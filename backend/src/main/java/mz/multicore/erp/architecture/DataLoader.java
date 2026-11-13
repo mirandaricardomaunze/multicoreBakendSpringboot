@@ -7,7 +7,8 @@ import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.crm.service.CRMService;
 import mz.multicore.erp.modules.financeira.service.TreasuryAccountProvisioningService;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateCommandService;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
 import mz.multicore.erp.modules.hr.service.HRService;
 import mz.multicore.erp.modules.inventory.service.StockMovementService;
@@ -56,18 +57,19 @@ public class DataLoader implements CommandLineRunner {
             AppUserLookup userLookup,
             AppUserCommandService userCommands,
             SupplierCommandService supplierCommandService,
-            TaxRateRepository taxRateRepository,
+            TaxRateLookup taxRateLookup,
+            TaxRateCommandService taxRateCommands,
             boolean seedDemoData,
             String superAdminPassword,
             PasswordEncoder passwordEncoder) {
         this.seedDemoData = seedDemoData;
         this.referenceSeeder = new ReferenceAndAdminDataSeeder(
-                companyLookup, userLookup, userCommands, taxRateRepository,
+                companyLookup, userLookup, userCommands, taxRateLookup, taxRateCommands,
                 productLookup, productCommandService, superAdminPassword, passwordEncoder);
         this.demoSeeder = new DemoEnterpriseDataSeeder(
                 employeeCommandService, clientCommandService, productLookup, productCommandService, treasuryAccounts,
                 hrService, crmService, companyLookup, companyService, warehouseCommandService, stockMovementService,
-                userCommands, supplierCommandService, taxRateRepository,
+                userCommands, supplierCommandService, taxRateLookup, taxRateCommands,
                 passwordEncoder, this.referenceSeeder);
     }
 

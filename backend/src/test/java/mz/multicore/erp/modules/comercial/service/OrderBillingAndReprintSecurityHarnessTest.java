@@ -117,7 +117,7 @@ class OrderBillingAndReprintSecurityHarnessTest {
                 mock(WalkInClientProvider.class),
                 documentNumberService,
                 mock(AuditLogService.class),
-                mock(mz.multicore.erp.modules.fiscal.repository.TaxRateRepository.class),
+                mock(mz.multicore.erp.modules.fiscal.service.TaxRateLookup.class),
                 receivablesService,
                 mock(ApplicationEventPublisher.class)
         );

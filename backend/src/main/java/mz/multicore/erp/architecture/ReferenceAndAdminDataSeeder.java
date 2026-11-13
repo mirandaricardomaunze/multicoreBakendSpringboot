@@ -7,7 +7,8 @@ import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.model.TaxRate;
 import mz.multicore.erp.modules.fiscal.model.TaxType;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateCommandService;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.service.AppUserCommandService;
 import mz.multicore.erp.modules.users.service.AppUserLookup;
@@ -23,7 +24,8 @@ public class ReferenceAndAdminDataSeeder {
     private final CompanyLookup companyLookup;
     private final AppUserLookup userLookup;
     private final AppUserCommandService userCommands;
-    private final TaxRateRepository taxRateRepository;
+    private final TaxRateLookup taxRateLookup;
+    private final TaxRateCommandService taxRateCommands;
     private final ProductLookup productLookup;
     private final ProductCommandService productCommandService;
     private final String superAdminPassword;
@@ -33,7 +35,8 @@ public class ReferenceAndAdminDataSeeder {
             CompanyLookup companyLookup,
             AppUserLookup userLookup,
             AppUserCommandService userCommands,
-            TaxRateRepository taxRateRepository,
+            TaxRateLookup taxRateLookup,
+            TaxRateCommandService taxRateCommands,
             ProductLookup productLookup,
             ProductCommandService productCommandService,
             @Value("${app.superadmin.password:}") String superAdminPassword,
@@ -41,7 +44,8 @@ public class ReferenceAndAdminDataSeeder {
         this.companyLookup = companyLookup;
         this.userLookup = userLookup;
         this.userCommands = userCommands;
-        this.taxRateRepository = taxRateRepository;
+        this.taxRateLookup = taxRateLookup;
+        this.taxRateCommands = taxRateCommands;
         this.productLookup = productLookup;
         this.productCommandService = productCommandService;
         this.superAdminPassword = superAdminPassword;
@@ -117,7 +121,7 @@ public class ReferenceAndAdminDataSeeder {
     }
 
     public void seedMozambicanTaxRates() {
-        if (taxRateRepository.count() > 0) return;
+        if (taxRateLookup.countAll() > 0) return;
         seedTaxRate("IVA16", "IVA Normal (16%)", TaxType.IVA_STANDARD, "0.16", "Lei do IVA — DL 8/2024");
         seedTaxRate("IVA5", "IVA Reduzido (5%)", TaxType.IVA_REDUCED, "0.05", "Lei do IVA — alimentos, livros, transportes");
         seedTaxRate("IVA0", "IVA Zero (0%)", TaxType.IVA_ZERO, "0.00", "Lei do IVA — exportações");
@@ -139,6 +143,6 @@ public class ReferenceAndAdminDataSeeder {
         t.setLegalBasis(legalBasis);
         t.setActive(true);
         t.setCreatedBy("SYSTEM");
-        taxRateRepository.save(t);
+        taxRateCommands.saveTaxRate(t);
     }
 }

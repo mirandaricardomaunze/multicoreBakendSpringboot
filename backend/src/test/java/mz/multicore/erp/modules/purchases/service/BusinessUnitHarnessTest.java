@@ -178,7 +178,7 @@ class BusinessUnitHarnessTest {
                 mock(WalkInClientProvider.class),
                 documentNumberService,
                 auditLogService,
-                mock(mz.multicore.erp.modules.fiscal.repository.TaxRateRepository.class),
+                mock(mz.multicore.erp.modules.fiscal.service.TaxRateLookup.class),
                 receivablesService,
                 mock(ApplicationEventPublisher.class),
                 null,

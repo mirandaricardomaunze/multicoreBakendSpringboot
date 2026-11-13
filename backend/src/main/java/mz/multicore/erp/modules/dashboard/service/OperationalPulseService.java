@@ -1,12 +1,11 @@
 package mz.multicore.erp.modules.dashboard.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.assets.repository.AssetRepository;
+import mz.multicore.erp.modules.assets.service.AssetLookup;
 import mz.multicore.erp.modules.dashboard.dto.OperationalPulseDTO;
-import mz.multicore.erp.modules.fleet.repository.FuelLogRepository;
-import mz.multicore.erp.modules.fleet.repository.VehicleRepository;
-import mz.multicore.erp.modules.manufacturing.repository.ProductionOrderRepository;
-import mz.multicore.erp.modules.recurring.repository.RecurringContractRepository;
+import mz.multicore.erp.modules.fleet.service.VehicleLookup;
+import mz.multicore.erp.modules.manufacturing.service.ProductionOrderLookup;
+import mz.multicore.erp.modules.recurring.service.RecurringContractLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,14 +26,13 @@ public class OperationalPulseService {
     }
 
     public OperationalPulseService(
-            ProductionOrderRepository productionOrderRepository,
-            VehicleRepository vehicleRepository,
-            FuelLogRepository fuelLogRepository,
-            RecurringContractRepository recurringContractRepository,
-            AssetRepository assetRepository
+            ProductionOrderLookup productionOrderLookup,
+            VehicleLookup vehicleLookup,
+            RecurringContractLookup recurringContractLookup,
+            AssetLookup assetLookup
     ) {
-        this(new IndustrialAndFleetPulseCalculator(productionOrderRepository, vehicleRepository, fuelLogRepository),
-             new FinancialContractsAndAssetsPulseCalculator(recurringContractRepository, assetRepository));
+        this(new IndustrialAndFleetPulseCalculator(productionOrderLookup, vehicleLookup),
+             new FinancialContractsAndAssetsPulseCalculator(recurringContractLookup, assetLookup));
     }
 
     @Transactional(readOnly = true)

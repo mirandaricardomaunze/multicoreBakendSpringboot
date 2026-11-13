@@ -18,7 +18,7 @@ import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
@@ -64,7 +64,7 @@ class OrderPaymentTermsCreditRestrictionHarnessTest {
                 mock(WalkInClientProvider.class),
                 mock(DocumentNumberService.class),
                 mock(AuditLogService.class),
-                mock(TaxRateRepository.class),
+                mock(TaxRateLookup.class),
                 mock(ReceivablesService.class),
                 mock(ApplicationEventPublisher.class)
         );

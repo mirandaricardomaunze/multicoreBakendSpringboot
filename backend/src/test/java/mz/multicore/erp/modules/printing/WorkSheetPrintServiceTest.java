@@ -39,7 +39,7 @@ class WorkSheetPrintServiceTest {
     @BeforeEach
     void setUp() {
         repository = mock(WorkSheetRepository.class);
-        service = new WorkSheetPrintService(repository);
+        service = new WorkSheetPrintService(new mz.multicore.erp.modules.crm.service.WorkSheetLookup(repository));
         CurrentUserContext.setCurrentUser("tecnico", "EMPLOYEE");
         CurrentUserContext.setCurrentCompanyId(COMPANY);
     }

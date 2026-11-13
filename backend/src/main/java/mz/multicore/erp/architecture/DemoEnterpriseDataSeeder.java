@@ -15,7 +15,8 @@ import mz.multicore.erp.modules.crm.dto.SupportTicketDTO;
 import mz.multicore.erp.modules.crm.service.CRMService;
 import mz.multicore.erp.modules.financeira.service.TreasuryAccountProvisioningService;
 import mz.multicore.erp.modules.fiscal.model.TaxRate;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateCommandService;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
@@ -50,7 +51,8 @@ public class DemoEnterpriseDataSeeder {
     private final StockMovementService stockMovementService;
     private final AppUserCommandService userCommands;
     private final SupplierCommandService supplierCommandService;
-    private final TaxRateRepository taxRateRepository;
+    private final TaxRateLookup taxRateLookup;
+    private final TaxRateCommandService taxRateCommands;
     private final PasswordEncoder passwordEncoder;
     private final ReferenceAndAdminDataSeeder referenceSeeder;
 
@@ -62,7 +64,7 @@ public class DemoEnterpriseDataSeeder {
             CompanyLookup companyLookup, CompanyService companyService,
             WarehouseCommandService warehouseCommandService, StockMovementService stockMovementService,
             AppUserCommandService userCommands, SupplierCommandService supplierCommandService,
-            TaxRateRepository taxRateRepository,
+            TaxRateLookup taxRateLookup, TaxRateCommandService taxRateCommands,
             PasswordEncoder passwordEncoder, ReferenceAndAdminDataSeeder referenceSeeder) {
         this.employeeCommandService = employeeCommandService;
         this.clientCommandService = clientCommandService;
@@ -77,7 +79,8 @@ public class DemoEnterpriseDataSeeder {
         this.stockMovementService = stockMovementService;
         this.userCommands = userCommands;
         this.supplierCommandService = supplierCommandService;
-        this.taxRateRepository = taxRateRepository;
+        this.taxRateLookup = taxRateLookup;
+        this.taxRateCommands = taxRateCommands;
         this.passwordEncoder = passwordEncoder;
         this.referenceSeeder = referenceSeeder;
     }
@@ -96,10 +99,10 @@ public class DemoEnterpriseDataSeeder {
             category.getCompanies().add(mzCompany);
             productCommandService.saveCategory(category);
         });
-        taxRateRepository.findAll().forEach(rate -> {
+        taxRateLookup.listAll().forEach(rate -> {
             rate.getCompanies().add(ptCompany);
             rate.getCompanies().add(mzCompany);
-            taxRateRepository.save(rate);
+            taxRateCommands.saveTaxRate(rate);
         });
 
         AppUser mariaUser = createAppUser("maria", "Maria Santos", "EMPLOYEE");
@@ -129,9 +132,9 @@ public class DemoEnterpriseDataSeeder {
         Client techSol = createClient("Tech Solutions Lda", "501234567", "financeiro@techsolutions.pt", "Avenida da Boavista 1200, Porto", ptCompany);
         Client padaria = createClient("Padaria Central do Minho", "509876543", "geral@padariaminho.pt", "Rua Principal 45, Braga", ptCompany);
 
-        TaxRate ivaExempt = taxRateRepository.findByCode("IVAEXMT").orElse(null);
-        TaxRate ivaReduced = taxRateRepository.findByCode("IVA5").orElse(null);
-        TaxRate ivaNormal = taxRateRepository.findByCode("IVA16").orElse(null);
+        TaxRate ivaExempt = taxRateLookup.findByCode("IVAEXMT").orElse(null);
+        TaxRate ivaReduced = taxRateLookup.findByCode("IVA5").orElse(null);
+        TaxRate ivaNormal = taxRateLookup.findByCode("IVA16").orElse(null);
 
         Product erpLic = createProduct("MER-ARROZ-5KG", "MRC-0001", "5601000000017", "Arroz Agulha 5kg", "550.00", "430.00", "20.000", "Saco de arroz agulha de 5kg", ivaExempt, ptCompany, mzCompany);
         Product support = createProduct("MER-ACUCAR-1KG", "MRC-0002", "5601000000024", "Açúcar Branco 1kg", "95.00", "72.00", "40.000", "Pacote de açúcar branco refinado de 1kg", ivaExempt, ptCompany, mzCompany);

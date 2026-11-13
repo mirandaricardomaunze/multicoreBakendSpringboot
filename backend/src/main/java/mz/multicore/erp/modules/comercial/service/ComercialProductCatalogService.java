@@ -20,7 +20,7 @@ import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.purchases.service.BusinessUnitLookup;
 import org.springframework.context.annotation.Lazy;
@@ -40,7 +40,7 @@ public class ComercialProductCatalogService {
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final CompanyLookup companyLookup;
-    private final TaxRateRepository taxRateRepository;
+    private final TaxRateLookup taxRateLookup;
     private final BusinessUnitLookup businessUnitLookup;
     private final InventoryService inventoryService;
     private final AuditLogService auditLogService;
@@ -49,14 +49,14 @@ public class ComercialProductCatalogService {
             ProductRepository productRepository,
             ProductCategoryRepository productCategoryRepository,
             CompanyLookup companyLookup,
-            TaxRateRepository taxRateRepository,
+            TaxRateLookup taxRateLookup,
             @Nullable BusinessUnitLookup businessUnitLookup,
             @Lazy InventoryService inventoryService,
             AuditLogService auditLogService) {
         this.productRepository = productRepository;
         this.productCategoryRepository = productCategoryRepository;
         this.companyLookup = companyLookup;
-        this.taxRateRepository = taxRateRepository;
+        this.taxRateLookup = taxRateLookup;
         this.businessUnitLookup = businessUnitLookup;
         this.inventoryService = inventoryService;
         this.auditLogService = auditLogService;
@@ -171,8 +171,7 @@ public class ComercialProductCatalogService {
                     .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada.")));
         }
         if (taxRateId != null) {
-            product.setTaxRate(taxRateRepository.findByIdAndCompaniesId(taxRateId, companyId)
-                    .orElseThrow(() -> new BusinessRuleException("Taxa de IVA não encontrada.")));
+            product.setTaxRate(taxRateLookup.requireForCompany(taxRateId, companyId));
         }
         product.setCreatedBy("SYSTEM");
         product.getCompanies().add(companyLookup.reference(companyId));
@@ -238,8 +237,7 @@ public class ComercialProductCatalogService {
                         .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada."))
                 : null);
         product.setTaxRate(taxRateId != null
-                ? taxRateRepository.findByIdAndCompaniesId(taxRateId, companyId)
-                        .orElseThrow(() -> new BusinessRuleException("Taxa de IVA não encontrada."))
+                ? taxRateLookup.requireForCompany(taxRateId, companyId)
                 : null);
         product = productRepository.save(product);
         auditLogService.logCurrent("PRODUCT_UPDATE",
@@ -309,7 +307,7 @@ public class ComercialProductCatalogService {
     }
 
     public List<TaxRateDTO> getActiveVatRates() {
-        return taxRateRepository.findDistinctByCompaniesIdAndActiveTrueOrderByTypeAscRateDesc(CurrentUserContext.getCurrentCompanyId()).stream()
+        return taxRateLookup.listActiveForCompany(CurrentUserContext.getCurrentCompanyId()).stream()
                 .filter(t -> t.getType() != null && t.getType().name().startsWith("IVA"))
                 .map(t -> new TaxRateDTO(t.getId(), t.getCode(), t.getName(), t.getType().name(),
                         t.getRate(), t.getLegalBasis(), t.isActive()))

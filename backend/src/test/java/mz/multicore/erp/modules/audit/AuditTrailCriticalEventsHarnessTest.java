@@ -203,7 +203,7 @@ class AuditTrailCriticalEventsHarnessTest {
                 mock(mz.multicore.erp.modules.comercial.service.WalkInClientProvider.class),
                 mock(mz.multicore.erp.modules.numbering.service.DocumentNumberService.class),
                 auditLogService,
-                mock(mz.multicore.erp.modules.fiscal.repository.TaxRateRepository.class),
+                mock(mz.multicore.erp.modules.fiscal.service.TaxRateLookup.class),
                 mock(mz.multicore.erp.modules.comercial.service.ReceivablesService.class),
                 mock(org.springframework.context.ApplicationEventPublisher.class)
         );
@@ -323,7 +323,7 @@ class AuditTrailCriticalEventsHarnessTest {
                 mock(mz.multicore.erp.modules.comercial.service.WalkInClientProvider.class),
                 mock(mz.multicore.erp.modules.numbering.service.DocumentNumberService.class),
                 auditLogService,
-                mock(mz.multicore.erp.modules.fiscal.repository.TaxRateRepository.class),
+                mock(mz.multicore.erp.modules.fiscal.service.TaxRateLookup.class),
                 mock(mz.multicore.erp.modules.comercial.service.ReceivablesService.class),
                 mock(org.springframework.context.ApplicationEventPublisher.class)
         );

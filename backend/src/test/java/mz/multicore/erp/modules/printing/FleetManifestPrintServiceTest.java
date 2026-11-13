@@ -29,7 +29,10 @@ class FleetManifestPrintServiceTest {
     @BeforeEach
     void setup() {
         manifestRepository = mock(FleetManifestRepository.class);
-        service = new FleetManifestPrintService(manifestRepository);
+        service = new FleetManifestPrintService(new mz.multicore.erp.modules.fleet.service.VehicleLookup(
+                mock(mz.multicore.erp.modules.fleet.repository.VehicleRepository.class),
+                mock(mz.multicore.erp.modules.fleet.repository.FuelLogRepository.class),
+                manifestRepository));
         CurrentUserContext.setCurrentCompanyId(1L);
         CurrentUserContext.setCurrentUser("admin", "ADMIN");
     }

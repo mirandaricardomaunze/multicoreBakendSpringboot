@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.backup.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
-import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
+import mz.multicore.erp.modules.audit.service.AuditLogLookup;
 import mz.multicore.erp.modules.backup.dto.BackupVerificationDTO;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
@@ -58,13 +58,13 @@ public class BackupService {
             ReceiptLookup receiptLookup,
             TillSessionLookup tillSessionLookup,
             TreasuryAccountLookup treasuryAccountLookup,
-            AuditLogRepository auditLogRepository
+            AuditLogLookup auditLogLookup
     ) {
         this(
                 new BackupDataCollector(userLookup, companyLookup, clientLookup, supplierLookup,
                         productLookup, warehouseLookup, stockLookup, stockMovementLookup,
                         invoiceLookup, receiptLookup, tillSessionLookup,
-                        treasuryAccountLookup, auditLogRepository),
+                        treasuryAccountLookup, auditLogLookup),
                 new BackupExecutionService(),
                 new BackupVerificationService(new BackupContentReader(new BackupFileCipher("")))
         );

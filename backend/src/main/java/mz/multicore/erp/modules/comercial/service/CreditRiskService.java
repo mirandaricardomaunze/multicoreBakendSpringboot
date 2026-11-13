@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.comercial.service;
 
 import mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO;
-import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
+import mz.multicore.erp.modules.approvals.service.ApprovalRequestLookup;
 import mz.multicore.erp.modules.approvals.service.ApprovalService;
 import mz.multicore.erp.modules.comercial.dto.ClientCreditRiskDTO;
 import mz.multicore.erp.modules.comercial.dto.CreditExceptionApprovalRequest;
@@ -50,14 +50,14 @@ public class CreditRiskService {
     public CreditRiskService(
             InvoiceRepository invoiceRepository,
             ClientRepository clientRepository,
-            ApprovalRequestRepository approvalRequestRepository,
+            ApprovalRequestLookup approvalRequestLookup,
             ApprovalService approvalService,
             CompanyService companyService
     ) {
         this.assessmentService = new CreditRiskAssessmentService(
-                invoiceRepository, clientRepository, approvalRequestRepository);
+                invoiceRepository, clientRepository, approvalRequestLookup);
         this.controlService = new CreditControlService(
-                invoiceRepository, clientRepository, approvalRequestRepository, approvalService);
+                invoiceRepository, clientRepository, approvalRequestLookup, approvalService);
         this.noticeService = new DebtCollectionNoticeService(
                 invoiceRepository, clientRepository, companyService);
     }

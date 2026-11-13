@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
-verify: ["AppUserLookupTest", "EmployeeLookupTest", "SupplierLookupTest", "PosLookupsTest", "TreasuryAccountLookupTest", "ModuleDecouplingHarnessTest", "CleanArchitectureHarnessTest"]
+verify: ["AppUserLookupTest", "EmployeeLookupTest", "SupplierLookupTest", "PosLookupsTest", "TreasuryAccountLookupTest", "RemainingOwnerLookupsTest", "ModuleDecouplingHarnessTest", "CleanArchitectureHarnessTest"]
 blockedBy: []
 ---
 
@@ -24,7 +24,7 @@ Cada critério de migração apaga as suas linhas de
 - [x] MD-R03 — SupplierLookup e leitores migrados — `SupplierLookupTest`
 - [x] MD-R04 — pos: Lookup das sessões/vendas e leitores migrados — `ModuleDecouplingHarnessTest`
 - [x] MD-R05 — TreasuryAccountLookup e leitores migrados — `TreasuryAccountLookupTest`
-- [ ] MD-R06 — fleet, fiscal, approvals, manufacturing, assets, recurring, performance, audit, quality, crm — `ModuleDecouplingHarnessTest`
+- [x] MD-R06 — fleet, fiscal, approvals, manufacturing, assets, recurring, performance, audit, quality, crm — `ModuleDecouplingHarnessTest`
 - [ ] MD-R07 — zero imports de Repository alheio; baseline do CA-07 vazia; suite verde — `ModuleDecouplingHarnessTest`
 
 ## Fora de âmbito
@@ -45,3 +45,4 @@ Cada critério de migração apaga as suas linhas de
 - 2026-11-13 · MD-R03 (gate) · diff-guard DG-07: nas linhas alteradas de `ComercialInvoiceLifecycleService` e `ComercialProductCatalogService` o `@Autowired(required = false) BusinessUnitLookup` passou a `@Nullable` (`org.springframework.lang`), mesma injecção opcional por construtor; harnesses e testes `Comercial*` verdes.
 - 2026-11-13 · MD-R04 · `TillSessionLookup` (`listForCompany`, `listMovementsForCompany`) e `PosPaymentLookup` (`listForInvoice`, `listPaidForCompanyBetween`; vales e pagamentos móveis do agregado mais próximo: `requireVoucher` "Vale de compras não encontrado.", `findVoucherByCode`, `findMobilePaymentForCompany`); 8 ficheiros migrados (backup, printing, reports, subscription) e 12 linhas apagadas da baseline CA-07; `PosLookupsTest`, harnesses e testes de backup/printing/reports/subscription verdes.
 - 2026-11-13 · MD-R05 · `TreasuryAccountLookup` (`requireForCompany`: "Conta de tesouraria não encontrada."; `listForCompany`) e `TreasuryAccountProvisioningService.openBankAccount(..., openingBalance)` para o seeder de demonstração; 7 ficheiros migrados (seeders, backup, comercial, POS, printing): o `TreasuryTransactionRepository` do backup e o `TreasuryAccountRepository` do `POSService` não eram usados e saíram dos construtores; 9 linhas apagadas da baseline CA-07; `TreasuryAccountLookupTest`, harnesses e testes de backup/comercial/POS/auditoria verdes.
+- 2026-11-13 · MD-R06 · Lookups nos módulos donos: `TaxRateLookup` (`countAll`, `listAll`, `findByCode`, `requireForCompany` "Taxa de IVA não encontrada.", `listActiveForCompany`) + `TaxRateCommandService.saveTaxRate` (seeders); `AuditLogLookup.listForCompany`; `ApprovalRequestLookup` (`listForCompanyByStatus`, `listForDocument`); `AssetLookup.listForCompany`; `RecurringContractLookup.listForCompanyWithClient`; `VehicleLookup` (`listForCompany`, `listFuelLogsForVehicle`, `requireManifestForCompany` "Manifesto de carga não encontrado."); `ProductionOrderLookup.listForCompany`; `BillOfMaterialsLookup` (`listActiveForCompany`, `requireForCompany` "Receita não encontrada."); `SalesGoalBonusLookup.listApprovedUnsettledForEmployee` + `SalesGoalBonusCommandService.settleOnPayslip` (recibo do RH); `WorkerEquipmentAssignmentLookup.requireForCompany` "Atribuição de equipamento não encontrada."; `WorkSheetLookup.requireForCompany` "Folha de obra não encontrada.". 22 ficheiros migrados (seeders, backup, comercial, dashboard, hr, printing, productionplan, reports) e as 28 linhas restantes apagadas da baseline CA-07 (fica vazia); asserção textual do `QualityEquipmentPrintServiceDecompositionHarnessTest` passa a exigir `assignmentLookup.requireForCompany(...)`; `RemainingOwnerLookupsTest`, harnesses e testes das classes alteradas verdes.

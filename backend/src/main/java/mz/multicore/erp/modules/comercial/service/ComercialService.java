@@ -21,7 +21,7 @@ import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
 import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
@@ -74,14 +74,14 @@ public class ComercialService {
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
-            TaxRateRepository taxRateRepository,
+            TaxRateLookup taxRateLookup,
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher) {
         this(clientRepository, productRepository, productCategoryRepository, invoiceRepository,
                 approvalService, companyLookup, warehouseLookup, inventoryService,
                 receiptRepository, financeService, treasuryAccountLookup, orderRepository,
                 orderLineRepository, walkInClientProvider, documentNumberService, auditLogService,
-                taxRateRepository, receivablesService, eventPublisher, new OrderRiskEvaluator(invoiceRepository), null);
+                taxRateLookup, receivablesService, eventPublisher, new OrderRiskEvaluator(invoiceRepository), null);
     }
 
     public ComercialService(
@@ -101,7 +101,7 @@ public class ComercialService {
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
-            TaxRateRepository taxRateRepository,
+            TaxRateLookup taxRateLookup,
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher,
             OrderRiskEvaluator orderRiskEvaluator,
@@ -111,7 +111,7 @@ public class ComercialService {
                 documentNumberService, financeService, auditLogService, eventPublisher,
                 new ComercialClientAndCreditService(clientRepository, companyLookup, invoiceRepository, auditLogService),
                 new ComercialProductCatalogService(productRepository, productCategoryRepository, companyLookup,
-                        taxRateRepository, businessUnitLookup, inventoryService, auditLogService),
+                        taxRateLookup, businessUnitLookup, inventoryService, auditLogService),
                 new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
                         companyLookup, warehouseLookup, inventoryService, receiptRepository, financeService,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,

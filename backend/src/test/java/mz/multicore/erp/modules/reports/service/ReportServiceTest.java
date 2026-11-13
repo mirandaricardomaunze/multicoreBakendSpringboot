@@ -58,7 +58,8 @@ class ReportServiceTest {
         tillMovementRepository = mock(TillMovementRepository.class);
 
         service = new ReportService(new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
-                new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository), approvalRequestRepository,
+                new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository),
+                new mz.multicore.erp.modules.approvals.service.ApprovalRequestLookup(approvalRequestRepository),
                 new mz.multicore.erp.modules.pos.service.TillSessionLookup(tillSessionRepository, tillMovementRepository),
                 new mz.multicore.erp.modules.pos.service.PosPaymentLookup(paymentEntryRepository,
                         mock(mz.multicore.erp.modules.pos.repository.StoreVoucherRepository.class),

@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.reports.service;
 
 import mz.multicore.erp.modules.approvals.model.ApprovalStatus;
-import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
+import mz.multicore.erp.modules.approvals.service.ApprovalRequestLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.pos.model.TillSession;
@@ -23,16 +23,16 @@ import java.util.stream.Collectors;
 @Component
 public class ReportOperationsCollector {
     private final StockLookup stockLookup;
-    private final ApprovalRequestRepository approvalRequestRepository;
+    private final ApprovalRequestLookup approvalRequestLookup;
     private final TillSessionLookup tillSessionLookup;
     private final PosPaymentLookup paymentLookup;
 
     public ReportOperationsCollector(StockLookup stockLookup,
-                                     ApprovalRequestRepository approvalRequestRepository,
+                                     ApprovalRequestLookup approvalRequestLookup,
                                      TillSessionLookup tillSessionLookup,
                                      PosPaymentLookup paymentLookup) {
         this.stockLookup = stockLookup;
-        this.approvalRequestRepository = approvalRequestRepository;
+        this.approvalRequestLookup = approvalRequestLookup;
         this.tillSessionLookup = tillSessionLookup;
         this.paymentLookup = paymentLookup;
     }
@@ -43,7 +43,7 @@ public class ReportOperationsCollector {
     }
 
     long countPendingApprovals(Long companyId) {
-        return approvalRequestRepository.findByCompanyIdAndStatus(companyId, ApprovalStatus.PENDING).size();
+        return approvalRequestLookup.listForCompanyByStatus(companyId, ApprovalStatus.PENDING).size();
     }
 
     List<OpenTillSessionDTO> openTillSessions(Long companyId) {

@@ -1,6 +1,6 @@
 package mz.multicore.erp.modules.backup.service;
 
-import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
+import mz.multicore.erp.modules.audit.service.AuditLogLookup;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
@@ -38,7 +38,7 @@ public class BackupDataCollector {
     private final ReceiptLookup receiptLookup;
     private final TillSessionLookup tillSessionLookup;
     private final TreasuryAccountLookup treasuryAccountLookup;
-    private final AuditLogRepository auditLogRepository;
+    private final AuditLogLookup auditLogLookup;
 
     @Autowired
     public BackupDataCollector(
@@ -54,7 +54,7 @@ public class BackupDataCollector {
             ReceiptLookup receiptLookup,
             TillSessionLookup tillSessionLookup,
             TreasuryAccountLookup treasuryAccountLookup,
-            AuditLogRepository auditLogRepository
+            AuditLogLookup auditLogLookup
     ) {
         this.userLookup = userLookup;
         this.companyLookup = companyLookup;
@@ -68,7 +68,7 @@ public class BackupDataCollector {
         this.receiptLookup = receiptLookup;
         this.tillSessionLookup = tillSessionLookup;
         this.treasuryAccountLookup = treasuryAccountLookup;
-        this.auditLogRepository = auditLogRepository;
+        this.auditLogLookup = auditLogLookup;
     }
 
     public Map<String, Object> collectBackupData(Long companyId) {
@@ -213,7 +213,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("auditLogs", auditLogRepository == null ? List.of() : auditLogRepository.findByCompanyIdOrderByEventTimeDesc(companyId).stream().map(l -> {
+        data.put("auditLogs", auditLogLookup == null ? List.of() : auditLogLookup.listForCompany(companyId).stream().map(l -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", l.getId());
             m.put("username", l.getUsername());

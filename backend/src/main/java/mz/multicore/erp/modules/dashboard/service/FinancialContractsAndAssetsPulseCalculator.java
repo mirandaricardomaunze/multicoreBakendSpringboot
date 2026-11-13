@@ -2,12 +2,12 @@ package mz.multicore.erp.modules.dashboard.service;
 
 import mz.multicore.erp.modules.assets.model.Asset;
 import mz.multicore.erp.modules.assets.model.AssetStatus;
-import mz.multicore.erp.modules.assets.repository.AssetRepository;
+import mz.multicore.erp.modules.assets.service.AssetLookup;
 import mz.multicore.erp.modules.dashboard.dto.OperationalPulseDTO;
 import mz.multicore.erp.modules.recurring.model.BillingFrequency;
 import mz.multicore.erp.modules.recurring.model.ContractStatus;
 import mz.multicore.erp.modules.recurring.model.RecurringContract;
-import mz.multicore.erp.modules.recurring.repository.RecurringContractRepository;
+import mz.multicore.erp.modules.recurring.service.RecurringContractLookup;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -18,17 +18,17 @@ import java.util.List;
 @Component
 public class FinancialContractsAndAssetsPulseCalculator {
 
-    private final RecurringContractRepository recurringContractRepository;
-    private final AssetRepository assetRepository;
+    private final RecurringContractLookup recurringContractLookup;
+    private final AssetLookup assetLookup;
 
-    public FinancialContractsAndAssetsPulseCalculator(RecurringContractRepository recurringContractRepository,
-                                                      AssetRepository assetRepository) {
-        this.recurringContractRepository = recurringContractRepository;
-        this.assetRepository = assetRepository;
+    public FinancialContractsAndAssetsPulseCalculator(RecurringContractLookup recurringContractLookup,
+                                                      AssetLookup assetLookup) {
+        this.recurringContractLookup = recurringContractLookup;
+        this.assetLookup = assetLookup;
     }
 
     public OperationalPulseDTO.RecurringPulse calculateRecurringPulse(Long companyId) {
-        List<RecurringContract> contracts = recurringContractRepository.findByCompanyIdWithClient(companyId);
+        List<RecurringContract> contracts = recurringContractLookup.listForCompanyWithClient(companyId);
         long activeCount = 0;
         BigDecimal mrr = BigDecimal.ZERO;
         long dueCount = 0;
@@ -58,7 +58,7 @@ public class FinancialContractsAndAssetsPulseCalculator {
     }
 
     public OperationalPulseDTO.AssetPulse calculateAssetPulse(Long companyId) {
-        List<Asset> assets = assetRepository.findByCompanyIdOrderByAssetCodeAsc(companyId);
+        List<Asset> assets = assetLookup.listForCompany(companyId);
         BigDecimal totalCost = BigDecimal.ZERO;
         BigDecimal accumulatedDepreciation = BigDecimal.ZERO;
 

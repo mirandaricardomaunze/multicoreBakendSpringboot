@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.reports.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
+import mz.multicore.erp.modules.approvals.service.ApprovalRequestLookup;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
@@ -35,11 +35,11 @@ public class ReportService {
 
     /** Construtor retrocompatível preservado para testes e integrações existentes. */
     public ReportService(InvoiceLookup invoiceLookup, StockLookup stockLookup,
-                         ApprovalRequestRepository approvalRequestRepository,
+                         ApprovalRequestLookup approvalRequestLookup,
                          TillSessionLookup tillSessionLookup,
                          PosPaymentLookup paymentLookup) {
         this(invoiceLookup, new ReportSalesAnalyzer(),
-                new ReportOperationsCollector(stockLookup, approvalRequestRepository,
+                new ReportOperationsCollector(stockLookup, approvalRequestLookup,
                         tillSessionLookup, paymentLookup));
     }
 
