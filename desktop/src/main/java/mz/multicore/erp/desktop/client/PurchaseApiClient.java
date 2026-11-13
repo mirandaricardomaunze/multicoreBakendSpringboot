@@ -90,6 +90,13 @@ public class PurchaseApiClient {
                 mz.multicore.erp.modules.purchases.dto.SupplierReturnDTO.class);
     }
 
+    /** Dinheiro devolvido pelo fornecedor depois de uma devolução de mercadoria já paga. */
+    public PurchaseDTO registerSupplierRefund(Long purchaseId, BigDecimal amount, Long financeAccountId, String reference) {
+        String path = "/api/purchases/" + purchaseId + "/supplier-refund?amount=" + amount + "&financeAccountId=" + financeAccountId;
+        if (reference != null && !reference.isBlank()) path += "&reference=" + URLEncoder.encode(reference, StandardCharsets.UTF_8);
+        return clientFactory.authenticatedClient().post(path, null, PurchaseDTO.class);
+    }
+
     // ─── Encomendas a fornecedor ─────────────────────────────────────────────
     public List<PurchaseOrderDTO> findOrdersByCompany(Long companyId) {
         return clientFactory.authenticatedClient()

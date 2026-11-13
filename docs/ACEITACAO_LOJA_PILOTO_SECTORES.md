@@ -91,6 +91,27 @@ ecrã (Definições › Ecrã) e envie à equipa.
 Com pelo menos uma excepção de gravidade alta ou média nos últimos 7 dias (por exemplo uma pesagem manual), abra o
 Painel Executivo: o rodapé deve mostrar "Excepções a verificar (7 dias): …". Sem excepções, o rodapé não mostra nada.
 
+## 7. Dinheiro, compras e contabilidade (funções de Novembro de 2026)
+
+Faça cada passo com valores pequenos e confirme o resultado indicado. Use uma conta de teste se a loja já estiver a
+facturar a sério.
+
+| # | Passo | Resultado esperado |
+|---|---|---|
+| 7.1 | Arranque: em Contabilidade › Balancete, carregue em **"Acertar existências"** | Mensagem com o valor do stock e da contabilidade; a conta Mercadorias (3201) deixa de estar negativa |
+| 7.2 | Abra a caixa no POS com 100 MT. Em Comercial, emita um recibo de 500 MT em **Numerário** de uma fatura em dívida | No fecho Z aparece "Recebimentos ao balcão 500"; o esperado na gaveta é 600 |
+| 7.3 | No mesmo recibo, escolha **Transferência** | A conta passa sozinha para o Banco; o esperado na gaveta não muda |
+| 7.4 | Venda no POS paga com 100 em numerário e o resto por M-Pesa | No Razão, a Caixa sobe 100 e o Banco sobe o resto |
+| 7.5 | Devolução no POS com reembolso em dinheiro | A gaveta baixa; no Razão, Clientes e Caixa baixam |
+| 7.6 | Compre um artigo a um preço diferente do custo da ficha | O custo do artigo passa a ser a média ponderada |
+| 7.7 | Compra directa de um artigo **não perecível** sem validade | É aceite; um artigo perecível sem validade é recusado |
+| 7.8 | Em Compras, seleccione a fatura e carregue em **"Devolver ao Fornecedor"** (2 unidades) | Documento DF; a dívida ao fornecedor e o stock baixam |
+| 7.9 | Devolva mercadoria de uma compra **já paga** e carregue em **"Reembolso do Fornecedor"** | O valor que o fornecedor deve aparece preenchido; ao registar, entra na conta escolhida |
+| 7.10 | Receba uma transferência entre armazéns com 1 unidade a menos e marque **"Perdido no transporte"** | A unidade não volta à origem; fica abatida como quebra |
+| 7.11 | Em RH, pague um recibo de salário | Pergunta a conta; escolhendo o banco, o Razão lança no Banco |
+| 7.12 | Corra as amortizações de um mês anterior à compra de um activo | Esse activo não é amortizado |
+| 7.13 | Faça uma nota de crédito de uma venda e veja o painel da loja | As vendas do dia descontam a nota |
+
 ## Folha de registo
 
 | Item | OK | Não OK | Observações / trama / foto |
@@ -102,6 +123,14 @@ Painel Executivo: o rodapé deve mostrar "Excepções a verificar (7 dias): …"
 | 4. Báscula: peso manual assinalado | | | |
 | 5. Ecrãs maximizados e a metade do ecrã | | | |
 | 6. Alerta no Painel Executivo | | | |
+| 7.1 Acerto de existências | | | |
+| 7.2–7.3 Recibos ao balcão e gaveta | | | |
+| 7.4–7.5 Pagamento misto e reembolso no POS | | | |
+| 7.6–7.7 Custo médio e validade nas compras | | | |
+| 7.8–7.9 Devolução e reembolso do fornecedor | | | |
+| 7.10 Perda no transporte | | | |
+| 7.11 Salário pago pelo banco | | | |
+| 7.12–7.13 Amortizações e painel de vendas | | | |
 
 Balança (marca/modelo): ______________ Porta: ____ Velocidade: ____ Modo: __________
 

@@ -90,7 +90,7 @@ class PayrollDeductionServiceTest {
                 5L, "ADIANTAMENTO", "Adiantamento de Agosto", new BigDecimal("5000"),
                 null, null, LocalDate.of(2026, 8, 10), null, null));
 
-        verify(financeService).registerAutoPayout(eq(new BigDecimal("5000")), any());
+        verify(financeService).registerAutoPayout(eq(new BigDecimal("5000")), any(), any());
         verify(auditLogService).logCurrent(eq("PAYROLL_DEDUCTION_CREATE"), any());
         assertTrue(dto.paidOut());
         assertEquals(1, dto.installments());
@@ -220,7 +220,7 @@ class PayrollDeductionServiceTest {
                 5L, "RECORRENTE", "Quota do sindicato", null, new BigDecimal("250"),
                 null, LocalDate.of(2026, 1, 1), null, null));
 
-        verify(financeService, never()).registerAutoPayout(any(), any());
+        verify(financeService, never()).registerAutoPayout(any(), any(), any());
         assertFalse(dto.paidOut());
         assertFalse(dto.settled(), "um recorrente sem capital nunca se salda sozinho");
     }
@@ -232,7 +232,7 @@ class PayrollDeductionServiceTest {
         assertThrows(BusinessRuleException.class, () -> service.create(
                 new CreatePayrollDeductionRequest(5L, "ADIANTAMENTO", "Adiantamento",
                         new BigDecimal("5000"), null, null, LocalDate.of(2026, 8, 1), null, null)));
-        verify(financeService, never()).registerAutoPayout(any(), any());
+        verify(financeService, never()).registerAutoPayout(any(), any(), any());
     }
 
     @Test

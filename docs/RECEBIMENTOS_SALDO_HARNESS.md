@@ -36,8 +36,8 @@ fix — a saída da execução está transcrita em §3.
 | ID | Cenário | Esperado | Falhava antes |
 |---|---|---|---|
 | RP-20 | `payInvoice` com perfil EMPLOYEE | recusa; fatura intacta; sem transacção | ✅ deixava passar |
-| RP-21 | `payInvoice` com perfil MANAGER | `PAID`; entra 1000 | ✅ (contexto do guard) |
-| RP-22 | `payInvoice` de fatura com 400 de 1000 já pagos | entra **600**, não 1000 | ✅ recusava `PARTIALLY_PAID` |
+| RP-21 | `payInvoice` com perfil MANAGER | emite recibo (RC) de 1000 em numerário (desde 2026-11-12, `InvoiceSettlementService`) | ✅ (contexto do guard) |
+| RP-22 | `payInvoice` de fatura com 400 de 1000 já pagos | recibo de **600**, não 1000; conta bancária = transferência | ✅ recusava `PARTIALLY_PAID` |
 | RP-23 | `payInvoice` de fatura já paga | recusa | — (não-regressão) |
 
 ### Não-regressão do POS

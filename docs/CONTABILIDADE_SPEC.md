@@ -210,3 +210,14 @@ saldo contabilístico contra **5901 Resultados transitados** (`INVENTORY_ADJUSTM
 (inventário inicial) e depois de contagens grandes. *A contrapartida é a confirmar pelo contabilista.*
 Código: `InventoryAdjustmentService`, `StockValuationService`. Teste: `InventoryPostingHttpIntegrationTest`.
 
+## Recebimentos sempre por recibo e pagamentos automáticos lançados (2026-11-12)
+
+- **Recebimentos de clientes:** "Registar Recebimento" na Tesouraria e "Amortizar Parcela" no plano de prestações
+  passam a emitir um recibo (RC) pelo `InvoiceSettlementService`. Antes a fatura ficava paga sem documento e sem
+  lançamento (Clientes nunca creditada), e a amortização de prestações não recebia dinheiro nenhum. O plano de
+  prestações acompanha os recibos (`InstallmentReceiptListener`), incluindo a anulação.
+- **Pagamentos automáticos do RH:** subsídios e acertos finais (D 6301), adiantamentos e empréstimos ao pessoal
+  (D 2602, abatidos depois pelos descontos no recibo), despesas reembolsadas e exames de saúde (D 6201); crédito na
+  Caixa (`TreasuryPayoutEvent`, `TREASURY_PAYOUT`). Antes o dinheiro saía da tesouraria sem lançamento.
+- **Reembolso do fornecedor** depois de devolução de compra já paga: D Caixa/Banco / C Fornecedores.
+

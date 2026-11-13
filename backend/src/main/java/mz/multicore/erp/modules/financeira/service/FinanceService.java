@@ -1,10 +1,6 @@
 package mz.multicore.erp.modules.financeira.service;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.paging.PageResponse;
-import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.architecture.security.PermissionGuard;
-import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
@@ -25,14 +21,22 @@ public class FinanceService {
     private final TreasuryOperationService operationService;
     private final TreasuryQueryService queryService;
     private final InvoiceRepository invoiceRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+
+    public FinanceService(TreasuryOperationService operationService, TreasuryQueryService queryService,
+                          @Lazy InvoiceRepository invoiceRepository) {
+        this(operationService, queryService, invoiceRepository, null);
+    }
 
     @Autowired
     public FinanceService(TreasuryOperationService operationService,
                           TreasuryQueryService queryService,
-                          @Lazy InvoiceRepository invoiceRepository) {
+                          @Lazy InvoiceRepository invoiceRepository,
+                          org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.operationService = operationService;
         this.queryService = queryService;
         this.invoiceRepository = invoiceRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public FinanceService(TreasuryAccountRepository accountRepository,
@@ -42,6 +46,7 @@ public class FinanceService {
         this.operationService = op;
         this.queryService = new TreasuryQueryService(accountRepository, transactionRepository, op);
         this.invoiceRepository = invoiceRepository;
+        this.eventPublisher = null;
     }
 
     @Transactional(readOnly = true)
@@ -64,28 +69,18 @@ public class FinanceService {
     public TreasuryAccountType accountType(Long accountId) { return queryService.accountType(accountId); }
 
     @Transactional
-    public void payInvoice(Long invoiceId, Long accountId) {
-        PermissionGuard.requireManagerOrAdmin("liquidar fatura");
-
-        Long companyId = CurrentUserContext.requireCurrentCompanyId();
-        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(invoiceId, companyId)
-                .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
-        if (!invoice.getStatus().isCollectable()) {
-            throw new BusinessRuleException("Apenas faturas por cobrar podem ser liquidadas. Estado atual: " + invoice.getStatus());
-        }
-
-        BigDecimal outstanding = invoice.outstandingAmount();
-        String description = "Recebimento Fatura " + invoice.getInvoiceNumber() + " - " + invoice.getClient().getName();
-        registerTransaction(accountId, "DEBIT", outstanding, description);
-
-        invoice.setAmountPaid(invoice.getTotalAmount());
-        invoice.setStatus(invoice.deriveStatusFromPayments());
-        invoiceRepository.save(invoice);
+    public void registerAutoExpensePayout(BigDecimal amount, String description) {
+        registerAutoPayout(amount, "Pagamento Despesa: " + description, mz.multicore.erp.architecture.events.PayoutPurpose.STAFF_EXPENSE);
     }
 
+    /** Automatic payout that the books must also see: the ledger posts it by purpose (TreasuryPayoutEvent). */
     @Transactional
-    public void registerAutoExpensePayout(BigDecimal amount, String description) {
-        operationService.registerAutoExpensePayout(amount, description);
+    public void registerAutoPayout(BigDecimal amount, String description, mz.multicore.erp.architecture.events.PayoutPurpose purpose) {
+        TreasuryTransactionDTO tx = operationService.registerAutoPayout(amount, description);
+        if (tx == null || eventPublisher == null) return;
+        eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.TreasuryPayoutEvent(
+                mz.multicore.erp.architecture.security.CurrentUserContext.getCurrentCompanyId(), tx.id(),
+                tx.transactionDate().toLocalDate(), amount, purpose, accountType(tx.accountId()) == TreasuryAccountType.CASH, description));
     }
 
     @Transactional

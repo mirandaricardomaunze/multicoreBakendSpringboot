@@ -84,7 +84,7 @@ public class PayrollDeductionService {
         PayrollDeduction saved = deductionRepository.save(deduction);
         if (kind.paysOutOnCreation()) {
             financeService.registerAutoPayout(saved.getPrincipalAmount(), String.format(
-                    "%s a %s - %s", kind.getLabel(), employee.getName(), saved.getDescription()));
+                    "%s a %s - %s", kind.getLabel(), employee.getName(), saved.getDescription()), mz.multicore.erp.architecture.events.PayoutPurpose.STAFF_ADVANCE);
             saved.setPaidOut(true);
             deductionRepository.save(saved);
         }

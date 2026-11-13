@@ -211,7 +211,7 @@ class TerminationServiceTest {
         TerminationDTO dto = service.paySettlement(3L);
 
         assertEquals("PAGO", dto.status());
-        verify(financeService).registerAutoPayout(eq(new BigDecimal("52000.00")), any());
+        verify(financeService).registerAutoPayout(eq(new BigDecimal("52000.00")), any(), any());
         verify(auditLogService).logCurrent(eq("TERMINATION_PAID"), any());
     }
 
@@ -224,7 +224,7 @@ class TerminationServiceTest {
         var ex = assertThrows(BusinessRuleException.class, () -> service.paySettlement(3L));
 
         assertTrue(ex.getMessage().contains("já foi pago"));
-        verify(financeService, never()).registerAutoPayout(any(), any());
+        verify(financeService, never()).registerAutoPayout(any(), any(), any());
     }
 
     @Test
@@ -235,7 +235,7 @@ class TerminationServiceTest {
         var ex = assertThrows(BusinessRuleException.class, () -> service.paySettlement(3L));
 
         assertTrue(ex.getMessage().contains("continua a dever"));
-        verify(financeService, never()).registerAutoPayout(any(), any());
+        verify(financeService, never()).registerAutoPayout(any(), any(), any());
     }
 
     @Test

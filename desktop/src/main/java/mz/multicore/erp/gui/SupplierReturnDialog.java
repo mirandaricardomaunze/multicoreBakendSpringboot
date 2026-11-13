@@ -28,10 +28,18 @@ final class SupplierReturnDialog {
     private SupplierReturnDialog() {
     }
 
-    static void open(ComprasPanel owner, JTable purchasesTable) {
+    static mz.multicore.erp.gui.components.ModernButton button(ComprasPanel owner, JTable purchasesTable) {
+        var button = UIHelper.createSecondaryButton("Devolver ao Fornecedor");
+        button.setIcon(UIHelper.icon("fas-undo", 14));
+        button.addActionListener(e -> withSelectedPurchase(owner, purchasesTable, purchase -> show(owner, purchase)));
+        return button;
+    }
+
+    /** Loads the purchase selected in the history (with its lines) and hands it to the action. */
+    static void withSelectedPurchase(ComprasPanel owner, JTable purchasesTable, java.util.function.Consumer<PurchaseDTO> action) {
         int row = TableFilter.selectedModelRow(purchasesTable);
         if (row < 0) {
-            ToastManager.show(owner, FeedbackType.WARNING, "Seleccione a fatura de compra a devolver.");
+            ToastManager.show(owner, FeedbackType.WARNING, "Seleccione uma fatura de compra.");
             return;
         }
         String number = String.valueOf(purchasesTable.getModel().getValueAt(row, 0));
@@ -40,9 +48,9 @@ final class SupplierReturnDialog {
                         .filter(p -> number.equals(p.purchaseNumber())).findFirst().orElse(null),
                 purchase -> {
                     if (purchase == null) ToastManager.show(owner, FeedbackType.ERROR, "Compra " + number + " não encontrada.");
-                    else show(owner, purchase);
+                    else action.accept(purchase);
                 },
-                error -> owner.showPurchaseLoadError("compra a devolver", error));
+                error -> owner.showPurchaseLoadError("compra seleccionada", error));
     }
 
     private static void show(ComprasPanel owner, PurchaseDTO purchase) {

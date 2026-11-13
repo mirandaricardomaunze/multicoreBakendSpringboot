@@ -14,6 +14,8 @@ public enum JournalSource {
     TRANSIT_LOSS("Perda em trânsito"),
     SUPPLIER_RETURN("Devolução a fornecedor"),
     INVENTORY_ADJUSTMENT("Acerto de existências"),
+    SUPPLIER_REFUND("Reembolso de fornecedor"),
+    TREASURY_PAYOUT("Pagamento automático"),
 
     /** Customer receipt or treasury settlement. */
     RECEIPT("Recibo"),

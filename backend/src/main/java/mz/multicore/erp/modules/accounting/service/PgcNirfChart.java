@@ -46,6 +46,7 @@ public final class PgcNirfChart {
     public static final String DEPRECIACAO_EXERCICIO = "6501";
     public static final String VARIACAO_PRODUCAO = "7301";
     public static final String RESULTADOS_TRANSITADOS = "5901"; // contrapartida do inventário inicial
+    public static final String FSE = "6201";                    // fornecimentos e serviços de terceiros
 
     public static List<Seed> accounts() {
         return List.of(

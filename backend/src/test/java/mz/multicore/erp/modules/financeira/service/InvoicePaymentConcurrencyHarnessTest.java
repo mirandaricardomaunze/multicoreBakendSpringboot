@@ -22,10 +22,11 @@ class InvoicePaymentConcurrencyHarnessTest {
                 "Optional<Invoice> lockByIdAndCompanyId",
                 "i.id = :id and i.company.id = :companyId");
 
-        String service = read("backend/src/main/java/mz/multicore/erp/modules/financeira/service/FinanceService.java");
+        // Treasury settlement now goes through a receipt: lock, check, then the receipt moves the money.
+        String service = read("backend/src/main/java/mz/multicore/erp/modules/comercial/service/InvoiceSettlementService.java");
         int lock = service.indexOf("invoiceRepository.lockByIdAndCompanyId");
         int collectableCheck = service.indexOf("invoice.getStatus().isCollectable()", lock);
-        int moneyMovement = service.indexOf("registerTransaction(accountId", lock);
+        int moneyMovement = service.indexOf("comercialService.createReceipt(", lock);
         assertThat(lock).isGreaterThanOrEqualTo(0);
         assertThat(collectableCheck).isGreaterThan(lock);
         assertThat(moneyMovement).isGreaterThan(collectableCheck);

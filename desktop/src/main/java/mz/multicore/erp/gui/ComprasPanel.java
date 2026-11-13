@@ -245,9 +245,8 @@ public class ComprasPanel extends JPanel {
                 java.util.List.of(new TableFilter.ColumnFilter(histBusinessUnitCombo, 6)),
                 java.util.List.of(new TableFilter.PeriodFilter(histPeriodo, 5)));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadPurchasesHistory);
-        ModernButton returnBtn = UIHelper.createSecondaryButton("Devolver ao Fornecedor");
-        returnBtn.setIcon(UIHelper.icon("fas-undo", 14));
-        returnBtn.addActionListener(e -> SupplierReturnDialog.open(this, purchasesTable));
+        ModernButton returnBtn = SupplierReturnDialog.button(this, purchasesTable);
+        ModernButton refundBtn = SupplierRefundDialog.button(this, purchasesTable);
         JPanel histFilters = UIHelper.filterBar(
                 new JComponent[]{histSearch,
                         TableFilter.label("Negócio:"), histBusinessUnitCombo,
@@ -255,7 +254,7 @@ public class ComprasPanel extends JPanel {
                 null);
         histFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
         historyCard.add(UIHelper.tableCardTop("Faturas de Compra Registadas", histFilters,
-                refreshBtn, returnBtn, newPurchaseBtn), BorderLayout.NORTH);
+                refreshBtn, returnBtn, refundBtn, newPurchaseBtn), BorderLayout.NORTH);
         historyCard.add(histScroll, BorderLayout.CENTER);
         TableQuickPeekController.install(purchasesTable, historyCard, (peek, row) -> {
             String doc = String.valueOf(purchasesModel.getValueAt(row, 0));

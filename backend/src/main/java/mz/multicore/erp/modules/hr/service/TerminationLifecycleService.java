@@ -123,7 +123,7 @@ public class TerminationLifecycleService {
         Termination saved = terminationRepository.save(termination);
 
         financeService.registerAutoPayout(saved.getNetAmount(), String.format(
-                "Acerto final %s - %s", saved.getSettlementNumber(), saved.getEmployee().getName()));
+                "Acerto final %s - %s", saved.getSettlementNumber(), saved.getEmployee().getName()), mz.multicore.erp.architecture.events.PayoutPurpose.STAFF_COST);
         auditLogService.logCurrent("TERMINATION_PAID", String.format(
                 "Acerto final %s pago a %s, líquido %s",
                 saved.getSettlementNumber(), saved.getEmployee().getName(), saved.getNetAmount()));

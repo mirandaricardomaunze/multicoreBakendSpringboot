@@ -171,15 +171,20 @@ public class InvoiceInstallmentsDialog {
             BigDecimal val = UIHelper.promptAmount("Amortização de Prestação", "fas-hand-holding-usd",
                     "Indique o valor a amortizar nas prestações", "Valor (MT) *:", BigDecimal.ZERO);
             if (val == null || val.compareTo(BigDecimal.ZERO) <= 0) return;
-            UIHelper.runWithProgress(dialog.getDialog(), "A amortizar prestação…",
-                    () -> api.payInvoiceInstallment(invoice.id(), val),
-                    updated -> {
-                        ToastManager.show(dialog.getDialog(), FeedbackType.SUCCESS, "Amortização registada com sucesso.");
-                        loadInstallments.run();
-                        if (onPlanUpdated != null) onPlanUpdated.run();
-                    },
-                    err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro na amortização: " + err.getMessage())
-            );
+            UIHelper.runWithProgress(dialog.getDialog(), "A carregar contas…", api::treasuryAccounts, accounts -> {
+                Long accountId = TreasuryAccountChooser.choose(dialog.getDialog(), "Receber Prestação",
+                        "O valor entra por recibo (RC) na conta escolhida.", accounts, false);
+                if (accountId == null) return;
+                UIHelper.runWithProgress(dialog.getDialog(), "A emitir recibo da prestação…",
+                        () -> api.payInvoiceInstallment(invoice.id(), val, accountId),
+                        updated -> {
+                            ToastManager.show(dialog.getDialog(), FeedbackType.SUCCESS, "Recibo emitido; prestações actualizadas.");
+                            loadInstallments.run();
+                            if (onPlanUpdated != null) onPlanUpdated.run();
+                        },
+                        err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao receber: " + err.getMessage())
+                );
+            }, err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao carregar contas: " + err.getMessage()));
         });
 
         dialog.addActionButton(generateBtn);

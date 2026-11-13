@@ -68,7 +68,7 @@ public class OccupationalHealthFinanceService {
                     "Este exame já foi pago em %s.", exam.getPaidAt()));
         }
         financeService.registerAutoPayout(exam.getCost(), String.format(
-                "Exame de saúde ocupacional de %s — %s", exam.getEmployee().getName(), describeProvider(exam)));
+                "Exame de saúde ocupacional de %s — %s", exam.getEmployee().getName(), describeProvider(exam)), mz.multicore.erp.architecture.events.PayoutPurpose.EXTERNAL_SERVICE);
         exam.setPaidAt(LocalDate.now());
         OccupationalHealthExam saved = repository.save(exam);
         auditLogService.logCurrent("OCCUPATIONAL_HEALTH_EXAM_PAID", String.format(

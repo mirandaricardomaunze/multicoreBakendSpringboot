@@ -31,7 +31,9 @@ class AutoPayoutAccountTest {
         TreasuryAccountRepository accounts = mock(TreasuryAccountRepository.class);
         when(accounts.findByCompanyIdOrderByName(1L)).thenReturn(List.of(bank, cash));
 
-        new TreasuryOperationService(accounts, mock(TreasuryTransactionRepository.class))
+        TreasuryTransactionRepository transactions = mock(TreasuryTransactionRepository.class);
+        when(transactions.save(org.mockito.ArgumentMatchers.any())).thenAnswer(inv -> inv.getArgument(0));
+        new TreasuryOperationService(accounts, transactions)
                 .registerAutoPayout(new BigDecimal("300"), "Pagamento Salário REC-2026/1");
 
         assertThat(cash.getBalance()).isEqualByComparingTo("700");

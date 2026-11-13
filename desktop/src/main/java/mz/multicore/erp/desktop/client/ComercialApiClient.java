@@ -211,7 +211,8 @@ public class ComercialApiClient {
     public List<BusinessUnitDTO> getActiveBusinessUnits(Long companyId) { return invoiceApiClient.getActiveBusinessUnits(companyId); }
     public List<InvoiceInstallmentDTO> createInvoiceInstallmentPlan(Long invoiceId, CreateInstallmentPlanRequest req) { return invoiceApiClient.createInvoiceInstallmentPlan(invoiceId, req); }
     public List<InvoiceInstallmentDTO> getInvoiceInstallments(Long invoiceId) { return invoiceApiClient.getInvoiceInstallments(invoiceId); }
-    public List<InvoiceInstallmentDTO> payInvoiceInstallment(Long invoiceId, BigDecimal amount) { return invoiceApiClient.payInvoiceInstallment(invoiceId, amount); }
+    public List<InvoiceInstallmentDTO> payInvoiceInstallment(Long invoiceId, BigDecimal amount, Long financeAccountId) { return invoiceApiClient.payInvoiceInstallment(invoiceId, amount, financeAccountId); }
+    public List<mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO> treasuryAccounts() { return invoiceApiClient.treasuryAccounts(); }
     public CollectionRadarSummaryDTO getCollectionRadarSummary(Long companyId) { return invoiceApiClient.getCollectionRadarSummary(companyId); }
     public List<CollectionRadarItemDTO> getCollectionRadarItems(Long companyId, String bucket) { return invoiceApiClient.getCollectionRadarItems(companyId, bucket); }
     public CollectionReminderTemplateDTO getCollectionReminderTemplate(Long invoiceId, String channel) { return invoiceApiClient.getCollectionReminderTemplate(invoiceId, channel); }

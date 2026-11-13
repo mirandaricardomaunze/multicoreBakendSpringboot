@@ -64,11 +64,11 @@ public class TreasuryOperationService {
         registerAutoPayout(amount, "Pagamento Despesa: " + description);
     }
 
-    public void registerAutoPayout(BigDecimal amount, String description) {
+    public TreasuryTransactionDTO registerAutoPayout(BigDecimal amount, String description) {
         List<TreasuryAccount> accounts = accountRepository.findByCompanyIdOrderByName(
                 CurrentUserContext.getCurrentCompanyId());
         if (accounts.isEmpty()) {
-            return;
+            return null;
         }
         // The ledger posts automatic payouts (salaries, expenses, taxes) to Caixa: take them from the cash account.
         TreasuryAccount defaultAccount = accounts.stream()
@@ -83,7 +83,7 @@ public class TreasuryOperationService {
         tx.setAmount(amount);
         tx.setDescription(description);
         tx.setTransactionDate(LocalDateTime.now());
-        transactionRepository.save(tx);
+        return toDTO(transactionRepository.save(tx));
     }
 
     public TreasuryTransactionDTO toDTO(TreasuryTransaction tx) {

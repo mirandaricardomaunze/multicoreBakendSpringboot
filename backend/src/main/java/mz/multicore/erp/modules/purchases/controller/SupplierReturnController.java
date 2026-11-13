@@ -15,9 +15,20 @@ import java.util.List;
 public class SupplierReturnController {
 
     private final SupplierReturnService supplierReturnService;
+    private final mz.multicore.erp.modules.purchases.service.SupplierRefundService supplierRefundService;
 
-    public SupplierReturnController(SupplierReturnService supplierReturnService) {
+    public SupplierReturnController(SupplierReturnService supplierReturnService,
+                                    mz.multicore.erp.modules.purchases.service.SupplierRefundService supplierRefundService) {
         this.supplierReturnService = supplierReturnService;
+        this.supplierRefundService = supplierRefundService;
+    }
+
+    /** O fornecedor devolveu dinheiro de uma compra paga e depois devolvida. */
+    @PostMapping("/{id}/supplier-refund")
+    public ResponseEntity<mz.multicore.erp.modules.purchases.dto.PurchaseDTO> refund(
+            @PathVariable Long id, @RequestParam java.math.BigDecimal amount, @RequestParam Long financeAccountId,
+            @RequestParam(required = false) String reference) {
+        return ResponseEntity.ok(supplierRefundService.register(id, amount, financeAccountId, reference));
     }
 
     @PostMapping("/{id}/returns")

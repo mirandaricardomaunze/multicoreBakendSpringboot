@@ -161,6 +161,32 @@ class InventoryPostingHttpIntegrationTest {
         send(post("/api/accounting/inventory-adjustment"), c, "{}").andExpect(status().is4xxClientError());
     }
 
+    @Test
+    void supplierPaysBackAfterAReturnOfGoodsAlreadyPaid() throws Exception {
+        Ctx c = context();
+        long product = product(c, "Cola 1 kg (teste reembolso)", "300", "200");
+        long supplier = getJson("/api/purchases/suppliers?companyId=" + c.companyId(), c).get(0).get("id").asLong();
+        long account = getJson("/api/finance/accounts", c).get(0).get("id").asLong();
+        BigDecimal suppliers = ledger(c, "2201");
+        JsonNode purchase = json(send(post("/api/purchases"), c, """
+                {"supplierId":%d,"warehouseId":%d,"companyId":%s,"financeAccountId":%d,
+                 "lines":[{"productId":%d,"quantity":5,"unitPrice":200,"taxRate":0}]}"""
+                .formatted(supplier, c.warehouseId(), c.companyId(), account, product)));
+        long purchaseId = purchase.get("id").asLong();
+        json(send(post("/api/purchases/" + purchaseId + "/returns"), c, """
+                {"reason":"Embalagens partidas","lines":[{"purchaseLineId":%d,"quantity":2}]}"""
+                .formatted(purchase.get("lines").get(0).get("id").asLong())));
+
+        // Paid 1000, kept 600: the supplier owes 400 and pays it back.
+        send(post("/api/purchases/" + purchaseId + "/supplier-refund?amount=500&financeAccountId=" + account), c, "")
+                .andExpect(status().is4xxClientError());
+        JsonNode after = json(send(post("/api/purchases/" + purchaseId + "/supplier-refund?amount=400&financeAccountId=" + account), c, ""));
+        assertThat(new BigDecimal(after.get("amountPaid").asText())).isEqualByComparingTo("600");
+        assertThat(ledger(c, "2201")).isEqualByComparingTo(suppliers);
+        send(post("/api/purchases/" + purchaseId + "/supplier-refund?amount=1&financeAccountId=" + account), c, "")
+                .andExpect(status().is4xxClientError());
+    }
+
     private BigDecimal ledger(Ctx c, String account) throws Exception {
         return new BigDecimal(getJson("/api/accounting/ledger/" + account + "?from=2000-01-01&to=" + LocalDate.now().plusDays(1), c)
                 .get("closingBalance").asText());

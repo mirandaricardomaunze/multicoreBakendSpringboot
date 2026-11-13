@@ -240,7 +240,7 @@ class OccupationalHealthServiceTest {
 
         assertTrue(result.paid());
         assertEquals(LocalDate.now(), result.paidAt());
-        verify(financeService).registerAutoPayout(eq(new BigDecimal("2500.00")), contains("Clínica Central"));
+        verify(financeService).registerAutoPayout(eq(new BigDecimal("2500.00")), contains("Clínica Central"), any());
         verify(auditLogService).logCurrent(eq("OCCUPATIONAL_HEALTH_EXAM_PAID"), anyString());
     }
 
@@ -253,7 +253,7 @@ class OccupationalHealthServiceTest {
         when(repository.findByIdAndCompanyId(10L, 7L)).thenReturn(Optional.of(exam));
 
         assertThrows(BusinessRuleException.class, () -> service.payExam(10L));
-        verify(financeService, never()).registerAutoPayout(any(), anyString());
+        verify(financeService, never()).registerAutoPayout(any(), anyString(), any());
     }
 
     @Test
@@ -264,7 +264,7 @@ class OccupationalHealthServiceTest {
 
         BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> service.payExam(10L));
         assertTrue(error.getMessage().contains("custo"));
-        verify(financeService, never()).registerAutoPayout(any(), anyString());
+        verify(financeService, never()).registerAutoPayout(any(), anyString(), any());
     }
 
     @Test

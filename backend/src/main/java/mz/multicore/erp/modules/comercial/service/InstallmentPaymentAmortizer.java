@@ -31,6 +31,16 @@ public class InstallmentPaymentAmortizer {
                 .toList();
     }
 
+    /** Re-spreads what the invoice has paid over its instalments, in order (after a receipt or its cancellation). */
+    public void syncWithInvoicePayments(Long companyId, Long invoiceId, BigDecimal invoicePaid) {
+        BigDecimal remaining = invoicePaid == null ? BigDecimal.ZERO : invoicePaid;
+        for (InvoiceInstallment inst : installmentRepository.findByInvoiceIdAndCompanyIdOrderByInstallmentNumberAsc(invoiceId, companyId)) {
+            inst.resetPayments();
+            remaining = inst.applyPayment(remaining);
+            installmentRepository.save(inst);
+        }
+    }
+
     public List<InvoiceInstallmentDTO> applyPaymentToInvoiceInstallments(Long companyId, Long invoiceId, BigDecimal paymentAmount) {
         if (companyId == null) {
             companyId = CurrentUserContext.getCurrentCompanyId();
