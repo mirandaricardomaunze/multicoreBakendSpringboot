@@ -78,6 +78,56 @@ class DialogButtonsHarnessTest {
         assertThat(offenders).as("botões de diálogo sem papel").isEmpty();
     }
 
+    @Test
+    @DisplayName("TC-13: Enter carrega no botão verde e Esc fecha; teclas próprias e excepções respeitadas")
+    void tc13_enterAndEscapeInEveryDialog() throws Exception {
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            javax.swing.JDialog dialog = new javax.swing.JDialog();
+            ModernButton close = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
+            ModernButton approve = ButtonStyles.main(UIHelper.createPrimaryButton("Aprovar"));
+            javax.swing.JPanel footer = new javax.swing.JPanel();
+            footer.add(close);
+            footer.add(approve);
+            dialog.add(footer);
+            boolean[] closing = {false};
+            dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override public void windowClosing(java.awt.event.WindowEvent e) { closing[0] = true; }
+            });
+            DialogKeys.apply(dialog);
+            assertThat(dialog.getRootPane().getDefaultButton()).as("Enter = botão verde").isSameAs(approve);
+            javax.swing.KeyStroke esc = javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0);
+            Object key = dialog.getRootPane().getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).get(esc);
+            dialog.getRootPane().getActionMap().get(key).actionPerformed(null);
+            assertThat(closing[0]).as("Esc fecha como o X da janela").isTrue();
+            dialog.dispose();
+
+            javax.swing.JDialog two = new javax.swing.JDialog();
+            javax.swing.JPanel p = new javax.swing.JPanel();
+            p.add(ButtonStyles.main(UIHelper.createPrimaryButton("A")));
+            p.add(ButtonStyles.main(UIHelper.createPrimaryButton("B")));
+            two.add(p);
+            DialogKeys.apply(two);
+            assertThat(two.getRootPane().getDefaultButton()).as("dois verdes: sem Enter").isNull();
+            two.dispose();
+
+            javax.swing.JDialog licence = new javax.swing.JDialog();
+            ModernButton accept = ButtonStyles.main(UIHelper.createPrimaryButton("Concordar"));
+            accept.putClientProperty(DialogKeys.NO_ENTER, Boolean.TRUE);
+            licence.add(accept);
+            DialogKeys.apply(licence);
+            assertThat(licence.getRootPane().getDefaultButton()).isNull();
+            licence.dispose();
+
+            assertThat(ButtonStyles.isMain(ButtonStyles.secondary(ButtonStyles.main(UIHelper.createPrimaryButton("X")))))
+                    .as("mudar de papel tira a marca de principal").isFalse();
+        });
+        Path gui = Path.of("src/main/java/mz/multicore/erp/gui");
+        assertThat(read(gui.resolve("components/UiThemeAndWindowSupport.java"))).contains("DialogKeys.install();");
+        assertThat(read(gui.resolve("components/ModernMessageDialog.java")))
+                .contains("setDefaultButton(type == FeedbackType.ERROR ? cancel : confirmButton)");
+        assertThat(read(gui.resolve("LicenseAcceptanceDialog.java"))).contains("DialogKeys.NO_ENTER");
+    }
+
     private static String read(Path p) {
         try {
             return Files.readString(p);

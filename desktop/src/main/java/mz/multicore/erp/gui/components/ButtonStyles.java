@@ -8,10 +8,13 @@ import org.kordamp.ikonli.swing.FontIcon;
  */
 public final class ButtonStyles {
 
+    private static final String MAIN = "button.main";
+
     private ButtonStyles() {}
 
     /** Card background, thin border, dark text. Used for every action that is not the main one. */
     static ModernButton outline(ModernButton button) {
+        button.putClientProperty(MAIN, null);
         button.setColors(UIHelper.BG_CARD, UIHelper.blendColors(UIHelper.BG_CARD, UIHelper.BORDER, 0.5f));
         button.putClientProperty(ModernButtonPainter.OUTLINE, Boolean.TRUE);
         return button;
@@ -31,7 +34,13 @@ public final class ButtonStyles {
         button.setColors(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER);
         button.putClientProperty(ModernButtonPainter.OUTLINE, null);
         button.putClientProperty(ModernButtonPainter.DANGER, null);
+        button.putClientProperty(MAIN, Boolean.TRUE);
         return button;
+    }
+
+    /** True for the button marked by {@link #main}: the one Enter presses in a dialog. */
+    static boolean isMain(ModernButton button) {
+        return Boolean.TRUE.equals(button.getClientProperty(MAIN));
     }
 
     /** Any other dialog button, including "Fechar" and "Voltar": closing is not destructive, so never red. */

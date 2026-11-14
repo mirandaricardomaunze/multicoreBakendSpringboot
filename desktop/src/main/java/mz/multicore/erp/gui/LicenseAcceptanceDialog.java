@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.ButtonStyles;
+import mz.multicore.erp.gui.components.DialogKeys;
 import mz.multicore.erp.desktop.client.LicenseApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -32,6 +33,7 @@ public class LicenseAcceptanceDialog extends JDialog {
     private final JCheckBox authorityCheck = new JCheckBox(
             "Li o contrato e possuo poderes para o aceitar em nome da empresa.");
     private final ModernButton acceptButton = ButtonStyles.main(UIHelper.createPrimaryButton("Concordar e continuar"));
+    { acceptButton.putClientProperty(DialogKeys.NO_ENTER, Boolean.TRUE); } // accepting a licence is never a stray Enter
     private final ModernButton declineButton = ButtonStyles.secondary(UIHelper.createDangerButton("Não concordo"));
     private final JProgressBar progress = UIHelper.createBusyBar();
     private LicenseTermsDTO terms;

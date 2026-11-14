@@ -102,6 +102,7 @@ final class UiThemeAndWindowSupport {
     static void registerMainWindow(Window window) {
         UIHelper.mainWindow = window;
         installModalContainment();
+        DialogKeys.install();
     }
 
     private static void installModalContainment() {

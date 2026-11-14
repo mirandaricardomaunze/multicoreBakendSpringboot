@@ -119,7 +119,8 @@ public final class ModernMessageDialog {
                     dialog.dispose();
                 });
                 actions.add(confirmButton);
-                dialog.getRootPane().setDefaultButton(confirmButton);
+                // Enter confirms, except a destructive action: there Enter is the safe "Cancelar".
+                dialog.getRootPane().setDefaultButton(type == FeedbackType.ERROR ? cancel : confirmButton);
             }
             root.add(actions, BorderLayout.SOUTH);
             dialog.add(root);
