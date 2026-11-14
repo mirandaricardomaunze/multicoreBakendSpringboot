@@ -27,24 +27,9 @@ public final class ResponsiveSupport {
      * Card header like {@code UIHelper.tableCardTop}, but the action buttons wrap to a second line on narrow windows
      * instead of covering the title or disappearing past the right edge. Filters keep their own shrinking layout.
      */
+    /** Same table header as every other screen: one row when it fits, two rows otherwise. */
     public static JPanel cardTop(String title, JComponent filters, JComponent... actions) {
-        JPanel top = new JPanel(new BorderLayout(0, 8));
-        top.setOpaque(false);
-        top.setBorder(new EmptyBorder(0, 0, filters != null ? 6 : 4, 0));
-        JPanel header = new JPanel(new BorderLayout(12, 0));
-        header.setOpaque(false);
-        JLabel heading = UIHelper.createSubheading(title);
-        heading.setVerticalAlignment(SwingConstants.TOP);
-        header.add(heading, BorderLayout.WEST);
-        if (actions != null && actions.length > 0) {
-            JPanel bar = new JPanel(new WrapLayout(FlowLayout.RIGHT, 6, 0));
-            bar.setOpaque(false);
-            for (JComponent action : actions) if (action != null) bar.add(action);
-            header.add(bar, BorderLayout.CENTER);
-        }
-        top.add(header, BorderLayout.NORTH);
-        if (filters != null) top.add(filters, BorderLayout.CENTER);
-        return top;
+        return UIHelper.tableCardTop(title, filters, actions);
     }
 
     /** Panel that always takes the viewport width when placed in a {@link JScrollPane}. */

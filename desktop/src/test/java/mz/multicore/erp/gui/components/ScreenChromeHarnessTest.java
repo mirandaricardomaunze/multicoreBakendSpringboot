@@ -34,17 +34,82 @@ class ScreenChromeHarnessTest {
     }
 
     @Test
-    @DisplayName("ECR-02: o título sai quando o separador já tem o mesmo nome")
+    @DisplayName("ECR-02: o título sai quando repete o separador; fica quando diz outra coisa ou distingue tabelas")
     void ecr02_titleHiddenWhenTabRepeatsIt() {
-        JLabel repeated = headingOf(inTab("Transferências entre Armazéns", "Transferências entre Armazéns"));
-        JLabel counted = headingOf(inTab("Alertas (3)", "Alertas"));
-        JLabel prefix = headingOf(inTab("Movimentos & Rastreabilidade", "Movimentos"));
-        JLabel different = headingOf(inTab("Clientes", "Clientes Bloqueados"));
+        assertThat(headingOf(inTab("Transferências entre Armazéns", "Transferências entre Armazéns")).isVisible()).isFalse();
+        assertThat(headingOf(inTab("Alertas (3)", "Alertas")).isVisible()).as("contador não conta").isFalse();
+        assertThat(headingOf(inTab("Movimentos & Rastreabilidade", "Movimentos")).isVisible()).isFalse();
+        assertThat(headingOf(inTab("Recibos", "Recibos Emitidos (Liquidações)")).isVisible()).isFalse();
+        assertThat(headingOf(inTab("Pedidos & Separação", "Central de Pedidos e Separação")).isVisible()).as("& lê-se e").isFalse();
+        assertThat(headingOf(inTab("Faturação", "Faturas Recentes")).isVisible()).as("diz outra coisa").isTrue();
+        assertThat(headingOf(inTab("Guias", "Guiaslote")).isVisible()).as("só palavras inteiras").isTrue();
 
-        assertThat(repeated.isVisible()).isFalse();
-        assertThat(counted.isVisible()).as("contador entre parênteses não conta").isFalse();
-        assertThat(prefix.isVisible()).as("o separador já diz mais do que o título").isFalse();
-        assertThat(different.isVisible()).as("título com informação a mais fica").isTrue();
+        JPanel page = new JPanel(new java.awt.GridLayout(2, 1));
+        JPanel first = UIHelper.tableCardTop("Clientes Activos", new JPanel());
+        JPanel second = UIHelper.tableCardTop("Clientes Bloqueados", new JPanel());
+        page.add(first);
+        page.add(second);
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Clientes", page);
+        java.awt.event.HierarchyEvent shown = new java.awt.event.HierarchyEvent(first, java.awt.event.HierarchyEvent.HIERARCHY_CHANGED,
+                first, page, java.awt.event.HierarchyEvent.SHOWING_CHANGED);
+        for (var l : first.getHierarchyListeners()) l.hierarchyChanged(shown);
+        assertThat(headingOf(first).isVisible()).as("duas tabelas no mesmo separador: os títulos distinguem-nas").isTrue();
+    }
+
+    @Test
+    @DisplayName("ECR-08: filtros nunca esmagados; numa fila quando cabem, senão em segunda fila com a largura toda")
+    void ecr08_filtersNeverSqueezed() {
+        JPanel filters = new JPanel();
+        filters.setPreferredSize(new java.awt.Dimension(600, 38));
+        JButton action = new JButton("Nova Cotação");
+        action.setPreferredSize(new java.awt.Dimension(150, 38));
+        JPanel top = UIHelper.tableCardTop("Central de Pedidos", filters, action);
+
+        top.setSize(1300, 60);
+        top.doLayout();
+        assertThat(filters.getY()).as("uma fila").isLessThan(10);
+        assertThat(filters.getWidth()).isGreaterThanOrEqualTo(600);
+        java.awt.Component actions = ((BorderLayout) top.getLayout()).getLayoutComponent(BorderLayout.EAST);
+        assertThat(filters.getY() + filters.getHeight() / 2).as("filtros e botões centrados na mesma linha")
+                .isEqualTo(actions.getY() + actions.getHeight() / 2);
+
+        top.setSize(700, 100);
+        top.doLayout();
+        assertThat(filters.getY()).as("segunda fila").isGreaterThan(20);
+        assertThat(filters.getWidth()).as("filtros com a largura toda").isEqualTo(700 - top.getInsets().left - top.getInsets().right);
+        assertThat(top.getPreferredSize().height).as("altura pedida inclui as duas filas").isGreaterThan(38 + 30);
+    }
+
+    @Test
+    @DisplayName("ECR-09: todos os ecrãs com filtros usam o cabeçalho comum")
+    void ecr09_everyScreenUsesTheSharedHeader() throws IOException {
+        Path gui = Path.of("src/main/java/mz/multicore/erp/gui");
+        java.util.Set<String> helpers = java.util.Set.of("PhysicalInventoryViewCoordinator.java");
+        try (var files = Files.walk(gui)) {
+            java.util.List<String> offenders = files
+                    .filter(f -> f.toString().endsWith(".java"))
+                    .filter(f -> !f.toString().replace('\\', '/').contains("/components/"))
+                    .filter(f -> !f.getFileName().toString().endsWith("Dialog.java"))
+                    .filter(f -> !helpers.contains(f.getFileName().toString()))
+                    .filter(f -> {
+                        String src = read(f);
+                        boolean hasFilters = src.contains("TableFilter.bar(") || src.contains("UIHelper.filterBar(")
+                                || src.contains("TableFilter.toolbar(") || src.contains("TableFilter.searchField(");
+                        return hasFilters && !src.contains("UIHelper.tableCardTop(") && !src.contains("ResponsiveSupport.cardTop(");
+                    })
+                    .map(f -> f.getFileName().toString())
+                    .toList();
+            assertThat(offenders).as("ecrãs com cabeçalho feito à mão").isEmpty();
+        }
+    }
+
+    private static String read(Path path) {
+        try {
+            return Files.readString(path);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test

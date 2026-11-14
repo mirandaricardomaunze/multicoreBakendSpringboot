@@ -63,6 +63,13 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 38. **Caminho na topbar e menu recolhido (2026-11-13):** topbar `Módulo › Separador`; `tableCardTop` numa
     fila e sem título repetido; menu lateral recolhido abaixo de 1440 px salvo escolha do utilizador.
     SPEC em `docs/ECRA_CAMINHO_E_MENU_SPEC.md`, imposta pelo `ScreenChromeHarnessTest`.
+39. **Separadores (2026-11-14):** "Mais ▾" em vez de setas, ícones sóbrios com destaque só no activo,
+    último separador lembrado na janela principal. SPEC em `docs/SEPARADORES_SPEC.md`, imposta pelo
+    `TabStripHarnessTest`.
+40. **Tabelas consistentes (2026-11-14):** cabeçalho comum em todos os ecrãs com filtros (uma ou duas filas,
+    filtros nunca esmagados); um só botão verde cheio, restantes de contorno, destrutivos com contorno
+    vermelho; um só vocabulário de estados (`StatusTone`), estado continua texto colorido; rodapé igual.
+    SPECs `docs/ECRA_CAMINHO_E_MENU_SPEC.md` e `docs/TABELAS_CONSISTENCIA_SPEC.md`.
 
 35. **Painel Executivo com Tema e Modais Próprios:**
     - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.

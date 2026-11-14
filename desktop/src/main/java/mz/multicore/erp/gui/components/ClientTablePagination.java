@@ -240,18 +240,28 @@ public final class ClientTablePagination {
     private int selectedPageSize() { return (Integer) pageSize.getSelectedItem(); }
     private int totalPages() { return Math.max(1, (matchingRows + selectedPageSize() - 1) / selectedPageSize()); }
 
+    /** Same footer text in every table, server-paged or not: "1 registo", "12 registos". */
+    static String recordsText(long count) {
+        return count == 1 ? "1 registo" : count + " registos";
+    }
+
+    /** "Página 1 de 1" even when empty, so the footer never changes shape. */
+    static String pageText(int pageIndex, int pages) {
+        return String.format("Página  %d  de  %d", pageIndex + 1, Math.max(1, pages));
+    }
+
     void updateStatusText() {
         if (matchingRows == 0) {
-            statusLeft.setText("Sem registos");
-            pageLabel.setText("");
+            statusLeft.setText(recordsText(0));
+            pageLabel.setText(pageText(0, 1));
             return;
         }
         int pages = totalPages();
-        pageLabel.setText(String.format("Página  %d  de  %d", page + 1, pages));
+        pageLabel.setText(pageText(page, pages));
 
         int[] selectedRows = table.getSelectedRows();
         StringBuilder sb = new StringBuilder();
-        sb.append(matchingRows).append(" registo(s)");
+        sb.append(recordsText(matchingRows));
 
         if (selectedRows != null && selectedRows.length > 0) {
             sb.append(" · ").append(selectedRows.length).append(" sel.");

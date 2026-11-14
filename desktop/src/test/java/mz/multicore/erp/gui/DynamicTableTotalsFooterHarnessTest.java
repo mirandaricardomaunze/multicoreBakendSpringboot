@@ -37,7 +37,7 @@ class DynamicTableTotalsFooterHarnessTest {
         assertTrue(statusLabel != null, "statusLabel deve existir no rodapé");
 
         // Sem selecção: deve indicar 3 registos
-        assertTrue(statusLabel.getText().contains("3 registo(s)"), "Deve indicar 3 registo(s)");
+        assertTrue(statusLabel.getText().contains("3 registos"), "Deve indicar 3 registos");
 
         // Selecciona linhas 0 e 1 (1.500 + 750 = 2.250,00 MT)
         table.setRowSelectionInterval(0, 1);

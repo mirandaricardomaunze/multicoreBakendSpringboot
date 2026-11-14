@@ -47,9 +47,8 @@ public final class AccountingTrialBalanceTab extends JPanel {
         adjust.addActionListener(e -> adjustInventory());
 
         JPanel filters = TableFilter.bar(TableFilter.label("De:", "fas-calendar-alt"), balanceFrom,
-                TableFilter.label("A:", "fas-calendar-alt"), balanceTo, load, adjust);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(filters, BorderLayout.NORTH);
+                TableFilter.label("A:", "fas-calendar-alt"), balanceTo);
+        card.add(UIHelper.tableCardTop("Balancete", filters, load, adjust), BorderLayout.NORTH);
         card.add(balanceSummary, BorderLayout.SOUTH);
 
         add(AccountingUiHelper.wrapTabCard(card), BorderLayout.CENTER);

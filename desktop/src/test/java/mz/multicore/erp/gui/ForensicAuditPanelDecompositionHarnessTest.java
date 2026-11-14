@@ -54,7 +54,7 @@ class ForensicAuditPanelDecompositionHarnessTest {
         assertTrue(content.contains("KpiCard.createGrid(4)"), "Falta KpiCard.createGrid(4)");
         assertTrue(content.contains("UIHelper.ensureHeadersFit(table)"), "Falta UIHelper.ensureHeadersFit(table)");
         assertTrue(content.contains("TableQuickPeekController.install(table"), "Falta TableQuickPeekController.install(table");
-        assertTrue(content.contains("TableFilter.toolbar("), "Falta TableFilter.toolbar(");
+        assertTrue(content.contains("UIHelper.tableCardTop("), "Falta o cabeçalho comum UIHelper.tableCardTop(");
     }
 
     @Test

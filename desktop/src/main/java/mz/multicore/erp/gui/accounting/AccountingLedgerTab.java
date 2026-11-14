@@ -46,9 +46,8 @@ public final class AccountingLedgerTab extends JPanel {
 
         JPanel filters = TableFilter.bar(TableFilter.label("Conta:"), ledgerAccount,
                 TableFilter.label("De:", "fas-calendar-alt"), ledgerFrom,
-                TableFilter.label("A:", "fas-calendar-alt"), ledgerTo, load);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(filters, BorderLayout.NORTH);
+                TableFilter.label("A:", "fas-calendar-alt"), ledgerTo);
+        card.add(UIHelper.tableCardTop("Razão", filters, load), BorderLayout.NORTH);
         card.add(ledgerSummary, BorderLayout.SOUTH);
 
         add(AccountingUiHelper.wrapTabCard(card), BorderLayout.CENTER);

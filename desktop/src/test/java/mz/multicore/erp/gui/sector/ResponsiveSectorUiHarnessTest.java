@@ -66,7 +66,10 @@ class ResponsiveSectorUiHarnessTest {
         try (Stream<Path> files = Files.list(dir)) {
             for (Path file : files.filter(f -> f.toString().endsWith(".java")).toList()) {
                 String source = Files.readString(file);
-                assertThat(source).as(file.getFileName().toString()).doesNotContain("UIHelper.tableCardTop(");
+                // ResponsiveSupport.cardTop delega no cabeçalho comum; os ecrãs de sector chamam-no a ele.
+                if (!file.getFileName().toString().equals("ResponsiveSupport.java")) {
+                    assertThat(source).as(file.getFileName().toString()).doesNotContain("UIHelper.tableCardTop(");
+                }
                 if (source.contains("new JSplitPane(")) {
                     assertThat(source).as(file.getFileName() + " adapts its split").contains("ResponsiveSupport.adaptiveSplit(");
                 }

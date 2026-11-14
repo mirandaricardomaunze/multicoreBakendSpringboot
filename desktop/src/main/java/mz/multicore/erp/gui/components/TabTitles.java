@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.components;
 
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JTabbedPane;
 import java.awt.Component;
@@ -41,19 +42,40 @@ public final class TabTitles {
         return custom == null ? null : firstLabelText(custom);
     }
 
-    /** True when an enclosing tab already says it: same name, or the tab name starts with the title. */
+    /**
+     * True when an enclosing tab already says what the title says: the title contains the tab name
+     * ("Recibos Emitidos (Liquidações)" in "Recibos", "Central de Pedidos e Separação" in
+     * "Pedidos & Separação") or the tab name starts with the title. When the tab page holds more than one
+     * table header the titles are what tells the tables apart, so they all stay.
+     */
     static boolean repeatsTab(Component component, String title) {
-        String wanted = normalize(title);
-        if (wanted.isEmpty()) return false;
+        String wanted = words(title);
+        if (wanted.isBlank()) return false;
         Component child = component;
         for (Container parent = component.getParent(); parent != null; child = parent, parent = parent.getParent()) {
             if (parent instanceof JTabbedPane tabs) {
                 int index = tabs.indexOfComponent(child);
-                String tab = index < 0 ? "" : normalize(titleAt(tabs, index));
-                if (!tab.isEmpty() && (tab.equals(wanted) || tab.startsWith(wanted + " "))) return true;
+                if (index < 0) continue;
+                String tab = words(titleAt(tabs, index));
+                boolean said = !tab.isBlank() && (wanted.contains(tab) || tab.startsWith(wanted));
+                if (said && countHeadings(child) <= 1) return true;
             }
         }
         return false;
+    }
+
+    /** Normalised words padded with spaces, so "contains" only matches whole words; "&" reads as "e". */
+    static String words(String text) {
+        String plain = normalize(text).replace("&", " e ").replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+        return plain.isEmpty() ? "" : " " + plain + " ";
+    }
+
+    private static int countHeadings(Component root) {
+        int count = root instanceof JComponent c && c.getClientProperty(TableCardTop.HEADING) != null ? 1 : 0;
+        if (root instanceof Container container) {
+            for (Component child : container.getComponents()) count += countHeadings(child);
+        }
+        return count;
     }
 
     /** Lower case, without counters such as "(3)", so "Alertas (3)" matches "Alertas". */

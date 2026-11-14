@@ -10,6 +10,9 @@ import java.awt.*;
 
 final class ModernButtonPainter {
 
+    static final String OUTLINE = "button.outline";
+    static final String DANGER = "button.danger";
+
     private ModernButtonPainter() {}
 
     static String stripEllipsis(String text) {
@@ -116,6 +119,10 @@ final class ModernButtonPainter {
         } else {
             g2.setColor(bg);
             g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
+            if (Boolean.TRUE.equals(btn.getClientProperty(OUTLINE))) {
+                g2.setColor(UIHelper.BORDER);
+                g2.drawRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);
+            }
         }
         g2.dispose();
     }

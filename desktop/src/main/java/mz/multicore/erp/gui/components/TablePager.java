@@ -28,8 +28,8 @@ public final class TablePager extends JPanel {
     private final JLabel pageState = new JLabel(" ");
     private final JLabel pageLabel = new JLabel("Por página:");
     private final PagerNavButton first = new PagerNavButton("fas-angle-double-left", "Primeira página");
-    private final PagerNavButton previous = new PagerNavButton("fas-chevron-left", "Página anterior");
-    private final PagerNavButton next = new PagerNavButton("fas-chevron-right", "Página seguinte");
+    private final PagerNavButton previous = new PagerNavButton("fas-angle-left", "Página anterior");
+    private final PagerNavButton next = new PagerNavButton("fas-angle-right", "Página seguinte");
     private final PagerNavButton last = new PagerNavButton("fas-angle-double-right", "Última página");
     private final JComboBox<Integer> pageSize = new JComboBox<>(PAGE_SIZES);
     private final BiConsumer<Integer, Integer> loader;
@@ -99,12 +99,8 @@ public final class TablePager extends JPanel {
         }
         page = response.page();
         totalPages = Math.max(response.totalPages(), 1);
-        status.setText(response.totalElements() == 0
-                ? "Sem registos"
-                : String.format("%d registo(s)", response.totalElements()));
-        pageState.setText(response.totalElements() == 0
-                ? ""
-                : String.format("Página  %d  de  %d", page + 1, totalPages));
+        status.setText(ClientTablePagination.recordsText(response.totalElements()));
+        pageState.setText(ClientTablePagination.pageText(page, totalPages));
         setEnabledState();
     }
 

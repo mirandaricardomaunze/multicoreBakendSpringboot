@@ -66,8 +66,8 @@ final class UiTableCellStyler {
                 } else {
                     Color base = row % 2 == 0 ? UIHelper.BG_CARD : UIHelper.ROW_ALT;
                     Color status = rowStatusColor(t, row);
-                    // Só o que precisa de atenção pinta a linha: o estado normal fica na etiqueta.
-                    setBackground(status == null || status.equals(UIHelper.APPROVED_GREEN) ? base : blend(base, status, 0.10f));
+                    // Só o que precisa de atenção pinta a linha: o estado normal fica no texto.
+                    setBackground(status == null ? base : blend(base, status, 0.10f));
                 }
 
                 if (value == null) {
@@ -84,7 +84,7 @@ final class UiTableCellStyler {
                     setForeground(UIHelper.TEXT_LIGHT);
                     setFont(getFont().deriveFont(Font.PLAIN));
                 } else {
-                    Color statusText = statusColorFor(valStr.toUpperCase());
+                    Color statusText = numeric ? null : statusColorFor(valStr);
                     setForeground(statusText != null ? statusText : UIHelper.TEXT_LIGHT);
                     setFont(getFont().deriveFont(statusText != null ? Font.BOLD : Font.PLAIN));
                 }
@@ -124,24 +124,10 @@ final class UiTableCellStyler {
         return value.toString();
     }
 
+    /** Colour of a status text, or null when the text is not a known status (shared with {@link StatusTone}). */
     static Color statusColorFor(String upper) {
-        if (upper == null) return null;
-        if (eqAny(upper, "APPROVED", "APROVADO", "APROVADA", "RESOLVED", "PAID", "PAGO",
-                "RECEIVED", "RECEBIDO", "RECEBIDA", "ATIVO", "ACTIVO", "ATIVA", "ACTIVA", "OK", "EM STOCK")) {
-            return UIHelper.APPROVED_GREEN;
-        }
-        if (eqAny(upper, "REJECTED", "REJEITADO", "CANCELLED", "CANCELADO", "CANCELADA",
-                "ANULADO", "ANULADA", "ESGOTADO", "SEM STOCK", "INATIVO", "INACTIVO") || upper.startsWith("VENCIDO")) {
-            return UIHelper.REJECTED_RED;
-        }
-        if (upper.contains("PENDING") || upper.contains("PENDENTE") || upper.startsWith("VENCE")
-                || upper.equals("BAIXO") || upper.equals("STOCK BAIXO")
-                || upper.contains("DÍVIDA") || upper.contains("DIVIDA")
-                || upper.contains("PARCIAL") || upper.contains("PARTIALLY")
-                || upper.contains("DIVERG") || upper.contains("DISCREPANCY")) {
-            return UIHelper.PENDING_YELLOW;
-        }
-        return null;
+        StatusTone.Tone tone = StatusTone.toneOf(upper);
+        return tone == StatusTone.Tone.NEUTRAL ? null : StatusTone.colorOf(tone);
     }
 
     private static boolean eqAny(String s, String... opts) {
@@ -163,7 +149,9 @@ final class UiTableCellStyler {
         int col = statusColumnIndex(t);
         if (col < 0) return null;
         Object v = t.getValueAt(viewRow, col);
-        return v == null ? null : statusColorFor(v.toString().toUpperCase());
+        if (v == null) return null;
+        StatusTone.Tone tone = StatusTone.toneOf(v.toString());
+        return tone == StatusTone.Tone.BAD || tone == StatusTone.Tone.WARN ? StatusTone.colorOf(tone) : null;
     }
 
     private static Color blend(Color base, Color accent, float ratio) {

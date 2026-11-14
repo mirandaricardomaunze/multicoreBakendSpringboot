@@ -195,10 +195,9 @@ public class ForensicAuditPanel extends JPanel {
         pdfBtn.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         pdfBtn.addActionListener(e -> emitForensicPdf());
 
-        return TableFilter.toolbar(
-                new JComponent[]{lblStart, startDateField, lblEnd, endDateField, severityCombo, categoryCombo, operatorField},
-                new JComponent[]{refreshBtn, pdfBtn}
-        );
+        return UIHelper.tableCardTop("Ocorrências de Auditoria",
+                TableFilter.bar(lblStart, startDateField, lblEnd, endDateField, severityCombo, categoryCombo, operatorField),
+                refreshBtn, pdfBtn);
     }
 
     public void loadData() {

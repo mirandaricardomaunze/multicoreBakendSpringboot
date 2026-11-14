@@ -116,75 +116,10 @@ public final class TableCellRenderers {
             String label = "EM STOCK".equals(raw) ? "Disponível" : human;
             setText(label.isEmpty() ? label : label.substring(0, 1).toUpperCase(java.util.Locale.forLanguageTag("pt-MZ"))
                     + label.substring(1).toLowerCase(java.util.Locale.forLanguageTag("pt-MZ")));
-
-            if (selected) {
-                setForeground(table.getSelectionForeground());
-            } else {
-                String normalizedHuman = human.toUpperCase(java.util.Locale.ROOT);
-                if (isGreen(raw) || isGreen(normalizedHuman)) {
-                    setForeground(UIHelper.APPROVED_GREEN);
-                } else if (isRed(raw) || isRed(normalizedHuman)) {
-                    setForeground(UIHelper.REJECTED_RED);
-                } else if (isYellow(raw) || isYellow(normalizedHuman)) {
-                    setForeground(UIHelper.PENDING_YELLOW);
-                } else if (isBlue(raw) || isBlue(normalizedHuman)) {
-                    setForeground(UIHelper.ACCENT_BLUE);
-                } else {
-                    setForeground(UIHelper.TEXT_MUTED);
-                }
-            }
+            StatusTone.Tone tone = StatusTone.toneOf(raw);
+            if (tone == StatusTone.Tone.NEUTRAL) tone = StatusTone.toneOf(human);
+            setForeground(selected ? table.getSelectionForeground() : StatusTone.colorOf(tone));
             return this;
-        }
-
-        private static boolean isGreen(String s) {
-            return switch (s) {
-                case "ACTIVE", "ACTIVA", "APPROVED", "PAID", "OPEN", "EM STOCK",
-                     "ACTIVO", "APROVADO", "APROVADA", "PAGA", "PAGO", "ABERTO", "RESOLVED",
-                     "RESOLVIDO", "FATURADA", "FATURADO", "FACTURADO", "FACTURADA", "BILLED", "INVOICED",
-                     "MATCHED", "CONCILIADO", "COMPLETED", "CONCLUÍDO", "CONCLUIDO",
-                     "RECEIVED", "RECEBIDO", "DELIVERED", "ENTREGUE", "OPERATIONAL", "OPERACIONAL" -> true;
-                default -> false;
-            };
-        }
-
-        private static boolean isRed(String s) {
-            return switch (s) {
-                case "INACTIVE", "INACTIVA", "REJECTED", "CANCELLED", "OVERDUE",
-                     "INACTIVO", "REJEITADO", "REJEITADA", "ANULADO", "ANULADA", "CANCELADO", "CANCELADA",
-                     "EM ATRASO", "IGNORED", "IGNORADO", "ESGOTADO",
-                     "OUT_OF_SERVICE", "FORA DE SERVIÇO", "FORA DE SERVICO", "SOLD", "VENDIDO",
-                     "EXPIRED", "EXPIRADO", "TERMINATED", "RESCINDIDO", "DEMITIDO" -> true;
-                default -> false;
-            };
-        }
-
-        private static boolean isYellow(String s) {
-            return switch (s) {
-                case "PENDING", "PENDING_APPROVAL", "PENDING_DISCOUNT_APPROVAL", "PARTIALLY_PAID",
-                     "PENDENTE", "PENDENTE DE APROVAÇÃO", "PENDENTE DE APROVACAO", "APROVAÇÃO DE DESCONTO",
-                     "IN_PROGRESS", "EM CURSO", "POR FATURAR", "POR FACTURAR",
-                     "AWAITING_SEPARATION", "AGUARDA SEPARAÇÃO", "AGUARDA SEPARACAO",
-                     "IN_SEPARATION", "EM SEPARAÇÃO", "EM SEPARACAO",
-                     "GUIDE_PENDING", "GUIA POR APROVAR", "TRANSFER_PENDING", "TRANSFERÊNCIA POR APROVAR",
-                     "ORDERED", "ENCOMENDADO", "PARTIALLY_RECEIVED", "PARCIALMENTE RECEBIDO",
-                     "RECEIVED_WITH_DISCREPANCY", "RECEBIDO C/ DIVERGÊNCIA", "RECEBIDO C/ DIVERGENCIA",
-                     "MAINTENANCE", "MANUTENÇÃO", "MANUTENCAO", "INSPECTION", "INSPECÇÃO", "INSPECCAO",
-                     "UNMATCHED", "POR CONCILIAR", "CRÍTICO", "CRITICO" -> true;
-                default -> false;
-            };
-        }
-
-        private static boolean isBlue(String s) {
-            return switch (s) {
-                case "PROCESSING", "EM PROCESSAMENTO", "SHIPPED", "ENVIADO", "EM TRÂNSITO", "EM TRANSITO", "IN_TRANSIT",
-                     "SCHEDULED", "AGENDADO", "BAIXO", "DRAFT", "RASCUNHO",
-                     "SEPARATED", "SEPARADO", "GUIDED", "EXPEDIDO POR GUIA",
-                     "TRANSFERRED", "TRANSFERIDO", "TRANSFERIDO PARA A LOJA",
-                     "PLANEADA", "EM PRODUÇÃO", "EM_PRODUCAO", "EM PRODUCAO",
-                     "SUSPENDED", "SUSPENSO", "ISSUED", "EMITIDA",
-                     "DEBIT", "DÉBITO", "DEBITO", "CREDIT", "CRÉDITO", "CREDITO", "SUPERADMIN" -> true;
-                default -> false;
-            };
         }
     }
 }

@@ -198,25 +198,14 @@ final class CommercialInvoicesView {
         issueBtn.setColors(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER);
         issueBtn.setToolTipText("Emitir uma nova fatura ou faturar uma encomenda pendente.");
 
-        JPanel cardHeader = new JPanel(new BorderLayout(8, 0));
-        cardHeader.setOpaque(false);
-        cardHeader.add(UIHelper.createSubheading("Faturas Recentes"), BorderLayout.WEST);
         if (!mz.multicore.erp.desktop.session.SignedInUser.isManagerOrAdmin()) {
             issueBtn.setVisible(false);
         }
-        cardHeader.add(UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn), BorderLayout.EAST);
-
-        JPanel invFilters = UIHelper.filterBar(
-                new JComponent[]{invSearch,
-                        TableFilter.label("Negócio:"), owner.invBusinessUnitCombo,
-                        TableFilter.label("Estado:"), invEstado,
-                        TableFilter.label("Período:", "fas-calendar-alt"), invPeriodo},
-                null);
-        JPanel cardTop = new JPanel(new BorderLayout(0, 10));
-        cardTop.setOpaque(false);
-        cardTop.add(cardHeader, BorderLayout.NORTH);
-        cardTop.add(invFilters, BorderLayout.CENTER);
-        listCard.add(cardTop, BorderLayout.NORTH);
+        JPanel invFilters = TableFilter.bar(invSearch,
+                TableFilter.label("Negócio:"), owner.invBusinessUnitCombo,
+                TableFilter.label("Estado:"), invEstado,
+                TableFilter.label("Período:", "fas-calendar-alt"), invPeriodo);
+        listCard.add(UIHelper.tableCardTop("Faturas Recentes", invFilters, refreshBtn, moreBtn, issueBtn), BorderLayout.NORTH);
 
         // A tabela vem paginada do servidor; o rodapé fica reservado exclusivamente à paginação.
         owner.invoicesPager = new TablePager(owner::loadInvoicesPage);

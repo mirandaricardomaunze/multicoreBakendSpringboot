@@ -20,13 +20,16 @@ cortavam texto.
    Armazéns`). O `MainFrameBreadcrumb` encontra o primeiro `JTabbedPane` visível do ecrã activo e segue
    a mudança de separador. Ecrãs sem separadores mostram só o módulo. Separador comprido termina em
    “…” (máx. 380 px) com o nome completo no tooltip.
-2. **Cabeçalho da tabela numa fila.** `UIHelper.tableCardTop` (91 tabelas, regra única em
-   `TableCardTop`) põe título, filtros e acções na mesma fila. Os filtros encolhem quando falta espaço
-   (`SingleRowFilterLayout`).
-3. **Título repetido sai.** O título do cartão esconde-se quando um separador que o contém tem o mesmo
-   nome, ignorando contadores como “(3)”, ou quando o nome do separador começa pelo título
-   (“Movimentos & Rastreabilidade” cobre “Movimentos”). Um título que acrescenta informação
-   (“Clientes Bloqueados” num separador “Clientes”) fica.
+2. **Cabeçalho comum em todos os ecrãs** (`UIHelper.tableCardTop`, regra única em `TableCardTop`;
+   `ResponsiveSupport.cardTop` dos ecrãs de sector delega nele). Ordem fixa: título à esquerda, filtros,
+   acções à direita com Actualizar primeiro. **Uma fila quando os filtros cabem à largura natural;**
+   senão duas filas, título e acções em cima e filtros com a largura toda em baixo. Os filtros nunca são
+   esmagados (“Tod…”). Filtros e botões ficam centrados na vertical da mesma linha.
+3. **Título repetido sai.** Esconde-se quando contém o nome do separador em palavras inteiras (“Recibos
+   Emitidos (Liquidações)” em “Recibos”; “&” lê-se “e”, por isso “Central de Pedidos e Separação” em
+   “Pedidos & Separação”), ou quando o nome do separador começa pelo título. Contadores “(3)” não contam.
+   Se o separador tiver mais de um cabeçalho de tabela, os títulos ficam todos: são eles que distinguem
+   as tabelas.
 4. **Menu lateral.** Sem escolha guardada, abre recolhido (64 px, só ícones com tooltip) em ecrãs com
    menos de 1440 px de largura lógica, e aberto nos outros. O clique do utilizador no botão ou Ctrl+B
    fica guardado nas preferências de UI e passa a valer sempre. O recolher automático do POS não é
@@ -37,12 +40,14 @@ cortavam texto.
 | ID | Critério | Teste |
 |---|---|---|
 | ECR-01 | Título, filtros e acções numa só fila | `ScreenChromeHarnessTest.ecr01_oneRowHeader` |
-| ECR-02 | Título escondido quando o separador o repete; fica quando acrescenta informação | `ecr02_titleHiddenWhenTabRepeatsIt` |
+| ECR-02 | Título escondido quando repete o separador; fica quando diz outra coisa ou quando há várias tabelas no separador | `ecr02_titleHiddenWhenTabRepeatsIt` |
 | ECR-03 | Sem separador, o título continua visível | `ecr03_titleStaysWithoutTabs` |
 | ECR-04 | Topbar mostra `Módulo › Separador`; outro módulo limpa o separador | `ecr04_topBarPath` |
 | ECR-05 | Menu recolhido abaixo de 1440 px; a escolha guardada ganha sempre | `ecr05_sidebarStartState` |
 | ECR-06 | Só o clique do utilizador é gravado; itens tardios seguem o estado | `ecr06_onlyUserTogglesAreRemembered` |
 | ECR-07 | O caminho segue o separador do ecrã visível e some num ecrã sem separadores | `MainFrameBreadcrumbHarnessTest.ecr07_pathFollowsSelectedTab` |
+| ECR-08 | Filtros nunca esmagados: uma fila quando cabem, segunda fila com a largura toda quando não; centrados com os botões | `ecr08_filtersNeverSqueezed` |
+| ECR-09 | Todo o ecrã com filtros (excepto diálogos) usa o cabeçalho comum | `ecr09_everyScreenUsesTheSharedHeader` |
 
 ## 4. Fora de âmbito
 

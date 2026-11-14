@@ -118,6 +118,9 @@ public class ModernButton extends JButton {
         repaint();
     }
 
+    /** Colour the button was given (green = main action, red = destructive). See {@link ButtonStyles}. */
+    public Color getBaseColor() { return normalColor; }
+
     public void setColors(Color base, Color hover) {
         if (hoverTimer != null && hoverTimer.isRunning()) hoverTimer.stop();
         this.hoverProgress = 0.0f;

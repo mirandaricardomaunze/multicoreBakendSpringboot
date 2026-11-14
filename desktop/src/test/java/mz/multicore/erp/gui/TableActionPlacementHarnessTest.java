@@ -125,10 +125,8 @@ class TableActionPlacementHarnessTest {
                 "CommercialInvoicesView.java");
         String source = Files.readString(sourcePath);
 
-        assertThat(source).contains("cardHeader.add(UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn)");
-        assertThat(source).contains("cardTop.add(cardHeader, BorderLayout.NORTH)");
-        assertThat(source).contains("cardTop.add(invFilters, BorderLayout.CENTER)");
-        assertThat(source).contains("listCard.add(cardTop, BorderLayout.NORTH)");
+        // Cabeçalho comum (docs/ECRA_CAMINHO_E_MENU_SPEC.md): título, filtros e acções no topo do mesmo card.
+        assertThat(source).contains("listCard.add(UIHelper.tableCardTop(\"Faturas Recentes\", invFilters, refreshBtn, moreBtn, issueBtn), BorderLayout.NORTH)");
         assertThat(source).doesNotContain("panel.add(headerBar, BorderLayout.NORTH)");
         assertThat(source).doesNotContain("new JComponent[]{moreBtn, cancelInvoiceBtn, payInvoiceBtn}");
     }

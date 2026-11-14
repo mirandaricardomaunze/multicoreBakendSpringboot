@@ -63,8 +63,8 @@ public final class AccountingStatementsTab extends JPanel {
 
         JPanel content = new JPanel(new BorderLayout(0, 8));
         content.setOpaque(false);
-        content.add(TableFilter.bar(TableFilter.label("De:", "fas-calendar-alt"), statementsFrom,
-                TableFilter.label("A:", "fas-calendar-alt"), statementsTo, load), BorderLayout.NORTH);
+        content.add(UIHelper.tableCardTop("Demonstrações", TableFilter.bar(TableFilter.label("De:", "fas-calendar-alt"), statementsFrom,
+                TableFilter.label("A:", "fas-calendar-alt"), statementsTo), load), BorderLayout.NORTH);
 
         ArrowScrollPanel scroll = new ArrowScrollPanel(tablesContainer);
         content.add(scroll, BorderLayout.CENTER);

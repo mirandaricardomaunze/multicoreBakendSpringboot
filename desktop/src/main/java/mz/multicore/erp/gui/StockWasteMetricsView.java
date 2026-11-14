@@ -55,13 +55,10 @@ public class StockWasteMetricsView extends JPanel {
         filterCard.setLayout(new BorderLayout());
         filterCard.setBorder(new EmptyBorder(10, 14, 10, 14));
 
-        JPanel filterToolbar = TableFilter.toolbar(
-                new JComponent[]{
-                        TableFilter.label("Data Início:", "fas-calendar-alt"), dateStartField,
-                        TableFilter.label("Data Fim:", "fas-calendar-alt"), dateEndField, filterBtn
-                },
-                new JComponent[]{ printPdfBtn }
-        );
+        JPanel filterToolbar = UIHelper.tableCardTop("Métricas & Relatório Executivo",
+                TableFilter.bar(TableFilter.label("Data Início:", "fas-calendar-alt"), dateStartField,
+                        TableFilter.label("Data Fim:", "fas-calendar-alt"), dateEndField),
+                filterBtn, printPdfBtn);
         filterCard.add(filterToolbar, BorderLayout.CENTER);
         add(filterCard, BorderLayout.NORTH);
 
