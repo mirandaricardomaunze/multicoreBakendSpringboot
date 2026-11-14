@@ -34,6 +34,15 @@ final class TableHeaderActions {
         return kept.toArray(new JComponent[0]);
     }
 
+    /** The main (green) action among the arranged buttons, or null. */
+    static ModernButton mainOf(JComponent[] arranged) {
+        ModernButton main = null;
+        for (JComponent action : arranged) {
+            if (action instanceof ModernButton button && !ButtonStyles.isOutline(button)) main = button;
+        }
+        return main;
+    }
+
     static boolean isDestructive(ModernButton button) {
         return UIHelper.REJECTED_RED.equals(button.getBaseColor());
     }

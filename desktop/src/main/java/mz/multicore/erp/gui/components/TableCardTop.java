@@ -45,13 +45,44 @@ final class TableCardTop {
         if (filters != null) top.add(filters, BorderLayout.CENTER);
         JComponent[] arranged = TableHeaderActions.arrange(actions);
         if (arranged.length > 0) top.add(actionsPanel(arranged), BorderLayout.EAST);
+        ModernButton main = TableHeaderActions.mainOf(arranged);
+        TableHeaderShortcuts.install(top, main, arranged, filters);
+        JComponent filtersArea = filters;
 
         top.addHierarchyListener(event -> {
             if ((event.getChangeFlags() & (HierarchyEvent.PARENT_CHANGED | HierarchyEvent.SHOWING_CHANGED)) != 0) {
                 heading.setVisible(!TabTitles.repeatsTab(heading, title));
+                linkToTable(top, main, filtersArea);
             }
         });
         return top;
+    }
+
+    /**
+     * Tells the table of the same card which action and which filters belong to it, so its empty state
+     * can offer "Nova Cotação" or "Limpar filtros". Only when the card holds exactly one table.
+     */
+    private static void linkToTable(JComponent top, ModernButton main, JComponent filters) {
+        Container card = top.getParent();
+        if (card == null) return;
+        List<javax.swing.JTable> tables = new ArrayList<>();
+        for (Component sibling : card.getComponents()) {
+            if (sibling != top) collectTables(sibling, tables);
+        }
+        if (tables.size() != 1) return;
+        javax.swing.JTable table = tables.get(0);
+        if (main != null) table.putClientProperty(TableEmptyState.EMPTY_ACTION, main);
+        if (filters != null) table.putClientProperty(TableEmptyState.EMPTY_FILTERS, filters);
+    }
+
+    private static void collectTables(Component root, List<javax.swing.JTable> out) {
+        if (root instanceof javax.swing.JTable table) {
+            out.add(table);
+            return;
+        }
+        if (root instanceof Container container) {
+            for (Component child : container.getComponents()) collectTables(child, out);
+        }
     }
 
     /** The row-details toggle ("Espreitar…") always sits at the end of the filters, as a quiet icon button. */

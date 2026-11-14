@@ -33,6 +33,18 @@ paginadores com textos e ícones diferentes, e o botão “Espreitar detalhes”
 4. **Botão de espreitar no fim dos filtros.** O cabeçalho comum encontra o botão “Espreitar…” onde quer
    que o ecrã o tenha posto (filtros ou acções) e coloca-o no fim dos filtros, com contorno.
 
+5. **Atalhos iguais em todos os ecrãs** (`TableHeaderShortcuts`). Ctrl+N corre a acção principal (o botão
+   verde), F5 o Actualizar e Ctrl+F leva à pesquisa dos filtros. Ficam ligados ao cabeçalho com
+   `WHEN_IN_FOCUSED_WINDOW`, por isso só o ecrã à vista responde, e só quando o botão está visível e
+   activo. Atalhos mais próximos do foco (POS, pesquisa rápida da tabela) têm prioridade. Os tooltips
+   indicam o atalho e o guia F1 lista-os.
+6. **Estado vazio com o passo seguinte** (`TableEmptyState`). Tabela sem dados: botão com a acção
+   principal do cabeçalho (“Nova Cotação”), só se estiver visível e activa. Quando os filtros escondem
+   todas as linhas: botão “Limpar filtros”, que esvazia a pesquisa e põe os combos na primeira opção.
+   O cabeçalho só se liga à tabela quando o cartão tem uma tabela.
+7. **Tema escuro.** Ao mudar de tema a janela principal é reconstruída, por isso os botões de contorno
+   ficam com as cores do novo tema. O contraste fica garantido por teste.
+
 A coluna estreita à esquerda das tabelas com linhas é a coluna de selecção (UA-06 a UA-08). Já era igual
 em todas as tabelas e esconde-se quando a tabela está vazia.
 
@@ -45,3 +57,6 @@ em todas as tabelas e esconde-se quando a tabela está vazia.
 | TC-03 | O mesmo estado tem a mesma cor nos dois renderizadores | `tc03_sharedStatusVocabulary` |
 | TC-04 | Texto do rodapé igual e estável, também vazio | `tc04_pagerText` |
 | TC-05 | Botão de espreitar no fim dos filtros, com contorno | `tc05_peekToggleAtEndOfFilters` |
+| TC-06 | Ctrl+N, F5 e Ctrl+F em todos os cabeçalhos; ecrã escondido não responde; tooltips com o atalho | `TableShortcutsAndEmptyStateHarnessTest.tc06_sameShortcutsOnEveryHeader` |
+| TC-07 | Tabela vazia oferece a acção principal; filtros que escondem tudo oferecem “Limpar filtros” | `tc07_emptyStateOffersTheNextStep` |
+| TC-08 | Botões de contorno legíveis no tema escuro | `tc08_outlineReadableInDarkTheme` |
