@@ -106,6 +106,7 @@ public class MainFrame extends JFrame {
     private final MainFrameTopBarBuilder topBarBuilder = new MainFrameTopBarBuilder();
     private final MainFrameNotificationCoordinator notificationCoordinator;
     private TopNavBar topBar;
+    private MainFrameBreadcrumb breadcrumb;
     private CollapsibleSidebar sidebar;
     private SectorModules sectorModules;
     private mz.multicore.erp.gui.components.StatusBar statusBar;
@@ -272,6 +273,7 @@ public class MainFrame extends JFrame {
                 buildSubscriptionChip(), companyCombo,
                 desktopSessionStore.requireSession().companies().size() > 1);
         if (notificationCoordinator != null) notificationCoordinator.attachNavComponents(topBar, sidebar);
+        breadcrumb = new MainFrameBreadcrumb(topBar, contentPanel);
         statusBar = new mz.multicore.erp.gui.components.StatusBar();
 
         JPanel centerContainer = new JPanel(new BorderLayout());
@@ -444,6 +446,7 @@ public class MainFrame extends JFrame {
         cardLayout.show(contentPanel, cardName);
         String modName = MainFrameModuleTitles.titleFor(cardName);
         if (topBar != null) topBar.setActive(modName);
+        if (breadcrumb != null) breadcrumb.followVisibleCard();
         syncSidebar(cardName, modName);
         adjustSidebarForPos("pos".equals(cardName));
         RecentItemsHistoryManager.getInstance().record("Módulo", null, modName, "Acesso rápido", cardName, "fas-folder-open");

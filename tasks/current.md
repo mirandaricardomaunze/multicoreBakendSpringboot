@@ -57,6 +57,12 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
       Service/CommandService dono, stock alheio só pelo ledger de movimentos.
     - SPEC em `docs/MODULE_DECOUPLING_SPEC.md`; baseline do CA-07 vazia (era 395) e imposta pelo
       `CleanArchitectureHarnessTest` e `ModuleDecouplingHarnessTest`. Feito pelo Ralph Loop (GOAL-001..005).
+37. **KPIs compactos por cima de tabelas (2026-11-13):** `KpiCard.createGrid` é a faixa compacta (56 px);
+    só os painéis de indicadores usam `createHeroGrid` (96 px). SPEC em `docs/KPI_FAIXA_COMPACTA_SPEC.md`,
+    imposta pelo `KpiStripHarnessTest`.
+38. **Caminho na topbar e menu recolhido (2026-11-13):** topbar `Módulo › Separador`; `tableCardTop` numa
+    fila e sem título repetido; menu lateral recolhido abaixo de 1440 px salvo escolha do utilizador.
+    SPEC em `docs/ECRA_CAMINHO_E_MENU_SPEC.md`, imposta pelo `ScreenChromeHarnessTest`.
 
 35. **Painel Executivo com Tema e Modais Próprios:**
     - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.

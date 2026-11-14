@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.gui.components.CollapsibleSidebar;
+import mz.multicore.erp.gui.components.SidebarCollapsePreference;
 import mz.multicore.erp.gui.components.UIHelper;
 
 import java.util.function.Consumer;
@@ -23,12 +24,24 @@ final class MainFrameSidebarBuilder {
             DesktopSession initialSession,
             boolean superAdmin,
             Consumer<String> navigate,
+            ComercialPanel comercialPanel,
+            SectorModules sectors
+    ) {
+        CollapsibleSidebar sb = buildItems(initialSession, superAdmin, navigate, comercialPanel, sectors);
+        if (SidebarCollapsePreference.startCollapsed()) sb.setCollapsedState(true);
+        return sb;
+    }
+
+    static CollapsibleSidebar build(
+            DesktopSession initialSession,
+            boolean superAdmin,
+            Consumer<String> navigate,
             ComercialPanel comercialPanel
     ) {
         return build(initialSession, superAdmin, navigate, comercialPanel, null);
     }
 
-    static CollapsibleSidebar build(
+    private static CollapsibleSidebar buildItems(
             DesktopSession initialSession,
             boolean superAdmin,
             Consumer<String> navigate,

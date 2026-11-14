@@ -117,6 +117,7 @@ public class CollapsibleSidebar extends JPanel {
     public void addSection(String title) {
         boolean showDivider = !sectionHeaders.isEmpty() || !navItems.isEmpty();
         SidebarSectionHeader section = new SidebarSectionHeader(title, showDivider);
+        section.setCollapsed(collapsed);
         sectionHeaders.add(section);
         body.add(section);
     }
@@ -131,6 +132,7 @@ public class CollapsibleSidebar extends JPanel {
 
     private SidebarNavItem registerItem(SidebarNavItem item) {
         item.setAlignmentX(Component.LEFT_ALIGNMENT);
+        item.setCollapsed(collapsed);
         navItems.add(item);
         body.add(item);
         body.add(Box.createRigidArea(new Dimension(0, 2)));
@@ -164,7 +166,8 @@ public class CollapsibleSidebar extends JPanel {
     public List<SidebarNavItem> getNavItems() { return List.copyOf(navItems); }
     public void onCollapsedChanged(Consumer<Boolean> listener) { this.collapseListener = listener; }
     public boolean isCollapsedState() { return collapsed; }
-    public void toggle() { setCollapsedState(!collapsed); }
+    /** The user's own toggle (button, Ctrl+B): remembered for the next start. */
+    public void toggle() { setCollapsedState(!collapsed); SidebarCollapsePreference.remember(collapsed); }
 
     public void setCollapsedState(boolean target) {
         if (this.collapsed == target) return;

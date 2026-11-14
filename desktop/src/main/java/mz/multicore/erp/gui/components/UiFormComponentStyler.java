@@ -56,21 +56,7 @@ final class UiFormComponentStyler {
     }
 
     static JPanel tableCardTop(String title, JComponent filters, JComponent... actions) {
-        JPanel top = new JPanel(new BorderLayout(0, 8));
-        top.setOpaque(false);
-        top.setBorder(new EmptyBorder(0, 0, filters != null ? 6 : 4, 0));
-
-        JPanel header = new JPanel(new BorderLayout(8, 0));
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading(title), BorderLayout.CENTER);
-        if (actions != null && actions.length > 0) {
-            header.add(UIHelper.actionsBar(actions), BorderLayout.EAST);
-        }
-        top.add(header, BorderLayout.NORTH);
-        if (filters != null) {
-            top.add(filters, BorderLayout.CENTER);
-        }
-        return top;
+        return TableCardTop.build(title, filters, actions);
     }
 
     static ModernButton createIconButton(String accessibleName, String iconCode) {

@@ -31,6 +31,8 @@ import java.util.Map;
  */
 public class TopNavBar extends JPanel {
 
+    private static final int SECTION_MAX_WIDTH = 380;
+
     // ── Cores sensíveis ao tema. Lidas a partir dos slots de UIHelper (claro/escuro) e não fixas,
     //    para a barra de topo acompanhar a troca de tema como o resto da janela. ─────────────────
     private static Color barBg()       { return UIHelper.isLight() ? new Color(255, 255, 255) : new Color(24, 32, 47); }
@@ -40,6 +42,7 @@ public class TopNavBar extends JPanel {
 
     private final JLabel brandLabel;
     private final JLabel brandSubLabel;
+    private final JLabel sectionLabel;
     private final JPanel navPanel;
     private final JPanel trailingPanel;
     private final List<TopNavItem> navItems = new ArrayList<>();
@@ -64,12 +67,27 @@ public class TopNavBar extends JPanel {
         brandSubLabel.setToolTipText("Empresa ativa");
         brandSubLabel.setVisible(subBrand != null && !subBrand.isBlank());
 
+        // "Module › Tab": the path shows where the user is, so screens need not repeat the tab name.
+        sectionLabel = new JLabel() {
+            @Override public Dimension getPreferredSize() {
+                Dimension size = super.getPreferredSize();
+                return new Dimension(Math.min(size.width, SECTION_MAX_WIDTH), size.height);
+            }
+        };
+        sectionLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 15));
+        sectionLabel.setForeground(headerText());
+        sectionLabel.setVisible(false);
+        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        titleRow.setOpaque(false);
+        titleRow.add(brandLabel);
+        titleRow.add(sectionLabel);
+
         JPanel brandStack = new JPanel();
         brandStack.setOpaque(false);
         brandStack.setLayout(new BoxLayout(brandStack, BoxLayout.Y_AXIS));
-        brandLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         brandSubLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        brandStack.add(brandLabel);
+        brandStack.add(titleRow);
         brandStack.add(brandSubLabel);
 
         JPanel brandWrapper = new JPanel(new BorderLayout());
@@ -92,8 +110,21 @@ public class TopNavBar extends JPanel {
     /** Update the title shown on the left of the top bar. */
     public void setTitle(String text) {
         if (text != null && !text.isBlank()) {
+            if (!text.equals(brandLabel.getText())) setSection(null);
             brandLabel.setText(text);
         }
+    }
+
+    /** Second part of the path ("Stock › Transferências"); null or blank shows the module alone. */
+    public void setSection(String section) {
+        boolean has = section != null && !section.isBlank();
+        sectionLabel.setText(has ? "  ›  " + section.trim() : "");
+        sectionLabel.setToolTipText(has ? section.trim() : null);
+        sectionLabel.setVisible(has);
+    }
+
+    public String getSection() {
+        return sectionLabel.isVisible() ? sectionLabel.getToolTipText() : null;
     }
 
     /** Update the sub-brand line (active company name shown under the brand). */
