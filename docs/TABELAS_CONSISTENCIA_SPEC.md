@@ -45,6 +45,14 @@ paginadores com textos e ícones diferentes, e o botão “Espreitar detalhes”
 7. **Tema escuro.** Ao mudar de tema a janela principal é reconstruída, por isso os botões de contorno
    ficam com as cores do novo tema. O contraste fica garantido por teste.
 
+8. **Combos dos filtros com o texto inteiro** (`SingleRowFilterLayout`). Muitos ecrãs fixavam os combos em
+   120 a 145 px e “Todos os negócios” aparecia cortado. A barra de filtros dá a cada combo pelo menos a
+   largura da sua opção mais comprida (calculada pelo próprio combo, até 260 px), mantendo a altura.
+9. **Diálogos com a mesma hierarquia** (`ButtonStyles`). “Cancelar” é sempre o botão comum
+   `ButtonStyles.cancelButton()`, com contorno e nunca vermelho. No `ModernFormDialog` (131 usos) só a
+   confirmação tem cor cheia, e os botões extra ficam com contorno (texto vermelho se forem destrutivos,
+   como “Rejeitar”).
+
 A coluna estreita à esquerda das tabelas com linhas é a coluna de selecção (UA-06 a UA-08). Já era igual
 em todas as tabelas e esconde-se quando a tabela está vazia.
 
@@ -60,3 +68,6 @@ em todas as tabelas e esconde-se quando a tabela está vazia.
 | TC-06 | Ctrl+N, F5 e Ctrl+F em todos os cabeçalhos; ecrã escondido não responde; tooltips com o atalho | `TableShortcutsAndEmptyStateHarnessTest.tc06_sameShortcutsOnEveryHeader` |
 | TC-07 | Tabela vazia oferece a acção principal; filtros que escondem tudo oferecem “Limpar filtros” | `tc07_emptyStateOffersTheNextStep` |
 | TC-08 | Botões de contorno legíveis no tema escuro | `tc08_outlineReadableInDarkTheme` |
+| TC-09 | Combo de filtro mostra a opção inteira mesmo com largura fixa estreita | `TabNamesAndCombosHarnessTest.tc09_comboShowsWholeOption` |
+| TC-10 | “Cancelar” com contorno; extras de diálogo com contorno, vermelho só no texto | `DialogButtonsHarnessTest.tc10_dialogButtonHierarchy` |
+| TC-11 | Nenhum diálogo cria o “Cancelar” à mão; o `ModernFormDialog` aplica a regra | `tc11_everyDialogUsesTheSharedCancel` |

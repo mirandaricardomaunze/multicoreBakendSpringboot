@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -133,7 +134,7 @@ public class PosImportQuotationDialog extends JDialog {
         footer.setBackground(UIHelper.ROW_ALT);
         footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER));
 
-        ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         cancelBtn.addActionListener(e -> dispose());
 

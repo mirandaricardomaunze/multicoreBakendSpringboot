@@ -176,7 +176,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
         footer.add(summaryLabel, BorderLayout.WEST);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0)); actions.setOpaque(false);
-        ModernButton cancel = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton cancel = ButtonStyles.cancelButton();
         cancel.setIcon(UIHelper.icon("fas-times", 14)); cancel.setPreferredSize(new Dimension(120, 38)); cancel.addActionListener(e -> close());
 
         ModernButton openInViewer = UIHelper.createSecondaryButton("Abrir no leitor");

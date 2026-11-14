@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.quality;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.QualityApiClient;
 import mz.multicore.erp.gui.components.*;
 
@@ -46,7 +47,7 @@ public final class QualityRenewalDialog {
         footer.setBackground(UIHelper.BG_DARK);
         footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER));
 
-        ModernButton cancelBtn = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dialog.dispose());
         ModernButton confirmBtn = UIHelper.createPrimaryButton("Confirmar Renovação");
 

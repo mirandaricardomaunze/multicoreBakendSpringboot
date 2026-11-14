@@ -2,8 +2,11 @@ package mz.multicore.erp.gui.components;
 
 import org.kordamp.ikonli.swing.FontIcon;
 
-/** Secondary button looks shared by every table header: quiet outline, and outline for destructive actions. */
-final class ButtonStyles {
+/**
+ * Secondary button looks shared by every table header and dialog: quiet outline, and outline with red text for
+ * destructive actions. Only the main action of a header or dialog keeps a solid colour (green).
+ */
+public final class ButtonStyles {
 
     private ButtonStyles() {}
 
@@ -21,6 +24,19 @@ final class ButtonStyles {
         if (button.getIcon() instanceof FontIcon icon) icon.setIconColor(UIHelper.REJECTED_RED_HOVER);
         button.putClientProperty(ModernButtonPainter.DANGER, Boolean.TRUE);
         return button;
+    }
+
+    /** The one "Cancelar" of every dialog: outline, never red (cancelling is not destructive). */
+    public static ModernButton cancelButton() {
+        ModernButton button = UIHelper.createSecondaryButton("Cancelar");
+        button.setIcon(UIHelper.icon("fas-times", 14));
+        return outline(button);
+    }
+
+    /** Extra footer button of a dialog: outline, with red text when it is destructive (e.g. "Rejeitar"). */
+    static ModernButton dialogExtra(ModernButton button) {
+        if (isOutline(button)) return button;
+        return TableHeaderActions.isDestructive(button) ? outlineDanger(button) : outline(button);
     }
 
     static boolean isOutline(ModernButton button) {

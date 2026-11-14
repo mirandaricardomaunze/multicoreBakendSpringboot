@@ -45,7 +45,15 @@ primeiro separador.
 | TAB-05 | Memória pela lista de nomes, ignora contadores e separadores desactivados | `tab05_memoryKeyAndLookup` |
 | TAB-06 | As três regras estão ligadas no estilo único; diálogos e escolha do programa respeitados | `tab06_wiredInTheSingleStyle` |
 
-## 4. Próximo passo possível
+4. **Nomes curtos** (`TabShortNames`). Os separadores com nome comprido mostram um nome curto de até 20
+   caracteres (“Transferências entre Armazéns” → “Transferências”, “Log de Auditoria Geral” →
+   “Auditoria”). Só muda o que se desenha: `getTitleAt` continua com o nome completo, por isso o código, os
+   testes, a memória do separador e o caminho na topbar não mudam, e o tooltip mostra o nome completo.
+   Com isto, Configurações, Compras, Stock e Clientes cabem em 1270 px sem “Mais ▾”.
 
-Nomes curtos (até cerca de 20 caracteres), com o nome completo no tooltip e no caminho da topbar. Exige
-mexer no texto de cada ecrã e ajustar a regra do título repetido de `ECRA_CAMINHO_E_MENU_SPEC.md`.
+## 4. Critérios adicionais
+
+| ID | Critério | Teste |
+|---|---|---|
+| TAB-07 | Desenha o nome curto e mede por ele; o título e o tooltip guardam o nome completo | `TabNamesAndCombosHarnessTest.tab07_shortLabelFullTitle` |
+| TAB-08 | Configurações, Compras, Stock e Clientes cabem em 1270 px; nomes curtos até 20 caracteres | `tab08_mainStripsFitWithShortNames` |

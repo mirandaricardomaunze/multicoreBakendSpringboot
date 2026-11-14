@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -57,7 +58,7 @@ public final class MobilePaymentWaitingPanel extends ModernPanel {
         simulateApproveBtn.setPreferredSize(new Dimension(140, 28));
         simulateApproveBtn.addActionListener(e -> { if (onSimulate != null) onSimulate.run(); });
 
-        cancelButton = UIHelper.createDangerButton("Cancelar");
+        cancelButton = ButtonStyles.cancelButton();
         cancelButton.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         cancelButton.setPreferredSize(new Dimension(90, 28));
         cancelButton.addActionListener(e -> { if (onCancel != null) onCancel.run(); });

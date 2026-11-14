@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -130,7 +131,7 @@ public class PosShiftHandoverDialog extends JDialog {
         btnConfirm.setIcon(UIHelper.icon("fas-check", 13, Color.WHITE));
         btnConfirm.addActionListener(e -> performHandover());
 
-        btnCancel = UIHelper.createSecondaryButton("Cancelar");
+        btnCancel = ButtonStyles.cancelButton();
         btnCancel.setIcon(UIHelper.icon("fas-times", 13));
         btnCancel.addActionListener(e -> dispose());
 

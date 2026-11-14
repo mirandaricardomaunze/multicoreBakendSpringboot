@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.users;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
 
@@ -97,7 +98,7 @@ public class ManagerPinDialog {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnPanel.setOpaque(false);
 
-        ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         cancelBtn.addActionListener(e -> dialog.dispose());
 

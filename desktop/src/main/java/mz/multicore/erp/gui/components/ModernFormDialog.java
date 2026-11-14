@@ -81,8 +81,7 @@ public class ModernFormDialog {
         main.add(contentPanel, BorderLayout.CENTER);
 
         // Buttons
-        cancelBtn = UIHelper.createSecondaryButton("Cancelar");
-        cancelBtn.setIcon(UIHelper.icon("fas-times", 14));
+        cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.setPreferredSize(new Dimension(110, 38));
         cancelBtn.addActionListener(e -> dialog.dispose());
 
@@ -160,6 +159,7 @@ public class ModernFormDialog {
      * decisão de aprovações.
      */
     public ModernFormDialog addActionButton(ModernButton btn) {
+        ButtonStyles.dialogExtra(btn);
         btn.setPreferredSize(new Dimension(130, 38));
         buttonRow.add(btn, 0);
         buttonRow.revalidate();
@@ -172,6 +172,7 @@ public class ModernFormDialog {
      * move the form forward, like "Anterior"/"Seguinte" in a multi-step form.
      */
     public ModernFormDialog addActionButtonBeforeConfirm(ModernButton btn) {
+        ButtonStyles.dialogExtra(btn);
         btn.setPreferredSize(new Dimension(130, 38));
         int index = java.util.Arrays.asList(buttonRow.getComponents()).indexOf(saveBtn);
         buttonRow.add(btn, index < 0 ? buttonRow.getComponentCount() : index);

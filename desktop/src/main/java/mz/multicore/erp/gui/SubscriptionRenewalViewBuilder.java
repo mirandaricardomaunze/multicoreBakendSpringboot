@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -128,7 +129,7 @@ final class SubscriptionRenewalViewBuilder {
     static JPanel buildFooter(Runnable onCancel, ModernButton submitBtn) {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         footer.setOpaque(false);
-        ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         cancelBtn.addActionListener(e -> onCancel.run());
         footer.add(cancelBtn);

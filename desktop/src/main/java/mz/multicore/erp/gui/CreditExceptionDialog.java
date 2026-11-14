@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.CreditRiskApiClient;
 import mz.multicore.erp.gui.components.*;
@@ -66,7 +67,7 @@ public final class CreditExceptionDialog {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttons.setOpaque(false);
 
-        ModernButton cancelBtn = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.setPreferredSize(new Dimension(100, UIHelper.FORM_CONTROL_HEIGHT));
         cancelBtn.addActionListener(e -> dialog.dispose());
 

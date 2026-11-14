@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.performance;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.PerformanceApiClient;
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.gui.components.*;
@@ -221,7 +222,7 @@ public class BonusTab extends JPanel {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         footer.setBackground(UIHelper.BG_DARK);
 
-        ModernButton btnCancel = UIHelper.createDangerButton("Cancelar");
+        ModernButton btnCancel = ButtonStyles.cancelButton();
         btnCancel.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         btnCancel.addActionListener(e -> dialog.dispose());
         footer.add(btnCancel);

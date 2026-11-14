@@ -141,7 +141,7 @@ public class CurrencyExchangeDialog extends JDialog {
         // Botões de Ação
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttons.setOpaque(false);
-        ModernButton cancelBtn = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
         confirmBtn = UIHelper.createPrimaryButton("Confirmar Pagamento");
         confirmBtn.setIcon(UIHelper.icon("fas-check", 14));
