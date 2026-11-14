@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
@@ -110,13 +111,13 @@ public class PosSessionHistoryDialog extends JDialog {
 
         ModernButton btnReload = UIHelper.createRefreshButton(() -> loadData());
 
-        ModernButton btnPrintZ = UIHelper.createPrimaryButton("Re-imprimir Relatório Z (A4)");
+        ModernButton btnPrintZ = ButtonStyles.main(UIHelper.createPrimaryButton("Re-imprimir Relatório Z (A4)"));
         btnPrintZ.setIcon(UIHelper.icon("fas-print", 13, Color.WHITE));
         btnPrintZ.setForeground(Color.WHITE);
         btnPrintZ.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         btnPrintZ.addActionListener(e -> printSelectedZ());
 
-        ModernButton btnClose = UIHelper.createDangerButton("Fechar");
+        ModernButton btnClose = ButtonStyles.secondary(UIHelper.createDangerButton("Fechar"));
         btnClose.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         btnClose.setForeground(Color.WHITE);
         btnClose.addActionListener(e -> dispose());

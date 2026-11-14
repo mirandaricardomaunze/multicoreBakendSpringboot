@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -105,18 +106,18 @@ public class StockProductDetailDialog {
         JPanel leftActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftActions.setOpaque(false);
 
-        ModernButton editBtn = UIHelper.createSecondaryButton("Editar Artigo");
+        ModernButton editBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Editar Artigo"));
         editBtn.setIcon(UIHelper.icon("fas-edit", 14, UIHelper.PENDING_YELLOW));
         editBtn.addActionListener(e -> { dialog.dispose(); owner.editProductDialog(product.id()); });
         leftActions.add(editBtn);
 
-        ModernButton labelBtn = UIHelper.createSecondaryButton("Gerar Etiqueta");
+        ModernButton labelBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Gerar Etiqueta"));
         labelBtn.setIcon(UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT));
         labelBtn.addActionListener(e -> { dialog.dispose(); owner.openLabelDialog(); });
         leftActions.add(labelBtn);
         footer.add(leftActions, BorderLayout.WEST);
 
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.setIcon(UIHelper.icon("fas-times", 14));
         closeBtn.addActionListener(e -> dialog.dispose());
         footer.add(closeBtn, BorderLayout.EAST);

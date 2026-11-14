@@ -141,7 +141,7 @@ public final class GoalCreateDialog {
         btnCancel.addActionListener(e -> dialog.dispose());
         footer.add(btnCancel);
 
-        ModernButton btnSave = UIHelper.createSuccessButton("Criar Meta");
+        ModernButton btnSave = ButtonStyles.main(UIHelper.createSuccessButton("Criar Meta"));
         btnSave.setIcon(UIHelper.icon("fas-check", 14));
         btnSave.addActionListener(e -> saveGoal(dialog, apiClient, session, onSaved, txtName, cbPeriod, txtStart, txtEnd,
                 cbScope, cbBusinessUnit, txtSeller, txtSupervisor, txtRevenue, txtMargin, chkBonusOptional, cbBonusType,

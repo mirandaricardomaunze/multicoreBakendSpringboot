@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.audit.dto.ForensicAnomalyDTO;
@@ -48,7 +49,7 @@ public final class ForensicAnomalyDetailsDialog {
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         btnRow.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dialog.dispose());
         btnRow.add(closeBtn);
         p.add(btnRow, BorderLayout.SOUTH);

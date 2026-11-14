@@ -197,7 +197,7 @@ public class QualityAssignmentDialog extends JDialog {
 
         ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
-        ModernButton saveBtn = UIHelper.createPrimaryButton("Gravar Atribuição");
+        ModernButton saveBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Gravar Atribuição"));
         saveBtn.addActionListener(e -> save());
 
         footer.add(cancelBtn);

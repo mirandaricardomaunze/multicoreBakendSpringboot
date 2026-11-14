@@ -146,9 +146,9 @@ public class ShelfLabelsDialog extends JDialog {
 
     private JPanel buildFooter() {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0)); footer.setOpaque(false);
-        ModernButton cancelBtn = UIHelper.createSecondaryButton("Fechar (ESC)");
+        ModernButton cancelBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar (ESC)"));
         cancelBtn.setIcon(UIHelper.icon("fas-times", 14)); cancelBtn.addActionListener(e -> dispose());
-        ModernButton printBtn = UIHelper.createPrimaryButton("Imprimir Etiquetas");
+        ModernButton printBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Imprimir Etiquetas"));
         printBtn.setIcon(UIHelper.icon("fas-print", 14)); printBtn.addActionListener(e -> printLabels());
         footer.add(cancelBtn); footer.add(printBtn);
         return footer;

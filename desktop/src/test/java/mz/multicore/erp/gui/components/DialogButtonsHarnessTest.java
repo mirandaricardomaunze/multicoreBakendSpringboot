@@ -47,6 +47,37 @@ class DialogButtonsHarnessTest {
         assertThat(dialog.split("ButtonStyles\\.dialogExtra\\(btn\\)", -1)).as("nos dois addActionButton").hasSize(3);
     }
 
+    @Test
+    @DisplayName("TC-12: em todos os diálogos cada botão tem papel: principal (verde), secundário ou destrutivo")
+    void tc12_everyDialogButtonHasARole() throws IOException {
+        Path gui = Path.of("src/main/java/mz/multicore/erp/gui");
+        // Excepções nomeadas: confirmação de acção destrutiva (vermelho cheio de propósito), o selector de
+        // filtros dos alertas e o botão de cabeçalho de tabela do BonusTab (tratado pelo cabeçalho comum).
+        List<String> allowed = List.of(
+                "? UIHelper.createDangerButton(\"Confirmar\")",
+                "UIHelper.createSecondaryButton(\"Todos (\"",
+                "UIHelper.createSecondaryButton(\"Críticos (\"",
+                "UIHelper.createSecondaryButton(\"Atenção (\"",
+                "UIHelper.createSuccessButton(\"Aprovar Prémio\")");
+        java.util.regex.Pattern raw = java.util.regex.Pattern.compile("UIHelper\\.create(Primary|Danger|Warning|Secondary|Success)Button\\(");
+        List<String> offenders = new java.util.ArrayList<>();
+        try (Stream<Path> files = Files.walk(gui)) {
+            for (Path f : files.filter(x -> x.toString().endsWith(".java")).toList()) {
+                String name = f.toString().replace('\\', '/');
+                if (name.contains("/tv/") || name.endsWith("ExecutiveDetailDialog.java")) continue; // tema próprio do Painel Executivo
+                String src = read(f);
+                if (!src.contains("extends JDialog") && !src.contains("new JDialog(")) continue;
+                for (String line : src.split("\n")) {
+                    if (!raw.matcher(line).find()) continue;
+                    if (line.matches(".*ButtonStyles\\.(main|secondary|destructive)\\(UIHelper\\.create.*")) continue;
+                    if (allowed.stream().anyMatch(line::contains)) continue;
+                    offenders.add(f.getFileName() + ": " + line.trim());
+                }
+            }
+        }
+        assertThat(offenders).as("botões de diálogo sem papel").isEmpty();
+    }
+
     private static String read(Path p) {
         try {
             return Files.readString(p);

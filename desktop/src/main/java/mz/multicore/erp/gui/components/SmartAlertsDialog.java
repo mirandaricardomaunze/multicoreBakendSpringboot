@@ -137,7 +137,7 @@ public class SmartAlertsDialog extends JDialog {
         // Rodapé
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         footer.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
         footer.add(closeBtn);
         root.add(footer, BorderLayout.SOUTH);
@@ -213,7 +213,7 @@ public class SmartAlertsDialog extends JDialog {
         // Lado Direito: Botão de Ação
         JPanel actionBox = new JPanel(new GridBagLayout());
         actionBox.setOpaque(false);
-        ModernButton actionBtn = UIHelper.createPrimaryButton(alert.actionLabel());
+        ModernButton actionBtn = ButtonStyles.secondary(UIHelper.createPrimaryButton(alert.actionLabel()));
         actionBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         actionBtn.setIcon(UIHelper.icon("fas-arrow-right", 11));
         actionBtn.addActionListener(e -> {

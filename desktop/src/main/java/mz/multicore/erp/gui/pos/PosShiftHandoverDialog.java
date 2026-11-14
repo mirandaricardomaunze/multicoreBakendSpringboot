@@ -127,7 +127,7 @@ public class PosShiftHandoverDialog extends JDialog {
 
     private JPanel createFooterPanel() {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12)); footer.setBackground(UIHelper.ROW_ALT);
-        btnConfirm = UIHelper.createPrimaryButton("Confirmar Passagem");
+        btnConfirm = ButtonStyles.main(UIHelper.createPrimaryButton("Confirmar Passagem"));
         btnConfirm.setIcon(UIHelper.icon("fas-check", 13, Color.WHITE));
         btnConfirm.addActionListener(e -> performHandover());
 

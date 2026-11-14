@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.ApprovalApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
@@ -114,13 +115,13 @@ public final class ApprovalDetailsDialog extends JDialog {
 
     private JPanel buildActionsBar() {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0)); bar.setOpaque(false); bar.setBorder(new EmptyBorder(6, 0, 0, 0));
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.setIcon(UIHelper.icon("fas-times", 14)); closeBtn.addActionListener(e -> dispose());
 
-        ModernButton rejectBtn = UIHelper.createDangerButton("Rejeitar");
+        ModernButton rejectBtn = ButtonStyles.destructive(UIHelper.createDangerButton("Rejeitar"));
         rejectBtn.setIcon(UIHelper.icon("fas-times-circle", 14)); rejectBtn.addActionListener(e -> handleReject(rejectBtn));
 
-        ModernButton approveBtn = UIHelper.createPrimaryButton("Aprovar Documento");
+        ModernButton approveBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Aprovar Documento"));
         approveBtn.setIcon(UIHelper.icon("fas-check-circle", 14)); approveBtn.addActionListener(e -> handleApprove(approveBtn));
 
         bar.add(closeBtn); bar.add(rejectBtn); bar.add(approveBtn);

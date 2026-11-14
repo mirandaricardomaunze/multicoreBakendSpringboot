@@ -71,7 +71,7 @@ public final class CreditExceptionDialog {
         cancelBtn.setPreferredSize(new Dimension(100, UIHelper.FORM_CONTROL_HEIGHT));
         cancelBtn.addActionListener(e -> dialog.dispose());
 
-        ModernButton submitBtn = UIHelper.createSuccessButton("Submeter à Gerência");
+        ModernButton submitBtn = ButtonStyles.main(UIHelper.createSuccessButton("Submeter à Gerência"));
         submitBtn.setIcon(UIHelper.icon("fas-paper-plane", 14));
         submitBtn.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
 

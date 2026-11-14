@@ -85,7 +85,7 @@ public class ShortcutHelpDialog extends JDialog {
         // Footer Actions
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         footer.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar (ESC)");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar (ESC)"));
         closeBtn.setIcon(UIHelper.icon("fas-times", 14));
         closeBtn.addActionListener(e -> dispose());
         footer.add(closeBtn);

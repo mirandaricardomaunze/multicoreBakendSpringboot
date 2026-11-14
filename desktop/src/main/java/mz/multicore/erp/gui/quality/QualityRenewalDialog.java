@@ -49,7 +49,7 @@ public final class QualityRenewalDialog {
 
         ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dialog.dispose());
-        ModernButton confirmBtn = UIHelper.createPrimaryButton("Confirmar Renovação");
+        ModernButton confirmBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Confirmar Renovação"));
 
         confirmBtn.addActionListener(e -> {
             LocalDate newDate = renewalDateField.getDate();

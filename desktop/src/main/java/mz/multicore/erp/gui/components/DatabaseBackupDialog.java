@@ -81,7 +81,7 @@ public class DatabaseBackupDialog extends JDialog {
         statusBox.add(lastRunLabel);
         quickCard.add(statusBox, BorderLayout.CENTER);
 
-        generateBtn = UIHelper.createSuccessButton("Criar Backup Agora");
+        generateBtn = ButtonStyles.main(UIHelper.createSuccessButton("Criar Backup Agora"));
         generateBtn.setIcon(UIHelper.icon("fas-download", 14));
         generateBtn.addActionListener(e -> generateBackup());
         quickCard.add(generateBtn, BorderLayout.EAST);
@@ -119,7 +119,7 @@ public class DatabaseBackupDialog extends JDialog {
         resultSummaryLabel.setFont(new Font(UIHelper.FONT, Font.ITALIC, 12));
         resultSummaryLabel.setForeground(UIHelper.TEXT_MUTED);
 
-        verifyBtn = UIHelper.createSecondaryButton("Verificar Integridade");
+        verifyBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Verificar Integridade"));
         verifyBtn.setIcon(UIHelper.icon("fas-shield-alt", 13));
         verifyBtn.addActionListener(e -> verifySelectedBackup());
 
@@ -133,7 +133,7 @@ public class DatabaseBackupDialog extends JDialog {
         // Rodapé
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         footer.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
         footer.add(closeBtn);
         root.add(footer, BorderLayout.SOUTH);

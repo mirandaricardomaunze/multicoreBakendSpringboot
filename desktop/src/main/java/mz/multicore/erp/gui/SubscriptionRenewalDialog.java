@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.MySubscriptionApiClient;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -92,7 +93,7 @@ public final class SubscriptionRenewalDialog extends JDialog {
         body.add(bankCard);
         content.add(body, BorderLayout.CENTER);
 
-        submitBtn = UIHelper.createPrimaryButton("Proceder ao Pagamento");
+        submitBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Proceder ao Pagamento"));
         submitBtn.setIcon(UIHelper.icon("fas-check-circle", 13, Color.WHITE));
         submitBtn.addActionListener(e -> processRenewal());
         content.add(SubscriptionRenewalViewBuilder.buildFooter(this::dispose, submitBtn), BorderLayout.SOUTH);

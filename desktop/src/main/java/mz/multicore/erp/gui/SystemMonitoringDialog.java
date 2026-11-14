@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.SystemMonitoringApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -99,19 +100,19 @@ public class SystemMonitoringDialog {
         refreshButton = UIHelper.createRefreshButton(this::refreshDataAsync);
         leftActions.add(refreshButton);
 
-        ModernButton copyButton = new ModernButton("Copiar Diagnóstico", UIHelper.ACCENT, UIHelper.ACCENT_HOVER);
+        ModernButton copyButton = ButtonStyles.secondary(new ModernButton("Copiar Diagnóstico", UIHelper.ACCENT, UIHelper.ACCENT_HOVER));
         copyButton.setIcon(UIHelper.icon("fas-copy", 14, Color.WHITE));
         copyButton.addActionListener(e -> SystemMonitoringExporter.copyToClipboard(dialog, lastDiagnosticsExport));
         leftActions.add(copyButton);
 
-        ModernButton exportButton = new ModernButton("Exportar Relatório (.txt)", UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER);
+        ModernButton exportButton = ButtonStyles.secondary(new ModernButton("Exportar Relatório (.txt)", UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER));
         exportButton.setIcon(UIHelper.icon("fas-file-download", 14, Color.WHITE));
         exportButton.addActionListener(e -> SystemMonitoringExporter.exportToFile(dialog, lastDiagnosticsExport));
         leftActions.add(exportButton);
 
         JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         rightActions.setOpaque(false);
-        ModernButton closeButton = UIHelper.createDangerButton("Fechar");
+        ModernButton closeButton = ButtonStyles.secondary(UIHelper.createDangerButton("Fechar"));
         closeButton.setIcon(UIHelper.icon("fas-times", 14, Color.WHITE));
         closeButton.addActionListener(e -> dialog.dispose());
         rightActions.add(closeButton);

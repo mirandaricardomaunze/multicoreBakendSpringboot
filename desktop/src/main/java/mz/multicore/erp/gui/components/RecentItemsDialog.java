@@ -150,7 +150,7 @@ public class RecentItemsDialog extends JDialog {
         footer.setOpaque(false);
         footer.setBorder(new EmptyBorder(8, 16, 14, 16));
 
-        ModernButton clearBtn = UIHelper.createSecondaryButton("Limpar Histórico");
+        ModernButton clearBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Limpar Histórico"));
         clearBtn.setIcon(UIHelper.icon("fas-trash-alt", 13, UIHelper.REJECTED_RED));
         clearBtn.addActionListener(e -> {
             boolean confirmed = ModernMessageDialog.confirm(
@@ -170,7 +170,7 @@ public class RecentItemsDialog extends JDialog {
         JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         rightActions.setOpaque(false);
 
-        ModernButton openBtn = UIHelper.createPrimaryButton("Abrir Registo");
+        ModernButton openBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Abrir Registo"));
         openBtn.setIcon(UIHelper.icon("fas-arrow-right", 14, Color.WHITE));
         openBtn.addActionListener(e -> {
             RecentItem selected = itemList.getSelectedValue();
@@ -179,7 +179,7 @@ public class RecentItemsDialog extends JDialog {
             }
         });
 
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
 
         rightActions.add(clearBtn);

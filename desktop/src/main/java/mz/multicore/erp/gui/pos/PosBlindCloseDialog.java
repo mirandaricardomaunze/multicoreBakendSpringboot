@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -134,16 +135,16 @@ public class PosBlindCloseDialog extends JDialog {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         footer.setBackground(UIHelper.ROW_ALT);
 
-        btnPrintZ = UIHelper.createPrimaryButton("Imprimir Relatório Z (A4)");
+        btnPrintZ = ButtonStyles.secondary(UIHelper.createPrimaryButton("Imprimir Relatório Z (A4)"));
         btnPrintZ.setIcon(UIHelper.icon("fas-print", 13, Color.WHITE));
         btnPrintZ.setEnabled(false);
         btnPrintZ.addActionListener(e -> printZReport());
 
-        btnConfirm = UIHelper.createSuccessButton("Confirmar Fecho de Caixa");
+        btnConfirm = ButtonStyles.main(UIHelper.createSuccessButton("Confirmar Fecho de Caixa"));
         btnConfirm.setIcon(UIHelper.icon("fas-lock", 13, Color.WHITE));
         btnConfirm.addActionListener(e -> executeClose());
 
-        btnCancel = UIHelper.createDangerButton("Cancelar / Voltar");
+        btnCancel = ButtonStyles.secondary(UIHelper.createDangerButton("Cancelar / Voltar"));
         btnCancel.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         btnCancel.addActionListener(e -> dispose());
 

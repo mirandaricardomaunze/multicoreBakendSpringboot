@@ -227,7 +227,7 @@ public class BonusTab extends JPanel {
         btnCancel.addActionListener(e -> dialog.dispose());
         footer.add(btnCancel);
 
-        ModernButton btnSave = UIHelper.createPrimaryButton("Guardar Ajuste");
+        ModernButton btnSave = ButtonStyles.main(UIHelper.createPrimaryButton("Guardar Ajuste"));
         btnSave.setIcon(UIHelper.icon("fas-check", 14));
         btnSave.addActionListener(e -> {
             try {

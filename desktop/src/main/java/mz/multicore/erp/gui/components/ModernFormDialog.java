@@ -85,7 +85,7 @@ public class ModernFormDialog {
         cancelBtn.setPreferredSize(new Dimension(110, 38));
         cancelBtn.addActionListener(e -> dialog.dispose());
 
-        saveBtn = UIHelper.createSuccessButton("Gravar");
+        saveBtn = ButtonStyles.main(UIHelper.createSuccessButton("Gravar"));
         saveBtn.setIcon(UIHelper.icon("fas-save", 14));
         saveBtn.setPreferredSize(new Dimension(150, 38));
         saveBtn.addActionListener(e -> attemptSave());

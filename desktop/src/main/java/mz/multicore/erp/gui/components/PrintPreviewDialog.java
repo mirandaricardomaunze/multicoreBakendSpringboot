@@ -67,7 +67,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
     private final PrintPreviewOptionsView optionsView = new PrintPreviewOptionsView(this);
     private final JLabel pageLabel = new JLabel();
     private final JLabel summaryLabel = new JLabel();
-    private final ModernButton printButton = UIHelper.createPrimaryButton("Imprimir");
+    private final ModernButton printButton = ButtonStyles.main(UIHelper.createPrimaryButton("Imprimir"));
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     private int pageIndex;
@@ -179,10 +179,10 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
         ModernButton cancel = ButtonStyles.cancelButton();
         cancel.setIcon(UIHelper.icon("fas-times", 14)); cancel.setPreferredSize(new Dimension(120, 38)); cancel.addActionListener(e -> close());
 
-        ModernButton openInViewer = UIHelper.createSecondaryButton("Abrir no leitor");
+        ModernButton openInViewer = ButtonStyles.secondary(UIHelper.createSecondaryButton("Abrir no leitor"));
         openInViewer.setIcon(UIHelper.icon("fas-external-link-alt", 14)); openInViewer.setPreferredSize(new Dimension(150, 38)); openInViewer.addActionListener(e -> saveDocument(true));
 
-        ModernButton save = UIHelper.createSecondaryButton("Guardar PDF");
+        ModernButton save = ButtonStyles.secondary(UIHelper.createSecondaryButton("Guardar PDF"));
         save.setIcon(UIHelper.icon("fas-save", 14)); save.setPreferredSize(new Dimension(150, 38)); save.addActionListener(e -> saveDocument(false));
 
         printButton.setIcon(UIHelper.icon("fas-print", 14)); printButton.setPreferredSize(new Dimension(150, 38)); printButton.addActionListener(e -> print());

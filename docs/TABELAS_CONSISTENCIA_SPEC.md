@@ -52,6 +52,12 @@ paginadores com textos e ícones diferentes, e o botão “Espreitar detalhes”
    `ButtonStyles.cancelButton()`, com contorno e nunca vermelho. No `ModernFormDialog` (131 usos) só a
    confirmação tem cor cheia, e os botões extra ficam com contorno (texto vermelho se forem destrutivos,
    como “Rejeitar”).
+10. **Todos os diálogos com papéis explícitos.** Cada botão de um diálogo é criado com um papel:
+    `ButtonStyles.main` (a confirmação, verde e única), `ButtonStyles.secondary` (Fechar, Voltar, Imprimir
+    quando não é a acção principal: contorno, nunca vermelho) ou `ButtonStyles.destructive` (Rejeitar:
+    contorno com texto vermelho). Excepções nomeadas no teste: a confirmação de uma acção destrutiva no
+    `ModernMessageDialog` mantém o vermelho cheio de propósito, e o selector de filtros dos alertas não é
+    acção. O Painel Executivo usa o seu próprio tema e fica de fora.
 
 A coluna estreita à esquerda das tabelas com linhas é a coluna de selecção (UA-06 a UA-08). Já era igual
 em todas as tabelas e esconde-se quando a tabela está vazia.
@@ -71,3 +77,4 @@ em todas as tabelas e esconde-se quando a tabela está vazia.
 | TC-09 | Combo de filtro mostra a opção inteira mesmo com largura fixa estreita | `TabNamesAndCombosHarnessTest.tc09_comboShowsWholeOption` |
 | TC-10 | “Cancelar” com contorno; extras de diálogo com contorno, vermelho só no texto | `DialogButtonsHarnessTest.tc10_dialogButtonHierarchy` |
 | TC-11 | Nenhum diálogo cria o “Cancelar” à mão; o `ModernFormDialog` aplica a regra | `tc11_everyDialogUsesTheSharedCancel` |
+| TC-12 | Em todos os diálogos cada botão tem papel (principal, secundário ou destrutivo) | `tc12_everyDialogButtonHasARole` |

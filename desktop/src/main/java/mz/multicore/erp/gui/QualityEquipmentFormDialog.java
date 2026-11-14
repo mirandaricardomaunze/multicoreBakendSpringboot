@@ -138,7 +138,7 @@ public class QualityEquipmentFormDialog extends JDialog {
 
         ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
-        ModernButton saveBtn = UIHelper.createPrimaryButton(editingEquipment == null ? "Gravar Equipamento" : "Actualizar");
+        ModernButton saveBtn = ButtonStyles.main(UIHelper.createPrimaryButton(editingEquipment == null ? "Gravar Equipamento" : "Actualizar"));
         saveBtn.addActionListener(e -> save());
 
         footer.add(cancelBtn);

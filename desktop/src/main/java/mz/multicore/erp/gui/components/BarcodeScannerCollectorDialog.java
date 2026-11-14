@@ -82,7 +82,7 @@ public class BarcodeScannerCollectorDialog {
         center.add(contentSplit, BorderLayout.CENTER); main.add(center, BorderLayout.CENTER);
 
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT)); footer.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar Coletor");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar Coletor"));
         closeBtn.addActionListener(e -> dialog.dispose());
         footer.add(closeBtn); main.add(footer, BorderLayout.SOUTH);
 
@@ -101,7 +101,7 @@ public class BarcodeScannerCollectorDialog {
         scanField.addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent e) { if (e.getKeyCode() == KeyEvent.VK_ENTER) processScan(scanField.getText().trim()); }
         });
-        ModernButton searchBtn = UIHelper.createPrimaryButton("Processar"); searchBtn.setIcon(UIHelper.icon("fas-search", 14));
+        ModernButton searchBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Processar")); searchBtn.setIcon(UIHelper.icon("fas-search", 14));
         searchBtn.addActionListener(e -> processScan(scanField.getText().trim()));
         JPanel inputRow = new JPanel(new BorderLayout(8, 0)); inputRow.setOpaque(false);
         inputRow.add(new JLabel(UIHelper.icon("fas-barcode", 24, UIHelper.ACCENT_BLUE)), BorderLayout.WEST);

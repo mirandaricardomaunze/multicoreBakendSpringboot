@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -118,10 +119,10 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
         footer.setOpaque(false);
         footer.setBorder(new EmptyBorder(0, 20, 8, 20));
 
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
 
-        ModernButton printBtn = UIHelper.createPrimaryButton("Imprimir Etiquetas");
+        ModernButton printBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Imprimir Etiquetas"));
         printBtn.setIcon(UIHelper.icon("fas-print", 14));
         printBtn.addActionListener(e -> printLabels());
 

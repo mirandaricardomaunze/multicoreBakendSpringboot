@@ -102,7 +102,7 @@ public class ManagerPinDialog {
         cancelBtn.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         cancelBtn.addActionListener(e -> dialog.dispose());
 
-        ModernButton confirmBtn = UIHelper.createSuccessButton("Autorizar");
+        ModernButton confirmBtn = ButtonStyles.main(UIHelper.createSuccessButton("Autorizar"));
         confirmBtn.setIcon(UIHelper.icon("fas-check-circle", 14, Color.WHITE));
         confirmBtn.addActionListener(e -> {
             String pin = new String(pinField.getPassword()).trim();

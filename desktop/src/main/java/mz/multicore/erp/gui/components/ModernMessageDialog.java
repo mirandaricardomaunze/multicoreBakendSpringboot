@@ -101,15 +101,16 @@ public final class ModernMessageDialog {
 
             JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
             actions.setOpaque(false);
-            ModernButton cancel = UIHelper.createSecondaryButton(confirmation ? "Cancelar" : "Fechar");
+            ModernButton cancel = ButtonStyles.secondary(UIHelper.createSecondaryButton(confirmation ? "Cancelar" : "Fechar"));
             cancel.setIcon(UIHelper.icon("fas-times", 14));
             cancel.addActionListener(e -> dialog.dispose());
             actions.add(cancel);
 
             confirmButton = confirmation
                     ? (type == FeedbackType.ERROR
+                        // Confirming a destructive action keeps the solid red warning on purpose.
                         ? UIHelper.createDangerButton("Confirmar")
-                        : UIHelper.createPrimaryButton("Confirmar"))
+                        : ButtonStyles.main(UIHelper.createPrimaryButton("Confirmar")))
                     : null;
             if (confirmButton != null) {
                 confirmButton.setIcon(UIHelper.icon("fas-check", 14));

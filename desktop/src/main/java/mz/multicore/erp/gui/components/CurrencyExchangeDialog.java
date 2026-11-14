@@ -143,7 +143,7 @@ public class CurrencyExchangeDialog extends JDialog {
         buttons.setOpaque(false);
         ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
-        confirmBtn = UIHelper.createPrimaryButton("Confirmar Pagamento");
+        confirmBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Confirmar Pagamento"));
         confirmBtn.setIcon(UIHelper.icon("fas-check", 14));
         confirmBtn.addActionListener(e -> onConfirmClicked());
 

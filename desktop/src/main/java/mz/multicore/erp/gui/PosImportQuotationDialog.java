@@ -138,7 +138,7 @@ public class PosImportQuotationDialog extends JDialog {
         cancelBtn.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         cancelBtn.addActionListener(e -> dispose());
 
-        ModernButton importBtn = UIHelper.createSuccessButton("Importar para o Carrinho");
+        ModernButton importBtn = ButtonStyles.main(UIHelper.createSuccessButton("Importar para o Carrinho"));
         importBtn.setIcon(UIHelper.icon("fas-file-import", 13));
         importBtn.addActionListener(e -> confirmSelection());
 

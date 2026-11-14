@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos.contingency;
 
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -108,7 +109,7 @@ public class PosContingencyDialog extends JDialog {
 
         ModernButton reprintBtn = UIHelper.createButton("Reimprimir Talão", UIHelper.icon("fas-print", UIHelper.ICON_SM, Color.WHITE), UIHelper.ACCENT_CYAN, e -> reprintSelected());
 
-        ModernButton syncBtn = UIHelper.createPrimaryButton("Sincronizar Agora");
+        ModernButton syncBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Sincronizar Agora"));
         syncBtn.setIcon(UIHelper.icon("fas-sync-alt", UIHelper.ICON_SM));
         syncBtn.addActionListener(e -> {
             if (syncService != null) {
@@ -116,7 +117,7 @@ public class PosContingencyDialog extends JDialog {
             }
         });
 
-        ModernButton closeBtn = UIHelper.createDangerButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createDangerButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
 
         actionsPanel.add(reprintBtn);

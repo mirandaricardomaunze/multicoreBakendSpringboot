@@ -26,6 +26,24 @@ public final class ButtonStyles {
         return button;
     }
 
+    /** The confirm action of a dialog: the only solid (green) button in its footer. */
+    public static ModernButton main(ModernButton button) {
+        button.setColors(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER);
+        button.putClientProperty(ModernButtonPainter.OUTLINE, null);
+        button.putClientProperty(ModernButtonPainter.DANGER, null);
+        return button;
+    }
+
+    /** Any other dialog button, including "Fechar" and "Voltar": closing is not destructive, so never red. */
+    public static ModernButton secondary(ModernButton button) {
+        return outline(button);
+    }
+
+    /** A dialog action that destroys or refuses something ("Rejeitar"): outline with red text. */
+    public static ModernButton destructive(ModernButton button) {
+        return outlineDanger(button);
+    }
+
     /** The one "Cancelar" of every dialog: outline, never red (cancelling is not destructive). */
     public static ModernButton cancelButton() {
         ModernButton button = UIHelper.createSecondaryButton("Cancelar");
