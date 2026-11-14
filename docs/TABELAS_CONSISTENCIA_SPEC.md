@@ -63,6 +63,11 @@ paginadores com textos e ícones diferentes, e o botão “Espreitar detalhes”
     Um diálogo que já definiu as suas teclas mantém-nas. Não há Enter quando há mais do que um botão verde,
     quando o campo com foco usa o Enter (leitor de código de barras, tabela, texto de várias linhas), na
     aceitação da licença, nem na confirmação de uma acção destrutiva (aí o Enter é "Cancelar").
+12. **Valores e datas iguais em todas as tabelas** (`UiTableCellStyler.formatValue`, o formatador comum das
+    células). Dinheiro `1.234,50 MT`, também quando é negativo (`-1.234,50 MT`) ou tem sinal (`+250,00 MT`).
+    Quantidades com `un`/`kg` e valores com sinal ficam alinhados à direita. Datas sempre `dd/MM/yyyy`, com
+    `HH:mm` quando há hora, mesmo que cheguem como objecto de data ou em ISO (`2026-11-14T10:20`). Os números
+    inteiros (códigos, anos, nº de documento) não levam separador de milhares.
 
 A coluna estreita à esquerda das tabelas com linhas é a coluna de selecção (UA-06 a UA-08). Já era igual
 em todas as tabelas e esconde-se quando a tabela está vazia.
@@ -84,3 +89,4 @@ em todas as tabelas e esconde-se quando a tabela está vazia.
 | TC-11 | Nenhum diálogo cria o “Cancelar” à mão; o `ModernFormDialog` aplica a regra | `tc11_everyDialogUsesTheSharedCancel` |
 | TC-12 | Em todos os diálogos cada botão tem papel (principal, secundário ou destrutivo) | `tc12_everyDialogButtonHasARole` |
 | TC-13 | Enter carrega no botão verde e Esc fecha; teclas próprias e excepções respeitadas; instalado para toda a app | `tc13_enterAndEscapeInEveryDialog` |
+| TC-14 | Dinheiro com sinal, unidades à direita e datas dd/MM/yyyy mesmo em ISO | `TableValuesFormatHarnessTest.tc14_valuesAndDatesLookTheSameEverywhere` |

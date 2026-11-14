@@ -51,9 +51,15 @@ primeiro separador.
    testes, a memória do separador e o caminho na topbar não mudam, e o tooltip mostra o nome completo.
    Com isto, Configurações, Compras, Stock e Clientes cabem em 1270 px sem “Mais ▾”.
 
+5. **"Mais ▾" inteiro e sem separador cortado à esquerda.** O botão "Mais" tem 30 px de altura, centrado na
+   barra (antes ficava com 2 px e só se via uma lasca). Quando a barra desliza para mostrar o separador escolhido,
+   pára no início de um separador, para o primeiro visível nunca ficar cortado ("isão Geral").
+
 ## 4. Critérios adicionais
 
 | ID | Critério | Teste |
 |---|---|---|
 | TAB-07 | Desenha o nome curto e mede por ele; o título e o tooltip guardam o nome completo | `TabNamesAndCombosHarnessTest.tab07_shortLabelFullTitle` |
 | TAB-08 | Configurações, Compras, Stock e Clientes cabem em 1270 px; nomes curtos até 20 caracteres | `tab08_mainStripsFitWithShortNames` |
+| TAB-09 | "Mais" com 30 px de altura, dentro da barra | `TabStripGeometryHarnessTest.moreIsFullHeightAndFirstVisibleTabIsWhole` |
+| TAB-10 | O primeiro separador visível nunca fica cortado; o escolhido continua visível | `TabStripGeometryHarnessTest.moreIsFullHeightAndFirstVisibleTabIsWhole` |

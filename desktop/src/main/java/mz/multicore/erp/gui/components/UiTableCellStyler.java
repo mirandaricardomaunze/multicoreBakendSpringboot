@@ -96,15 +96,21 @@ final class UiTableCellStyler {
         table.setDefaultRenderer(String.class, cellRenderer);
     }
 
-    /** Texto apresentado na célula: decimais em formato pt-MZ, preservando sufixos (MT, un, kg, %). */
+    /**
+     * Texto apresentado na célula: decimais em formato pt-MZ, preservando sufixos (MT, un, kg, %) e o sinal, e datas
+     * sempre como dd/MM/yyyy (com HH:mm quando há hora), mesmo quando chegam em ISO (2026-11-14T10:20).
+     */
     static String formatValue(Object value) {
+        String date = formatDate(value);
+        if (date != null) return date;
         if (value instanceof BigDecimal bd) return TableCellRenderers.format(bd, 2, "");
         if (value instanceof Double d) return TableCellRenderers.format(BigDecimal.valueOf(d), 2, "");
         if (value instanceof Float f) return TableCellRenderers.format(BigDecimal.valueOf(f), 2, "");
         if (value instanceof String s && !s.trim().isEmpty() && !s.equals("—") && !s.equals("-")) {
             String trimmed = s.trim();
             boolean hasSign = trimmed.startsWith("+");
-            String clean = trimmed.replaceAll("^[+]", "").replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim();
+            boolean negative = trimmed.startsWith("-");
+            String clean = trimmed.replaceAll("^[+-]", "").replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim();
             if (clean.isEmpty()) return s;
             clean = MoneyField.normalize(clean);
             if (clean.matches("^\\d+\\.\\d+$")) {
@@ -114,7 +120,8 @@ final class UiTableCellStyler {
                             : trimmed.endsWith(" un") ? " un"
                             : trimmed.endsWith(" kg") ? " kg"
                             : trimmed.endsWith("%") ? "%" : "";
-                    return (hasSign && parsed.signum() > 0 ? "+" : "") + TableCellRenderers.format(parsed, 2, suffix);
+                    String sign = negative && parsed.signum() != 0 ? "-" : hasSign && parsed.signum() > 0 ? "+" : "";
+                    return sign + TableCellRenderers.format(parsed, 2, suffix);
                 } catch (Exception ex) {
                     return s;
                 }
@@ -122,6 +129,28 @@ final class UiTableCellStyler {
             return s;
         }
         return value.toString();
+    }
+
+    private static final java.util.regex.Pattern ISO_DATE = java.util.regex.Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
+    private static final java.util.regex.Pattern ISO_DATE_TIME =
+            java.util.regex.Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?");
+
+    /** dd/MM/yyyy or dd/MM/yyyy HH:mm for a date value or an ISO date text; null when it is not a date. */
+    static String formatDate(Object value) {
+        try {
+            if (value instanceof java.time.LocalDate d) return UIHelper.formatDate(d);
+            if (value instanceof java.time.LocalDateTime d) return UIHelper.formatDateTime(d);
+            if (value instanceof java.time.OffsetDateTime d) return UIHelper.formatDateTime(d.atZoneSameInstant(java.time.ZoneId.systemDefault()));
+            if (value instanceof java.time.ZonedDateTime d) return UIHelper.formatDateTime(d.withZoneSameInstant(java.time.ZoneId.systemDefault()));
+            if (value instanceof String s) {
+                String t = s.trim();
+                if (ISO_DATE.matcher(t).matches()) return UIHelper.formatDate(java.time.LocalDate.parse(t));
+                if (ISO_DATE_TIME.matcher(t).matches()) return UIHelper.formatDateTime(java.time.LocalDateTime.parse(t));
+            }
+        } catch (java.time.DateTimeException ex) {
+            return null;
+        }
+        return null;
     }
 
     /** Colour of a status text, or null when the text is not a known status (shared with {@link StatusTone}). */
@@ -166,7 +195,7 @@ final class UiTableCellStyler {
         if (raw == null) return false;
         String s = raw.trim();
         if (s.isEmpty()) return false;
-        String cleaned = s.replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%)\\s*$", "").trim();
+        String cleaned = s.replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim().replaceFirst("^\\+", "");
         if (cleaned.isEmpty()) return false;
         return cleaned.matches("-?\\d{1,3}([.\\s]\\d{3})*(,\\d+)?")
                 || cleaned.matches("-?\\d{1,3}(,\\d{3})*(\\.\\d+)?")

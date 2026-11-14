@@ -68,6 +68,23 @@ final class UiTabScrollSupport {
                 Point position = viewport.getViewPosition();
                 tab.translate(position.x - origin.x, position.y - origin.y);
                 strip.scrollRectToVisible(tab);
+                snapToTabStart(tabs, viewport);
+            }
+        }
+    }
+
+    /** Never leave the first visible tab cut in half ("isão Geral"): slide on to the start of the next tab. */
+    static void snapToTabStart(JTabbedPane tabs, JViewport viewport) {
+        Point position = viewport.getViewPosition();
+        if (position.x <= 0) return;
+        int originX = viewport.getX();
+        for (int i = 0; i < tabs.getTabCount(); i++) {
+            Rectangle tab = tabs.getBoundsAt(i);
+            if (tab == null) continue;
+            int start = tab.x - originX + position.x;
+            if (start < position.x && start + tab.width > position.x) {
+                viewport.setViewPosition(new Point(start + tab.width, position.y));
+                return;
             }
         }
     }

@@ -30,7 +30,8 @@ final class UiTabOverflow {
 
     static final String LABEL = "Mais";
     private static final int HALF_WIDTH = 34;
-    private static final int HEIGHT = 30;
+    // Not "HEIGHT": inside a JButton that name resolves to ImageObserver.HEIGHT (= 2), which made "Mais" 2 px tall.
+    private static final int BUTTON_HEIGHT = 30;
 
     private UiTabOverflow() {}
 
@@ -83,8 +84,19 @@ final class UiTabOverflow {
             getAccessibleContext().setAccessibleName("Mais separadores");
         }
 
-        @Override public Dimension getPreferredSize() { return new Dimension(HALF_WIDTH, HEIGHT); }
+        @Override public Dimension getPreferredSize() { return new Dimension(HALF_WIDTH, BUTTON_HEIGHT); }
         @Override public Dimension getMaximumSize() { return getPreferredSize(); }
+
+        /**
+         * The Swing tab layout gives the scroll buttons only the space left under the tabs (2 px with our insets),
+         * which showed a sliver of "Mais". Keep the full height, centred on the tab strip that ends at y + height.
+         */
+        @Override
+        public void setBounds(int x, int y, int width, int height) {
+            int stripBottom = y + height;
+            int top = Math.max(0, (stripBottom - BUTTON_HEIGHT) / 2);
+            super.setBounds(x, top, width, Math.min(BUTTON_HEIGHT, Math.max(height, stripBottom - top)));
+        }
 
         /** The tab UI disables a scroll button at the end of the strip; this one always lists what is hidden. */
         @Override public void setEnabled(boolean enabled) { super.setEnabled(true); }
