@@ -82,6 +82,31 @@ class ScreenChromeHarnessTest {
     }
 
     @Test
+    @DisplayName("ECR-10: com uma linha extra nos filtros (aviso), título e botões alinham com a primeira linha")
+    void ecr10_alignsWithFirstLineOfFilters() {
+        JPanel controls = new JPanel();
+        controls.setPreferredSize(new java.awt.Dimension(500, UIHelper.FORM_CONTROL_HEIGHT));
+        JLabel hint = new JLabel("Nenhum lote expirado ou a expirar nos próximos 30 dias.");
+        hint.setPreferredSize(new java.awt.Dimension(500, 22));
+        JPanel filters = new JPanel(new BorderLayout());
+        filters.add(controls, BorderLayout.NORTH);
+        filters.add(hint, BorderLayout.SOUTH);
+        JButton refresh = new JButton("Actualizar");
+        refresh.setPreferredSize(new java.awt.Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
+
+        JPanel top = UIHelper.tableCardTop("Lotes Expirados e a Expirar", filters, refresh);
+        top.setSize(1300, 80);
+        top.doLayout();
+        java.awt.Component actions = ((BorderLayout) top.getLayout()).getLayoutComponent(BorderLayout.EAST);
+        java.awt.Component title = ((BorderLayout) top.getLayout()).getLayoutComponent(BorderLayout.WEST);
+        int firstLineCentre = filters.getY() + UIHelper.FORM_CONTROL_HEIGHT / 2;
+
+        assertThat(actions.getY() + actions.getHeight() / 2).as("Actualizar na linha dos campos").isEqualTo(firstLineCentre);
+        assertThat(title.getY() + title.getHeight() / 2).as("título na linha dos campos").isBetween(firstLineCentre - 1, firstLineCentre + 1);
+        assertThat(filters.getHeight()).as("o aviso fica por baixo, à vista").isEqualTo(UIHelper.FORM_CONTROL_HEIGHT + 22);
+    }
+
+    @Test
     @DisplayName("ECR-09: todos os ecrãs com filtros usam o cabeçalho comum")
     void ecr09_everyScreenUsesTheSharedHeader() throws IOException {
         Path gui = Path.of("src/main/java/mz/multicore/erp/gui");

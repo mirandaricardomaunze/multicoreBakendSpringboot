@@ -89,7 +89,9 @@ class TableConsistencyHarnessTest {
         JPanel filters = new JPanel();
         JPanel top = UIHelper.tableCardTop("Clientes", filters, UIHelper.createRefreshButton(() -> { }), fromActions);
         Component center = ((BorderLayout) top.getLayout()).getLayoutComponent(BorderLayout.CENTER);
-        assertThat(((BorderLayout) ((Container) center).getLayout()).getLayoutComponent(BorderLayout.EAST)).isSameAs(fromActions);
+        Component east = ((BorderLayout) ((Container) center).getLayout()).getLayoutComponent(BorderLayout.EAST);
+        assertThat(javax.swing.SwingUtilities.isDescendingFrom(fromActions, east)).as("no fim dos filtros").isTrue();
+        assertThat(fromActions.getPreferredSize().height).as("mesma altura de um campo").isEqualTo(UIHelper.FORM_CONTROL_HEIGHT);
         assertThat(buttons(((BorderLayout) top.getLayout()).getLayoutComponent(BorderLayout.EAST))).doesNotContain((ModernButton) fromActions);
 
         JButton insideFilters = peek();
@@ -98,7 +100,8 @@ class TableConsistencyHarnessTest {
         bar.add(insideFilters);
         JPanel top2 = UIHelper.tableCardTop("Clientes", bar);
         Component center2 = ((BorderLayout) top2.getLayout()).getLayoutComponent(BorderLayout.CENTER);
-        assertThat(((BorderLayout) ((Container) center2).getLayout()).getLayoutComponent(BorderLayout.EAST)).isSameAs(insideFilters);
+        Component east2 = ((BorderLayout) ((Container) center2).getLayout()).getLayoutComponent(BorderLayout.EAST);
+        assertThat(javax.swing.SwingUtilities.isDescendingFrom(insideFilters, east2)).isTrue();
         assertThat(insideFilters.getParent()).isNotSameAs(bar);
         assertThat(ButtonStyles.isOutline((ModernButton) insideFilters)).isTrue();
     }

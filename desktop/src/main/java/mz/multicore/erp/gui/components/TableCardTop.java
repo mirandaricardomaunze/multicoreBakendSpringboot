@@ -12,6 +12,8 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.event.HierarchyEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Header of a table card. One row (title, filters, actions) when the filters fit at their natural width;
@@ -42,7 +44,7 @@ final class TableCardTop {
         top.add(heading, BorderLayout.WEST);
         if (filters != null) top.add(filters, BorderLayout.CENTER);
         JComponent[] arranged = TableHeaderActions.arrange(actions);
-        if (arranged.length > 0) top.add(UIHelper.actionsBar(arranged), BorderLayout.EAST);
+        if (arranged.length > 0) top.add(actionsPanel(arranged), BorderLayout.EAST);
 
         top.addHierarchyListener(event -> {
             if ((event.getChangeFlags() & (HierarchyEvent.PARENT_CHANGED | HierarchyEvent.SHOWING_CHANGED)) != 0) {
@@ -91,11 +93,108 @@ final class TableCardTop {
 
     private static JComponent withPeekAtEnd(JComponent filters, JButton peek) {
         if (peek instanceof ModernButton modern && !ButtonStyles.isOutline(modern)) ButtonStyles.outline(modern);
+        // Same size as a field and pinned to the first line of controls, so it never hangs lower than them.
+        java.awt.Dimension square = new java.awt.Dimension(UIHelper.FORM_CONTROL_HEIGHT, UIHelper.FORM_CONTROL_HEIGHT);
+        peek.setPreferredSize(square);
+        peek.setMinimumSize(square);
+        peek.setMaximumSize(square);
+        JPanel holder = new JPanel(new BorderLayout());
+        holder.setOpaque(false);
+        holder.add(peek, BorderLayout.NORTH);
         JPanel row = new JPanel(new BorderLayout(8, 0));
         row.setOpaque(false);
         if (filters != null) row.add(filters, BorderLayout.CENTER);
-        row.add(peek, BorderLayout.EAST);
+        row.add(holder, BorderLayout.EAST);
         return row;
+    }
+
+    private static JPanel actionsPanel(JComponent[] actions) {
+        JPanel bar = new JPanel(new ActionsLayout());
+        bar.setOpaque(false);
+        for (JComponent action : actions) bar.add(action);
+        return bar;
+    }
+
+    /** Buttons right-aligned on one line; on a narrow card they wrap onto more right-aligned lines. */
+    static final class ActionsLayout implements java.awt.LayoutManager {
+
+        static final int HGAP = 8;
+        static final int VGAP = 6;
+
+        static int heightFor(Component actions, int width) {
+            if (!(actions instanceof Container bar)) return 0;
+            int lineWidth = 0, lineHeight = 0, total = 0;
+            for (Component c : bar.getComponents()) {
+                if (!c.isVisible()) continue;
+                Dimension d = c.getPreferredSize();
+                if (lineWidth > 0 && lineWidth + HGAP + d.width > width) {
+                    total += lineHeight + VGAP;
+                    lineWidth = 0;
+                    lineHeight = 0;
+                }
+                lineWidth += (lineWidth > 0 ? HGAP : 0) + d.width;
+                lineHeight = Math.max(lineHeight, d.height);
+            }
+            return total + lineHeight;
+        }
+
+        @Override
+        public Dimension preferredLayoutSize(Container bar) {
+            int width = 0, height = 0;
+            for (Component c : bar.getComponents()) {
+                if (!c.isVisible()) continue;
+                Dimension d = c.getPreferredSize();
+                width += (width > 0 ? HGAP : 0) + d.width;
+                height = Math.max(height, d.height);
+            }
+            return new Dimension(width, height);
+        }
+
+        @Override
+        public Dimension minimumLayoutSize(Container bar) {
+            return new Dimension(0, preferredLayoutSize(bar).height);
+        }
+
+        @Override
+        public void layoutContainer(Container bar) {
+            List<List<Component>> lines = new ArrayList<>();
+            List<Component> line = new ArrayList<>();
+            int lineWidth = 0;
+            for (Component c : bar.getComponents()) {
+                if (!c.isVisible()) continue;
+                int w = c.getPreferredSize().width;
+                if (!line.isEmpty() && lineWidth + HGAP + w > bar.getWidth()) {
+                    lines.add(line);
+                    line = new ArrayList<>();
+                    lineWidth = 0;
+                }
+                lineWidth += (line.isEmpty() ? 0 : HGAP) + w;
+                line.add(c);
+            }
+            if (!line.isEmpty()) lines.add(line);
+            int y = lines.size() == 1 ? Math.max(0, (bar.getHeight() - lineHeight(lines.get(0))) / 2) : 0;
+            for (List<Component> row : lines) {
+                int h = lineHeight(row);
+                int x = bar.getWidth();
+                for (int i = row.size() - 1; i >= 0; i--) {
+                    Component c = row.get(i);
+                    Dimension d = c.getPreferredSize();
+                    x -= d.width;
+                    c.setBounds(Math.max(0, x), y + (h - d.height) / 2, Math.min(d.width, bar.getWidth()), d.height);
+                    x -= HGAP;
+                }
+                y += h + VGAP;
+            }
+        }
+
+        private static int lineHeight(List<Component> row) {
+            int h = 0;
+            for (Component c : row) h = Math.max(h, c.getPreferredSize().height);
+            return h;
+        }
+
+        @Override public void addLayoutComponent(String name, Component comp) { }
+        @Override public void removeLayoutComponent(Component comp) { }
     }
 
     /** BorderLayout positions (WEST title, CENTER filters, EAST actions) laid out as one or two rows. */
@@ -112,17 +211,32 @@ final class TableCardTop {
             return title + filters + actions + Math.max(0, parts - 1) * GAP <= width;
         }
 
+        private enum Mode { ONE_ROW, TITLE_AND_ACTIONS_THEN_FILTERS, STACKED }
+
+        /**
+         * ONE_ROW when everything fits at natural width; otherwise filters drop to their own row; and when
+         * even the title and the buttons do not fit side by side (a narrow list/detail column), the buttons
+         * get their own right-aligned row, wrapping onto more lines if needed.
+         */
+        private Mode mode(int width, Component title, Component filters, Component actions) {
+            int tw = width(title), aw = width(actions);
+            if (fitsOneRow(width, tw, width(filters), aw)) return Mode.ONE_ROW;
+            if (fitsOneRow(width, tw, 0, aw)) return Mode.TITLE_AND_ACTIONS_THEN_FILTERS;
+            return Mode.STACKED;
+        }
+
         @Override
         public Dimension preferredLayoutSize(Container target) {
             synchronized (target.getTreeLock()) {
                 Insets in = target.getInsets();
                 Component title = part(WEST), filters = part(CENTER), actions = part(EAST);
                 int width = target.getWidth() > 0 ? target.getWidth() - in.left - in.right : Integer.MAX_VALUE;
-                int oneRow = Math.max(height(title), Math.max(height(filters), height(actions)));
                 int sumWidth = width(title) + width(filters) + width(actions) + 2 * GAP;
-                int height = fitsOneRow(width, width(title), width(filters), width(actions)) || filters == null
-                        ? oneRow
-                        : Math.max(height(title), height(actions)) + ROW_GAP + height(filters);
+                int height = switch (mode(width, title, filters, actions)) {
+                    case ONE_ROW -> Math.max(band(title, filters, actions), height(filters));
+                    case TITLE_AND_ACTIONS_THEN_FILTERS -> stack(Math.max(height(title), height(actions)), height(filters));
+                    case STACKED -> stack(stack(height(title), ActionsLayout.heightFor(actions, width)), height(filters));
+                };
                 return new Dimension(Math.min(sumWidth, width) + in.left + in.right, height + in.top + in.bottom);
             }
         }
@@ -139,25 +253,60 @@ final class TableCardTop {
                 int x0 = in.left, y0 = in.top;
                 int width = target.getWidth() - in.left - in.right;
                 Component title = part(WEST), filters = part(CENTER), actions = part(EAST);
-                int tw = width(title), aw = Math.min(width(actions), width);
-
-                if (filters == null || fitsOneRow(width, tw, width(filters), width(actions))) {
-                    int row = Math.max(height(title), Math.max(height(filters), height(actions)));
-                    int x = x0;
-                    if (title != null) { place(title, x, y0, tw, row); x += tw + GAP; }
-                    int right = x0 + width - aw;
-                    if (actions != null) place(actions, right, y0, aw, row);
-                    if (filters != null) place(filters, x, y0, Math.max(0, (actions != null ? right - GAP : x0 + width) - x), row);
-                    requestHeight(target, row + in.top + in.bottom);
-                } else {
-                    int first = Math.max(height(title), height(actions));
-                    if (title != null) place(title, x0, y0, Math.min(tw, Math.max(0, width - aw - GAP)), first);
-                    if (actions != null) place(actions, x0 + width - aw, y0, aw, first);
-                    int second = y0 + (first > 0 ? first + ROW_GAP : 0);
-                    place(filters, x0, second, width, height(filters));
-                    requestHeight(target, second + height(filters) + in.bottom);
+                int tw = Math.min(width(title), width), aw = Math.min(width(actions), width);
+                int bottom;
+                switch (mode(width, title, filters, actions)) {
+                    case ONE_ROW -> {
+                        // Title and buttons line up with the first line of controls; anything the filters
+                        // show below it (a hint, a second line) hangs underneath instead of pushing them down.
+                        int band = band(title, filters, actions);
+                        int x = x0;
+                        if (title != null) { place(title, x, y0, tw, band); x += tw + GAP; }
+                        int right = x0 + width - aw;
+                        if (actions != null) place(actions, right, y0, aw, band);
+                        if (filters != null) {
+                            int fh = height(filters);
+                            int fy = fh <= band ? y0 + (band - fh) / 2 : y0;
+                            filters.setBounds(x, fy, Math.max(0, (actions != null ? right - GAP : x0 + width) - x), fh);
+                        }
+                        bottom = y0 + Math.max(band, height(filters));
+                    }
+                    case TITLE_AND_ACTIONS_THEN_FILTERS -> {
+                        int first = Math.max(height(title), height(actions));
+                        if (title != null) place(title, x0, y0, tw, first);
+                        if (actions != null) place(actions, x0 + width - aw, y0, aw, first);
+                        bottom = placeBelow(filters, x0, y0 + first, width);
+                    }
+                    default -> {
+                        int y = y0;
+                        if (title != null) { place(title, x0, y, tw, height(title)); y += height(title); }
+                        if (actions != null) {
+                            if (y > y0) y += ROW_GAP;
+                            int ah = ActionsLayout.heightFor(actions, width);
+                            actions.setBounds(x0, y, width, ah);
+                            y += ah;
+                        }
+                        bottom = placeBelow(filters, x0, y, width);
+                    }
                 }
+                requestHeight(target, bottom + in.bottom);
             }
+        }
+
+        private static int band(Component title, Component filters, Component actions) {
+            return Math.max(height(title), Math.max(height(actions), Math.min(height(filters), UIHelper.FORM_CONTROL_HEIGHT)));
+        }
+
+        private static int stack(int above, int below) {
+            if (above == 0) return below;
+            return below == 0 ? above : above + ROW_GAP + below;
+        }
+
+        private static int placeBelow(Component c, int x, int y, int width) {
+            if (c == null) return y;
+            int top = y + ROW_GAP;
+            c.setBounds(x, top, width, height(c));
+            return top + height(c);
         }
 
         private Component part(Object constraint) {

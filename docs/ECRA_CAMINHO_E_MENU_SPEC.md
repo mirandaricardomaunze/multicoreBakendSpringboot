@@ -24,7 +24,10 @@ cortavam texto.
    `ResponsiveSupport.cardTop` dos ecrãs de sector delega nele). Ordem fixa: título à esquerda, filtros,
    acções à direita com Actualizar primeiro. **Uma fila quando os filtros cabem à largura natural;**
    senão duas filas, título e acções em cima e filtros com a largura toda em baixo. Os filtros nunca são
-   esmagados (“Tod…”). Filtros e botões ficam centrados na vertical da mesma linha.
+   esmagados (“Tod…”). Título e botões alinham com a primeira linha de campos; se os filtros tiverem
+   mais uma linha (por exemplo um aviso), essa fica por baixo sem os empurrar. Numa coluna estreita
+   (lista e detalhe) onde nem título e botões cabem lado a lado, os botões passam a uma linha própria,
+   alinhados à direita, e quebram em mais linhas se for preciso: nunca são cortados.
 3. **Título repetido sai.** Esconde-se quando contém o nome do separador em palavras inteiras (“Recibos
    Emitidos (Liquidações)” em “Recibos”; “&” lê-se “e”, por isso “Central de Pedidos e Separação” em
    “Pedidos & Separação”), ou quando o nome do separador começa pelo título. Contadores “(3)” não contam.
@@ -47,6 +50,8 @@ cortavam texto.
 | ECR-06 | Só o clique do utilizador é gravado; itens tardios seguem o estado | `ecr06_onlyUserTogglesAreRemembered` |
 | ECR-07 | O caminho segue o separador do ecrã visível e some num ecrã sem separadores | `MainFrameBreadcrumbHarnessTest.ecr07_pathFollowsSelectedTab` |
 | ECR-08 | Filtros nunca esmagados: uma fila quando cabem, segunda fila com a largura toda quando não; centrados com os botões | `ecr08_filtersNeverSqueezed` |
+| ECR-10 | Com uma linha extra nos filtros, título e botões alinham com a primeira linha de campos | `ecr10_alignsWithFirstLineOfFilters` |
+| ECR-11 | Auditoria de todos os ecrãs: cada módulo e ecrã de sector, todos os separadores, a 1270 px e 1100 px; nenhum cabeçalho com título ou botões fora da linha, filtros esmagados, peças sobrepostas ou botões cortados | `AllScreensHeaderAuditTest` (relatório em `desktop/target/all-screens-header-audit.txt`) |
 | ECR-09 | Todo o ecrã com filtros (excepto diálogos) usa o cabeçalho comum | `ecr09_everyScreenUsesTheSharedHeader` |
 
 ## 4. Fora de âmbito
