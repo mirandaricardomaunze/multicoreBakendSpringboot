@@ -107,7 +107,7 @@ public class OperationalPulseWidget extends ModernPanel {
     }
 
     private void buildCards() {
-        JPanel grid = KpiCard.createGrid(4, 12, 12);
+        JPanel grid = KpiCard.createHeroGrid(4, 12, 12);
 
         grid.add(createPillarCard(
                 "MANUFATURA & PRODUÇÃO",

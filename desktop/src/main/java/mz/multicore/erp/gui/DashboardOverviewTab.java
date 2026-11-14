@@ -43,7 +43,7 @@ final class DashboardOverviewTab {
         tab1.setOpaque(false);
         tab1.setBorder(new EmptyBorder(12, 4, 4, 4));
 
-        JPanel commercialKpiGrid = KpiCard.createGrid(4, 10, 10);
+        JPanel commercialKpiGrid = KpiCard.createHeroGrid(4, 10, 10);
 
         balanceValLabel = KpiCard.valueLabel("0,00 MT", 19);
         // The balance is always current; the caption prevents it from appearing period-filtered.

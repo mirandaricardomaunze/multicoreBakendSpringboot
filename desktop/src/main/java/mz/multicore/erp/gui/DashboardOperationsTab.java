@@ -35,7 +35,7 @@ final class DashboardOperationsTab {
         tab2.setOpaque(false);
         tab2.setBorder(new EmptyBorder(12, 4, 4, 4));
 
-        JPanel operationalKpiGrid = KpiCard.createGrid(4, 10, 10);
+        JPanel operationalKpiGrid = KpiCard.createHeroGrid(4, 10, 10);
 
         approvalsValLabel = KpiCard.valueLabel("0 Pedidos", 19);
         operationalKpiGrid.add(buildKpiCard("APROVAÇÕES PENDENTES", "fas-clipboard-check", UIHelper.KPI_WARNING_SOFT,

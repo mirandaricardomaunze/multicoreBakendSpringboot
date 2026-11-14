@@ -84,7 +84,7 @@ public final class StockProductDetailHeroBuilder {
     }
 
     public static JComponent buildKpiGrid(ProductDTO product, BigDecimal totalQty) {
-        JPanel grid = KpiCard.createGrid(4, 8, 8);
+        JPanel grid = KpiCard.createHeroGrid(4, 8, 8);
 
         BigDecimal sellPrice = product.unitPrice() != null ? product.unitPrice() : BigDecimal.ZERO;
         String vatInfo = product.taxRateLabel() != null ? product.taxRateLabel() : "IVA Geral";

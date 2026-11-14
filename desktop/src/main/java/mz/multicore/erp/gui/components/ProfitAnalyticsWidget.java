@@ -49,7 +49,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         add(top, BorderLayout.NORTH);
 
         // Painel Central com KPIs
-        JPanel kpiGrid = KpiCard.createGrid(4);
+        JPanel kpiGrid = KpiCard.createHeroGrid(4, 10, 10);
 
         revenueVal = new JLabel("0,00 MT");
         cogsVal = new JLabel("0,00 MT");

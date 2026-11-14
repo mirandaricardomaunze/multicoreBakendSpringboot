@@ -29,7 +29,7 @@ class OperationalPulseWidgetHarnessTest {
         assertThat(widgetSource)
                 .contains("COCKPIT OPERACIONAL & INDUSTRIAL", "MANUFATURA & PRODUÇÃO", "FROTAS & COMBUSTÍVEIS",
                         "CONTRATOS RECORRENTES", "PATRIMÓNIO & ATIVOS",
-                        "KpiCard.createGrid(4, 12, 12)", "KpiCard.STANDARD_CARD_HEIGHT",
+                        "KpiCard.createHeroGrid(4, 12, 12)", "KpiCard.STANDARD_CARD_HEIGHT",
                         "Chão de Fábrica", "Gestão de Frotas", "Ver Contratos", "Activos Fixos")
                 .doesNotContain("JOptionPane", "printStackTrace");
     }

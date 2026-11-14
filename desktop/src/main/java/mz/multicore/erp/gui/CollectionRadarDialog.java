@@ -38,7 +38,7 @@ public class CollectionRadarDialog {
         root.setOpaque(false);
         root.setPreferredSize(new Dimension(980, 580));
 
-        // 1. Grid de 5 KPIs corporativos canónicos (STANDARD_CARD_HEIGHT = 96px)
+        // 1. Faixa compacta de 5 KPIs por cima da tabela
         JLabel critVal = new JLabel("0,00 MT");
         JLabel critSub = new JLabel("0 faturas");
         ModernPanel critCard = KpiCard.createCard("Crítico (>15d)", critVal, null, critSub, "fas-exclamation-triangle", UIHelper.REJECTED_RED);

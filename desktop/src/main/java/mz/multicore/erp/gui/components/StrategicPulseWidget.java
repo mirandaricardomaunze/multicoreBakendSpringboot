@@ -69,7 +69,7 @@ public class StrategicPulseWidget extends ModernPanel {
     }
 
     private void buildCards() {
-        JPanel grid = KpiCard.createGrid(4, 12, 12);
+        JPanel grid = KpiCard.createHeroGrid(4, 12, 12);
         grid.add(StrategicPulseCardFactory.createPillarCard(
                 "COMPLIANCE & FRAUDE", "fas-shield-alt", UIHelper.REJECTED_RED,
                 forensicScoreLabel, forensicSubLabel, forensicNavBtn, "fas-file-alt"));

@@ -50,7 +50,7 @@ public final class SellerDashboardViewCoordinator {
 
     public static JPanel buildKpis(JLabel salesVal, JLabel salesCnt, JLabel ordersVal,
                                    JLabel quotesVal, Consumer<String> onAction) {
-        JPanel grid = KpiCard.createGrid(4, 10, 10);
+        JPanel grid = KpiCard.createHeroGrid(4, 10, 10);
         grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, KpiCard.STANDARD_CARD_HEIGHT));
         grid.add(KpiCard.createInteractiveCard("VENDAS NA SESSÃO", salesVal, "Apenas o seu caixa actual",
                 "fas-cash-register", UIHelper.APPROVED_GREEN, "Abrir o POS", () -> onAction.accept("pos")));
