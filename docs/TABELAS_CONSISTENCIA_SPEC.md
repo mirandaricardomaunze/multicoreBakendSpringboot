@@ -68,6 +68,10 @@ paginadores com textos e ícones diferentes, e o botão “Espreitar detalhes”
     Quantidades com `un`/`kg` e valores com sinal ficam alinhados à direita. Datas sempre `dd/MM/yyyy`, com
     `HH:mm` quando há hora, mesmo que cheguem como objecto de data ou em ISO (`2026-11-14T10:20`). Os números
     inteiros (códigos, anos, nº de documento) não levam separador de milhares.
+13. **Nenhum diálogo maior do que o ecrã** (`UiThemeAndWindowSupport.fitOnScreen`, instalado no arranque).
+    Ao abrir, um diálogo que não cabe (por exemplo o Fecho de Caixa, 720x760, num ecrã de 1366x720) encolhe para
+    caber na janela e fica centrado. O rodapé fica em baixo e o conteúdo ganha scroll, por isso os botões ficam
+    sempre visíveis. Um diálogo que cabe mantém o tamanho e o lugar.
 
 A coluna estreita à esquerda das tabelas com linhas é a coluna de selecção (UA-06 a UA-08). Já era igual
 em todas as tabelas e esconde-se quando a tabela está vazia.
@@ -90,3 +94,4 @@ em todas as tabelas e esconde-se quando a tabela está vazia.
 | TC-12 | Em todos os diálogos cada botão tem papel (principal, secundário ou destrutivo) | `tc12_everyDialogButtonHasARole` |
 | TC-13 | Enter carrega no botão verde e Esc fecha; teclas próprias e excepções respeitadas; instalado para toda a app | `tc13_enterAndEscapeInEveryDialog` |
 | TC-14 | Dinheiro com sinal, unidades à direita e datas dd/MM/yyyy mesmo em ISO | `TableValuesFormatHarnessTest.tc14_valuesAndDatesLookTheSameEverywhere` |
+| TC-15 | O diálogo que não cabe encolhe ao abrir; o que cabe não é mexido; instalado no arranque | `DialogFitHarnessTest.tc15_dialogsNeverOutgrowTheScreen` |

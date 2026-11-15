@@ -76,14 +76,30 @@ final class UiThemeAndWindowSupport {
         containWithinMain(dialog);
     }
 
+    /**
+     * A dialog with a fixed size larger than the screen (720x760 on a 1366x720 screen) hid its own footer buttons.
+     * Only a dialog that does not fit is resized and re-centred; one that fits keeps its size and place.
+     */
+    static void fitOnScreen(Window dialog) {
+        if (dialog == null || dialog == UIHelper.mainWindow) return;
+        Dimension max = maxModalSize(dialog);
+        if (dialog.getWidth() > max.width || dialog.getHeight() > max.height) containWithinMain(dialog);
+    }
+
+    static Dimension maxModalSize(Window dialog) {
+        Rectangle usable = getUsableScreenBounds(dialog);
+        Rectangle area = mainArea();
+        return new Dimension(Math.min((int) (area.width * 0.94), usable.width - 24),
+                Math.min((int) (area.height * 0.94), usable.height - 36));
+    }
+
     static void containWithinMain(Window dialog) {
         if (dialog == null) return;
         Rectangle usable = getUsableScreenBounds(dialog);
         Rectangle area = mainArea();
-        int maxW = Math.min((int) (area.width * 0.94), usable.width - 24);
-        int maxH = Math.min((int) (area.height * 0.94), usable.height - 36);
-        int w = Math.min(dialog.getWidth(), maxW);
-        int h = Math.min(dialog.getHeight(), maxH);
+        Dimension max = maxModalSize(dialog);
+        int w = Math.min(dialog.getWidth(), max.width);
+        int h = Math.min(dialog.getHeight(), max.height);
         if (w > 0 && h > 0) dialog.setSize(w, h);
         int x = area.x + Math.max(0, (area.width - dialog.getWidth()) / 2);
         int y = area.y + Math.max(0, (area.height - dialog.getHeight()) / 2);
@@ -102,12 +118,18 @@ final class UiThemeAndWindowSupport {
     static void registerMainWindow(Window window) {
         UIHelper.mainWindow = window;
         installModalContainment();
-        DialogKeys.install();
     }
 
-    private static void installModalContainment() {
+    /** Window rules for every dialog: kept inside the main window, never taller or wider than the screen, same keys. */
+    static void installModalContainment() {
         if (modalContainmentInstalled) return;
         modalContainmentInstalled = true;
+        DialogKeys.install();
+        Toolkit.getDefaultToolkit().addAWTEventListener(event -> {
+            if (event.getID() == java.awt.event.WindowEvent.WINDOW_OPENED && event.getSource() instanceof Dialog dialog) {
+                fitOnScreen(dialog);
+            }
+        }, AWTEvent.WINDOW_EVENT_MASK);
         Toolkit.getDefaultToolkit().addAWTEventListener(event -> {
             if (event.getID() != java.awt.event.ComponentEvent.COMPONENT_MOVED) return;
             Object source = event.getSource();
@@ -148,6 +170,7 @@ final class UiThemeAndWindowSupport {
     }
 
     static void loadAndApplySavedTheme() {
+        installModalContainment(); // at startup, so the login and licence dialogs follow the same rules
         String saved = PREFS.get("theme", "light");
         if ("dark".equalsIgnoreCase(saved)) {
             saved = "light";
