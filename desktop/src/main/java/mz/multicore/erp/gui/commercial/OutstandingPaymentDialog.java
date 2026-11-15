@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.commercial;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.MoneyField;
@@ -51,7 +52,7 @@ public final class OutstandingPaymentDialog {
                 .setConfirmButton("Receber", "fas-money-bill-wave").showDialog()) return;
         try {
             BigDecimal value = amount.value();
-            if (value.signum() <= 0) throw new IllegalArgumentException("O valor deve ser maior que zero.");
+            if (value.signum() <= 0) throw FieldValidationException.of(amount, "O valor deve ser maior que zero.");
             Long accountId = accounts.isEmpty() ? null : accounts.get(account.getSelectedIndex()).id();
             PosPaymentRequest request = new PosPaymentRequest(String.valueOf(method.getSelectedItem()), value, value,
                     reference.getText().trim().isEmpty() ? null : reference.getText().trim(), accountId,

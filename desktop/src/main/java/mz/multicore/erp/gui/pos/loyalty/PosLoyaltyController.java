@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos.loyalty;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.LoyaltyEngine;
@@ -90,7 +91,7 @@ public class PosLoyaltyController {
         dialog.setOnSave(() -> {
             String query = searchField.getText().trim();
             if (query.isEmpty()) {
-                throw new IllegalArgumentException("Por favor, introduza o código do cartão, NUIT ou telefone.");
+                throw FieldValidationException.of(searchField, "Por favor, introduza o código do cartão, NUIT ou telefone.");
             }
 
             try {

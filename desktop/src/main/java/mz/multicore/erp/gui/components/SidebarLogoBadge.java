@@ -33,12 +33,12 @@ public class SidebarLogoBadge extends JComponent {
             int w = getWidth();
             int h = getHeight();
 
-            Color bgTop = UIHelper.isLight() ? new Color(241, 245, 249) : new Color(30, 41, 59);
-            Color bgBot = UIHelper.isLight() ? new Color(226, 232, 240) : new Color(15, 23, 42);
+            Color bgTop = ThemeColors.subtleFill();
+            Color bgBot = UIHelper.TABLE_HEADER_BG;
             g2.setPaint(new GradientPaint(0, 0, bgTop, 0, h, bgBot));
             g2.fillRoundRect(0, 0, w, h, 8, 8);
 
-            g2.setColor(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(51, 65, 85));
+            g2.setColor(ThemeColors.hairline());
             g2.drawRoundRect(0, 0, w - 1, h - 1, 8, 8);
 
             if (iconImage != null) {

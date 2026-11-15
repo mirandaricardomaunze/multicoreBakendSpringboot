@@ -128,7 +128,7 @@ public class TopProductsWidget extends ModernPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 int w = getWidth();
                 int h = getHeight();
-                g2.setColor(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85));
+                g2.setColor(ThemeColors.hairline());
                 g2.fillRoundRect(0, 0, w, h, 4, 4);
 
                 int filledW = (int) Math.round((p.percentage() / 100.0) * w);

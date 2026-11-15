@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.architecture.pricing.TaxRates;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -57,7 +58,7 @@ public class PosCartController {
                     } catch (NumberFormatException ex) {
                         throw new IllegalArgumentException("Introduza uma quantidade válida.");
                     }
-                    if (quantity.signum() <= 0) throw new IllegalArgumentException("A quantidade deve ser maior do que zero.");
+                    if (quantity.signum() <= 0) throw FieldValidationException.of(quantityField, "A quantidade deve ser maior do que zero.");
                     item.qty = quantity;
                 })
                 .showDialog();

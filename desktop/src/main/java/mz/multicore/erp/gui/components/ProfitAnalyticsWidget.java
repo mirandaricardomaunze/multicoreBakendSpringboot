@@ -103,7 +103,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         bar.setValue(0);
         bar.setPreferredSize(new Dimension(100, 6));
         bar.setForeground(fill);
-        bar.setBackground(!UIHelper.isLight() ? new Color(30, 41, 59) : new Color(226, 232, 240));
+        bar.setBackground(ThemeColors.subtleFill());
         bar.setBorderPainted(false);
         return bar;
     }

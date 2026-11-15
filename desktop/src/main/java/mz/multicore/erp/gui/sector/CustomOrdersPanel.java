@@ -330,7 +330,7 @@ public class CustomOrdersPanel extends JPanel {
                     throw new IllegalArgumentException("Hora inválida.");
                 }
             }
-            if (date.getDate() == null) throw new IllegalArgumentException("Indique o dia de entrega.");
+            if (date.getDate() == null) throw FieldValidationException.of(date, "Indique o dia de entrega.");
             SaveCustomOrderRequest request = new SaveCustomOrderRequest(companyId, date.getDate(), hour,
                     mode.getSelectedIndex() == 1 ? DeliveryMode.DELIVERY : DeliveryMode.PICKUP, address.getText().trim(),
                     phone.getText().trim(), personalization.getText().trim(), image[0], remove[0]);

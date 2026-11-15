@@ -20,10 +20,10 @@ public class CollapsibleSidebar extends JPanel {
     private static final int ANIMATION_DURATION_MS = 140;
     private static final int ANIMATION_TICK_MS = 14;
 
-    private static Color sidebarBg()     { return UIHelper.isLight() ? new Color(255, 255, 255) : new Color(24, 32, 47); }
-    private static Color sidebarBorder() { return UIHelper.isLight() ? new Color(226, 232, 240) : new Color(45, 55, 72); }
-    private static Color headerText()    { return UIHelper.isLight() ? new Color(31, 41, 55)    : new Color(243, 244, 246); }
-    private static Color subText()       { return UIHelper.isLight() ? new Color(100, 116, 139) : new Color(203, 213, 225); }
+    private static Color sidebarBg()     { return ThemeColors.chromeBg(); }
+    private static Color sidebarBorder() { return ThemeColors.chromeBorder(); }
+    private static Color headerText()    { return UIHelper.TEXT_LIGHT; }
+    private static Color subText()       { return ThemeColors.textSoft(); }
 
     private final JPanel body = new JPanel();
     private final JPanel headerPanel = new JPanel();

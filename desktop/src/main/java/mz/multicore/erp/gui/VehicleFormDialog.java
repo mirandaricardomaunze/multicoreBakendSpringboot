@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.desktop.client.FleetApiClient;
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -60,18 +61,15 @@ public final class VehicleFormDialog {
         dialog.setOnSave(() -> {
             String plate = plateField.getText().trim();
             if (plate.isEmpty()) {
-                plateField.requestFocus();
-                throw new IllegalArgumentException("A matrícula é obrigatória.");
+                throw FieldValidationException.of(plateField, "A matrícula é obrigatória.");
             }
             String make = makeField.getText().trim();
             if (make.isEmpty()) {
-                makeField.requestFocus();
-                throw new IllegalArgumentException("A marca é obrigatória.");
+                throw FieldValidationException.of(makeField, "A marca é obrigatória.");
             }
             String model = modelField.getText().trim();
             if (model.isEmpty()) {
-                modelField.requestFocus();
-                throw new IllegalArgumentException("O modelo é obrigatório.");
+                throw FieldValidationException.of(modelField, "O modelo é obrigatório.");
             }
 
             int year;
@@ -79,8 +77,7 @@ public final class VehicleFormDialog {
                 year = Integer.parseInt(yearField.getText().trim());
                 if (year < 1950 || year > 2100) throw new Exception();
             } catch (Exception ex) {
-                yearField.requestFocus();
-                throw new IllegalArgumentException("Ano de fabrico inválido.");
+                throw FieldValidationException.of(yearField, "Ano de fabrico inválido.");
             }
 
             BigDecimal odo;
@@ -88,8 +85,7 @@ public final class VehicleFormDialog {
                 odo = new BigDecimal(odoField.getText().trim().replace(",", "."));
                 if (odo.compareTo(BigDecimal.ZERO) < 0) throw new Exception();
             } catch (Exception ex) {
-                odoField.requestFocus();
-                throw new IllegalArgumentException("Odómetro não pode ser negativo.");
+                throw FieldValidationException.of(odoField, "Odómetro não pode ser negativo.");
             }
 
             LocalDate insDate = null;
@@ -97,8 +93,7 @@ public final class VehicleFormDialog {
                 try {
                     insDate = LocalDate.parse(insuranceField.getText().trim());
                 } catch (Exception ex) {
-                    insuranceField.requestFocus();
-                    throw new IllegalArgumentException("Data de seguro inválida. Use AAAA-MM-DD.");
+                    throw FieldValidationException.of(insuranceField, "Data de seguro inválida. Use AAAA-MM-DD.");
                 }
             }
 
@@ -107,8 +102,7 @@ public final class VehicleFormDialog {
                 try {
                     inspDate = LocalDate.parse(inspectionField.getText().trim());
                 } catch (Exception ex) {
-                    inspectionField.requestFocus();
-                    throw new IllegalArgumentException("Data de inspecção inválida. Use AAAA-MM-DD.");
+                    throw FieldValidationException.of(inspectionField, "Data de inspecção inválida. Use AAAA-MM-DD.");
                 }
             }
 

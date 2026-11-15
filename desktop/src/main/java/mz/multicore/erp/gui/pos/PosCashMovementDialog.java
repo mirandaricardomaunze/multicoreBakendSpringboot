@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.MoneyField;
@@ -87,14 +88,12 @@ public class PosCashMovementDialog {
         dlg.setOnSave(() -> {
             BigDecimal amt = amountField.value();
             if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
-                amountField.requestFocusInWindow();
-                throw new IllegalArgumentException("O valor do movimento deve ser maior do que zero.");
+                throw FieldValidationException.of(amountField, "O valor do movimento deve ser maior do que zero.");
             }
 
             String desc = descField.getText().trim();
             if (desc.isEmpty()) {
-                descField.requestFocusInWindow();
-                throw new IllegalArgumentException("Indique o motivo ou justificação do movimento de caixa.");
+                throw FieldValidationException.of(descField, "Indique o motivo ou justificação do movimento de caixa.");
             }
 
             String type = rbSuprimento.isSelected() ? "SUPRIMENTO" : "SANGRIA";

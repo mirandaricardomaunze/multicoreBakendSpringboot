@@ -38,7 +38,7 @@ final class ModernButtonPainter {
                 if (b.isEnabled()) {
                     g.setColor(b.getForeground());
                 } else {
-                    g.setColor(UIHelper.isLight() ? new Color(148, 163, 184) : new Color(100, 116, 139));
+                    g.setColor(ThemeColors.controlSubtle());
                 }
                 String drawText = text;
                 if (drawText != null && (drawText.endsWith("...") || drawText.endsWith("…"))) {
@@ -103,7 +103,7 @@ final class ModernButtonPainter {
         Color bg = btn.getBackground() != null ? btn.getBackground() : new Color(59, 130, 246);
 
         if (!btn.isEnabled()) {
-            Color disabledBg = UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85);
+            Color disabledBg = ThemeColors.hairline();
             g2.setColor(disabledBg);
             g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
             g2.setColor(UIHelper.BORDER);
@@ -132,7 +132,7 @@ final class ModernButtonPainter {
         Color currentFg = btn.getForeground();
         if (!btn.isEnabled()) {
             if (btn.getIcon() instanceof FontIcon fi) {
-                fi.setIconColor(UIHelper.isLight() ? new Color(148, 163, 184) : new Color(100, 116, 139));
+                fi.setIconColor(ThemeColors.controlSubtle());
             }
         } else if (currentFg == null || UIHelper.contrastRatio(bg, currentFg) < 3.0) {
             Color safeFg = UIHelper.readableTextOn(bg);

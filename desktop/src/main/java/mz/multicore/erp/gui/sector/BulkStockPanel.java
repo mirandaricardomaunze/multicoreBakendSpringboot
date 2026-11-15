@@ -315,8 +315,8 @@ public class BulkStockPanel extends JPanel {
         Long companyId = CurrentUserContext.findCurrentCompanyId();
         BulkStockSettingDTO product = productCombo.selectedValue();
         WarehouseDTO warehouse = warehouseCombo.selectedValue();
-        if (product == null) throw new IllegalArgumentException("Escolha o produto a granel.");
-        if (warehouse == null) throw new IllegalArgumentException("Escolha o armazém onde está o monte.");
+        if (product == null) throw FieldValidationException.of(productCombo, "Escolha o produto a granel.");
+        if (warehouse == null) throw FieldValidationException.of(warehouseCombo, "Escolha o armazém onde está o monte.");
         BulkMeasurementMethod method = (BulkMeasurementMethod) methodCombo.getSelectedItem();
         boolean direct = method == BulkMeasurementMethod.DIRECT;
         return new BulkMeasurementRequest(companyId, product.productId(), warehouse.id(), method.name(),

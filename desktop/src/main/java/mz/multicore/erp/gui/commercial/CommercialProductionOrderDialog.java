@@ -164,13 +164,12 @@ public final class CommercialProductionOrderDialog {
         dialog.setOnSaveAsync(() -> {
             BomMatch selectedMatch = (BomMatch) bomCombo.getSelectedItem();
             if (selectedMatch == null) {
-                throw new IllegalArgumentException("Selecione a ficha técnica a produzir.");
+                throw FieldValidationException.of(bomCombo, "Selecione a ficha técnica a produzir.");
             }
 
             BigDecimal qty = qtyField.value();
             if (qty == null || qty.signum() <= 0) {
-                qtyField.requestFocusInWindow();
-                throw new IllegalArgumentException("A quantidade a produzir deve ser superior a zero.");
+                throw FieldValidationException.of(qtyField, "A quantidade a produzir deve ser superior a zero.");
             }
 
             WarehouseDTO sourceWh = (WarehouseDTO) sourceWhCombo.getSelectedItem();

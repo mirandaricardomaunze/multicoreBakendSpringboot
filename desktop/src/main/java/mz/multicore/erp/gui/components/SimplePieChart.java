@@ -252,7 +252,7 @@ public class SimplePieChart extends JPanel {
             int holeX = pieX + (pieSize - holeSize) / 2;
             int holeY = pieY + (pieSize - holeSize) / 2;
 
-            Color holeBg = UIHelper.isLight() ? new Color(255, 255, 255) : UIHelper.BG_CARD;
+            Color holeBg = UIHelper.BG_CARD;
             g.setColor(holeBg);
             g.fill(new Ellipse2D.Double(holeX, holeY, holeSize, holeSize));
 

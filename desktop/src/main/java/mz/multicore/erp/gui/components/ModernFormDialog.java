@@ -338,7 +338,9 @@ public class ModernFormDialog {
         String message = error == null || error.getMessage() == null || error.getMessage().isBlank()
                 ? "Não foi possível concluir a operação. Tente novamente."
                 : error.getMessage();
-        feedbackPanel.show(FeedbackType.ERROR, "Não foi possível gravar", message, null, null);
+        // A field error is shown on the field itself; the banner only points at it.
+        String title = FieldErrors.showIfField(error) ? "Corrija o campo assinalado" : "Não foi possível gravar";
+        feedbackPanel.show(FeedbackType.ERROR, title, message, null, null);
         dialog.revalidate();
         dialog.repaint();
     }

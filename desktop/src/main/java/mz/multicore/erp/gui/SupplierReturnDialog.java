@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -94,7 +95,7 @@ final class SupplierReturnDialog {
                 if (qty.signum() > 0) toReturn.add(new CreateSupplierReturnRequest.Line(lines.get(i).id(), qty));
             }
             if (toReturn.isEmpty()) throw new IllegalArgumentException("Indique a quantidade a devolver em pelo menos uma linha.");
-            if (reason.getText().isBlank()) throw new IllegalArgumentException("Indique o motivo da devolução.");
+            if (reason.getText().isBlank()) throw FieldValidationException.of(reason, "Indique o motivo da devolução.");
             CreateSupplierReturnRequest request = new CreateSupplierReturnRequest(reason.getText().trim(), toReturn);
             return () -> owner.purchaseApiClient.registerSupplierReturn(purchase.id(), request);
         });

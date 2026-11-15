@@ -87,14 +87,14 @@ public class GlobalSearchDialog extends JDialog {
         JPanel root = new JPanel(new BorderLayout(0, 0));
         root.setBackground(UIHelper.BG_DARK);
         root.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(51, 65, 85), 1),
+                BorderFactory.createLineBorder(ThemeColors.hairline(), 1),
                 BorderFactory.createEmptyBorder(12, 14, 12, 14)
         ));
 
         // Top Search Bar
         JPanel searchBar = new JPanel(new BorderLayout(10, 0));
         searchBar.setOpaque(false);
-        searchBar.setBorder(UIHelper.fieldBorder(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85), 1));
+        searchBar.setBorder(UIHelper.fieldBorder(ThemeColors.hairline(), 1));
 
         JLabel searchIcon = new JLabel(UIHelper.icon("fas-search", 18, UIHelper.ACCENT_BLUE));
         searchField.setFont(Typography.TITLE_REGULAR);
@@ -279,7 +279,7 @@ public class GlobalSearchDialog extends JDialog {
                     if (isSelected) {
                         Graphics2D g2 = (Graphics2D) g.create();
                         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                        g2.setColor(UIHelper.isLight() ? new Color(237, 242, 247) : new Color(30, 41, 59));
+                        g2.setColor(ThemeColors.subtleFill());
                         g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
                         g2.setColor(item.accentColor() != null ? item.accentColor() : UIHelper.ACCENT_BLUE);
                         g2.fillRoundRect(2, 6, 4, getHeight() - 12, 4, 4);
@@ -318,7 +318,7 @@ public class GlobalSearchDialog extends JDialog {
                 hintLabel.setFont(Typography.CAPTION_BOLD);
                 hintLabel.setForeground(isSelected ? UIHelper.ACCENT_BLUE : UIHelper.TEXT_MUTED);
                 hintLabel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(71, 85, 105), 1),
+                        BorderFactory.createLineBorder(ThemeColors.outline(), 1),
                         BorderFactory.createEmptyBorder(2, 6, 2, 6)
                 ));
                 hintPanel.add(hintLabel);

@@ -114,7 +114,7 @@ public class SendStatementEmailDialog {
         dlg.setOnSaveAsync(() -> () -> {
             String email = emailField.getText() != null ? emailField.getText().trim() : "";
             if (email.isBlank() || !email.contains("@")) {
-                throw new IllegalArgumentException("Por favor, introduza um endereço de correio eletrónico válido.");
+                throw FieldValidationException.of(emailField, "Por favor, introduza um endereço de correio eletrónico válido.");
             }
             SendStatementEmailRequest req = new SendStatementEmailRequest(
                     clientId,

@@ -50,6 +50,7 @@ final class UiAsyncTaskSupport {
             scope.putClientProperty("loading", Boolean.TRUE);
             scope.putClientProperty("loadError", null);
         }
+        java.util.List<JTable> loadingTables = TableLoadingState.begin(scope);
         CurrentUserContext.UserSession capturedUser = CurrentUserContext.findCurrentUser();
         Long capturedCompany = CurrentUserContext.findCurrentCompanyId();
 
@@ -80,6 +81,7 @@ final class UiAsyncTaskSupport {
                     if (onError != null) onError.accept(cause);
                 } finally {
                     if (scope != null) scope.putClientProperty("loading", Boolean.FALSE);
+                    TableLoadingState.end(loadingTables);
                     endLoading(window);
                 }
             }
@@ -163,6 +165,17 @@ final class UiAsyncTaskSupport {
             }
         };
         worker.execute();
+        // When called off the EDT the task can finish before the dialog opens; done() would then dispose
+        // a dialog that is not shown yet and the modal one would stay open forever. The watchdog runs
+        // inside the modal loop and closes it as soon as the task is over.
+        Timer watchdog = new Timer(100, e -> {
+            if (worker.isDone()) {
+                ((Timer) e.getSource()).stop();
+                dialog.dispose();
+            }
+        });
+        watchdog.start();
         dialog.setVisible(true);
+        watchdog.stop();
     }
 }

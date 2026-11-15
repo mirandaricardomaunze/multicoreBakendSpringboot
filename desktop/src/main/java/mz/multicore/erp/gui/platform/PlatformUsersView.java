@@ -138,7 +138,7 @@ public class PlatformUsersView extends JPanel {
                 "fas-pen", "Utilizador: " + user.username(), form).setConfirmButton("Guardar", "fas-check");
         dlg.setOnSaveAsync(() -> {
             if (nameField.getText().trim().isEmpty()) {
-                throw new IllegalArgumentException("O nome é obrigatório.");
+                throw mz.multicore.erp.gui.components.FieldValidationException.of(nameField, "O nome é obrigatório.");
             }
             String name = nameField.getText().trim();
             return () -> platformApiClient.updateUser(user.username(), name);
@@ -265,7 +265,7 @@ public class PlatformUsersView extends JPanel {
                 "fas-key", "Utilizador: " + user.username(), form).setConfirmButton("Repor", "fas-check");
         dlg.setOnSaveAsync(() -> {
             if (passwordField.getPassword().length == 0) {
-                throw new IllegalArgumentException("Indique a nova senha.");
+                throw mz.multicore.erp.gui.components.FieldValidationException.of(passwordField, "Indique a nova senha.");
             }
             String password = new String(passwordField.getPassword());
             return () -> {

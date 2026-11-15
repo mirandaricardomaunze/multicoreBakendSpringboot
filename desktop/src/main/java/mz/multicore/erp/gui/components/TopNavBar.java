@@ -35,10 +35,10 @@ public class TopNavBar extends JPanel {
 
     // ── Cores sensíveis ao tema. Lidas a partir dos slots de UIHelper (claro/escuro) e não fixas,
     //    para a barra de topo acompanhar a troca de tema como o resto da janela. ─────────────────
-    private static Color barBg()       { return UIHelper.isLight() ? new Color(255, 255, 255) : new Color(24, 32, 47); }
-    private static Color barBorder()   { return UIHelper.isLight() ? new Color(226, 232, 240) : new Color(45, 55, 72); }
-    private static Color headerText()  { return UIHelper.isLight() ? new Color(31, 41, 55)    : new Color(243, 244, 246); }
-    private static Color subText()     { return UIHelper.isLight() ? new Color(100, 116, 139) : new Color(203, 213, 225); }
+    private static Color barBg()       { return ThemeColors.chromeBg(); }
+    private static Color barBorder()   { return ThemeColors.chromeBorder(); }
+    private static Color headerText()  { return UIHelper.TEXT_LIGHT; }
+    private static Color subText()     { return ThemeColors.textSoft(); }
 
     private final JLabel brandLabel;
     private final JLabel brandSubLabel;
@@ -190,7 +190,7 @@ public class TopNavBar extends JPanel {
         searchPill.setToolTipText("Pesquisar módulos ou ações (Ctrl+K)");
         searchPill.putClientProperty("search.action", onSearchClick);
         searchPill.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85), 1),
+                javax.swing.BorderFactory.createLineBorder(ThemeColors.hairline(), 1),
                 new EmptyBorder(5, 12, 5, 10)
         ));
 
@@ -203,7 +203,7 @@ public class TopNavBar extends JPanel {
         badge.setFont(Typography.CAPTION_BOLD);
         badge.setForeground(UIHelper.TEXT_MUTED);
         badge.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(71, 85, 105), 1),
+                javax.swing.BorderFactory.createLineBorder(ThemeColors.outline(), 1),
                 new EmptyBorder(1, 4, 1, 4)
         ));
 

@@ -45,7 +45,7 @@ public class ArrowScrollPanel extends JPanel {
         scrollPane.getVerticalScrollBar().setUnitIncrement(SCROLL_UNIT_INCREMENT);
 
         // Botões de navegação por seta (Topo e Fundo)
-        Color navIconColor = UIHelper.isLight() ? new Color(51, 65, 85) : Color.WHITE;
+        Color navIconColor = ThemeColors.control();
         this.btnUp = UIHelper.createSecondaryButton("");
         btnUp.setIcon(UIHelper.icon("fas-chevron-up", 12, navIconColor));
         btnUp.setRolloverIcon(UIHelper.icon("fas-chevron-up", 12, UIHelper.ACCENT_BLUE));

@@ -117,8 +117,7 @@ public class AiDocumentHistoryView extends JPanel {
         dialog.setOnSaveAsync(() -> {
             String value = reason.getText().trim();
             if (value.length() < 3) {
-                reason.requestFocusInWindow();
-                throw new IllegalArgumentException("Indique o motivo da rejeição.");
+                throw FieldValidationException.of(reason, "Indique o motivo da rejeição.");
             }
             return () -> apiClient.rejectDocument(id, value);
         });

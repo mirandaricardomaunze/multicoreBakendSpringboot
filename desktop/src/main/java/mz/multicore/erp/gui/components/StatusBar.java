@@ -102,7 +102,7 @@ public class StatusBar extends JPanel {
     // ── Helpers ───────────────────────────────────────────────────────────────────────────────
 
     private static Color barBg() {
-        return UIHelper.isLight() ? new Color(241, 245, 249) : new Color(15, 23, 42);
+        return UIHelper.TABLE_HEADER_BG;
     }
 
     private static JLabel slimLabel(String text) {

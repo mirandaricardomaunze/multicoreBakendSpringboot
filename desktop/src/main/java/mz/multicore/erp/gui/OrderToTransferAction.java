@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.TableFilter;
@@ -79,12 +80,10 @@ final class OrderToTransferAction {
                     String responsible = blankToNull(responsibleField.getText());
                     String notes = blankToNull(notesArea.getText());
                     if (driver == null && responsible == null) {
-                        driverField.requestFocusInWindow();
-                        throw new IllegalArgumentException("O nome do motorista é obrigatório para emitir a guia de transferência.");
+                        throw FieldValidationException.of(driverField, "O nome do motorista é obrigatório para emitir a guia de transferência.");
                     }
                     if (plate == null) {
-                        vehiclePlateField.requestFocusInWindow();
-                        throw new IllegalArgumentException("A matrícula do veículo é obrigatória para emitir a guia de transferência.");
+                        throw FieldValidationException.of(vehiclePlateField, "A matrícula do veículo é obrigatória para emitir a guia de transferência.");
                     }
                     return () -> created[0] = api.convertOrderToTransfer(orderId, responsible, plate, notes, driver, plate);
                 });

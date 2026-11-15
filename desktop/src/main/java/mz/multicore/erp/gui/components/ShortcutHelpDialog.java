@@ -139,7 +139,7 @@ public class ShortcutHelpDialog extends JDialog {
             keyLabel.setFont(Typography.CAPTION_BOLD);
             keyLabel.setForeground(UIHelper.TEXT_LIGHT);
             keyLabel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(71, 85, 105), 1),
+                    BorderFactory.createLineBorder(ThemeColors.outline(), 1),
                     BorderFactory.createEmptyBorder(2, 6, 2, 6)
             ));
 

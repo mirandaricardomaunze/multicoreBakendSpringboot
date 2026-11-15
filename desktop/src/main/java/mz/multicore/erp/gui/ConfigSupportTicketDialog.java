@@ -32,7 +32,7 @@ public final class ConfigSupportTicketDialog {
                 "fas-headset", "Contactar o suporte da plataforma", form).setConfirmButton("Enviar", "fas-paper-plane");
         dlg.setOnSaveAsync(() -> {
             if (subjectField.getText().trim().isEmpty()) {
-                throw new IllegalArgumentException("O assunto é obrigatório.");
+                throw FieldValidationException.of(subjectField, "O assunto é obrigatório.");
             }
             CreateTicketRequest request = new CreateTicketRequest(subjectField.getText().trim(),
                     descArea.getText().trim(), (String) priorityCombo.getSelectedItem());

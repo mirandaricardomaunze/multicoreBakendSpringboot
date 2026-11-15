@@ -32,8 +32,8 @@ public class SidebarUserProfileCard extends JPanel {
             }
         });
 
-        Color headColor = UIHelper.isLight() ? new Color(31, 41, 55) : new Color(243, 244, 246);
-        Color subColor = UIHelper.isLight() ? new Color(100, 116, 139) : new Color(203, 213, 225);
+        Color headColor = UIHelper.TEXT_LIGHT;
+        Color subColor = ThemeColors.textSoft();
 
         nameLabel = new JLabel("Multicore");
         nameLabel.setFont(Typography.BODY_BOLD);
@@ -151,7 +151,7 @@ public class SidebarUserProfileCard extends JPanel {
                 int dotSize = 8;
                 int dotX = w - dotSize;
                 int dotY = h - dotSize;
-                Color sideBg = UIHelper.isLight() ? new Color(255, 255, 255) : new Color(24, 32, 47);
+                Color sideBg = ThemeColors.chromeBg();
                 g2.setColor(sideBg);
                 g2.fillOval(dotX - 1, dotY - 1, dotSize + 2, dotSize + 2);
                 g2.setColor(new Color(16, 185, 129));

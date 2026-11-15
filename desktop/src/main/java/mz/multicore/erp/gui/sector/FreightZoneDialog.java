@@ -64,11 +64,11 @@ final class FreightZoneDialog {
             String name = newName.getText().trim();
             if (name.isEmpty()) {
                 ProductDTO zone = zoneCombo.selectedValue();
-                if (zone == null) throw new IllegalArgumentException("Escolha a zona ou indique uma zona nova.");
+                if (zone == null) throw FieldValidationException.of(zoneCombo, "Escolha a zona ou indique uma zona nova.");
                 return () -> { result[0] = zone; return null; };
             }
             BigDecimal price = newPrice.value();
-            if (price.signum() <= 0) throw new IllegalArgumentException("O preço do frete tem de ser maior que zero.");
+            if (price.signum() <= 0) throw FieldValidationException.of(newPrice, "O preço do frete tem de ser maior que zero.");
             String label = "Frete — " + name;
             String sku = SKU_PREFIX + slug(name);
             return () -> {

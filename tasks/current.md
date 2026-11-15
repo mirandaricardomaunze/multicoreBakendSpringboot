@@ -73,6 +73,12 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 41. **Escala tipográfica e diálogos temáticos (2026-11-14):** todo o texto usa um papel de `Typography`
     (8 tamanhos fechados); nenhum `JOptionPane` fora do `ModernMessageDialog`. SPEC em
     `docs/TIPOGRAFIA_ESCALA_SPEC.md`, imposta pelo `TypographyHarnessTest`.
+42. **Validação no próprio campo (2026-11-15):** `throw FieldValidationException.of(campo, msg)` assinala o campo
+    (borda vermelha, mensagem por baixo, cursor no campo). SPEC `docs/VALIDACAO_CAMPOS_SPEC.md`, `FieldValidationHarnessTest`.
+43. **Tabela a carregar (2026-11-15):** o `loadAsync` central marca as tabelas da área; vazias mostram "A carregar…"
+    em vez de "Sem registos.". SPEC `docs/ESTADO_CARREGAR_SPEC.md`, `TableLoadingStateHarnessTest`.
+44. **Cores do cromo em três temas (2026-11-15):** `ThemeColors` com valores para claro, escuro e alto contraste;
+    proibido `isLight() ? new Color(..) : new Color(..)`. SPEC `docs/CORES_TEMA_SPEC.md`, `ThemeColorsHarnessTest`.
 
 35. **Painel Executivo com Tema e Modais Próprios:**
     - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.

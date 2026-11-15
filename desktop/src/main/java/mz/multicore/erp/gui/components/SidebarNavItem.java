@@ -34,9 +34,9 @@ public class SidebarNavItem extends JComponent {
     private static final int LEFT_INSET = 8;
     private static final int RIGHT_INSET = 10;
 
-    private static Color textActive()   { return UIHelper.isLight() ? new Color(15, 23, 42) : Color.WHITE; }
-    private static Color textInactive() { return UIHelper.isLight() ? new Color(71, 85, 105) : Color.WHITE; }
-    private static Color hoverOverlay() { return UIHelper.isLight() ? new Color(0, 0, 0, 14) : new Color(255, 255, 255, 16); }
+    private static Color textActive()   { return UIHelper.TEXT_LIGHT; }
+    private static Color textInactive() { return ThemeColors.control(); }
+    private static Color hoverOverlay() { return ThemeColors.hoverOverlay(); }
 
     private final String iconGlyph;
     private final Icon icon;

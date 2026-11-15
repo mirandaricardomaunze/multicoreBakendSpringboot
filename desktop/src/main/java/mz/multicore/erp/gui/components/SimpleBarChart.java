@@ -165,7 +165,7 @@ public class SimpleBarChart extends JPanel {
         java.awt.Stroke dashed = new java.awt.BasicStroke(1.0f, java.awt.BasicStroke.CAP_BUTT,
                 java.awt.BasicStroke.JOIN_MITER, 10.0f, new float[]{3.0f, 3.0f}, 0.0f);
         g.setStroke(dashed);
-        g.setColor(UIHelper.isLight() ? new Color(226, 232, 240, 180) : new Color(55, 65, 81, 140));
+        g.setColor(ThemeColors.hairline());
         for (int step = 1; step <= 3; step++) {
             int lineY = top + chartHeight - (int) Math.round(chartHeight * (step * 0.25));
             g.drawLine(left, lineY, left + chartWidth, lineY);
@@ -173,7 +173,7 @@ public class SimpleBarChart extends JPanel {
         g.setStroke(origStroke);
 
         // Axis baseline.
-        g.setColor(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(55, 65, 81));
+        g.setColor(ThemeColors.hairline());
         g.drawLine(left, top + chartHeight, left + chartWidth, top + chartHeight);
 
         if (values.length == 0) {

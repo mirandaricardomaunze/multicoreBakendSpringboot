@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.desktop.client.ProductionApiClient;
@@ -250,12 +251,10 @@ final class CommercialOrderActions {
                     String vehicle = blankToNull(vehicleField.getText());
                     String notes = blankToNull(notesArea.getText());
                     if (responsible == null) {
-                        responsibleField.requestFocusInWindow();
-                        throw new IllegalArgumentException("O transportador / responsável é obrigatório para emitir a guia de remessa.");
+                        throw FieldValidationException.of(responsibleField, "O transportador / responsável é obrigatório para emitir a guia de remessa.");
                     }
                     if (vehicle == null) {
-                        vehicleField.requestFocusInWindow();
-                        throw new IllegalArgumentException("A viatura / matrícula é obrigatória para emitir a guia de remessa.");
+                        throw FieldValidationException.of(vehicleField, "A viatura / matrícula é obrigatória para emitir a guia de remessa.");
                     }
                     return () -> created[0] = panel.comercialApiClient.createDeliveryGuide(
                             order.id(), responsible, vehicle, notes);

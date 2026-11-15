@@ -36,6 +36,7 @@ public final class TableEmptyState {
     /** Client property: the filters container, cleared by "Limpar filtros" when they hide every row. */
     static final String EMPTY_FILTERS = "emptyState.filters";
     static final String CLEAR_FILTERS = "Limpar filtros";
+    static final String LOADING_TEXT = "A carregar…";
 
     private TableEmptyState() {}
 
@@ -57,7 +58,7 @@ public final class TableEmptyState {
 
         Runnable refresh = () -> {
             boolean empty = table.getRowCount() == 0;
-            if (empty) updateOverlayText(overlay, table);
+            if (empty) updateOverlayText(overlay, table, TableLoadingState.isLoading(table));
             // Aplicar sempre o estado calculado. Evita que um overlay visível de um estado
             // anterior sobreviva a actualizações consecutivas do modelo/sorter.
             overlay.setVisible(empty);
@@ -71,6 +72,7 @@ public final class TableEmptyState {
             SwingUtilities.invokeLater(refresh);
         };
         table.getModel().addTableModelListener(e -> refreshAfterSwingUpdate.run());
+        table.addPropertyChangeListener(TableLoadingState.COUNT, e -> refresh.run());
         table.addPropertyChangeListener("model", e -> {
             table.getModel().addTableModelListener(ev -> refreshAfterSwingUpdate.run());
             refreshAfterSwingUpdate.run();
@@ -96,6 +98,20 @@ public final class TableEmptyState {
         iconLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
         iconLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 6, 0));
         panel.add(iconLbl);
+
+        // While the data is on its way: an animated bar in place of the icon (docs/ESTADO_CARREGAR_SPEC.md)
+        javax.swing.JProgressBar busyBar = UIHelper.createBusyBar();
+        busyBar.setPreferredSize(new Dimension(180, 6));
+        busyBar.setMaximumSize(new Dimension(180, 6));
+        busyBar.setAlignmentX(Component.CENTER_ALIGNMENT);
+        busyBar.setVisible(false);
+        JPanel busyRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 0, 0));
+        busyRow.setOpaque(false);
+        busyRow.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        busyRow.setAlignmentX(Component.CENTER_ALIGNMENT);
+        busyRow.add(busyBar);
+        busyRow.setVisible(false);
+        panel.add(busyRow);
 
         // Título em negrito
         JLabel titleLbl = new JLabel(resolveText(table));
@@ -127,6 +143,9 @@ public final class TableEmptyState {
         panel.add(actionRow);
 
         // Guardar referências para actualização posterior
+        panel.putClientProperty("iconLabel", iconLbl);
+        panel.putClientProperty("busyRow", busyRow);
+        panel.putClientProperty("busyBar", busyBar);
         panel.putClientProperty("titleLabel", titleLbl);
         panel.putClientProperty("subLabel",   subLbl);
         panel.putClientProperty("actionButton", actionBtn);
@@ -134,11 +153,21 @@ public final class TableEmptyState {
     }
 
     /** Actualiza os textos do painel quando o estado vazio muda de tabela/filtro. */
-    private static void updateOverlayText(JPanel overlay, JTable table) {
+    private static void updateOverlayText(JPanel overlay, JTable table, boolean loading) {
         Object titleRef = overlay.getClientProperty("titleLabel");
         Object subRef   = overlay.getClientProperty("subLabel");
-        if (titleRef instanceof JLabel title) title.setText(resolveText(table));
-        if (subRef   instanceof JLabel sub)   sub.setText(resolveSubtext(table));
+        if (titleRef instanceof JLabel title) title.setText(loading ? LOADING_TEXT : resolveText(table));
+        if (subRef   instanceof JLabel sub)   sub.setText(loading ? "" : resolveSubtext(table));
+        if (overlay.getClientProperty("iconLabel") instanceof JLabel icon) icon.setVisible(!loading);
+        if (overlay.getClientProperty("busyRow") instanceof JPanel busyRow) busyRow.setVisible(loading);
+        if (overlay.getClientProperty("busyBar") instanceof javax.swing.JProgressBar bar) {
+            bar.setVisible(loading);
+            bar.setIndeterminate(loading); // stops the animation timer when hidden
+        }
+        if (loading) {
+            if (overlay.getClientProperty("actionButton") instanceof ModernButton button) button.setVisible(false);
+            return;
+        }
         if (overlay.getClientProperty("actionButton") instanceof ModernButton button) {
             String label = resolveActionLabel(table);
             button.setVisible(label != null);

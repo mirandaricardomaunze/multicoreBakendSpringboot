@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.desktop.client.AssetApiClient;
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -70,31 +71,31 @@ public final class AssetFormDialog {
 
         dialog.setOnSave(() -> {
             String code = codeField.getText().trim();
-            if (code.isEmpty()) { codeField.requestFocus(); throw new IllegalArgumentException("O código do activo é obrigatório."); }
+            if (code.isEmpty()) { throw FieldValidationException.of(codeField, "O código do activo é obrigatório."); }
             String name = nameField.getText().trim();
-            if (name.isEmpty()) { nameField.requestFocus(); throw new IllegalArgumentException("A designação do activo é obrigatória."); }
+            if (name.isEmpty()) { throw FieldValidationException.of(nameField, "A designação do activo é obrigatória."); }
 
             LocalDate acqDate;
             try { acqDate = LocalDate.parse(dateField.getText().trim()); }
-            catch (Exception ex) { dateField.requestFocus(); throw new IllegalArgumentException("A data de aquisição é inválida. Use AAAA-MM-DD."); }
+            catch (Exception ex) { throw FieldValidationException.of(dateField, "A data de aquisição é inválida. Use AAAA-MM-DD."); }
 
             BigDecimal cost;
             try {
                 cost = new BigDecimal(costField.getText().trim().replace(",", "."));
                 if (cost.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
-            } catch (Exception ex) { costField.requestFocus(); throw new IllegalArgumentException("O custo de aquisição deve ser um valor numérico positivo."); }
+            } catch (Exception ex) { throw FieldValidationException.of(costField, "O custo de aquisição deve ser um valor numérico positivo."); }
 
             BigDecimal residual = BigDecimal.ZERO;
             if (!residualField.getText().trim().isEmpty()) {
                 try { residual = new BigDecimal(residualField.getText().trim().replace(",", ".")); }
-                catch (Exception ex) { residualField.requestFocus(); throw new IllegalArgumentException("O valor residual deve ser numérico."); }
+                catch (Exception ex) { throw FieldValidationException.of(residualField, "O valor residual deve ser numérico."); }
             }
 
             BigDecimal rate;
             try {
                 rate = new BigDecimal(rateField.getText().trim().replace(",", "."));
                 if (rate.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
-            } catch (Exception ex) { rateField.requestFocus(); throw new IllegalArgumentException("A taxa de amortização deve ser maior que zero."); }
+            } catch (Exception ex) { throw FieldValidationException.of(rateField, "A taxa de amortização deve ser maior que zero."); }
 
             AssetCategory cat = (AssetCategory) categoryCombo.getSelectedItem();
             CreateAssetRequest req = new CreateAssetRequest(code, name, cat, acqDate, cost, residual, rate,

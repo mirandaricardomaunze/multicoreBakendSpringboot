@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ToastManager;
@@ -75,7 +76,7 @@ final class BankReconciliationMatchDialogs {
         dlg.setOnSaveAsync(() -> {
             TreasuryTransactionDTO selectedTx = (TreasuryTransactionDTO) txCombo.getSelectedItem();
             if (selectedTx == null) {
-                throw new IllegalArgumentException("Seleccione uma transacção para vincular.");
+                throw FieldValidationException.of(txCombo, "Seleccione uma transacção para vincular.");
             }
             return () -> owner.apiClient.manualMatch(new ManualReconciliationRequest(item.id(), selectedTx.id()));
         });

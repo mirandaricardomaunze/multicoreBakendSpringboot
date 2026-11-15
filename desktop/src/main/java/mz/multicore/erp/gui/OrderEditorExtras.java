@@ -90,7 +90,7 @@ public final class OrderEditorExtras {
         OrderEditorExtras extras = of(owner);
         if (extras == null || extras.deliveryDays.getText() == null || extras.deliveryDays.getText().isBlank()) return null;
         int days = extras.deliveryDays.value();
-        if (days <= 0) throw new IllegalArgumentException("O prazo de entrega tem de ser de pelo menos um dia.");
+        if (days <= 0) throw FieldValidationException.of(extras.deliveryDays, "O prazo de entrega tem de ser de pelo menos um dia.");
         return days;
     }
 

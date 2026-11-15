@@ -96,7 +96,7 @@ final class PriceListItemDialog {
                 throw new IllegalArgumentException("O preço tem de ser maior que zero.");
             }
             BigDecimal min = minField.getText().isBlank() ? BigDecimal.ZERO : minField.value();
-            if (min.signum() < 0) throw new IllegalArgumentException("A quantidade mínima não pode ser negativa.");
+            if (min.signum() < 0) throw FieldValidationException.of(minField, "A quantidade mínima não pode ser negativa.");
             SavePriceListItemRequest request = new SavePriceListItemRequest(companyId, list.id(), product.id(), min, price);
             return () -> { result[0] = api.saveItem(request); return null; };
         });

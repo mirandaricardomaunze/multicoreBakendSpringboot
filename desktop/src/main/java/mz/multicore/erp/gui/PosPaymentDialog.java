@@ -297,7 +297,7 @@ final class PosPaymentDialog {
                             throw new IllegalArgumentException("Valor entregue inválido.");
                         }
                         if (tendered.compareTo(safeTotal) < 0) {
-                            throw new IllegalArgumentException("O valor entregue é inferior ao total a pagar.");
+                            throw FieldValidationException.of(tenderedField, "O valor entregue é inferior ao total a pagar.");
                         }
                         BigDecimal capturedTendered = tendered;
                         return () -> {
@@ -310,7 +310,7 @@ final class PosPaymentDialog {
                         String ref = refField.getText().trim();
                         if ("STORE_CREDIT".equals(method)) {
                             if (ref.isEmpty()) {
-                                throw new IllegalArgumentException("Indique o código do vale de compras.");
+                                throw FieldValidationException.of(refField, "Indique o código do vale de compras.");
                             }
                             Long companyId = CurrentUserContext.getCurrentCompanyId();
                             return () -> {

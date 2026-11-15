@@ -47,7 +47,7 @@ public class SidebarSectionHeader extends JPanel {
             label.setIconTextGap(5);
         }
         label.setFont(Typography.CAPTION_BOLD);
-        label.setForeground(UIHelper.isLight() ? new Color(148, 163, 184) : new Color(156, 163, 175));
+        label.setForeground(ThemeColors.controlSubtle());
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         label.setBorder(new EmptyBorder(0, 10, 3, 0));
         add(label);
@@ -77,7 +77,7 @@ public class SidebarSectionHeader extends JPanel {
             Graphics2D g2 = (Graphics2D) g.create();
             try {
                 int w = getWidth();
-                g2.setColor(UIHelper.isLight() ? new Color(226, 232, 240, 180) : new Color(51, 65, 85, 160));
+                g2.setColor(ThemeColors.hairline());
                 if (collapsed) {
                     int lineW = 24;
                     int lx = (w - lineW) / 2;

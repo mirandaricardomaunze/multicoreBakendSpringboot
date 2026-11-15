@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -99,7 +100,7 @@ final class BankStatementImportDialog {
             BigDecimal cBal = parseAmountSafe(closeBalField.getText().trim());
 
             List<BankStatementItemImportDTO> items = parseCsvLines(csvArea.getText());
-            if (items.isEmpty()) throw new IllegalArgumentException("Nenhuma linha de movimento válida foi detectada no extracto.");
+            if (items.isEmpty()) throw FieldValidationException.of(csvArea, "Nenhuma linha de movimento válida foi detectada no extracto.");
 
             ImportBankStatementRequest req = new ImportBankStatementRequest(acc.id(), ref, sDate, eDate, oBal, cBal, items);
             return () -> owner.apiClient.importStatement(req);

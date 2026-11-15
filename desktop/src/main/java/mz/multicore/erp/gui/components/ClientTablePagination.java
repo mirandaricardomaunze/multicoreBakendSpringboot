@@ -304,9 +304,9 @@ public final class ClientTablePagination {
      */
     static GhostNavButton ghostBtn(String icon, String tooltip) {
         boolean light = UIHelper.isLight();
-        Color base = light ? new Color(51, 65, 85) : new Color(226, 232, 240);
+        Color base = ThemeColors.control();
         Color hover = UIHelper.ACCENT_BLUE;
-        Color disabled = light ? new Color(203, 213, 225) : new Color(100, 116, 139);
+        Color disabled = ThemeColors.controlSubtle();
         GhostNavButton b = new GhostNavButton(UIHelper.icon(icon, 12, base), tooltip);
         b.setRolloverIcon(UIHelper.icon(icon, 12, hover));
         b.setDisabledIcon(UIHelper.icon(icon, 12, disabled));
@@ -345,7 +345,7 @@ public final class ClientTablePagination {
             if (!isEnabled()) {
                 g2.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, 0.45f));
                 if (UIHelper.isLight()) {
-                    g2.setColor(new Color(241, 245, 249));
+                    g2.setColor(ThemeColors.subtleFill());
                     g2.fillRoundRect(0, 0, w, h, ARC, ARC);
                 }
             } else if (hovered) {
@@ -357,9 +357,9 @@ public final class ClientTablePagination {
                 g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, w - 1, h - 1, ARC, ARC);
             } else if (UIHelper.isLight()) {
-                g2.setColor(new Color(241, 245, 249));
+                g2.setColor(ThemeColors.subtleFill());
                 g2.fillRoundRect(0, 0, w, h, ARC, ARC);
-                g2.setColor(new Color(226, 232, 240));
+                g2.setColor(ThemeColors.hairline());
                 g2.drawRoundRect(0, 0, w - 1, h - 1, ARC, ARC);
             }
             super.paintComponent(g);

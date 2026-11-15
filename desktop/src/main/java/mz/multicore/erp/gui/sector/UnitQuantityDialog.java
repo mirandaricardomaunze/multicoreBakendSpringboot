@@ -82,7 +82,7 @@ final class UnitQuantityDialog {
         UnitConversionDTO[] result = new UnitConversionDTO[1];
         dialog.setOnSaveAsync(() -> {
             ProductUnitDTO unit = (ProductUnitDTO) unitCombo.getSelectedItem();
-            if (unit == null) throw new IllegalArgumentException("Escolha a unidade.");
+            if (unit == null) throw FieldValidationException.of(unitCombo, "Escolha a unidade.");
             BigDecimal qty = quantity.value();
             return () -> { result[0] = api.convert(companyId, units.productId(), unit.unitCode(), qty); return null; };
         });

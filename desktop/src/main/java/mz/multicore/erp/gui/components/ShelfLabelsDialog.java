@@ -108,7 +108,7 @@ public class ShelfLabelsDialog extends JDialog {
         productList.addListSelectionListener(e -> updatePreview());
 
         JScrollPane leftScroll = new JScrollPane(productList);
-        leftScroll.setBorder(BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85), 1));
+        leftScroll.setBorder(BorderFactory.createLineBorder(ThemeColors.hairline(), 1));
         leftPanel.add(leftScroll, BorderLayout.CENTER);
         return leftPanel;
     }

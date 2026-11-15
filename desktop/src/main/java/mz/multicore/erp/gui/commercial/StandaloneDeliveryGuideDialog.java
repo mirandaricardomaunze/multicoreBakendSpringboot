@@ -121,15 +121,13 @@ final class StandaloneDeliveryGuideDialog {
                 .setOnSaveAsync(() -> {
                     ClientDTO client = (ClientDTO) clientCombo.getSelectedItem();
                     WarehouseDTO warehouse = (WarehouseDTO) warehouseCombo.getSelectedItem();
-                    if (client == null) throw new IllegalArgumentException("Seleccione o cliente.");
-                    if (warehouse == null) throw new IllegalArgumentException("Seleccione o armazém de saída.");
+                    if (client == null) throw FieldValidationException.of(clientCombo, "Seleccione o cliente.");
+                    if (warehouse == null) throw FieldValidationException.of(warehouseCombo, "Seleccione o armazém de saída.");
                     if (responsible.getText().isBlank()) {
-                        responsible.requestFocusInWindow();
-                        throw new IllegalArgumentException("Indique o responsável pelo transporte.");
+                        throw FieldValidationException.of(responsible, "Indique o responsável pelo transporte.");
                     }
                     if (vehicle.getText().isBlank()) {
-                        vehicle.requestFocusInWindow();
-                        throw new IllegalArgumentException("Indique a viatura ou matrícula.");
+                        throw FieldValidationException.of(vehicle, "Indique a viatura ou matrícula.");
                     }
                     if (table.isEditing() && !table.getCellEditor().stopCellEditing()) {
                         throw new IllegalArgumentException("Conclua a edição da quantidade.");
