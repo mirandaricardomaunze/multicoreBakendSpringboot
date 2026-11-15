@@ -103,9 +103,9 @@ public class StepIndicator extends JComponent {
                 g2.drawLine(x1, cy, x2, cy);
             }
 
-            Font numberFont = new Font(UIHelper.FONT, Font.BOLD, 12);
-            Font labelFont = new Font(UIHelper.FONT, Font.PLAIN, 12);
-            Font currentLabelFont = new Font(UIHelper.FONT, Font.BOLD, 12);
+            Font numberFont = Typography.BODY_BOLD;
+            Font labelFont = Typography.BODY;
+            Font currentLabelFont = Typography.BODY_BOLD;
             for (int i = 0; i < count; i++) {
                 int cx = slot * i + slot / 2;
                 Ellipse2D circle = new Ellipse2D.Double(cx - DIAMETER / 2.0, cy - DIAMETER / 2.0, DIAMETER, DIAMETER);

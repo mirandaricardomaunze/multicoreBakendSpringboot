@@ -60,7 +60,7 @@ final class UiTabOverflow {
             String title = TabTitles.titleAt(tabs, index);
             Icon icon = tabs.getIconAt(index);
             JMenuItem item = new JMenuItem(title, icon == null ? null : UiTabIcons.tinted(icon, UIHelper.TEXT_MUTED));
-            item.setFont(new Font(UIHelper.FONT, index == tabs.getSelectedIndex() ? Font.BOLD : Font.PLAIN, 13));
+            item.setFont(index == tabs.getSelectedIndex() ? Typography.EMPHASIS_BOLD : Typography.EMPHASIS);
             item.setEnabled(tabs.isEnabledAt(index));
             item.addActionListener(event -> tabs.setSelectedIndex(index));
             menu.add(item);
@@ -119,7 +119,7 @@ final class UiTabOverflow {
                 Icon chevron = UIHelper.icon("fas-chevron-down", 11, hover ? UIHelper.ACCENT : UIHelper.TEXT_MUTED);
                 chevron.paintIcon(this, g2, 3, (getHeight() - chevron.getIconHeight()) / 2);
             } else {
-                g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+                g2.setFont(Typography.EMPHASIS_BOLD);
                 g2.setColor(hover ? UIHelper.ACCENT : UIHelper.TEXT_MUTED);
                 FontMetrics metrics = g2.getFontMetrics();
                 int x = getWidth() - metrics.stringWidth(LABEL) - 2;

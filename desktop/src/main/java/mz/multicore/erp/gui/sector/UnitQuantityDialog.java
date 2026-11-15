@@ -54,7 +54,7 @@ final class UnitQuantityDialog {
         sellable.stream().filter(ProductUnitDTO::defaultSale).findFirst().ifPresent(unitCombo::setSelectedItem);
         DecimalField quantity = new DecimalField("1", 3, true);
         JLabel preview = new JLabel(" ");
-        preview.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        preview.setFont(Typography.EMPHASIS_BOLD);
         preview.setIcon(UIHelper.icon("fas-equals", 13, UIHelper.ACCENT_BLUE));
         preview.setIconTextGap(8);
         Runnable sync = () -> {

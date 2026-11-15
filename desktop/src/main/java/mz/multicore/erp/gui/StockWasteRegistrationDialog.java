@@ -70,11 +70,11 @@ public final class StockWasteRegistrationDialog {
         notesField.setPreferredSize(new Dimension(320, UIHelper.FORM_CONTROL_HEIGHT));
 
         JLabel costPreviewLabel = new JLabel("Custo Estimado: 0,00 MT");
-        costPreviewLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        costPreviewLabel.setFont(Typography.BODY_BOLD);
         costPreviewLabel.setForeground(UIHelper.ACCENT_BLUE);
 
         JLabel thresholdWarning = new JLabel("Perdas > 2.500,00 MT requerem aprovação formal da gerência.");
-        thresholdWarning.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        thresholdWarning.setFont(Typography.CAPTION);
         thresholdWarning.setForeground(UIHelper.PENDING_YELLOW);
 
         Runnable updateCostPreview = () -> {

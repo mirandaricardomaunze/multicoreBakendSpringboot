@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.UIHelper;
 
 import javax.swing.*;
@@ -18,7 +19,7 @@ final class LoginDemoAccountsPanel {
     static JPanel build(BiConsumer<String, String> onPick) {
         JPanel panel = new JPanel(new BorderLayout(0, 6)); panel.setOpaque(false);
         JLabel title = new JLabel("CONTAS DE DEMONSTRAÇÃO", SwingConstants.CENTER);
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 10)); title.setForeground(UIHelper.TEXT_MUTED);
+        title.setFont(Typography.CAPTION_BOLD); title.setForeground(UIHelper.TEXT_MUTED);
         title.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER), new EmptyBorder(10, 0, 0, 0)));
         panel.add(title, BorderLayout.NORTH);
@@ -50,7 +51,7 @@ final class LoginDemoAccountsPanel {
         btn.setIconTextGap(10); btn.setHorizontalAlignment(SwingConstants.LEFT);
         btn.setContentAreaFilled(false); btn.setBorderPainted(false); btn.setFocusPainted(false); btn.setRolloverEnabled(true);
         btn.setBorder(new EmptyBorder(5, 10, 5, 8));
-        btn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11)); btn.setForeground(UIHelper.TEXT_LIGHT);
+        btn.setFont(Typography.CAPTION); btn.setForeground(UIHelper.TEXT_LIGHT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setToolTipText("Entrar imediatamente como " + username);
         btn.getAccessibleContext().setAccessibleName("Entrar como " + name + ", " + role);
@@ -67,7 +68,7 @@ final class LoginDemoAccountsPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                 g2.setColor(tone); g2.fillOval(x, y, 30, 30);
-                g2.setColor(Color.WHITE); g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+                g2.setColor(Color.WHITE); g2.setFont(Typography.EMPHASIS_BOLD);
                 FontMetrics fm = g2.getFontMetrics();
                 g2.drawString(initial, x + (30 - fm.stringWidth(initial)) / 2, y + (30 - fm.getHeight()) / 2 + fm.getAscent());
                 g2.dispose();

@@ -126,7 +126,7 @@ final class UiAsyncTaskSupport {
                 new LineBorder(UIHelper.BORDER, 1, true), new EmptyBorder(18, 26, 18, 26)));
         JLabel label = new JLabel(message);
         label.setForeground(UIHelper.TEXT_LIGHT);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        label.setFont(Typography.EMPHASIS_BOLD);
         panel.add(label, BorderLayout.NORTH);
         panel.add(createBusyBar(), BorderLayout.SOUTH);
         dialog.setContentPane(panel);

@@ -100,7 +100,7 @@ public final class TableEmptyState {
         // Título em negrito
         JLabel titleLbl = new JLabel(resolveText(table));
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        titleLbl.setFont(Typography.EMPHASIS_BOLD);
         titleLbl.setHorizontalAlignment(SwingConstants.CENTER);
         titleLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(titleLbl);
@@ -108,7 +108,7 @@ public final class TableEmptyState {
         // Subtítulo em muted
         JLabel subLbl = new JLabel(resolveSubtext(table));
         subLbl.setForeground(UIHelper.TEXT_MUTED);
-        subLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subLbl.setFont(Typography.BODY);
         subLbl.setHorizontalAlignment(SwingConstants.CENTER);
         subLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
         subLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 0, 0, 0));

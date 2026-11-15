@@ -47,7 +47,7 @@ final class PriceListItemDialog {
         minField.setEnabled(existing == null);
         MoneyField priceField = new MoneyField(existing == null ? "" : ProductUnitsPanel.plain(existing.price()));
         JLabel retailInfo = new JLabel(" ");
-        retailInfo.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        retailInfo.setFont(Typography.EMPHASIS_BOLD);
         retailInfo.setIcon(UIHelper.icon("fas-info-circle", 13, UIHelper.ACCENT_BLUE));
         retailInfo.setIconTextGap(8);
 

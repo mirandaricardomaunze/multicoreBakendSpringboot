@@ -70,7 +70,7 @@ final class StockBatchesPanel {
         );
 
         owner.batchesSummary = new JLabel(" ");
-        owner.batchesSummary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        owner.batchesSummary.setFont(Typography.EMPHASIS_BOLD);
         owner.batchesSummary.setForeground(UIHelper.TEXT_MUTED);
         owner.batchesSummary.setBorder(new EmptyBorder(6, 2, 0, 0));
 

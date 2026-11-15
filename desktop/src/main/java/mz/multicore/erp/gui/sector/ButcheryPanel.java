@@ -132,10 +132,10 @@ public class ButcheryPanel extends JPanel {
         cutTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
         JScrollPane scroll = new JScrollPane(cutTable);
         UIHelper.styleScrollPane(scroll);
-        detailTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        detailTitle.setFont(Typography.TITLE);
         detailTitle.setForeground(UIHelper.TEXT_LIGHT);
         detailMeta.setForeground(UIHelper.TEXT_MUTED);
-        detailTotals.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        detailTotals.setFont(Typography.EMPHASIS_BOLD);
         JPanel head = new JPanel(new GridLayout(2, 1, 0, 2));
         head.setOpaque(false);
         head.add(detailTitle);

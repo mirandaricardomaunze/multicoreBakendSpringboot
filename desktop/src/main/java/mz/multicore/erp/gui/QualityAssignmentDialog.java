@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.HRApiClient;
@@ -90,13 +91,13 @@ public class QualityAssignmentDialog extends JDialog {
         sizeOrSpecField.putClientProperty("JTextField.placeholderText", "Ex: Tam. 42, XL, L, 50mm...");
         serialNumberField.putClientProperty("JTextField.placeholderText", "Ex: Lote ou Nº de série do fabricante (opcional)");
 
-        calculatedExpiryLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        calculatedExpiryLabel.setFont(Typography.EMPHASIS_BOLD);
         calculatedExpiryLabel.setForeground(UIHelper.TEXT_MUTED);
         calculatedExpiryLabel.setText("Aguardando selecção de equipamento...");
 
         notesArea.setLineWrap(true);
         notesArea.setWrapStyleWord(true);
-        notesArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        notesArea.setFont(Typography.EMPHASIS);
         JScrollPane notesScroll = new JScrollPane(notesArea);
         notesScroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER));
 
@@ -167,7 +168,7 @@ public class QualityAssignmentDialog extends JDialog {
 
         qg.gridx = 1; qg.weightx = 0.28;
         JLabel specLbl = new JLabel("Tamanho / Calibre:");
-        specLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        specLbl.setFont(Typography.EMPHASIS);
         specLbl.setForeground(UIHelper.TEXT_LIGHT);
         qtyAndSpecPanel.add(specLbl, qg);
 
@@ -213,7 +214,7 @@ public class QualityAssignmentDialog extends JDialog {
         g.gridy = row;
         g.weightx = 0.35;
         JLabel lbl = new JLabel(labelText);
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lbl.setFont(Typography.BODY_BOLD);
         lbl.setForeground(UIHelper.TEXT_LIGHT);
         p.add(lbl, g);
 

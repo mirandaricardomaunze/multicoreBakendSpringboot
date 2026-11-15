@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.SystemMonitoringApiClient;
 import mz.multicore.erp.gui.SystemMonitoringDialog;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -29,14 +30,14 @@ public class PlatformSystemMonitoringView extends JPanel {
         card.add(Box.createVerticalStrut(16));
 
         JLabel title = new JLabel("Consola de Observabilidade & Diagnóstico");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
         card.add(title);
         card.add(Box.createVerticalStrut(8));
 
         JLabel desc = new JLabel("<html><center>Monitore em tempo real a integridade da persistência, pool HikariCP,<br>memória JVM, espaço em disco e subsistemas de faturação e auditoria.</center></html>");
-        desc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        desc.setFont(Typography.EMPHASIS);
         desc.setForeground(UIHelper.TEXT_MUTED);
         desc.setAlignmentX(Component.CENTER_ALIGNMENT);
         card.add(desc);

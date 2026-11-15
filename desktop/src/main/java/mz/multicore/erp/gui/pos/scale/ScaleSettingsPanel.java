@@ -57,13 +57,13 @@ public class ScaleSettingsPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm(1, new Object[]{"", help, "", enabled, "Porta série:", portRow,
                 "Velocidade (baud):", baud, "Modo de leitura:", mode});
 
-        live.setFont(new Font(UIHelper.FONT, Font.BOLD, 34));
+        live.setFont(Typography.HERO);
         live.setForeground(UIHelper.TEXT_LIGHT);
         live.setIcon(UIHelper.icon("fas-balance-scale", 26, UIHelper.ACCENT_BLUE));
         live.setIconTextGap(12);
         liveStatus.setForeground(UIHelper.TEXT_MUTED);
         rawFrame.setForeground(UIHelper.TEXT_MUTED);
-        rawFrame.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        rawFrame.setFont(Typography.MONO);
         rawFrame.setToolTipText("Para o teste de aceitação: o que a balança enviou, com os caracteres de controlo visíveis");
         JPanel liveBox = new JPanel(new GridLayout(3, 1, 0, 4));
         liveBox.setOpaque(false);

@@ -119,7 +119,7 @@ public class BulkStockPanel extends JPanel {
         second.add(secondMeasure);
         second.add(thirdMeasure);
 
-        result.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        result.setFont(Typography.EMPHASIS_BOLD);
         result.setForeground(UIHelper.TEXT_MUTED);
         previewBtn.setIcon(UIHelper.icon("fas-calculator", 14));
         previewBtn.setToolTipText("Calcular a diferença sem gravar");

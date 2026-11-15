@@ -113,7 +113,7 @@ public class VariantsPanel extends JPanel {
         grid.setRowSelectionAllowed(false);
         JScrollPane scroll = new JScrollPane(grid);
         UIHelper.styleScrollPane(scroll);
-        gridTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        gridTitle.setFont(Typography.TITLE);
         gridTitle.setForeground(UIHelper.TEXT_LIGHT);
         gridHint.setForeground(UIHelper.TEXT_MUTED);
         JPanel head = new JPanel(new BorderLayout(0, 2));
@@ -212,7 +212,7 @@ public class VariantsPanel extends JPanel {
             UIHelper.styleTextField(attr2);
             JTextField values2 = new JTextField("Branco, Preto, Azul");
             UIHelper.styleTextField(values2);
-            JTextArea preview = ResponsiveSupport.wrappingText(" ", new Font(UIHelper.FONT, Font.PLAIN, 12), UIHelper.TEXT_MUTED);
+            JTextArea preview = ResponsiveSupport.wrappingText(" ", Typography.BODY, UIHelper.TEXT_MUTED);
             Runnable refresh = () -> {
                 int a = split(values1.getText()).size();
                 int b = attr2.getText().isBlank() ? 1 : Math.max(1, split(values2.getText()).size());

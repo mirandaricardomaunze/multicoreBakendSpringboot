@@ -98,7 +98,7 @@ final class CommercialInvoicesView {
 
         // Row 7: Total summary (a emissão é feita pelo botão Gravar do modal)
         owner.totalLabel = new JLabel("Total Rascunho: 0,00 MT (incl. IVA)");
-        owner.totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        owner.totalLabel.setFont(Typography.EMPHASIS_BOLD);
         owner.totalLabel.setForeground(Color.WHITE);
 
         JPanel totalRow = new JPanel(new BorderLayout());
@@ -239,7 +239,7 @@ final class CommercialInvoicesView {
         JPanel group = new JPanel(new BorderLayout(0, 4));
         group.setOpaque(false);
         JLabel lbl = new JLabel(labelText);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lbl.setFont(Typography.BODY);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         group.add(lbl, BorderLayout.NORTH);
         if (width > 0) {

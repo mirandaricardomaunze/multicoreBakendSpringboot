@@ -143,7 +143,7 @@ public final class RecordDetailsDialog {
 
         table.getColumnModel().getColumn(0).setCellRenderer((t, val, sel, foc, r, c) -> {
             JLabel lbl = new JLabel("  " + (val != null ? val : ""));
-            lbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            lbl.setFont(Typography.BODY_BOLD);
             lbl.setForeground(sel ? Color.WHITE : UIHelper.TEXT_MUTED);
             lbl.setBackground(sel ? UIHelper.ACCENT_BLUE : (r % 2 == 0 ? UIHelper.BG_CARD : UIHelper.BG_DARK));
             lbl.setOpaque(true);
@@ -153,7 +153,7 @@ public final class RecordDetailsDialog {
         table.getColumnModel().getColumn(1).setCellRenderer((t, val, sel, foc, r, c) -> {
             String str = val != null ? String.valueOf(val) : "—";
             JLabel lbl = new JLabel("  " + str);
-            lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            lbl.setFont(Typography.BODY);
             boolean isMoney = str.contains("MT") || str.contains("MZN");
             lbl.setForeground(sel ? Color.WHITE : (isMoney ? UIHelper.APPROVED_GREEN : UIHelper.TEXT_LIGHT));
             lbl.setBackground(sel ? UIHelper.ACCENT_BLUE : (r % 2 == 0 ? UIHelper.BG_CARD : UIHelper.BG_DARK));
@@ -174,7 +174,7 @@ public final class RecordDetailsDialog {
         topBar.setOpaque(false);
         topBar.add(searchField, BorderLayout.CENTER);
         JLabel countLbl = new JLabel(items.size() + " atributos");
-        countLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        countLbl.setFont(Typography.CAPTION);
         countLbl.setForeground(UIHelper.TEXT_MUTED);
         countLbl.setBorder(new EmptyBorder(0, 8, 0, 0));
         topBar.add(countLbl, BorderLayout.EAST);

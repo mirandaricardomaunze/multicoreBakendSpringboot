@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -47,7 +48,7 @@ final class BankStatementImportDialog {
         JPanel balPanel = flow(openBalField, new JLabel("Final:"), closeBalField);
 
         JTextArea csvArea = new JTextArea(8, 35);
-        csvArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        csvArea.setFont(Typography.MONO);
         csvArea.setBackground(UIHelper.FIELD_BG);
         csvArea.setForeground(UIHelper.TEXT_LIGHT);
         csvArea.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.commercial;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.QuantityField;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -79,7 +80,7 @@ final class QuotationEditorHeaderForm {
         JPanel group = new JPanel(new BorderLayout(0, 4));
         group.setOpaque(false);
         JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lbl.setFont(Typography.BODY);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         group.add(lbl, BorderLayout.NORTH);
         if (width > 0) comp.setPreferredSize(new Dimension(width, 36));

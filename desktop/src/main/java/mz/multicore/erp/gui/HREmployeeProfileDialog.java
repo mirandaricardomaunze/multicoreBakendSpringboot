@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
@@ -67,7 +68,7 @@ final class HREmployeeProfileDialog {
         names.setLayout(new BoxLayout(names, BoxLayout.Y_AXIS));
         JLabel name = new JLabel(employee.name());
         name.setForeground(UIHelper.TEXT_LIGHT);
-        name.setFont(name.getFont().deriveFont(Font.BOLD, 20f));
+        name.setFont(Typography.METRIC);
         JLabel role = new JLabel(roleLabel(employee.role()) + " · " + value(employee.department()));
         role.setForeground(UIHelper.TEXT_MUTED);
         JLabel status = new JLabel(statusLabel(employee.status()));
@@ -208,7 +209,7 @@ final class HREmployeeProfileDialog {
         panel.setBorder(new EmptyBorder(14, 16, 14, 16));
         JLabel heading = new JLabel(title, UIHelper.icon(icon, 14, UIHelper.ACCENT_BLUE), SwingConstants.LEFT);
         heading.setForeground(UIHelper.TEXT_LIGHT);
-        heading.setFont(heading.getFont().deriveFont(Font.BOLD, 14f));
+        heading.setFont(Typography.EMPHASIS_BOLD);
         heading.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(heading);
         panel.add(Box.createVerticalStrut(10));

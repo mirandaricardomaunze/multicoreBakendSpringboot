@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.KpiCard;
@@ -34,14 +35,14 @@ public final class SellerDashboardViewCoordinator {
         JPanel titles = new JPanel();
         titles.setOpaque(false);
         titles.setLayout(new BoxLayout(titles, BoxLayout.Y_AXIS));
-        welcomeLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 22));
+        welcomeLabel.setFont(Typography.METRIC);
         welcomeLabel.setForeground(UIHelper.TEXT_LIGHT);
         JLabel subtitle = new JLabel("Venda rapidamente e acompanhe apenas a sua operação comercial.");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        subtitle.setFont(Typography.EMPHASIS);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
         titles.add(welcomeLabel);
         titles.add(subtitle);
-        cashStatus.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        cashStatus.setFont(Typography.BODY_BOLD);
         cashStatus.setForeground(UIHelper.ACCENT_CYAN);
         header.add(titles, BorderLayout.WEST);
         header.add(cashStatus, BorderLayout.EAST);

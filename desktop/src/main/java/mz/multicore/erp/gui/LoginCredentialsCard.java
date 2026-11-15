@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -52,10 +53,10 @@ class LoginCredentialsCard {
         card.add(logo, c);
 
         c.gridy++; c.insets = new Insets(10, 0, 0, 0);
-        card.add(centered("Bem-vindo ao Multicore", Font.BOLD, 22, UIHelper.TEXT_LIGHT), c);
+        card.add(centered("Bem-vindo ao Multicore", Typography.METRIC, UIHelper.TEXT_LIGHT), c);
 
         c.gridy++; c.insets = new Insets(2, 0, 16, 0);
-        card.add(centered("Entre com a sua conta para continuar", Font.PLAIN, 12, UIHelper.TEXT_MUTED), c);
+        card.add(centered("Entre com a sua conta para continuar", Typography.BODY, UIHelper.TEXT_MUTED), c);
 
         c.gridy++; c.insets = new Insets(0, 0, 6, 0);
         card.add(fieldLabel("Utilizador"), c);
@@ -70,7 +71,7 @@ class LoginCredentialsCard {
         JPanel passLabelRow = new JPanel(new BorderLayout()); passLabelRow.setOpaque(false);
         passLabelRow.add(fieldLabel("Senha"), BorderLayout.WEST);
         capsLockWarning = new JLabel("Caps Lock activo", UIHelper.icon("fas-exclamation-triangle", 11, UIHelper.PENDING_YELLOW), SwingConstants.RIGHT);
-        capsLockWarning.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        capsLockWarning.setFont(Typography.CAPTION_BOLD);
         capsLockWarning.setForeground(UIHelper.PENDING_YELLOW);
         capsLockWarning.setVisible(false);
         passLabelRow.add(capsLockWarning, BorderLayout.EAST);
@@ -87,7 +88,7 @@ class LoginCredentialsCard {
         JPanel optionsRow = new JPanel(new BorderLayout()); optionsRow.setOpaque(false);
         rememberUser = new JCheckBox("Lembrar utilizador");
         rememberUser.setOpaque(false); rememberUser.setFocusPainted(false);
-        rememberUser.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); rememberUser.setForeground(UIHelper.TEXT_MUTED);
+        rememberUser.setFont(Typography.BODY); rememberUser.setForeground(UIHelper.TEXT_MUTED);
         optionsRow.add(rememberUser, BorderLayout.WEST);
         JButton forgot = linkButton("Esqueceu a senha?", BRAND);
         forgot.addActionListener(e -> setMessage("Contacte o administrador do sistema para redefinir a senha.", UIHelper.TEXT_MUTED));
@@ -96,14 +97,14 @@ class LoginCredentialsCard {
 
         c.gridy++; c.insets = new Insets(0, 0, 6, 0);
         errorLabel = new JLabel(" ");
-        errorLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        errorLabel.setFont(Typography.CAPTION);
         errorLabel.setHorizontalAlignment(SwingConstants.CENTER);
         card.add(errorLabel, c);
 
         c.gridy++; c.insets = new Insets(0, 0, 4, 0);
         loginBtn = new ModernButton("Entrar", BRAND, UIHelper.ACCENT_BLUE_HOVER);
         loginBtn.setIcon(UIHelper.icon("fas-sign-in-alt", 14, Color.WHITE));
-        loginBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        loginBtn.setFont(Typography.EMPHASIS_BOLD);
         loginBtn.setPreferredSize(new Dimension(0, 46));
         loginBtn.addActionListener(e -> onLogin.run());
         loginBtn.getAccessibleContext().setAccessibleName("Submeter autenticação");
@@ -116,7 +117,7 @@ class LoginCredentialsCard {
 
         c.gridy++; c.insets = new Insets(2, 0, 0, 0);
         cancelBtn = new ModernButton("Sair  (Esc)", Color.WHITE, UIHelper.ROW_ALT);
-        cancelBtn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); cancelBtn.setForeground(UIHelper.TEXT_MUTED);
+        cancelBtn.setFont(Typography.BODY); cancelBtn.setForeground(UIHelper.TEXT_MUTED);
         cancelBtn.setPreferredSize(new Dimension(0, 30));
         cancelBtn.addActionListener(e -> onCancel.run());
         cancelBtn.getAccessibleContext().setAccessibleName("Cancelar autenticação");
@@ -223,20 +224,20 @@ class LoginCredentialsCard {
         JButton b = new JButton(text);
         b.setContentAreaFilled(false); b.setBorderPainted(false); b.setFocusPainted(false);
         b.setBorder(new EmptyBorder(0, 0, 0, 0));
-        b.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); b.setForeground(color);
+        b.setFont(Typography.BODY_BOLD); b.setForeground(color);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return b;
     }
 
-    private static JLabel centered(String text, int style, int size, Color color) {
+    private static JLabel centered(String text, Font font, Color color) {
         JLabel l = new JLabel(text, SwingConstants.CENTER);
-        l.setFont(new Font(UIHelper.FONT, style, size)); l.setForeground(color);
+        l.setFont(font); l.setForeground(color);
         return l;
     }
 
     private JLabel fieldLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); l.setForeground(UIHelper.TEXT_LIGHT);
+        l.setFont(Typography.BODY_BOLD); l.setForeground(UIHelper.TEXT_LIGHT);
         return l;
     }
 

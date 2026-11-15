@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
@@ -126,12 +127,12 @@ final class CommercialOrderHeaderForm {
 
         JLabel kindHint = new JLabel();
         kindHint.setForeground(UIHelper.TEXT_MUTED);
-        kindHint.setFont(kindHint.getFont().deriveFont(11f));
+        kindHint.setFont(Typography.CAPTION);
         kindHint.setIcon(UIHelper.semanticIcon("fas-info-circle", 12));
         hintsPanel.add(kindHint, BorderLayout.WEST);
 
         owner.orderClientCreditWarningLabel = new JLabel();
-        owner.orderClientCreditWarningLabel.setFont(owner.orderClientCreditWarningLabel.getFont().deriveFont(Font.BOLD, 11f));
+        owner.orderClientCreditWarningLabel.setFont(Typography.CAPTION_BOLD);
         owner.orderClientCreditWarningLabel.setForeground(UIHelper.REJECTED_RED);
         owner.orderClientCreditWarningLabel.setIcon(UIHelper.semanticIcon("fas-exclamation-triangle", 12));
         owner.orderClientCreditWarningLabel.setVisible(false);

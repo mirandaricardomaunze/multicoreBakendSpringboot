@@ -107,7 +107,7 @@ public class StatusBar extends JPanel {
 
     private static JLabel slimLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        l.setFont(Typography.CAPTION);
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }

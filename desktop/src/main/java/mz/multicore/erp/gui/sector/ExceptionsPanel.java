@@ -38,7 +38,7 @@ public class ExceptionsPanel extends JPanel {
     private final JTable table = new JTable(model);
     private final JComboBox<String> period = new JComboBox<>(java.util.Arrays.stream(PERIODS).map(p -> p[0]).toArray(String[]::new));
     private final JTextArea detail = ResponsiveSupport.wrappingText("Escolha uma excepção para ver o que aconteceu.",
-            new Font(UIHelper.FONT, Font.PLAIN, 13), UIHelper.TEXT_LIGHT);
+            Typography.EMPHASIS, UIHelper.TEXT_LIGHT);
     private final List<ExceptionFindingDTO> findings = new ArrayList<>();
     private Consumer<ExceptionReportDTO> onLoaded = report -> { };
 

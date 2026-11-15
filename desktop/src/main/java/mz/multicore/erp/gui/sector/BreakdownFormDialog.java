@@ -61,7 +61,7 @@ final class BreakdownFormDialog {
         UIHelper.styleScrollPane(scroll);
         scroll.setPreferredSize(new Dimension(520, 220));
         JLabel summary = new JLabel(" ");
-        summary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        summary.setFont(Typography.EMPHASIS_BOLD);
 
         Runnable refreshSummary = () -> {
             BigDecimal input = safe(inputKg);

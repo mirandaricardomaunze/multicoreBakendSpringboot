@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.SimpleBarChart;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -14,7 +15,7 @@ final class HROverviewUi {
 
     static JLabel subtitle(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        label.setFont(Typography.CAPTION);
         label.setForeground(UIHelper.TEXT_MUTED);
         return label;
     }

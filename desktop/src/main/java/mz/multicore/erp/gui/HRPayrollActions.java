@@ -1,10 +1,12 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.hr.dto.BankPaymentFileDTO;
 import mz.multicore.erp.modules.hr.dto.PayslipDTO;
 
-import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
@@ -45,11 +47,10 @@ final class HRPayrollActions {
         if (sel == null) {
             return;
         }
-        int answer = JOptionPane.showConfirmDialog(owner, String.format(
+        boolean approved = ModernMessageDialog.confirm(owner, FeedbackType.INFO, "Aprovar Recibo", String.format(
                 "Aprovar o recibo %s de %s?%n%nLíquido a pagar: %,.2f MT",
-                sel.payslipNumber(), sel.employeeName(), sel.netPay()),
-                "Aprovar Recibo", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (answer != JOptionPane.YES_OPTION) {
+                sel.payslipNumber(), sel.employeeName(), sel.netPay()), "Aprovar");
+        if (!approved) {
             return;
         }
         UIHelper.runWithProgress(owner, "A aprovar recibo…",
@@ -116,14 +117,13 @@ final class HRPayrollActions {
         }
         JTextArea area = new JTextArea(text.toString());
         area.setEditable(false);
-        area.setFont(new java.awt.Font("Consolas", java.awt.Font.PLAIN, 12));
+        area.setFont(Typography.MONO);
         JScrollPane scroll = new JScrollPane(area);
         scroll.setPreferredSize(new Dimension(760, 340));
 
-        JOptionPane.showMessageDialog(owner, scroll, String.format(
+        ModernMessageDialog.showContent(owner, String.format(
                 "Pagamento %02d/%d — %d pagamento(s), total %,.2f MT",
-                file.month(), file.year(), file.paymentCount(), file.totalAmount()),
-                JOptionPane.INFORMATION_MESSAGE);
+                file.month(), file.year(), file.paymentCount(), file.totalAmount()), "fas-university", scroll);
     }
 
     /** Ano e mês, na mesma pergunta. Devolve nulo se o utilizador cancelar. */
@@ -134,9 +134,7 @@ final class HRPayrollActions {
         JSpinner monthSpinner = new JSpinner(new SpinnerNumberModel(today.getMonthValue(), 1, 12, 1));
         JPanel form = UIHelper.createDialogForm("Ano:", yearSpinner, "Mês:", monthSpinner);
 
-        int answer = JOptionPane.showConfirmDialog(owner, form, title,
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (answer != JOptionPane.OK_OPTION) {
+        if (!ModernMessageDialog.confirmContent(owner, title, "fas-calendar-alt", form, "Continuar")) {
             return null;
         }
         return new int[]{(Integer) yearSpinner.getValue(), (Integer) monthSpinner.getValue()};

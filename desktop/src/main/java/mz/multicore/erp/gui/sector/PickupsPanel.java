@@ -129,7 +129,7 @@ public class PickupsPanel extends JPanel {
         inner.setOpaque(false);
         inner.add(new JLabel(UIHelper.icon("fas-people-carry", 40, UIHelper.ACCENT_ORANGE), SwingConstants.CENTER));
         JLabel title = new JLabel("Pagou tudo, levanta aos poucos", SwingConstants.CENTER);
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         inner.add(title);
         JLabel text = new JLabel("<html><div style='text-align:center;width:320px'>Escolha uma fatura à esquerda, ou registe "
@@ -150,9 +150,9 @@ public class PickupsPanel extends JPanel {
         header.add(new JLabel(UIHelper.icon("fas-file-invoice", 24, UIHelper.MODULE_COMERCIAL)), BorderLayout.WEST);
         JPanel text = new JPanel(new GridLayout(2, 1, 0, 2));
         text.setOpaque(false);
-        detailTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        detailTitle.setFont(Typography.TITLE);
         detailTitle.setForeground(UIHelper.TEXT_LIGHT);
-        detailMeta.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        detailMeta.setFont(Typography.BODY);
         detailMeta.setForeground(UIHelper.TEXT_MUTED);
         text.add(detailTitle);
         text.add(detailMeta);

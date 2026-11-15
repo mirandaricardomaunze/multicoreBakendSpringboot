@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.users;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -56,11 +57,11 @@ public class ManagerPinDialog {
         JPanel titleBlock = new JPanel(new GridLayout(2, 1, 0, 2));
         titleBlock.setOpaque(false);
         JLabel title = new JLabel("Autorização Gerencial");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel sub = new JLabel(operationName);
-        sub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        sub.setFont(Typography.CAPTION);
         sub.setForeground(UIHelper.TEXT_MUTED);
 
         titleBlock.add(title);
@@ -74,12 +75,12 @@ public class ManagerPinDialog {
         body.setOpaque(false);
 
         JLabel pinLabel = new JLabel("Introduza o PIN de 4 dígitos do Gerente:");
-        pinLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        pinLabel.setFont(Typography.BODY_BOLD);
         pinLabel.setForeground(UIHelper.TEXT_MUTED);
         body.add(pinLabel);
 
         pinField = new JPasswordField(4);
-        pinField.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        pinField.setFont(Typography.METRIC);
         pinField.setHorizontalAlignment(JTextField.CENTER);
         UIHelper.styleTextField(pinField);
         body.add(pinField);
@@ -91,7 +92,7 @@ public class ManagerPinDialog {
         footer.setOpaque(false);
 
         feedbackLabel = new JLabel(" ", SwingConstants.CENTER);
-        feedbackLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        feedbackLabel.setFont(Typography.CAPTION_BOLD);
         feedbackLabel.setForeground(UIHelper.REJECTED_RED);
         footer.add(feedbackLabel, BorderLayout.NORTH);
 

@@ -60,12 +60,10 @@ public class DesktopApplication {
                     String msg = throwable.getMessage() != null && !throwable.getMessage().isBlank()
                             ? throwable.getMessage()
                             : throwable.getClass().getSimpleName();
-                    javax.swing.JOptionPane.showMessageDialog(
-                            null,
-                            "Ocorreu um erro operacional inesperado:\n" + msg + "\n\nConsulte o registo de suporte para mais detalhes.",
+                    mz.multicore.erp.gui.components.ModernMessageDialog.showSafely(
+                            mz.multicore.erp.gui.components.FeedbackType.WARNING,
                             "Multicore ERP — Aviso do Sistema",
-                            javax.swing.JOptionPane.WARNING_MESSAGE
-                    );
+                            "Ocorreu um erro operacional inesperado:\n" + msg + "\n\nConsulte o registo de suporte para mais detalhes.");
                 });
             } catch (Throwable ignored) {
             }

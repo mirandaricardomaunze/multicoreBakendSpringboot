@@ -22,7 +22,7 @@ public final class FormField extends JPanel {
         setOpaque(false);
 
         JLabel title = new JLabel(label + (required ? " *" : ""));
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        title.setFont(Typography.BODY_BOLD);
         title.setForeground(UIHelper.ACCENT);
         title.setLabelFor(input);
         title.getAccessibleContext().setAccessibleName(label + (required ? ", obrigatório" : ""));
@@ -33,11 +33,11 @@ public final class FormField extends JPanel {
         messages.setOpaque(false);
         if (help != null && !help.isBlank()) {
             JLabel helpLabel = new JLabel(help);
-            helpLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+            helpLabel.setFont(Typography.CAPTION);
             helpLabel.setForeground(UIHelper.TEXT_MUTED);
             messages.add(helpLabel, BorderLayout.NORTH);
         }
-        errorLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        errorLabel.setFont(Typography.CAPTION);
         errorLabel.setForeground(UIHelper.REJECTED_RED);
         errorLabel.setVisible(false);
         messages.add(errorLabel, BorderLayout.SOUTH);

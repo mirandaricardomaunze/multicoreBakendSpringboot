@@ -101,12 +101,12 @@ public class DashboardPanel extends JPanel {
         stack.setLayout(new BoxLayout(stack, BoxLayout.Y_AXIS));
 
         welcomeLabel = new JLabel("Olá, Gestor! Bem-vindo ao MULTICORE.");
-        welcomeLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 22));
+        welcomeLabel.setFont(Typography.METRIC);
         welcomeLabel.setForeground(UIHelper.TEXT_LIGHT);
         stack.add(welcomeLabel);
 
         JLabel subtitle = new JLabel("Visão geral das operações, vendas e fluxo financeiro.");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        subtitle.setFont(Typography.EMPHASIS);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
         stack.add(subtitle);
 

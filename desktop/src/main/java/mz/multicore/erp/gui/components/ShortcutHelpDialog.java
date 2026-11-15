@@ -118,7 +118,7 @@ public class ShortcutHelpDialog extends JDialog {
         cardHeader.setOpaque(false);
         JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 16, accent));
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
         cardHeader.add(iconLabel);
         cardHeader.add(titleLabel);
@@ -136,7 +136,7 @@ public class ShortcutHelpDialog extends JDialog {
 
             // Key pill
             JLabel keyLabel = new JLabel(s.key());
-            keyLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            keyLabel.setFont(Typography.CAPTION_BOLD);
             keyLabel.setForeground(UIHelper.TEXT_LIGHT);
             keyLabel.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(71, 85, 105), 1),
@@ -145,7 +145,7 @@ public class ShortcutHelpDialog extends JDialog {
 
             // Description
             JLabel descLabel = new JLabel(s.description());
-            descLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            descLabel.setFont(Typography.BODY);
             descLabel.setForeground(UIHelper.TEXT_MUTED);
 
             row.add(keyLabel, BorderLayout.WEST);

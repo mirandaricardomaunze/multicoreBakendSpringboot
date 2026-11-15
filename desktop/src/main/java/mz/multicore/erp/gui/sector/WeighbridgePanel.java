@@ -72,7 +72,7 @@ public class WeighbridgePanel extends JPanel {
     }
 
     private JComponent buildLive() {
-        liveWeight.setFont(new Font(UIHelper.FONT, Font.BOLD, 30));
+        liveWeight.setFont(Typography.HERO);
         liveWeight.setForeground(UIHelper.TEXT_LIGHT);
         liveWeight.setIcon(UIHelper.icon("fas-truck", 26, UIHelper.ACCENT_BLUE));
         liveWeight.setIconTextGap(12);
@@ -258,7 +258,7 @@ public class WeighbridgePanel extends JPanel {
         UIHelper.styleTextField(reference);
         JTextArea info = ResponsiveSupport.wrappingText(t.plate() + " entrou com " + kg(t.firstWeight()) + " kg ("
                 + (t.direction() == WeighingDirection.OUT ? "vem buscar material: deve sair mais pesado" : "traz material: deve sair mais leve")
-                + ").", new Font(UIHelper.FONT, Font.PLAIN, 12), UIHelper.TEXT_LIGHT);
+                + ").", Typography.BODY, UIHelper.TEXT_LIGHT);
         FormField weightForm = new FormField("Peso à saída (kg)", weight.panel(), true, null);
         ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "2.ª Pesagem " + t.number(), "fas-sign-out-alt",
                 "Camião à saída", UIHelper.createDialogForm(1, new Object[]{"", info, "", weightForm, "Documento (fatura, guia):", reference}))

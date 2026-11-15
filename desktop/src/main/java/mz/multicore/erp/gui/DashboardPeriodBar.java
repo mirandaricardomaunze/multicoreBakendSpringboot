@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -32,7 +33,7 @@ final class DashboardPeriodBar {
 
         ModernButton tv = new ModernButton(TV_LABEL, idleBackground(), idleHover());
         tv.setIcon(UIHelper.icon("fas-tv", 13, UIHelper.ACCENT_BLUE));
-        tv.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        tv.setFont(Typography.BODY_BOLD);
         tv.setToolTipText("Abrir Painel TV em ecrã inteiro (F11)");
         tv.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1, true), BorderFactory.createEmptyBorder(5, 12, 5, 12)));
@@ -45,7 +46,7 @@ final class DashboardPeriodBar {
         segments.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
         for (DashboardPanel.PeriodFilter period : DashboardPanel.PeriodFilter.values()) {
             ModernButton button = new ModernButton(period.getLabel(), idleBackground(), idleHover());
-            button.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+            button.setFont(Typography.BODY_BOLD);
             button.setBorder(BorderFactory.createEmptyBorder(5, 14, 5, 14));
             button.setPreferredSize(new Dimension(button.getPreferredSize().width, 28));
             button.addActionListener(e -> onSelect.accept(period));

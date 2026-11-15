@@ -30,32 +30,32 @@ final class HROverviewTabPanel {
         JPanel grid = new JPanel(new GridLayout(0, 3, 12, 12));
         grid.setOpaque(false);
 
-        JLabel ovActiveEmployees = KpiCard.valueLabel("0", 20);
+        JLabel ovActiveEmployees = KpiCard.valueLabel("0");
         JLabel ovActiveEmployeesSub = HROverviewUi.subtitle("");
         grid.add(KpiCard.create("COLABORADORES ATIVOS", "fas-users", UIHelper.KPI_INFO_SOFT,
                 ovActiveEmployees, ovActiveEmployeesSub, UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END));
 
-        JLabel ovPayrollNet = KpiCard.valueLabel("0,00 MT", 20);
+        JLabel ovPayrollNet = KpiCard.valueLabel("0,00 MT");
         JLabel ovPayrollGrossSub = HROverviewUi.subtitle("");
         grid.add(KpiCard.create("MASSA SALARIAL (MÊS)", "fas-money-check-alt", UIHelper.KPI_PURPLE_SOFT,
                 ovPayrollNet, ovPayrollGrossSub, UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END));
 
-        JLabel ovEmployerInss = KpiCard.valueLabel("0,00 MT", 20);
+        JLabel ovEmployerInss = KpiCard.valueLabel("0,00 MT");
         JLabel ovEmployerInssSub = HROverviewUi.subtitle("");
         grid.add(KpiCard.create("INSS PATRONAL (MÊS)", "fas-hand-holding-usd", UIHelper.KPI_SUCCESS_SOFT,
                 ovEmployerInss, ovEmployerInssSub, UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN));
 
-        JLabel ovPendingVacations = KpiCard.valueLabel("0", 20);
+        JLabel ovPendingVacations = KpiCard.valueLabel("0");
         JLabel ovPendingVacationsSub = HROverviewUi.subtitle("");
         grid.add(KpiCard.create("FÉRIAS PENDENTES", "fas-umbrella-beach", UIHelper.KPI_WARNING_SOFT,
                 ovPendingVacations, ovPendingVacationsSub, UIHelper.KPI_WARNING_DARK, UIHelper.KPI_WARNING_END));
 
-        JLabel ovMonthAbsences = KpiCard.valueLabel("0", 20);
+        JLabel ovMonthAbsences = KpiCard.valueLabel("0");
         JLabel ovMonthAbsencesSub = HROverviewUi.subtitle("");
         grid.add(KpiCard.create("FALTAS (MÊS)", "fas-user-times", UIHelper.KPI_DANGER_SOFT,
                 ovMonthAbsences, ovMonthAbsencesSub, UIHelper.KPI_DANGER_DARK, UIHelper.KPI_DANGER_END));
 
-        JLabel ovPendingExpenses = KpiCard.valueLabel("0", 20);
+        JLabel ovPendingExpenses = KpiCard.valueLabel("0");
         JLabel ovPendingExpensesSub = HROverviewUi.subtitle("");
         grid.add(KpiCard.create("DESPESAS PENDENTES", "fas-receipt", UIHelper.KPI_NEUTRAL_SOFT,
                 ovPendingExpenses, ovPendingExpensesSub, UIHelper.KPI_NEUTRAL_DARK, UIHelper.KPI_NEUTRAL_END));

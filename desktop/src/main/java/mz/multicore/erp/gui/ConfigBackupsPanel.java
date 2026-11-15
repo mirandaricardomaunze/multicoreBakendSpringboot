@@ -36,11 +36,11 @@ final class ConfigBackupsPanel {
         consoleCard.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         JLabel desc = new JLabel("<html><body>O <b>backup lógico (.json)</b> é um snapshot de verificação por empresa (auditoria). Para recuperação use o <b>backup físico (BD)</b>, restaurável via pg_dump/pg_restore. O <b>backup automático</b> corre diariamente e apaga cópias antigas conforme retenção.</body></html>");
-        desc.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        desc.setFont(Typography.EMPHASIS);
         desc.setForeground(UIHelper.TEXT_MUTED);
 
         backupAutoStatus = new JLabel(" ");
-        backupAutoStatus.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        backupAutoStatus.setFont(Typography.BODY_BOLD);
         backupAutoStatus.setBorder(new EmptyBorder(8, 0, 0, 0));
 
         JPanel northInfo = new JPanel(new BorderLayout(0, 4));
@@ -52,7 +52,7 @@ final class ConfigBackupsPanel {
         backupLogArea = new JTextArea();
         backupLogArea.setBackground(UIHelper.BG_DARK);
         backupLogArea.setForeground(UIHelper.APPROVED_GREEN);
-        backupLogArea.setFont(new Font("Consolas", Font.PLAIN, 12));
+        backupLogArea.setFont(Typography.MONO);
         backupLogArea.setEditable(false);
         backupLogArea.setMargin(new Insets(10, 10, 10, 10));
         consoleCard.add(new JScrollPane(backupLogArea), BorderLayout.CENTER);

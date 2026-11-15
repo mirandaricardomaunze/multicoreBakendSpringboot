@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.commercial;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.comercial.dto.AgingBucketTotalDTO;
@@ -23,7 +24,7 @@ final class OutstandingAccountsAgingSummaryView extends JPanel {
         super(new BorderLayout(0, 5));
         setOpaque(false);
         setBorder(new EmptyBorder(2, 0, 3, 0));
-        referenceDate.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        referenceDate.setFont(Typography.CAPTION_BOLD);
         referenceDate.setForeground(UIHelper.TEXT_MUTED);
         add(referenceDate, BorderLayout.NORTH);
 

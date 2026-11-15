@@ -345,7 +345,7 @@ public class StockWastePanel extends JPanel {
         form.setOpaque(false);
         JLabel lbl = new JLabel("<html><body style='width:360px'>" + prompt + "</body></html>");
         lbl.setForeground(UIHelper.TEXT_LIGHT);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        lbl.setFont(Typography.EMPHASIS);
         form.add(lbl, BorderLayout.NORTH);
 
         JTextField notesField = new JTextField();

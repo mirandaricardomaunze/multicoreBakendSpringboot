@@ -69,7 +69,7 @@ public final class BillOrderDialog {
         JLabel client = value("—");
         JLabel date = value("—");
         JLabel total = value("0,00 MT");
-        total.setFont(new Font(UIHelper.FONT, Font.BOLD, 24));
+        total.setFont(Typography.METRIC);
         total.setForeground(UIHelper.APPROVED_GREEN);
         Runnable preview = () -> {
             lines.setRowCount(0);
@@ -109,9 +109,9 @@ public final class BillOrderDialog {
         content.add(selector, BorderLayout.NORTH);
         content.add(summary, BorderLayout.CENTER);
         content.add(scroll, BorderLayout.SOUTH);
-        int choice = JOptionPane.showConfirmDialog(owner, content, "Faturar Encomenda",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION || combo.getSelectedIndex() < 0) return;
+        boolean confirmed = ModernMessageDialog.confirmContent(owner, "Faturar Encomenda", "fas-file-invoice",
+                content, "Faturar");
+        if (!confirmed || combo.getSelectedIndex() < 0) return;
         OrderDTO selected = orders.get(combo.getSelectedIndex());
         UIHelper.runWithProgress(owner, "A faturar encomenda…", () -> apiClient.billOrder(selected.id()),
                 invoice -> success(selected, invoice), error -> showError("faturar encomenda", error));
@@ -145,7 +145,7 @@ public final class BillOrderDialog {
     }
     private static JLabel value(String text) {
         JLabel label = new JLabel(text); label.setForeground(UIHelper.TEXT_LIGHT);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); return label;
+        label.setFont(Typography.EMPHASIS_BOLD); return label;
     }
     private void showError(String action, Throwable error) {
         if (owner instanceof ComercialPanel panel) panel.showCommercialNotice(

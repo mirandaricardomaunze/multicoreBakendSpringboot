@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -65,7 +66,7 @@ public final class StockProductDetailHeroBuilder {
         label.setHorizontalTextPosition(SwingConstants.CENTER);
         label.setVerticalTextPosition(SwingConstants.BOTTOM);
         label.setForeground(UIHelper.TEXT_MUTED);
-        label.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        label.setFont(Typography.CAPTION);
     }
 
     public static void openFullImageModal(ProductDTO product, JDialog parentDialog) {

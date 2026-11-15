@@ -140,10 +140,10 @@ final class StockTransferLinesDialog {
         JPanel p = new JPanel(new BorderLayout(0, 2));
         p.setOpaque(false);
         JLabel l = new JLabel(label);
-        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        l.setFont(Typography.CAPTION);
         l.setForeground(UIHelper.TEXT_MUTED);
         JLabel v = new JLabel(value != null && !value.isBlank() ? value : "—");
-        v.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        v.setFont(Typography.BODY_BOLD);
         v.setForeground(UIHelper.TEXT_LIGHT);
         p.add(l, BorderLayout.NORTH);
         p.add(v, BorderLayout.CENTER);
@@ -154,10 +154,10 @@ final class StockTransferLinesDialog {
         JPanel p = new JPanel(new BorderLayout(0, 2));
         p.setOpaque(false);
         JLabel l = new JLabel(label);
-        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        l.setFont(Typography.CAPTION);
         l.setForeground(UIHelper.TEXT_MUTED);
         JLabel v = new JLabel(value);
-        v.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        v.setFont(Typography.EMPHASIS_BOLD);
         v.setForeground(UIHelper.ACCENT_BLUE);
         p.add(l, BorderLayout.NORTH);
         p.add(v, BorderLayout.CENTER);

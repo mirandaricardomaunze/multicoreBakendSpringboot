@@ -58,11 +58,11 @@ public class TopNavBar extends JPanel {
 
         // ---- Brand / Active title block (left)
         brandLabel = new JLabel(brand != null && !brand.isBlank() ? brand : "Painel Inicial");
-        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
+        brandLabel.setFont(Typography.TITLE);
         brandLabel.setForeground(headerText());
 
         brandSubLabel = new JLabel(subBrand != null ? subBrand : "");
-        brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        brandSubLabel.setFont(Typography.CAPTION);
         brandSubLabel.setForeground(subText());
         brandSubLabel.setToolTipText("Empresa ativa");
         brandSubLabel.setVisible(subBrand != null && !subBrand.isBlank());
@@ -74,7 +74,7 @@ public class TopNavBar extends JPanel {
                 return new Dimension(Math.min(size.width, SECTION_MAX_WIDTH), size.height);
             }
         };
-        sectionLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 15));
+        sectionLabel.setFont(Typography.TITLE_REGULAR);
         sectionLabel.setForeground(headerText());
         sectionLabel.setVisible(false);
         JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -161,7 +161,7 @@ public class TopNavBar extends JPanel {
 
         for (MenuEntry entry : entries) {
             JMenuItem option = new JMenuItem(entry.label(), entry.icon());
-            option.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+            option.setFont(Typography.EMPHASIS);
             option.setBorder(new EmptyBorder(8, 10, 8, 14));
             option.getAccessibleContext().setAccessibleName(entry.label());
             option.addActionListener(e -> {
@@ -196,11 +196,11 @@ public class TopNavBar extends JPanel {
 
         JLabel icon = new JLabel(UIHelper.icon("fas-search", 13, UIHelper.TEXT_MUTED));
         JLabel text = new JLabel("Pesquisar módulos ou ações...");
-        text.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        text.setFont(Typography.BODY);
         text.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel badge = new JLabel("Ctrl+K");
-        badge.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        badge.setFont(Typography.CAPTION_BOLD);
         badge.setForeground(UIHelper.TEXT_MUTED);
         badge.setBorder(javax.swing.BorderFactory.createCompoundBorder(
                 javax.swing.BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(71, 85, 105), 1),

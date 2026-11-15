@@ -206,7 +206,7 @@ public class ComprasPanel extends JPanel {
         bottomPanel.setOpaque(false);
 
         totalLabel = new JLabel("Total Compra: 0,00 MT (excl. IVA)");
-        totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        totalLabel.setFont(Typography.EMPHASIS_BOLD);
         totalLabel.setForeground(Color.WHITE);
 
         JPanel totalRow = new JPanel(new BorderLayout());

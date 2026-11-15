@@ -1,5 +1,8 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -68,11 +71,11 @@ public class PosImportQuotationDialog extends JDialog {
         titlePanel.setOpaque(false);
 
         JLabel title = new JLabel("Importar Cotação / Pró-forma");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel subtitle = new JLabel("Selecione uma cotação aberta para preencher o cliente e artigos no carrinho do POS");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
 
         titlePanel.add(title);
@@ -186,18 +189,16 @@ public class PosImportQuotationDialog extends JDialog {
                         table.setRowSelectionInterval(0, 0);
                     }
                 },
-                ex -> JOptionPane.showMessageDialog(this,
-                        "Erro ao carregar cotações: " + ex.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE)
+                ex -> ModernMessageDialog.show(this, FeedbackType.ERROR, "Erro",
+                        "Erro ao carregar cotações: " + ex.getMessage())
         );
     }
 
     private void confirmSelection() {
         int selectedRow = table.getSelectedRow();
         if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this,
-                    "Seleccione uma cotação para importar.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            ModernMessageDialog.show(this, FeedbackType.WARNING, "Aviso",
+                    "Seleccione uma cotação para importar.");
             return;
         }
 
@@ -208,9 +209,8 @@ public class PosImportQuotationDialog extends JDialog {
                 () -> comercialApiClient.getQuotationById(id),
                 fullQuotation -> {
                     if (fullQuotation == null || fullQuotation.lines() == null || fullQuotation.lines().isEmpty()) {
-                        JOptionPane.showMessageDialog(this,
-                                "A cotação seleccionada não contém artigos para faturar.",
-                                "Aviso", JOptionPane.WARNING_MESSAGE);
+                        ModernMessageDialog.show(this, FeedbackType.WARNING, "Aviso",
+                                "A cotação seleccionada não contém artigos para faturar.");
                         return;
                     }
                     this.selectedQuotation = fullQuotation;
@@ -219,9 +219,8 @@ public class PosImportQuotationDialog extends JDialog {
                         onImportCallback.accept(fullQuotation);
                     }
                 },
-                ex -> JOptionPane.showMessageDialog(this,
-                        "Falha ao carregar cotação: " + ex.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE)
+                ex -> ModernMessageDialog.show(this, FeedbackType.ERROR, "Erro",
+                        "Falha ao carregar cotação: " + ex.getMessage())
         );
     }
 

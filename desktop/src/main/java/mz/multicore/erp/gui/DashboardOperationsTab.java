@@ -37,27 +37,27 @@ final class DashboardOperationsTab {
 
         JPanel operationalKpiGrid = KpiCard.createHeroGrid(4, 10, 10);
 
-        approvalsValLabel = KpiCard.valueLabel("0 Pedidos", 19);
+        approvalsValLabel = KpiCard.valueLabel("0 Pedidos");
         operationalKpiGrid.add(buildKpiCard("APROVAÇÕES PENDENTES", "fas-clipboard-check", UIHelper.KPI_WARNING_SOFT,
                 approvalsValLabel, null, UIHelper.KPI_WARNING_DARK, UIHelper.KPI_WARNING_END,
                 "Clique para abrir Aprovações", "approvals"));
 
-        ticketsValLabel = KpiCard.valueLabel("0 Tickets", 19);
+        ticketsValLabel = KpiCard.valueLabel("0 Tickets");
         operationalKpiGrid.add(buildKpiCard("SUPORTE CRM / ASSISTÊNCIAS", "fas-headset", UIHelper.KPI_NEUTRAL_SOFT,
                 ticketsValLabel, null, UIHelper.KPI_NEUTRAL_DARK, UIHelper.KPI_NEUTRAL_END,
                 "Clique para abrir CRM & Assistência", "crm"));
 
-        stockAlertsLabel = KpiCard.valueLabel("0 Artigos", 19);
+        stockAlertsLabel = KpiCard.valueLabel("0 Artigos");
         JLabel stockAlertsSub = new JLabel("Qtd < 5 un no armazém");
-        stockAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        stockAlertsSub.setFont(Typography.CAPTION);
         stockAlertsSub.setForeground(UIHelper.KPI_DANGER_SOFT);
         operationalKpiGrid.add(buildKpiCard("ALERTAS DE STOCK", "fas-exclamation-triangle", UIHelper.KPI_DANGER_SOFT,
                 stockAlertsLabel, stockAlertsSub, UIHelper.KPI_DANGER_DARK, UIHelper.KPI_DANGER_END,
                 "Clique para abrir Gestão de Stock", "stock"));
 
-        expiryAlertsLabel = KpiCard.valueLabel("0 Lotes", 19);
+        expiryAlertsLabel = KpiCard.valueLabel("0 Lotes");
         expiryAlertsSub = new JLabel("Vencimento ≤ " + DashboardDataCoordinator.EXPIRY_ALERT_DAYS + " dias");
-        expiryAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        expiryAlertsSub.setFont(Typography.CAPTION);
         expiryAlertsSub.setForeground(UIHelper.KPI_ORANGE_SOFT);
         operationalKpiGrid.add(buildKpiCard("ALERTAS DE VALIDADE", "fas-calendar-times", UIHelper.KPI_ORANGE_SOFT,
                 expiryAlertsLabel, expiryAlertsSub, UIHelper.KPI_ORANGE_DARK, UIHelper.KPI_ORANGE_END,

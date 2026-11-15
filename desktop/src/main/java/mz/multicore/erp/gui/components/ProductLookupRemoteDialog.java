@@ -59,11 +59,11 @@ public final class ProductLookupRemoteDialog {
 
         JLabel statusLeft = new JLabel("A carregar catálogo do servidor…");
         statusLeft.setForeground(UIHelper.TEXT_MUTED);
-        statusLeft.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        statusLeft.setFont(Typography.BODY);
 
         JLabel pageLabel = new JLabel("Página 1 de 1", SwingConstants.CENTER);
         pageLabel.setForeground(UIHelper.TEXT_LIGHT);
-        pageLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        pageLabel.setFont(Typography.BODY_BOLD);
 
         var firstBtn = ClientTablePagination.ghostBtn("fas-angle-double-left", "Primeira página");
         var prevBtn = ClientTablePagination.ghostBtn("fas-angle-left", "Página anterior");
@@ -81,7 +81,7 @@ public final class ProductLookupRemoteDialog {
         leftPanel.setOpaque(false);
         JLabel perPageLabel = new JLabel("Por página:");
         perPageLabel.setForeground(UIHelper.TEXT_MUTED);
-        perPageLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        perPageLabel.setFont(Typography.BODY);
         leftPanel.add(perPageLabel);
         leftPanel.add(pageSizeCombo);
         leftPanel.add(statusLeft);

@@ -57,7 +57,7 @@ public class BadgedIcon implements Icon {
 
             if (badgeCount > 0) {
                 String text = badgeCount > 99 ? "99+" : String.valueOf(badgeCount);
-                Font badgeFont = new Font(UIHelper.FONT, Font.BOLD, 9);
+                Font badgeFont = Typography.BADGE;
                 g2.setFont(badgeFont);
                 FontMetrics fm = g2.getFontMetrics();
 

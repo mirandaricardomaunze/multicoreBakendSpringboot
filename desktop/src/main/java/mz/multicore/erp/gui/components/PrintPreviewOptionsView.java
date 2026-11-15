@@ -96,7 +96,7 @@ public class PrintPreviewOptionsView {
 
         grayscaleCheck.setOpaque(false);
         grayscaleCheck.setForeground(UIHelper.TEXT_LIGHT);
-        grayscaleCheck.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        grayscaleCheck.setFont(Typography.EMPHASIS);
         grayscaleCheck.addActionListener(event -> {
             if (listener != null) listener.onSummaryRefresh();
         });

@@ -45,35 +45,35 @@ final class DashboardOverviewTab {
 
         JPanel commercialKpiGrid = KpiCard.createHeroGrid(4, 10, 10);
 
-        balanceValLabel = KpiCard.valueLabel("0,00 MT", 19);
+        balanceValLabel = KpiCard.valueLabel("0,00 MT");
         // The balance is always current; the caption prevents it from appearing period-filtered.
         commercialKpiGrid.add(buildKpiCard("SALDO DE TESOURARIA", "fas-piggy-bank", UIHelper.KPI_INFO_SOFT,
                 balanceValLabel, new JLabel("Saldo actual de caixa e bancos"), UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END,
                 "Clique para abrir módulo Financeiro / Tesouraria", "financeiro"));
 
-        salesValLabel = KpiCard.valueLabel("0,00 MT", 19);
+        salesValLabel = KpiCard.valueLabel("0,00 MT");
         salesTrendBadge = new KpiCard.TrendBadge(null);
         salesSubLabel = new JLabel("Valor médio: 0,00 MT/venda");
-        salesSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        salesSubLabel.setFont(Typography.CAPTION);
         salesSubLabel.setForeground(UIHelper.KPI_PURPLE_SOFT);
         commercialKpiGrid.add(buildKpiCard("FATURAÇÃO TOTAL", "fas-file-invoice-dollar", UIHelper.KPI_PURPLE_SOFT,
                 salesValLabel, salesTrendBadge, salesSubLabel,
                 UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END,
                 "Clique para abrir módulo Comercial / Faturação", "comercial"));
 
-        posSalesValLabel = KpiCard.valueLabel("0,00 MT", 19);
+        posSalesValLabel = KpiCard.valueLabel("0,00 MT");
         posTrendBadge = new KpiCard.TrendBadge(null);
         posSalesCountSub = new JLabel("0 vendas");
-        posSalesCountSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        posSalesCountSub.setFont(Typography.CAPTION);
         posSalesCountSub.setForeground(UIHelper.KPI_SUCCESS_SOFT);
         commercialKpiGrid.add(buildKpiCard("VENDAS POS", "fas-cash-register", UIHelper.KPI_SUCCESS_SOFT,
                 posSalesValLabel, posTrendBadge, posSalesCountSub,
                 UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN,
                 "Clique para abrir Ponto de Venda (POS)", "pos"));
 
-        taxSummaryLabel = KpiCard.valueLabel("0,00 MT", 19);
+        taxSummaryLabel = KpiCard.valueLabel("0,00 MT");
         taxDetailLabel = new JLabel("A pagar · Liquidado: 0,00 | Dedutível: 0,00 MT");
-        taxDetailLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        taxDetailLabel.setFont(Typography.CAPTION);
         taxDetailLabel.setForeground(UIHelper.KPI_SUCCESS_SOFT);
         commercialKpiGrid.add(buildKpiCard("IVA DO PERÍODO", "fas-percentage", UIHelper.KPI_SUCCESS_SOFT,
                 taxSummaryLabel, taxDetailLabel,

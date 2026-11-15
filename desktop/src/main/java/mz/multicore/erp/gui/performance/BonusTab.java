@@ -270,7 +270,7 @@ public class BonusTab extends JPanel {
         form.setOpaque(false);
         JLabel lbl = new JLabel("Indique o ano e mês da folha salarial (formato AAAA/MM):");
         lbl.setForeground(UIHelper.TEXT_LIGHT);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        lbl.setFont(Typography.EMPHASIS);
         form.add(lbl, BorderLayout.NORTH);
 
         JTextField inputField = new JTextField(now.getYear() + "/" + String.format("%02d", now.getMonthValue()));

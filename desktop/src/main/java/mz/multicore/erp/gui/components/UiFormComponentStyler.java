@@ -108,7 +108,7 @@ final class UiFormComponentStyler {
         JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         group.setOpaque(false);
         JLabel label = new JLabel(labelText);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        label.setFont(Typography.BODY_BOLD);
         label.setForeground(UIHelper.TEXT_LIGHT);
         group.add(label);
         group.add(component);
@@ -134,7 +134,7 @@ final class UiFormComponentStyler {
         field.setBackground(UIHelper.FIELD_BG);
         field.setForeground(UIHelper.TEXT_LIGHT);
         field.setCaretColor(UIHelper.TEXT_LIGHT);
-        field.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        field.setFont(Typography.EMPHASIS);
         field.putClientProperty("JTextField.showClearButton", Boolean.TRUE);
         field.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(field);
@@ -247,7 +247,7 @@ final class UiFormComponentStyler {
         field.setBackground(UIHelper.FIELD_BG);
         field.setForeground(UIHelper.TEXT_LIGHT);
         field.setCaretColor(UIHelper.TEXT_LIGHT);
-        field.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        field.setFont(Typography.EMPHASIS);
         field.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(field);
         applyFormControlHeight(field);
@@ -257,7 +257,7 @@ final class UiFormComponentStyler {
         area.setBackground(UIHelper.FIELD_BG);
         area.setForeground(UIHelper.TEXT_LIGHT);
         area.setCaretColor(UIHelper.TEXT_LIGHT);
-        area.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        area.setFont(Typography.EMPHASIS);
         area.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(area);
     }
@@ -265,7 +265,7 @@ final class UiFormComponentStyler {
     static <T> ListCellRenderer<T> labelRenderer(Function<T, String> label) {
         return (list, value, index, selected, focus) -> {
             JLabel rendered = new JLabel(value == null ? "" : label.apply(value));
-            rendered.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+            rendered.setFont(Typography.EMPHASIS);
             rendered.setOpaque(true);
             return rendered;
         };
@@ -275,7 +275,7 @@ final class UiFormComponentStyler {
         ListCellRenderer<?> originalRenderer = combo.getRenderer();
         combo.setBackground(UIHelper.FIELD_BG);
         combo.setForeground(UIHelper.TEXT_LIGHT);
-        combo.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        combo.setFont(Typography.EMPHASIS);
         combo.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(combo);
         flattenComboArrow(combo);
@@ -309,7 +309,7 @@ final class UiFormComponentStyler {
     static void styleSpinner(JSpinner spinner) {
         spinner.setBackground(UIHelper.FIELD_BG);
         spinner.setForeground(UIHelper.TEXT_LIGHT);
-        spinner.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        spinner.setFont(Typography.EMPHASIS);
         spinner.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(spinner);
         if (spinner.getEditor() instanceof JSpinner.DefaultEditor de) {
@@ -317,7 +317,7 @@ final class UiFormComponentStyler {
             tf.setBackground(UIHelper.FIELD_BG);
             tf.setForeground(UIHelper.TEXT_LIGHT);
             tf.setCaretColor(UIHelper.TEXT_LIGHT);
-            tf.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+            tf.setFont(Typography.EMPHASIS);
             tf.setBorder(new EmptyBorder(0, 4, 0, 4));
             tf.setOpaque(false);
         }
@@ -329,7 +329,7 @@ final class UiFormComponentStyler {
         banner.setOpaque(true);
         banner.setBackground(UIHelper.PENDING_YELLOW);
         banner.setForeground(UIHelper.BG_DARK);
-        banner.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        banner.setFont(Typography.EMPHASIS_BOLD);
         banner.setBorder(new EmptyBorder(10, 14, 10, 14));
         banner.setVisible(false);
         return banner;

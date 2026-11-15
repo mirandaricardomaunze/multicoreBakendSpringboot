@@ -120,11 +120,11 @@ public class ExecutiveDetailDialog {
         titleBlock.setOpaque(false);
 
         titleLabel = new JLabel("—");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(Typography.TITLE);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         subtitleLabel = new JLabel("—");
-        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subtitleLabel.setFont(Typography.BODY);
         subtitleLabel.setForeground(UIHelper.TEXT_MUTED);
 
         titleBlock.add(titleLabel);
@@ -133,7 +133,7 @@ public class ExecutiveDetailDialog {
 
         statusBadgeLabel = new JLabel("—", SwingConstants.CENTER);
         statusBadgeLabel.setOpaque(true);
-        statusBadgeLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        statusBadgeLabel.setFont(Typography.BODY_BOLD);
         statusBadgeLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1),
                 new EmptyBorder(6, 16, 6, 16)
@@ -192,7 +192,7 @@ public class ExecutiveDetailDialog {
                 g2.setColor(bgColor != null ? bgColor : UIHelper.ACCENT);
                 g2.fillOval(x, y, d, d);
                 g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                g2.setFont(Typography.TITLE);
                 FontMetrics fm = g2.getFontMetrics();
                 String text = initials != null ? initials.toUpperCase() : "—";
                 int tx = x + (d - fm.stringWidth(text)) / 2;
@@ -231,16 +231,16 @@ public class ExecutiveDetailDialog {
             header.add(new JLabel(UIHelper.icon(iconName, 13, accentColor != null ? accentColor : UIHelper.ACCENT)));
         }
         JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lbl.setFont(Typography.CAPTION_BOLD);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         header.add(lbl);
 
         JLabel val = new JLabel(value != null ? value : "—");
-        val.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        val.setFont(Typography.TITLE);
         val.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel sub = new JLabel(subtext != null ? subtext : " ");
-        sub.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        sub.setFont(Typography.CAPTION);
         sub.setForeground(accentColor != null ? accentColor : UIHelper.TEXT_MUTED);
 
         JPanel body = new JPanel(new GridLayout(2, 1, 0, 1));

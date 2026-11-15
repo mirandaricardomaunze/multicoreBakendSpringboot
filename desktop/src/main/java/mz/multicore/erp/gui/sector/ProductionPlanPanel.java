@@ -112,7 +112,7 @@ public class ProductionPlanPanel extends JPanel {
         warehouse.addActionListener(e -> {
             if (warehouse.isPopupVisible() || warehouse.hasFocus()) loadDay();
         });
-        status.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        status.setFont(Typography.EMPHASIS_BOLD);
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bar.setOpaque(false);
         bar.add(TableFilter.label("Dia:"));

@@ -175,7 +175,7 @@ public class SimplePieChart extends JPanel {
         int height = getHeight();
 
         // Chart title.
-        g.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        g.setFont(Typography.TITLE);
         g.setColor(UIHelper.TEXT_LIGHT);
         g.drawString(title, 16, 26);
 
@@ -257,7 +257,7 @@ public class SimplePieChart extends JPanel {
             g.fill(new Ellipse2D.Double(holeX, holeY, holeSize, holeSize));
 
             // Doughnut total.
-            g.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            g.setFont(Typography.CAPTION_BOLD);
             g.setColor(UIHelper.TEXT_LIGHT);
             String compactTotal = formatCompact(total);
             FontMetrics fm = g.getFontMetrics();
@@ -296,7 +296,7 @@ public class SimplePieChart extends JPanel {
                 // Choose dark text for light colours and white text for dark colours.
                 Color textContrastColor = getContrastingTextColor(sliceColor);
 
-                g.setFont(new Font(UIHelper.FONT, Font.BOLD, (pct >= 15.0 && !donut) ? 12 : 10));
+                g.setFont((pct >= 15.0 && !donut) ? Typography.BODY_BOLD : Typography.CAPTION_BOLD);
                 g.setColor(textContrastColor);
                 FontMetrics fm = g.getFontMetrics();
                 int textW = fm.stringWidth(pctText);
@@ -334,11 +334,11 @@ public class SimplePieChart extends JPanel {
                 String labelText = (i < labels.length && labels[i] != null) ? labels[i] : "Item " + (i + 1);
                 String pctText = String.format("%.1f%%", sliceRatio);
 
-                g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+                g.setFont(Typography.CAPTION);
                 g.setColor(UIHelper.TEXT_LIGHT);
                 g.drawString(labelText, legendX + 16, legendY);
 
-                g.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+                g.setFont(Typography.CAPTION_BOLD);
                 g.setColor(UIHelper.TEXT_MUTED);
                 g.drawString(pctText, legendX + 16, legendY + 12);
 

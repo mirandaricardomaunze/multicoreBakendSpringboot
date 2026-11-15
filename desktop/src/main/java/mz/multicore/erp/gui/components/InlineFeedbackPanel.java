@@ -50,8 +50,8 @@ public final class InlineFeedbackPanel extends JPanel {
         JPanel text = new JPanel();
         text.setOpaque(false);
         text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        message.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        title.setFont(Typography.BODY_BOLD);
+        message.setFont(Typography.BODY);
         text.add(title);
         text.add(Box.createVerticalStrut(2));
         text.add(message);

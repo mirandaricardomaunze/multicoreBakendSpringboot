@@ -33,7 +33,7 @@ public final class TableFooter {
     public static JLabel install(JTable table, int moneyColumn) {
         JLabel label = new JLabel(" ");
         label.setForeground(UIHelper.TEXT_MUTED);
-        label.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        label.setFont(Typography.BODY);
         label.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
                 new EmptyBorder(6, 4, 0, 4)));

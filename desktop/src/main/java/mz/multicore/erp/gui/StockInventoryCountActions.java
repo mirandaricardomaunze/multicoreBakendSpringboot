@@ -77,7 +77,7 @@ final class StockInventoryCountActions {
             if (r < 0) { owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma contagem", "Escolha uma contagem na tabela para continuar."); return; }
             var s = rows.get(r);
             if (!"DRAFT".equals(s.status())) { owner.showStockNotice(FeedbackType.WARNING, "Contagem encerrada", "Só é possível cancelar contagens em curso."); return; }
-            if (JOptionPane.showConfirmDialog(owner, "Cancelar a contagem #" + s.id() + "?", "Confirmar", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+            if (!ModernMessageDialog.confirm(owner, FeedbackType.ERROR, "Cancelar contagem", "Cancelar a contagem #" + s.id() + "?", "Cancelar contagem")) return;
             UIHelper.runWithProgress(owner, "A cancelar contagem…", () -> {
                 owner.inventoryCountApiClient.cancelSession(s.id());
                 return null;

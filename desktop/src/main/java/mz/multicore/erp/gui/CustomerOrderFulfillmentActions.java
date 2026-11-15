@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -29,16 +30,10 @@ final class CustomerOrderFulfillmentActions {
         String status = String.valueOf(owner.ordersTableModel.getValueAt(row, ComercialPanel.ORDERS_COL_STATUS));
 
         if ("INVOICED".equalsIgnoreCase(status) || "BILLED".equalsIgnoreCase(status)) {
-            String[] options = {"Guia de Remessa / Transporte", "Folha de Encomenda (A4)"};
-            int opt = JOptionPane.showOptionDialog(owner,
+            int opt = ModernMessageDialog.choose(owner, FeedbackType.INFO, "Imprimir Documento",
                     "A encomenda já se encontra faturada.\nSelecione o documento que pretende emitir:",
-                    "Imprimir Documento",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    options,
-                    options[0]);
-            if (opt == 0) {
+                    "Folha de Encomenda (A4)", "Guia de Remessa / Transporte");
+            if (opt == 1) {
                 UIHelper.loadAsync(owner, () -> api.getOrderById(id), order -> {
                     if (order.invoiceId() != null) {
                         SensitivePrintCoordinator.print(owner, owner.printApiClient,
@@ -51,7 +46,7 @@ final class CustomerOrderFulfillmentActions {
                     }
                 }, error -> showError(owner, "consultar encomenda", error));
                 return;
-            } else if (opt == 1) {
+            } else if (opt == 0) {
                 printA4(owner, api, id);
                 return;
             } else {
@@ -60,16 +55,10 @@ final class CustomerOrderFulfillmentActions {
         }
 
         if (kindOf(owner, row).usesSeparationFlow() || "AWAITING_SEPARATION".equals(status) || "IN_SEPARATION".equals(status)) {
-            String[] docOpts = {"Folha de Separação A4 (Picking List)", "Talão Térmico 80mm", "Folha de Encomenda A4"};
-            int chosen = JOptionPane.showOptionDialog(owner,
+            int chosen = ModernMessageDialog.choose(owner, FeedbackType.INFO, "Imprimir Guia de Separação",
                     "Selecione o formato de impressão da guia de separação:",
-                    "Imprimir Guia de Separação",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    docOpts,
-                    docOpts[0]);
-            if (chosen == 0) {
+                    "Folha de Encomenda A4", "Talão Térmico 80mm", "Folha de Separação A4 (Picking List)");
+            if (chosen == 2) {
                 UIHelper.runWithProgress(owner, "A gerar guia A4 de separação…",
                         () -> api.printPickingA4(id, terminalName()),
                         pdf -> { owner.loadOrdersTable(); PrintPreviewDialog.show(owner, pdf, "separacao-a4-" + id); },
@@ -81,7 +70,7 @@ final class CustomerOrderFulfillmentActions {
                         pdf -> { owner.loadOrdersTable(); PrintPreviewDialog.show(owner, pdf, "separacao-" + id); },
                         error -> showError(owner, "imprimir guia de separação térmica", error));
                 return;
-            } else if (chosen == 2) {
+            } else if (chosen == 0) {
                 printA4(owner, api, id);
                 return;
             } else {
@@ -164,14 +153,15 @@ final class CustomerOrderFulfillmentActions {
             JTable table = new JTable(model); UIHelper.styleTable(table);
             JScrollPane scroll = new JScrollPane(table); UIHelper.styleScrollPane(scroll);
             scroll.setPreferredSize(new Dimension(1000, 420));
-            JOptionPane.showMessageDialog(owner, scroll, "Histórico operacional do pedido", JOptionPane.PLAIN_MESSAGE);
+            ModernMessageDialog.showContent(owner, "Histórico operacional do pedido", "fas-history", scroll);
         }, error -> showError(owner, "carregar histórico operacional", error));
     }
 
     private static void reprint(ComercialPanel owner, ComercialApiClient api, Long id) {
         JTextField user = new JTextField(); JPasswordField password = new JPasswordField(); JTextField reason = new JTextField();
-        Object[] fields = {"Outro gerente/administrador:", user, "Senha:", password, "Motivo:", reason};
-        if (JOptionPane.showConfirmDialog(owner, fields, "Autorizar reimpressão", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
+        UIHelper.styleTextField(user); UIHelper.styleTextField(password); UIHelper.styleTextField(reason);
+        JPanel fields = UIHelper.createDialogForm("Outro gerente/administrador:", user, "Senha:", password, "Motivo:", reason);
+        if (!ModernMessageDialog.confirmContent(owner, "Autorizar reimpressão", "fas-user-shield", fields, "Autorizar")) return;
         String secret = new String(password.getPassword());
         UIHelper.runWithProgress(owner, "A autorizar reimpressão…",
                 () -> api.reprintPicking(id, user.getText(), secret, reason.getText(), terminalName()),

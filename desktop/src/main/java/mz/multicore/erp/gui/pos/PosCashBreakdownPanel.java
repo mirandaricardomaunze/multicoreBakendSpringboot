@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Typography;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -63,11 +64,11 @@ final class PosCashBreakdownPanel {
 
     private JPanel createModeSelectorPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 2)); panel.setOpaque(false); panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel lblMode = new JLabel("Método de Contagem:"); lblMode.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); lblMode.setForeground(UIHelper.TEXT_LIGHT);
+        JLabel lblMode = new JLabel("Método de Contagem:"); lblMode.setFont(Typography.BODY_BOLD); lblMode.setForeground(UIHelper.TEXT_LIGHT);
         rbBreakdown = new JRadioButton("Contagem Física por Notas e Moedas (Recomendado)", true);
-        rbBreakdown.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); rbBreakdown.setForeground(UIHelper.TEXT_LIGHT); rbBreakdown.setOpaque(false);
+        rbBreakdown.setFont(Typography.BODY); rbBreakdown.setForeground(UIHelper.TEXT_LIGHT); rbBreakdown.setOpaque(false);
         rbDirectAmount = new JRadioButton("Introdução Direta de Montante Global");
-        rbDirectAmount.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); rbDirectAmount.setForeground(UIHelper.TEXT_LIGHT); rbDirectAmount.setOpaque(false);
+        rbDirectAmount.setFont(Typography.BODY); rbDirectAmount.setForeground(UIHelper.TEXT_LIGHT); rbDirectAmount.setOpaque(false);
         ButtonGroup group = new ButtonGroup(); group.add(rbBreakdown); group.add(rbDirectAmount);
         rbBreakdown.addActionListener(e -> switchMode(true)); rbDirectAmount.addActionListener(e -> switchMode(false));
         panel.add(lblMode); panel.add(rbBreakdown); panel.add(rbDirectAmount);
@@ -83,19 +84,19 @@ final class PosCashBreakdownPanel {
         ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(0, 10));
         card.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14)); card.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel header = new JLabel("Contagem Física de Cédulas e Moedas da Gaveta");
-        header.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); header.setForeground(UIHelper.TEXT_LIGHT);
+        header.setFont(Typography.EMPHASIS_BOLD); header.setForeground(UIHelper.TEXT_LIGHT);
         header.setIcon(UIHelper.icon("fas-coins", 14, UIHelper.PENDING_YELLOW));
         card.add(header, BorderLayout.NORTH);
 
         JPanel gridPanel = new JPanel(new GridLayout(1, 2, 15, 0)); gridPanel.setOpaque(false);
         JPanel notesCol = new JPanel(); notesCol.setLayout(new BoxLayout(notesCol, BoxLayout.Y_AXIS)); notesCol.setOpaque(false);
-        JLabel notesTitle = new JLabel("Notas (Cédulas MZN)"); notesTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); notesTitle.setForeground(UIHelper.APPROVED_GREEN);
+        JLabel notesTitle = new JLabel("Notas (Cédulas MZN)"); notesTitle.setFont(Typography.BODY_BOLD); notesTitle.setForeground(UIHelper.APPROVED_GREEN);
         notesTitle.setIcon(UIHelper.icon("fas-money-bill-wave", 13, UIHelper.APPROVED_GREEN));
         notesCol.add(notesTitle); notesCol.add(Box.createVerticalStrut(8));
         for (BigDecimal denom : NOTE_DENOMINATIONS) { notesCol.add(createDenominationRow(denom, true)); notesCol.add(Box.createVerticalStrut(5)); }
 
         JPanel coinsCol = new JPanel(); coinsCol.setLayout(new BoxLayout(coinsCol, BoxLayout.Y_AXIS)); coinsCol.setOpaque(false);
-        JLabel coinsTitle = new JLabel("Moedas Metálicas"); coinsTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); coinsTitle.setForeground(UIHelper.PENDING_YELLOW);
+        JLabel coinsTitle = new JLabel("Moedas Metálicas"); coinsTitle.setFont(Typography.BODY_BOLD); coinsTitle.setForeground(UIHelper.PENDING_YELLOW);
         coinsTitle.setIcon(UIHelper.icon("fas-coins", 13, UIHelper.PENDING_YELLOW));
         coinsCol.add(coinsTitle); coinsCol.add(Box.createVerticalStrut(8));
         for (BigDecimal denom : COIN_DENOMINATIONS) { coinsCol.add(createDenominationRow(denom, false)); coinsCol.add(Box.createVerticalStrut(5)); }
@@ -111,11 +112,11 @@ final class PosCashBreakdownPanel {
         row.setMaximumSize(new Dimension(Short.MAX_VALUE, 38));
 
         String labelText = denom.compareTo(BigDecimal.ONE) >= 0 ? String.format("%,.0f MT", denom) : String.format("%,.2f MT", denom);
-        JLabel lblDenom = new JLabel(labelText); lblDenom.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        JLabel lblDenom = new JLabel(labelText); lblDenom.setFont(Typography.BODY_BOLD);
         lblDenom.setForeground(isNote ? UIHelper.TEXT_LIGHT : UIHelper.PENDING_YELLOW); lblDenom.setPreferredSize(new Dimension(65, 26));
 
         JTextField countField = new JTextField("0", 4); countField.setHorizontalAlignment(JTextField.CENTER);
-        UIHelper.styleTextField(countField); countField.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        UIHelper.styleTextField(countField); countField.setFont(Typography.EMPHASIS_BOLD);
         countField.setPreferredSize(new Dimension(50, 26));
         countField.getDocument().addDocumentListener(createDocListener(this::recalculate));
         countFields.put(denom, countField);
@@ -124,7 +125,7 @@ final class PosCashBreakdownPanel {
         buttonsPanel.add(createMiniButton("+1", () -> increment(denom, 1)));
         buttonsPanel.add(createMiniButton("+5", () -> increment(denom, 5)));
 
-        JLabel lblSubtotal = new JLabel("0,00 MT"); lblSubtotal.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        JLabel lblSubtotal = new JLabel("0,00 MT"); lblSubtotal.setFont(Typography.BODY);
         lblSubtotal.setForeground(UIHelper.TEXT_MUTED); lblSubtotal.setHorizontalAlignment(SwingConstants.RIGHT);
         lblSubtotal.setPreferredSize(new Dimension(75, 26));
         subtotalLabels.put(denom, lblSubtotal);
@@ -137,7 +138,7 @@ final class PosCashBreakdownPanel {
     }
 
     private JButton createMiniButton(String text, Runnable action) {
-        JButton btn = new JButton(text); btn.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        JButton btn = new JButton(text); btn.setFont(Typography.CAPTION_BOLD);
         btn.setBackground(UIHelper.BORDER); btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false); btn.setMargin(new Insets(1, 4, 1, 4));
         btn.setPreferredSize(new Dimension(28, 22)); btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -161,9 +162,9 @@ final class PosCashBreakdownPanel {
     private JPanel createDirectAmountCard() {
         ModernPanel card = new ModernPanel(14); card.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 12));
         card.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15)); card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel lbl = new JLabel("Montante Total Contado (MT):"); lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); lbl.setForeground(UIHelper.TEXT_LIGHT);
+        JLabel lbl = new JLabel("Montante Total Contado (MT):"); lbl.setFont(Typography.EMPHASIS_BOLD); lbl.setForeground(UIHelper.TEXT_LIGHT);
         directAmountField = new JTextField(12); UIHelper.styleTextField(directAmountField);
-        directAmountField.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        directAmountField.setFont(Typography.TITLE);
         directAmountField.getDocument().addDocumentListener(createDocListener(this::recalculate));
         card.add(lbl); card.add(directAmountField);
         return card;
@@ -176,15 +177,15 @@ final class PosCashBreakdownPanel {
 
         JPanel left = new JPanel(); left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS)); left.setOpaque(false);
         JLabel title = new JLabel("TOTAL FÍSICO CONTADO NA GAVETA");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 11)); title.setForeground(UIHelper.TEXT_MUTED);
+        title.setFont(Typography.CAPTION_BOLD); title.setForeground(UIHelper.TEXT_MUTED);
 
         lblTotalCounted = new JLabel("0,00 MT");
-        lblTotalCounted.setFont(new Font(UIHelper.FONT, Font.BOLD, 22)); lblTotalCounted.setForeground(UIHelper.ACCENT_CYAN);
+        lblTotalCounted.setFont(Typography.METRIC); lblTotalCounted.setForeground(UIHelper.ACCENT_CYAN);
         left.add(title); left.add(lblTotalCounted);
 
         JPanel right = new JPanel(new GridLayout(2, 1, 2, 2)); right.setOpaque(false);
-        lblTotalNotes = new JLabel("Notas: 0,00 MT"); lblTotalNotes.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); lblTotalNotes.setForeground(UIHelper.TEXT_LIGHT);
-        lblTotalCoins = new JLabel("Moedas: 0,00 MT"); lblTotalCoins.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); lblTotalCoins.setForeground(UIHelper.TEXT_LIGHT);
+        lblTotalNotes = new JLabel("Notas: 0,00 MT"); lblTotalNotes.setFont(Typography.BODY); lblTotalNotes.setForeground(UIHelper.TEXT_LIGHT);
+        lblTotalCoins = new JLabel("Moedas: 0,00 MT"); lblTotalCoins.setFont(Typography.BODY); lblTotalCoins.setForeground(UIHelper.TEXT_LIGHT);
         right.add(lblTotalNotes); right.add(lblTotalCoins);
 
         card.add(left, BorderLayout.WEST); card.add(right, BorderLayout.EAST);

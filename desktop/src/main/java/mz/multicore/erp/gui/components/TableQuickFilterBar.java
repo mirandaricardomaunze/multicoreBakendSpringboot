@@ -78,7 +78,7 @@ public class TableQuickFilterBar extends JPanel {
 
         // 4. Painel com Contador de Registos
         this.countLabel = new JLabel();
-        this.countLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        this.countLabel.setFont(Typography.BODY_BOLD);
         this.countLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         this.countLabel.setBorder(new EmptyBorder(0, 4, 0, 4));
         add(this.countLabel, BorderLayout.EAST);

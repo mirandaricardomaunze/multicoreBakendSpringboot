@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -230,10 +231,10 @@ public class PurchaseOrderReceivingDialog {
         JPanel p = new JPanel(new BorderLayout(0, 2));
         p.setOpaque(false);
         JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        lbl.setFont(Typography.CAPTION);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         JLabel val = new JLabel(value);
-        val.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        val.setFont(Typography.EMPHASIS_BOLD);
         val.setForeground(UIHelper.TEXT_LIGHT);
         p.add(lbl, BorderLayout.NORTH);
         p.add(val, BorderLayout.CENTER);

@@ -89,7 +89,7 @@ final class CommercialOrdersView {
         linesScroll.setMinimumSize(new Dimension(0, 260));
 
         owner.orderTotalLabel = new JLabel("Total Rascunho: 0,00 MT (incl. IVA)");
-        owner.orderTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        owner.orderTotalLabel.setFont(Typography.EMPHASIS_BOLD);
         owner.orderTotalLabel.setForeground(Color.WHITE);
         owner.orderLoadLabel = new JLabel("Carga: 0.000 kg");
         owner.orderLoadLabel.setForeground(UIHelper.TEXT_MUTED);

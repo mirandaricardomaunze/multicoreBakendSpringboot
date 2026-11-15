@@ -85,7 +85,7 @@ public class SalesReturnDialog {
         UIHelper.styleScrollPane(scroll);
 
         JLabel totalCreditLbl = new JLabel("Total a Creditar: 0,00 MT (incl. IVA)");
-        totalCreditLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        totalCreditLbl.setFont(Typography.EMPHASIS_BOLD);
         totalCreditLbl.setForeground(UIHelper.APPROVED_GREEN);
 
         List<ReturnableInvoiceLineDTO> linesData = new ArrayList<>();
@@ -239,11 +239,11 @@ public class SalesReturnDialog {
         JPanel p = new JPanel(new BorderLayout(0, 2));
         p.setOpaque(false);
         JLabel l = new JLabel(label);
-        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        l.setFont(Typography.CAPTION);
         l.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel v = new JLabel(value != null ? value : "-");
-        v.setFont(v.getFont().deriveFont(Font.BOLD, 12f));
+        v.setFont(Typography.BODY_BOLD);
         v.setForeground(UIHelper.TEXT_LIGHT);
 
         p.add(l, BorderLayout.NORTH);

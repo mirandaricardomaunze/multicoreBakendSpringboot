@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -31,11 +32,11 @@ public final class MobilePaymentWaitingPanel extends ModernPanel {
         JPanel waitHeader = new JPanel(new BorderLayout());
         waitHeader.setOpaque(false);
         statusDescLabel = new JLabel("Aguardando PIN do cliente...");
-        statusDescLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        statusDescLabel.setFont(Typography.BODY_BOLD);
         statusDescLabel.setForeground(UIHelper.PENDING_YELLOW);
 
         countdownLabel = new JLabel("60s");
-        countdownLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        countdownLabel.setFont(Typography.EMPHASIS_BOLD);
         countdownLabel.setForeground(UIHelper.TEXT_MUTED);
 
         waitHeader.add(statusDescLabel, BorderLayout.WEST);
@@ -54,12 +55,12 @@ public final class MobilePaymentWaitingPanel extends ModernPanel {
         waitActions.setOpaque(false);
 
         simulateApproveBtn = new ModernButton("Simular Aprovação", UIHelper.ACCENT_CYAN, UIHelper.ACCENT_CYAN.darker());
-        simulateApproveBtn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        simulateApproveBtn.setFont(Typography.CAPTION);
         simulateApproveBtn.setPreferredSize(new Dimension(140, 28));
         simulateApproveBtn.addActionListener(e -> { if (onSimulate != null) onSimulate.run(); });
 
         cancelButton = ButtonStyles.cancelButton();
-        cancelButton.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        cancelButton.setFont(Typography.CAPTION);
         cancelButton.setPreferredSize(new Dimension(90, 28));
         cancelButton.addActionListener(e -> { if (onCancel != null) onCancel.run(); });
 

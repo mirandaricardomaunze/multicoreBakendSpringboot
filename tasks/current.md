@@ -70,6 +70,9 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
     filtros nunca esmagados); um só botão verde cheio, restantes de contorno, destrutivos com contorno
     vermelho; um só vocabulário de estados (`StatusTone`), estado continua texto colorido; rodapé igual.
     SPECs `docs/ECRA_CAMINHO_E_MENU_SPEC.md` e `docs/TABELAS_CONSISTENCIA_SPEC.md`.
+41. **Escala tipográfica e diálogos temáticos (2026-11-14):** todo o texto usa um papel de `Typography`
+    (8 tamanhos fechados); nenhum `JOptionPane` fora do `ModernMessageDialog`. SPEC em
+    `docs/TIPOGRAFIA_ESCALA_SPEC.md`, imposta pelo `TypographyHarnessTest`.
 
 35. **Painel Executivo com Tema e Modais Próprios:**
     - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.

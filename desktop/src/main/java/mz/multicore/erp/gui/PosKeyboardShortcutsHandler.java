@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -134,15 +135,11 @@ public final class PosKeyboardShortcutsHandler {
             return;
         }
 
-        int answer = JOptionPane.showConfirmDialog(
-                panel,
-                "Deseja cancelar o atendimento actual e limpar o carrinho de compras?",
+        boolean clear = ModernMessageDialog.confirm(panel, FeedbackType.WARNING,
                 "Cancelar Venda / Limpar Carrinho",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-        );
+                "Deseja cancelar o atendimento actual e limpar o carrinho de compras?", "Limpar carrinho");
 
-        if (answer == JOptionPane.YES_OPTION) {
+        if (clear) {
             panel.clearCart();
             ToastManager.show(panel, FeedbackType.INFO, "Carrinho limpo com sucesso.");
         }

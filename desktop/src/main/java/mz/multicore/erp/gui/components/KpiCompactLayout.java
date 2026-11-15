@@ -23,9 +23,6 @@ final class KpiCompactLayout {
 
     static final int HEIGHT = 56;
     private static final int ICON_SIZE = 16;
-    private static final int TITLE_SIZE = 10;
-    private static final int VALUE_SIZE = 17;
-    private static final int NOTE_SIZE = 11;
     private static final String PARTS = "kpi.parts";
     private static final String COMPACT = "kpi.compact";
     private static final Locale PT = Locale.forLanguageTag("pt-MZ");
@@ -60,7 +57,7 @@ final class KpiCompactLayout {
         JPanel text = new JPanel(new BorderLayout(0, 1));
         text.setOpaque(false);
         parts.title().setText(parts.title().getText() == null ? "" : parts.title().getText().toUpperCase(PT));
-        resize(parts.title(), Font.BOLD, TITLE_SIZE);
+        resize(parts.title(), Typography.CAPTION_BOLD);
         text.add(parts.title(), BorderLayout.NORTH);
         text.add(valueRow(parts), BorderLayout.CENTER);
         card.add(text, BorderLayout.CENTER);
@@ -76,14 +73,14 @@ final class KpiCompactLayout {
         row.setLayout(new ValueRowLayout(parts.value(), parts.trend(), parts.note()));
         if (parts.value() != null) {
             parts.value().putClientProperty(KpiTextFit.FIT_AVAILABLE, (IntSupplier) () -> ValueRowLayout.valueRoom(row, parts.trend()));
-            resize(parts.value(), Font.BOLD, VALUE_SIZE);
+            resize(parts.value(), Typography.TITLE);
             row.add(parts.value());
         }
         if (parts.trend() != null) row.add(parts.trend());
         if (parts.note() != null) {
             JLabel note = parts.note();
             note.putClientProperty(KpiTextFit.FIT_AVAILABLE, (IntSupplier) note::getWidth);
-            resize(note, Font.PLAIN, NOTE_SIZE);
+            resize(note, Typography.CAPTION);
             row.add(note);
         }
         return row;
@@ -169,8 +166,8 @@ final class KpiCompactLayout {
         @Override public void removeLayoutComponent(Component comp) {}
     }
 
-    private static void resize(JLabel label, int style, int size) {
-        label.setFont(new Font(UIHelper.FONT, style, size));
-        KpiTextFit.refit(label, size);
+    private static void resize(JLabel label, Font role) {
+        label.setFont(role);
+        KpiTextFit.refit(label, role.getSize());
     }
 }

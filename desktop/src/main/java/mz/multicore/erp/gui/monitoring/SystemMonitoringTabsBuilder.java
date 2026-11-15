@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.monitoring;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.SoundAlertManager;
@@ -91,7 +92,7 @@ public class SystemMonitoringTabsBuilder {
         JCheckBox soundBox = new JCheckBox("Activar Alarme Sonoro em Falhas Críticas", SoundAlertManager.getInstance().isSoundAlertEnabled());
         soundBox.setOpaque(false);
         soundBox.setForeground(UIHelper.TEXT_LIGHT);
-        soundBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        soundBox.setFont(Typography.BODY);
         soundBox.addActionListener(e -> SoundAlertManager.getInstance().setSoundAlertEnabled(soundBox.isSelected()));
         leftActions.add(soundBox);
 
@@ -182,7 +183,7 @@ public class SystemMonitoringTabsBuilder {
         panel.setLayout(new BorderLayout(0, 8));
         panel.setBorder(new EmptyBorder(10, 12, 10, 12));
         JLabel title = new JLabel(titleText);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        title.setFont(Typography.EMPHASIS_BOLD);
         title.setForeground(UIHelper.TEXT_LIGHT);
         panel.add(title, BorderLayout.NORTH);
         return panel;
@@ -205,7 +206,7 @@ public class SystemMonitoringTabsBuilder {
         table.setGridColor(UIHelper.BORDER);
         table.getTableHeader().setBackground(UIHelper.BG_CARD);
         table.getTableHeader().setForeground(UIHelper.TEXT_MUTED);
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        table.getTableHeader().setFont(Typography.BODY_BOLD);
         return table;
     }
 

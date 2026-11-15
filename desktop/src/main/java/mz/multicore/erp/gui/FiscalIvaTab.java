@@ -250,7 +250,7 @@ final class FiscalIvaTab {
     private JLabel filterLabel(String text) {
         JLabel l = new JLabel(text);
         l.setForeground(UIHelper.TEXT_MUTED);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        l.setFont(Typography.BODY_BOLD);
         return l;
     }
 }

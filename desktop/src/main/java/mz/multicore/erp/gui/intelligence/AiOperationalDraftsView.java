@@ -54,7 +54,7 @@ public class AiOperationalDraftsView extends JPanel {
 
         JLabel hint = new JLabel("Extrai apenas dados explícitos; não grava, não emite e não inventa cadastros.");
         hint.setForeground(UIHelper.TEXT_MUTED);
-        hint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        hint.setFont(Typography.BODY);
 
         JPanel topRow = new JPanel(new BorderLayout(12, 0));
         topRow.setOpaque(false);

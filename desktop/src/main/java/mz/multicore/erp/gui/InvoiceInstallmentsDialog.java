@@ -199,11 +199,11 @@ public class InvoiceInstallmentsDialog {
         JPanel p = new JPanel(new BorderLayout(0, 2));
         p.setOpaque(false);
         JLabel l = new JLabel(label);
-        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        l.setFont(Typography.CAPTION);
         l.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel v = new JLabel(value);
-        v.setFont(v.getFont().deriveFont(Font.BOLD, 12f));
+        v.setFont(Typography.BODY_BOLD);
         v.setForeground(UIHelper.TEXT_LIGHT);
 
         p.add(l, BorderLayout.NORTH);

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -71,7 +72,7 @@ public class StockProductDetailDialog {
         left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
 
         JLabel titleLbl = new JLabel(product.name());
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
+        titleLbl.setFont(Typography.METRIC);
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
         left.add(titleLbl);
 
@@ -137,7 +138,7 @@ public class StockProductDetailDialog {
 
     private JComponent createPill(String text, Color color) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        l.setFont(Typography.CAPTION_BOLD);
         l.setForeground(color);
         l.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(color, 1, true),

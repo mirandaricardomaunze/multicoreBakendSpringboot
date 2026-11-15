@@ -36,7 +36,7 @@ public class StatusBadge extends JLabel {
         this.badgeBg = new Color(this.badgeColor.getRed(), this.badgeColor.getGreen(), this.badgeColor.getBlue(), alpha);
         this.badgeBorder = new Color(this.badgeColor.getRed(), this.badgeColor.getGreen(), this.badgeColor.getBlue(), borderAlpha);
 
-        setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        setFont(Typography.CAPTION_BOLD);
         setHorizontalAlignment(SwingConstants.CENTER);
         setBorder(new EmptyBorder(3, 10, 3, 10));
 

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
 
@@ -59,7 +60,7 @@ public class PosShortcutBar extends ModernPanel {
         chip.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         JLabel keyLabel = new JLabel(key, SwingConstants.CENTER);
-        keyLabel.setFont(new Font(Font.MONOSPACED, Font.BOLD, 10));
+        keyLabel.setFont(Typography.KEYCAP);
         keyLabel.setForeground(highlight ? UIHelper.APPROVED_GREEN : Color.WHITE);
         keyLabel.setBackground(highlight ? Color.WHITE : accent);
         keyLabel.setOpaque(true);
@@ -68,7 +69,7 @@ public class PosShortcutBar extends ModernPanel {
 
         JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 11, highlight ? Color.WHITE : accent));
         JLabel textLabel = new JLabel(label);
-        textLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        textLabel.setFont(Typography.CAPTION_BOLD);
         textLabel.setForeground(highlight ? Color.WHITE : UIHelper.TEXT_LIGHT);
 
         chip.add(keyLabel);

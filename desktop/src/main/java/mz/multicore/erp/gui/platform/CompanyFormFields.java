@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.company.model.CompanyLegalForm;
 import mz.multicore.erp.modules.company.model.MozambiqueProvince;
@@ -272,7 +273,7 @@ final class CompanyFormFields {
         panel.setBorder(new EmptyBorder(0, 0, 8, 0));
         if (title != null) {
             JLabel heading = new JLabel(title);
-            heading.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+            heading.setFont(Typography.EMPHASIS_BOLD);
             heading.setForeground(UIHelper.TEXT_LIGHT);
             heading.setBorder(new EmptyBorder(4, 14, 0, 14));
             panel.add(heading, BorderLayout.NORTH);
@@ -288,7 +289,7 @@ final class CompanyFormFields {
             hintText.setEditable(false);
             hintText.setFocusable(false);
             hintText.setOpaque(false);
-            hintText.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            hintText.setFont(Typography.BODY);
             hintText.setForeground(UIHelper.TEXT_MUTED);
             hintText.setBorder(new EmptyBorder(0, 21, 0, 21));
             panel.add(hintText, BorderLayout.SOUTH);

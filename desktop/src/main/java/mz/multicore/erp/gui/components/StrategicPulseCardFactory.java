@@ -27,14 +27,14 @@ final class StrategicPulseCardFactory {
         titleRow.setOpaque(false);
         JLabel icon = new JLabel(UIHelper.icon("fas-compass", 18, UIHelper.ACCENT_BLUE));
         JLabel title = new JLabel("PULSO ESTRATÉGICO DA EMPRESA (DECISÃO 360°)");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        title.setFont(Typography.EMPHASIS_BOLD);
         title.setForeground(UIHelper.TEXT_LIGHT);
         titleRow.add(icon);
         titleRow.add(title);
         titleBox.add(titleRow);
 
         JLabel sub = new JLabel("Indicadores em tempo real de Governação, Liquidez, Risco e Metas.");
-        sub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        sub.setFont(Typography.CAPTION);
         sub.setForeground(UIHelper.TEXT_MUTED);
         sub.setBorder(new EmptyBorder(3, 26, 0, 0));
         titleBox.add(sub);
@@ -42,7 +42,7 @@ final class StrategicPulseCardFactory {
         header.add(titleBox, BorderLayout.WEST);
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(onRefresh);
-        refreshBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        refreshBtn.setFont(Typography.BODY_BOLD);
         refreshBtn.setPreferredSize(new Dimension(135, 28));
         header.add(refreshBtn, BorderLayout.EAST);
 
@@ -71,7 +71,7 @@ final class StrategicPulseCardFactory {
         JPanel cardHeader = new JPanel(new BorderLayout(6, 0));
         cardHeader.setOpaque(false);
         JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        titleLbl.setFont(Typography.CAPTION_BOLD);
         titleLbl.setForeground(pal.title);
 
         JLabel iconLbl = new JLabel(UIHelper.icon(iconCode, 14, pal.accent));
@@ -83,11 +83,11 @@ final class StrategicPulseCardFactory {
         content.setOpaque(false);
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
 
-        valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
+        valueLabel.setFont(Typography.TITLE);
         valueLabel.setForeground(pal.value);
         valueLabel.setAlignmentX(0.0f);
 
-        subLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        subLabel.setFont(Typography.CAPTION);
         subLabel.setForeground(pal.subtitle);
         subLabel.setAlignmentX(0.0f);
 
@@ -98,7 +98,7 @@ final class StrategicPulseCardFactory {
 
         actionBtn.setIcon(UIHelper.icon(actionIcon, 11));
         actionBtn.setPreferredSize(new Dimension(0, 26));
-        actionBtn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        actionBtn.setFont(Typography.CAPTION);
         card.add(actionBtn, BorderLayout.SOUTH);
 
         return card;

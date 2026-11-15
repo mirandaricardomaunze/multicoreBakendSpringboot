@@ -100,7 +100,7 @@ public class SimpleBarChart extends JPanel {
     static void drawEmptyState(Graphics2D g, String message, String hint, javax.swing.Icon icon, int width, int height,
                                java.awt.Component owner) {
         int iconShift = icon != null ? (icon.getIconHeight() + 10) / 2 : 0;
-        g.setFont(new Font(UIHelper.FONT, icon != null ? Font.BOLD : Font.PLAIN, icon != null ? 14 : 13));
+        g.setFont(icon != null ? Typography.EMPHASIS_BOLD : Typography.EMPHASIS);
         g.setColor(icon != null ? UIHelper.TEXT_LIGHT : UIHelper.TEXT_MUTED);
         java.awt.FontMetrics metrics = g.getFontMetrics();
         int baseline = (height + metrics.getAscent()) / 2 + iconShift;
@@ -109,7 +109,7 @@ public class SimpleBarChart extends JPanel {
         }
         g.drawString(message, (width - metrics.stringWidth(message)) / 2, baseline);
         if (hint == null) return;
-        g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        g.setFont(Typography.BODY);
         g.setColor(UIHelper.TEXT_MUTED);
         java.awt.FontMetrics hintMetrics = g.getFontMetrics();
         g.drawString(hint, (width - hintMetrics.stringWidth(hint)) / 2, baseline + metrics.getHeight() + 4);
@@ -150,7 +150,7 @@ public class SimpleBarChart extends JPanel {
         int chartWidth = Math.max(1, width - left - right);
         int chartHeight = Math.max(1, height - top - bottom);
 
-        g.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        g.setFont(Typography.TITLE);
         g.setColor(UIHelper.TEXT_LIGHT);
         g.drawString(title, 16, 26);
 
@@ -177,7 +177,7 @@ public class SimpleBarChart extends JPanel {
         g.drawLine(left, top + chartHeight, left + chartWidth, top + chartHeight);
 
         if (values.length == 0) {
-            g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            g.setFont(Typography.BODY);
             g.setColor(UIHelper.TEXT_MUTED);
             g.drawString("Sem dados", left, top + 30);
             g.dispose();
@@ -214,13 +214,13 @@ public class SimpleBarChart extends JPanel {
             g.setPaint(gp);
             if (barHeight > 0) g.fillRoundRect(x, y, barWidth, barHeight, 10, 10);
 
-            g.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            g.setFont(Typography.CAPTION_BOLD);
             g.setColor(UIHelper.TEXT_LIGHT);
             String valueText = formatCompact(rawValue);
             int valueWidth = g.getFontMetrics().stringWidth(valueText);
             g.drawString(valueText, x + (barWidth - valueWidth) / 2, Math.max(42, y - 7));
 
-            g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+            g.setFont(Typography.CAPTION);
             g.setColor(UIHelper.TEXT_MUTED);
             String label = i < labels.length && labels[i] != null ? labels[i] : "";
             int labelWidth = g.getFontMetrics().stringWidth(label);

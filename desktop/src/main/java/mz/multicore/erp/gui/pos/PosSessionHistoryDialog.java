@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.desktop.client.POSApiClient;
@@ -61,11 +62,11 @@ public class PosSessionHistoryDialog extends JDialog {
         panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
         JLabel title = new JLabel("Histórico de Fechos de Caixa (Relatório Z)");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel subtitle = new JLabel("Consulta de sessões anteriores, reconciliação de gaveta e reimpressão de dossiês fiscais");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
 
         panel.add(title, BorderLayout.NORTH);
@@ -114,7 +115,7 @@ public class PosSessionHistoryDialog extends JDialog {
         ModernButton btnPrintZ = ButtonStyles.main(UIHelper.createPrimaryButton("Re-imprimir Relatório Z (A4)"));
         btnPrintZ.setIcon(UIHelper.icon("fas-print", 13, Color.WHITE));
         btnPrintZ.setForeground(Color.WHITE);
-        btnPrintZ.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        btnPrintZ.setFont(Typography.EMPHASIS_BOLD);
         btnPrintZ.addActionListener(e -> printSelectedZ());
 
         ModernButton btnClose = ButtonStyles.secondary(UIHelper.createDangerButton("Fechar"));

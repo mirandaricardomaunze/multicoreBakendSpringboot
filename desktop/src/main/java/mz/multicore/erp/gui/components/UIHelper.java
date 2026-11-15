@@ -205,14 +205,14 @@ public class UIHelper {
 
     public static JLabel createHeading(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(FONT, Font.BOLD, 22));
+        label.setFont(Typography.METRIC);
         label.setForeground(TEXT_LIGHT);
         return label;
     }
 
     public static JLabel createSubheading(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(FONT, Font.BOLD, 15));
+        label.setFont(Typography.TITLE);
         label.setForeground(ACCENT);
         return label;
     }

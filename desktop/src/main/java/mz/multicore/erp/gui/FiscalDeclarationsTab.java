@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -27,12 +28,12 @@ final class FiscalDeclarationsTab {
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         JLabel title = new JLabel("Documentos para a Autoridade Tributária");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel hint = new JLabel("<html>Estes documentos são exportados em PDF profissional, prontos para impressão e arquivo. " +
                 "Inclua todas as faturas aprovadas/pagas e compras não-canceladas do período selecionado.</html>");
-        hint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        hint.setFont(Typography.BODY);
         hint.setForeground(UIHelper.TEXT_MUTED);
 
         ModernButton ivaDocBtn = UIHelper.createSecondaryButton("Declaração Mensal de IVA");

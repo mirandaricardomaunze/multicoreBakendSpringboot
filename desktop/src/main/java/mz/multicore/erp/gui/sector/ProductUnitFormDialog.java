@@ -60,7 +60,7 @@ final class ProductUnitFormDialog {
         JLabel factorCaption = new JLabel();
         factorCaption.setForeground(UIHelper.TEXT_MUTED);
         JLabel preview = new JLabel(" ");
-        preview.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        preview.setFont(Typography.EMPHASIS_BOLD);
         preview.setIcon(UIHelper.icon("fas-equals", 13, UIHelper.ACCENT_BLUE));
         preview.setIconTextGap(8);
 

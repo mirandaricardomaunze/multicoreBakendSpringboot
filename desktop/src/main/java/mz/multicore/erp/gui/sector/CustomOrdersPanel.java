@@ -145,7 +145,7 @@ public class CustomOrdersPanel extends JPanel {
         hint.setVerticalTextPosition(SwingConstants.BOTTOM);
         hint.setForeground(UIHelper.TEXT_MUTED);
         empty.add(hint);
-        detailTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        detailTitle.setFont(Typography.TITLE);
         detailTitle.setForeground(UIHelper.TEXT_LIGHT);
         detailBody.setForeground(UIHelper.TEXT_LIGHT);
         detailBody.setVerticalAlignment(SwingConstants.TOP);

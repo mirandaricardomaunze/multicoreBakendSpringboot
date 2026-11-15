@@ -55,7 +55,7 @@ public class CurrencyExchangeDialog extends JDialog {
         header.setOpaque(false);
         JLabel title = UIHelper.createHeading("Pagamento em Moeda Estrangeira");
         JLabel sub = new JLabel("Total da Venda: " + MultiCurrencyEngine.formatCurrency(totalMzn, Currency.MZN));
-        sub.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        sub.setFont(Typography.TITLE);
         sub.setForeground(UIHelper.ACCENT_BLUE);
         header.add(title, BorderLayout.NORTH);
         header.add(sub, BorderLayout.SOUTH);
@@ -77,7 +77,7 @@ public class CurrencyExchangeDialog extends JDialog {
 
         gbc.gridy = 1;
         currencyCombo = new JComboBox<>(new Currency[]{Currency.USD, Currency.ZAR, Currency.EUR});
-        currencyCombo.setFont(new Font(UIHelper.FONT, Font.PLAIN, 14));
+        currencyCombo.setFont(Typography.EMPHASIS);
         currencyCombo.setBackground(UIHelper.FIELD_BG);
         currencyCombo.setForeground(UIHelper.TEXT_LIGHT);
         currencyCombo.addActionListener(e -> recalculate());
@@ -86,7 +86,7 @@ public class CurrencyExchangeDialog extends JDialog {
         // Taxa de Câmbio
         gbc.gridy = 2;
         rateLabel = new JLabel("Câmbio: 1 USD = 63.83 MT");
-        rateLabel.setFont(new Font(UIHelper.FONT, Font.ITALIC, 12));
+        rateLabel.setFont(Typography.BODY.deriveFont(Font.ITALIC));
         rateLabel.setForeground(UIHelper.TEXT_MUTED);
         card.add(rateLabel, gbc);
 
@@ -98,7 +98,7 @@ public class CurrencyExchangeDialog extends JDialog {
         gbc.gridy = 4;
         gbc.insets = new Insets(2, 4, 12, 4);
         totalForeignLabel = new JLabel("$ 0.00");
-        totalForeignLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
+        totalForeignLabel.setFont(Typography.TITLE);
         totalForeignLabel.setForeground(UIHelper.PENDING_YELLOW);
         card.add(totalForeignLabel, gbc);
 
@@ -109,7 +109,7 @@ public class CurrencyExchangeDialog extends JDialog {
 
         gbc.gridy = 6;
         receivedField = new JTextField();
-        receivedField.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        receivedField.setFont(Typography.TITLE);
         UIHelper.styleTextField(receivedField);
         receivedField.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { recalculate(); }
@@ -121,7 +121,7 @@ public class CurrencyExchangeDialog extends JDialog {
         // Equivalente recebido em MZN
         gbc.gridy = 7;
         receivedMznLabel = new JLabel("Equivalente: 0,00 MT");
-        receivedMznLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        receivedMznLabel.setFont(Typography.BODY);
         receivedMznLabel.setForeground(UIHelper.TEXT_MUTED);
         card.add(receivedMznLabel, gbc);
 
@@ -132,7 +132,7 @@ public class CurrencyExchangeDialog extends JDialog {
 
         gbc.gridy = 9;
         changeMznLabel = new JLabel("0,00 MT");
-        changeMznLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
+        changeMznLabel.setFont(Typography.METRIC);
         changeMznLabel.setForeground(UIHelper.APPROVED_GREEN);
         card.add(changeMznLabel, gbc);
 
@@ -156,7 +156,7 @@ public class CurrencyExchangeDialog extends JDialog {
 
     private JLabel createFieldTitle(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        l.setFont(Typography.BODY_BOLD);
         l.setForeground(UIHelper.TEXT_LIGHT);
         return l;
     }

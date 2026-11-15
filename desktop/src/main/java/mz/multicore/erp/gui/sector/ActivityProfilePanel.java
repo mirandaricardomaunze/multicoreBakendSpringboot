@@ -92,7 +92,7 @@ public class ActivityProfilePanel extends JPanel {
         header.add(UIHelper.createHeading("Perfil de Actividade da Empresa"), BorderLayout.NORTH);
         JTextArea intro = ResponsiveSupport.wrappingText("Escolha o que a empresa faz. Pode combinar vários sectores, por "
                 + "exemplo Estaleiro e Fábrica de blocos. As capacidades de cada sector somam-se. Desligar um sector "
-                + "simplifica os ecrãs, mas nunca apaga dados.", new Font(UIHelper.FONT, Font.PLAIN, 13), UIHelper.TEXT_MUTED);
+                + "simplifica os ecrãs, mas nunca apaga dados.", Typography.EMPHASIS, UIHelper.TEXT_MUTED);
         header.add(intro, BorderLayout.CENTER);
         header.add(feedback, BorderLayout.SOUTH);
         return header;
@@ -109,9 +109,9 @@ public class ActivityProfilePanel extends JPanel {
         JLabel title = new JLabel("Capacidades activas");
         title.setIcon(UIHelper.icon("fas-check-double", 16, UIHelper.APPROVED_GREEN));
         title.setIconTextGap(8);
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
-        summaryCount.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        summaryCount.setFont(Typography.BODY);
         summaryCount.setForeground(UIHelper.TEXT_MUTED);
         top.add(title, BorderLayout.NORTH);
         top.add(summaryCount, BorderLayout.SOUTH);
@@ -125,7 +125,7 @@ public class ActivityProfilePanel extends JPanel {
 
         JPanel bottom = new JPanel(new BorderLayout(0, 8));
         bottom.setOpaque(false);
-        statusLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        statusLabel.setFont(Typography.BODY);
         statusLabel.setForeground(UIHelper.TEXT_MUTED);
         bottom.add(statusLabel, BorderLayout.NORTH);
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
@@ -210,7 +210,7 @@ public class ActivityProfilePanel extends JPanel {
         }
         if (active.isEmpty()) {
             JTextArea none = ResponsiveSupport.wrappingText("Nenhum sector escolhido. Escolha pelo menos um.",
-                    new Font(UIHelper.FONT, Font.PLAIN, 12), UIHelper.TEXT_MUTED);
+                    Typography.BODY, UIHelper.TEXT_MUTED);
             none.setAlignmentX(Component.LEFT_ALIGNMENT);
             capabilityList.add(none);
         }
@@ -243,9 +243,9 @@ public class ActivityProfilePanel extends JPanel {
         text.setOpaque(false);
         JLabel title = new JLabel(label);
         title.setForeground(UIHelper.TEXT_LIGHT);
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        title.setFont(Typography.BODY_BOLD);
         text.add(title, BorderLayout.NORTH);
-        text.add(ResponsiveSupport.wrappingText(description, new Font(UIHelper.FONT, Font.PLAIN, 11), UIHelper.TEXT_MUTED),
+        text.add(ResponsiveSupport.wrappingText(description, Typography.CAPTION, UIHelper.TEXT_MUTED),
                 BorderLayout.CENTER);
         row.add(text, BorderLayout.CENTER);
         return row;
@@ -295,11 +295,11 @@ public class ActivityProfilePanel extends JPanel {
             JPanel body = new JPanel(new BorderLayout(0, 6));
             body.setOpaque(false);
             JLabel title = new JLabel(profile.label());
-            title.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+            title.setFont(Typography.EMPHASIS_BOLD);
             title.setForeground(UIHelper.TEXT_LIGHT);
             body.add(title, BorderLayout.NORTH);
             JTextArea description = ResponsiveSupport.wrappingText(profile.description(),
-                    new Font(UIHelper.FONT, Font.PLAIN, 12), UIHelper.TEXT_MUTED);
+                    Typography.BODY, UIHelper.TEXT_MUTED);
             body.add(description, BorderLayout.CENTER);
 
             JPanel chips = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));

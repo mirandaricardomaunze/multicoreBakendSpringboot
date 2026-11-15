@@ -123,7 +123,7 @@ public class ReturnablesPanel extends JPanel {
         toggleItemBtn.setIcon(UIHelper.icon("fas-power-off", 14));
         toggleItemBtn.addActionListener(e -> toggleItem());
         JTextArea note = ResponsiveSupport.wrappingText("O preço de venda do artigo é o valor cobrado quando o vasilhame não volta.",
-                new Font(UIHelper.FONT, Font.PLAIN, 12), UIHelper.TEXT_MUTED);
+                Typography.BODY, UIHelper.TEXT_MUTED);
         return card("Artigos Retornáveis", note, scroll, UIHelper.createRefreshButton(this::reload), toggleItemBtn, addBtn);
     }
 
@@ -236,7 +236,7 @@ public class ReturnablesPanel extends JPanel {
         UIHelper.styleTextField(notes);
         JTextArea info = ResponsiveSupport.wrappingText(b.clientName() + " tem " + qty(b.balance()) + " " + b.itemName()
                 + " em aberto há " + b.daysOut() + " dias. É emitida uma fatura ao preço do artigo e essa quantidade deixa de contar no saldo.",
-                new Font(UIHelper.FONT, Font.PLAIN, 12), UIHelper.TEXT_LIGHT);
+                Typography.BODY, UIHelper.TEXT_LIGHT);
         FormField qtyForm = new FormField("Quantidade a cobrar", quantity, true, "No máximo " + qty(b.balance()));
         ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Cobrar Vasilhame Não Devolvido", "fas-file-invoice-dollar",
                 "Fatura do vasilhame perdido ou partido", UIHelper.createDialogForm(1, new Object[]{"", info, "", qtyForm, "Motivo:", notes}))

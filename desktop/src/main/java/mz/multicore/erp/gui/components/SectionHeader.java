@@ -31,7 +31,7 @@ public class SectionHeader extends JPanel {
         }
 
         JLabel label = new JLabel(title);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        label.setFont(Typography.EMPHASIS_BOLD);
         label.setForeground(UIHelper.TEXT_LIGHT);
         add(label);
     }

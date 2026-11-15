@@ -97,7 +97,7 @@ public final class GoalCreateDialog {
 
         gc.gridy++;
         JCheckBox chkBonusOptional = new JCheckBox("Atribuir Bonificação / Compensação de Vendas (Opcional)", false);
-        chkBonusOptional.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        chkBonusOptional.setFont(Typography.BODY_BOLD);
         chkBonusOptional.setForeground(UIHelper.PENDING_YELLOW);
         chkBonusOptional.setOpaque(false);
         form.add(chkBonusOptional, gc);

@@ -10,7 +10,6 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -85,7 +84,7 @@ public class RecentItemsDialog extends JDialog {
         searchField.setBackground(UIHelper.FIELD_BG);
         searchField.setForeground(UIHelper.TEXT_LIGHT);
         searchField.setCaretColor(UIHelper.TEXT_LIGHT);
-        searchField.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        searchField.setFont(Typography.EMPHASIS);
         searchField.putClientProperty("JTextField.placeholderText", "Filtrar por nome, NUIT, referência ou categoria...");
 
         searchField.getDocument().addDocumentListener(new DocumentListener() {
@@ -260,12 +259,12 @@ public class RecentItemsDialog extends JDialog {
             titleRow.setOpaque(false);
 
             JLabel titleLabel = new JLabel(item.title());
-            titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+            titleLabel.setFont(Typography.EMPHASIS_BOLD);
             titleLabel.setForeground(UIHelper.TEXT_LIGHT);
             titleRow.add(titleLabel);
 
             JLabel catBadge = new JLabel(" " + item.category() + " ");
-            catBadge.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+            catBadge.setFont(Typography.CAPTION);
             catBadge.setOpaque(true);
             catBadge.setBackground(iconTint);
             catBadge.setForeground(UIHelper.readableTextOn(iconTint));
@@ -275,7 +274,7 @@ public class RecentItemsDialog extends JDialog {
 
             if (item.subtitle() != null && !item.subtitle().isBlank()) {
                 JLabel subLabel = new JLabel(item.subtitle());
-                subLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+                subLabel.setFont(Typography.CAPTION);
                 subLabel.setForeground(UIHelper.TEXT_MUTED);
                 center.add(Box.createVerticalStrut(2));
                 center.add(subLabel);
@@ -285,7 +284,7 @@ public class RecentItemsDialog extends JDialog {
 
             // Direita: Tempo decorrido
             JLabel timeLabel = new JLabel(item.formattedTimeAgo());
-            timeLabel.setFont(new Font(UIHelper.FONT, Font.ITALIC, 11));
+            timeLabel.setFont(Typography.CAPTION.deriveFont(Font.ITALIC));
             timeLabel.setForeground(UIHelper.TEXT_MUTED);
             panel.add(timeLabel, BorderLayout.EAST);
 

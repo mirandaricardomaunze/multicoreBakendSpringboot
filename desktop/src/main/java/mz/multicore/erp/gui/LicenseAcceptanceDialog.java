@@ -1,5 +1,8 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.DialogKeys;
 import mz.multicore.erp.desktop.client.LicenseApiClient;
@@ -11,7 +14,6 @@ import javax.swing.BorderFactory;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -64,7 +66,7 @@ public class LicenseAcceptanceDialog extends JDialog {
         root.setBackground(UIHelper.BG_DARK);
 
         JLabel title = new JLabel("Contrato de Licença do Utilizador Final");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
+        title.setFont(Typography.METRIC);
         title.setForeground(UIHelper.TEXT_LIGHT);
         root.add(title, BorderLayout.NORTH);
 
@@ -150,7 +152,7 @@ public class LicenseAcceptanceDialog extends JDialog {
     private void showFailure(Exception exception, String fallback) {
         Throwable cause = exception.getCause() == null ? exception : exception.getCause();
         String message = cause.getMessage() == null || cause.getMessage().isBlank() ? fallback : cause.getMessage();
-        JOptionPane.showMessageDialog(this, message, "Contrato de licença", JOptionPane.ERROR_MESSAGE);
+        ModernMessageDialog.show(this, FeedbackType.ERROR, "Contrato de licença", message);
         dispose();
     }
 }

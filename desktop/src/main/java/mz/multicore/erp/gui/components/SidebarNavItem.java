@@ -249,7 +249,7 @@ public class SidebarNavItem extends JComponent {
     }
 
     private void paintLabel(Graphics2D g2, int h) {
-        g2.setFont(new Font(UIHelper.FONT, active ? Font.BOLD : Font.PLAIN, 13));
+        g2.setFont(active ? Typography.EMPHASIS_BOLD : Typography.EMPHASIS);
         FontMetrics fm = g2.getFontMetrics();
         int labelY = (h + fm.getAscent() - fm.getDescent()) / 2;
         g2.setColor(active ? textActive() : textInactive());
@@ -263,7 +263,7 @@ public class SidebarNavItem extends JComponent {
     private void paintBadge(Graphics2D g2, int w, int h) {
         if (badgeCount <= 0) return;
         String badgeText = badgeCount > 99 ? "99+" : String.valueOf(badgeCount);
-        g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        g2.setFont(Typography.CAPTION_BOLD);
         FontMetrics fm = g2.getFontMetrics();
         int textW = fm.stringWidth(badgeText);
         int badgeH = 16;

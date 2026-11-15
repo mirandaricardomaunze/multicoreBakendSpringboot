@@ -47,7 +47,7 @@ public class ModernButton extends JButton {
         setBorder(BorderFactory.createEmptyBorder(0, 14, 0, 14));
         setBackground(normalColor);
         setForeground(textColor);
-        setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        setFont(Typography.EMPHASIS_BOLD);
         setCursor(new Cursor(Cursor.HAND_CURSOR));
         setUI(ModernButtonPainter.createButtonUI());
 

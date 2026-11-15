@@ -3,6 +3,7 @@ package mz.multicore.erp.gui;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
@@ -51,11 +52,11 @@ public class PosQuotationActions {
 
         // Se o carrinho já tem artigos, pede confirmação para substituir
         if (!owner.cartItems.isEmpty()) {
-            int resp = JOptionPane.showConfirmDialog(owner,
+            boolean replace = ModernMessageDialog.confirm(owner, FeedbackType.WARNING, "Importar Cotação",
                     "O carrinho actual contém " + owner.cartItems.size() + " artigo(s).\n"
                             + "Deseja substituir o conteúdo actual pelos artigos da cotação " + quotation.quotationNumber() + "?",
-                    "Importar Cotação", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-            if (resp != JOptionPane.YES_OPTION) return;
+                    "Substituir carrinho");
+            if (!replace) return;
         }
 
         // 1. Cliente

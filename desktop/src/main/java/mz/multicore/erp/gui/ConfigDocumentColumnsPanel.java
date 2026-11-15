@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.ConfigDocumentColumnsOperations.ColumnBoxGroup;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -52,7 +53,7 @@ final class ConfigDocumentColumnsPanel {
         JLabel desc = new JLabel("<html><body>Escolha que colunas aparecem na tabela de linhas da <b>Fatura</b>, "
                 + "<b>Encomenda</b>, <b>Nota de Crédito</b> e <b>Guia de Remessa</b>. A configuração é por empresa "
                 + "e não altera totais nem IVA — apenas a presença visual das colunas.</body></html>");
-        desc.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        desc.setFont(Typography.EMPHASIS);
         desc.setForeground(UIHelper.TEXT_MUTED);
         topCard.add(desc, BorderLayout.NORTH);
         topCard.add(ConfigDocumentColumnsOperations.buildPresetsRow(

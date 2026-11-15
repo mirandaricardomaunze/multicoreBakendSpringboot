@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.AuthApiClient;
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.gui.components.AboutDialog;
@@ -100,7 +101,7 @@ public class LoginDialog extends JFrame {
         footer.setBorder(new EmptyBorder(8, 20, 16, 20));
 
         JLabel info = new JLabel("Multicore ERP v1.0.0 • Sistema Integrado de Gestão Empresarial • Moçambique");
-        info.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        info.setFont(Typography.CAPTION);
         info.setForeground(UIHelper.withAlpha(Color.WHITE, 190));
         info.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         info.setToolTipText("Multicore ERP • Clique para ver detalhes e licença do sistema");

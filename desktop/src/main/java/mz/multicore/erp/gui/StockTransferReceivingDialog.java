@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -146,7 +147,7 @@ public class StockTransferReceivingDialog {
         JPanel notesPanel = new JPanel(new BorderLayout(8, 0));
         notesPanel.setOpaque(false);
         JLabel notesLabel = new JLabel("Observações da Recepção:");
-        notesLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        notesLabel.setFont(Typography.BODY);
         notesLabel.setForeground(UIHelper.TEXT_LIGHT);
         JTextField notesField = new JTextField();
         notesField.setPreferredSize(new Dimension(300, UIHelper.FORM_CONTROL_HEIGHT));
@@ -218,10 +219,10 @@ public class StockTransferReceivingDialog {
         JPanel p = new JPanel(new BorderLayout(0, 2));
         p.setOpaque(false);
         JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        lbl.setFont(Typography.CAPTION);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         JLabel val = new JLabel(value);
-        val.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        val.setFont(Typography.EMPHASIS_BOLD);
         val.setForeground(UIHelper.TEXT_LIGHT);
         p.add(lbl, BorderLayout.NORTH);
         p.add(val, BorderLayout.CENTER);

@@ -150,7 +150,7 @@ final class UiTabbedPaneStyler {
         tabbedPane.setOpaque(false);
         tabbedPane.setBackground(UIHelper.BG_DARK);
         tabbedPane.setForeground(UIHelper.TEXT_LIGHT);
-        tabbedPane.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        tabbedPane.setFont(Typography.EMPHASIS_BOLD);
         // SCROLL_TAB_LAYOUT evita a 2.ª linha de abas inacessível com muitas abas.
         tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         UiTabScrollSupport.installMouseWheel(tabbedPane);

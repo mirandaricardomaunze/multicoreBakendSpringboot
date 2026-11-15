@@ -34,12 +34,12 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
         JLabel title = new JLabel("Rentabilidade & Margem Bruta");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         title.setIcon(UIHelper.icon("fas-chart-line", 15));
 
         marginBadge = new JLabel("0,0% Margem");
-        marginBadge.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        marginBadge.setFont(Typography.BODY_BOLD);
         marginBadge.setOpaque(true);
         marginBadge.setToolTipText("Percentagem de margem bruta no período seleccionado");
         styleMarginBadge(true);
@@ -67,7 +67,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         channelsPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
 
         posLabel = new JLabel("Vendas POS Balcão: 0,00 MT (0%)");
-        posLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        posLabel.setFont(Typography.CAPTION);
         posLabel.setForeground(UIHelper.TEXT_MUTED);
         posBar = createProgressBar(UIHelper.ACCENT_BLUE);
 
@@ -77,7 +77,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         posBox.add(posBar, BorderLayout.CENTER);
 
         invoiceLabel = new JLabel("Faturação Direta: 0,00 MT (0%)");
-        invoiceLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        invoiceLabel.setFont(Typography.CAPTION);
         invoiceLabel.setForeground(UIHelper.TEXT_MUTED);
         invoiceBar = createProgressBar(new Color(139, 92, 246));
 

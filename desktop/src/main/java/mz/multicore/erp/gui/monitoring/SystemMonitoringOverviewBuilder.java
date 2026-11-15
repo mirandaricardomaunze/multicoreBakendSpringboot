@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.monitoring;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.SoundAlertManager;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -30,10 +31,10 @@ public class SystemMonitoringOverviewBuilder {
         overallBadge.setOpaque(true);
         overallBadge.setBackground(UIHelper.BG_CARD);
         overallBadge.setForeground(UIHelper.TEXT_MUTED);
-        overallBadge.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        overallBadge.setFont(Typography.BODY_BOLD);
         overallBadge.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1), new EmptyBorder(6, 16, 6, 16)));
-        uptimeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        uptimeLabel.setFont(Typography.BODY);
         uptimeLabel.setForeground(UIHelper.TEXT_MUTED);
     }
 
@@ -48,7 +49,7 @@ public class SystemMonitoringOverviewBuilder {
         JPanel titles = new JPanel(new GridLayout(2, 1, 0, 2));
         titles.setOpaque(false);
         JLabel title = new JLabel("Diagnóstico & Saúde Operacional");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         titles.add(title);
         titles.add(uptimeLabel);
@@ -180,7 +181,7 @@ public class SystemMonitoringOverviewBuilder {
         header.setOpaque(false);
         header.add(new JLabel(UIHelper.icon(iconName, 16, iconColor)));
         JLabel lbl = new JLabel(title);
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lbl.setFont(Typography.EMPHASIS_BOLD);
         lbl.setForeground(UIHelper.TEXT_LIGHT);
         header.add(lbl);
 
@@ -201,7 +202,7 @@ public class SystemMonitoringOverviewBuilder {
 
     private JLabel createDetailLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        l.setFont(Typography.BODY);
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }

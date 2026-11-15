@@ -32,7 +32,7 @@ public class BarcodeScannerProductDetailsCard {
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         JLabel cardTitle = new JLabel("Artigo Identificado");
-        cardTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        cardTitle.setFont(Typography.EMPHASIS_BOLD);
         cardTitle.setForeground(UIHelper.TEXT_LIGHT);
         card.add(cardTitle, BorderLayout.NORTH);
 
@@ -40,15 +40,15 @@ public class BarcodeScannerProductDetailsCard {
         details.setOpaque(false);
         details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
 
-        lblProductName.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        lblProductName.setFont(Typography.TITLE);
         lblProductName.setForeground(UIHelper.TEXT_LIGHT);
-        lblProductSku.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblProductSku.setFont(Typography.BODY);
         lblProductSku.setForeground(UIHelper.TEXT_MUTED);
-        lblProductBarcode.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblProductBarcode.setFont(Typography.BODY);
         lblProductBarcode.setForeground(UIHelper.TEXT_MUTED);
-        lblProductDetails.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblProductDetails.setFont(Typography.BODY);
         lblProductDetails.setForeground(UIHelper.TEXT_MUTED);
-        lblBomStatus.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lblBomStatus.setFont(Typography.BODY_BOLD);
 
         details.add(lblProductName);
         details.add(Box.createVerticalStrut(4));

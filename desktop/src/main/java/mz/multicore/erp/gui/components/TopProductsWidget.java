@@ -43,7 +43,7 @@ public class TopProductsWidget extends ModernPanel {
         header.setOpaque(false);
 
         JLabel titleLabel = new JLabel("Top 5 Produtos Mais Vendidos");
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel iconLabel = new JLabel(UIHelper.icon("fas-award", 14, UIHelper.PENDING_YELLOW));
@@ -81,7 +81,7 @@ public class TopProductsWidget extends ModernPanel {
         listContainer.removeAll();
         if (products.isEmpty()) {
             JLabel empty = new JLabel("Sem dados de vendas registados.");
-            empty.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            empty.setFont(Typography.BODY);
             empty.setForeground(UIHelper.TEXT_MUTED);
             empty.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
             listContainer.add(empty);
@@ -107,12 +107,12 @@ public class TopProductsWidget extends ModernPanel {
         textRow.setOpaque(false);
 
         JLabel nameLbl = new JLabel(rank + ". " + p.name());
-        nameLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        nameLbl.setFont(Typography.BODY_BOLD);
         nameLbl.setForeground(UIHelper.TEXT_LIGHT);
 
         String revStr = String.format("%,.2f MT (%d un)", p.revenue() != null ? p.revenue() : BigDecimal.ZERO, p.quantity());
         JLabel revLbl = new JLabel(revStr);
-        revLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        revLbl.setFont(Typography.CAPTION);
         revLbl.setForeground(UIHelper.APPROVED_GREEN);
 
         textRow.add(nameLbl, BorderLayout.WEST);

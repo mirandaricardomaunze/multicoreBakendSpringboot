@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -36,8 +37,8 @@ public class PosCashMovementDialog {
 
         JRadioButton rbSuprimento = new JRadioButton("SUPRIMENTO (Entrada de Troco)");
         JRadioButton rbSangria = new JRadioButton("SANGRIA (Retirada para Cofre)");
-        rbSuprimento.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
-        rbSangria.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        rbSuprimento.setFont(Typography.EMPHASIS_BOLD);
+        rbSangria.setFont(Typography.EMPHASIS_BOLD);
         rbSuprimento.setForeground(UIHelper.APPROVED_GREEN);
         rbSangria.setForeground(UIHelper.PENDING_YELLOW);
         rbSuprimento.setOpaque(false);
@@ -54,17 +55,17 @@ public class PosCashMovementDialog {
         // Campos de valor e motivo
         MoneyField amountField = new MoneyField();
         JTextField descField = new JTextField();
-        descField.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        descField.setFont(Typography.EMPHASIS);
 
         JPanel fieldsPanel = new JPanel(new GridLayout(4, 1, 0, 6));
         fieldsPanel.setOpaque(false);
 
         JLabel lblAmount = new JLabel("Valor do Movimento (MT):");
-        lblAmount.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lblAmount.setFont(Typography.BODY_BOLD);
         lblAmount.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel lblDesc = new JLabel("Motivo / Justificação Obrigatória:");
-        lblDesc.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lblDesc.setFont(Typography.BODY_BOLD);
         lblDesc.setForeground(UIHelper.TEXT_LIGHT);
 
         fieldsPanel.add(lblAmount);

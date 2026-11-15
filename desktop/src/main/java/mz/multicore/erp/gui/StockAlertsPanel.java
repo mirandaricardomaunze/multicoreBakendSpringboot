@@ -70,7 +70,7 @@ final class StockAlertsPanel {
         );
 
         owner.alertsSummary = new JLabel("A carregar alertas de stock…");
-        owner.alertsSummary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        owner.alertsSummary.setFont(Typography.EMPHASIS_BOLD);
         owner.alertsSummary.setForeground(UIHelper.TEXT_MUTED);
         owner.alertsSummary.setBorder(new EmptyBorder(8, 2, 0, 0));
 
@@ -119,7 +119,7 @@ final class StockAlertsPanel {
         );
 
         outSummary = new JLabel(" ");
-        outSummary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        outSummary.setFont(Typography.EMPHASIS_BOLD);
         outSummary.setForeground(UIHelper.TEXT_MUTED);
         outSummary.setBorder(new EmptyBorder(8, 2, 0, 0));
 

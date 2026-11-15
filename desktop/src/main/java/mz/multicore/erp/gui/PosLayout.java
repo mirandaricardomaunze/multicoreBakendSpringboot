@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.UIHelper;
 
 import javax.swing.*;
@@ -139,7 +140,7 @@ final class PosLayout {
 
     static int addSectionHeader(JPanel host, GridBagConstraints gbc, int row, String text) {
         JLabel section = new JLabel(text);
-        section.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        section.setFont(Typography.BODY_BOLD);
         section.setForeground(UIHelper.ACCENT);
         section.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIHelper.GRID));
 
@@ -220,18 +221,18 @@ final class PosLayout {
         Color totalColor = UIHelper.ACCENT_BLUE;
 
         JLabel subCap = new JLabel("Subtotal s/ IVA");
-        subCap.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subCap.setFont(Typography.BODY);
         subCap.setForeground(labelColor);
 
         JLabel ivaCap = new JLabel("IVA");
-        ivaCap.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        ivaCap.setFont(Typography.BODY);
         ivaCap.setForeground(labelColor);
 
-        subtotalValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        subtotalValue.setFont(Typography.BODY_BOLD);
         subtotalValue.setForeground(valueColor);
         subtotalValue.setHorizontalAlignment(SwingConstants.RIGHT);
 
-        ivaValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        ivaValue.setFont(Typography.BODY_BOLD);
         ivaValue.setForeground(valueColor);
         ivaValue.setHorizontalAlignment(SwingConstants.RIGHT);
 
@@ -241,10 +242,10 @@ final class PosLayout {
         taxSummary.add(ivaValue);
 
         JLabel totalCaption = new JLabel("TOTAL A PAGAR");
-        totalCaption.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        totalCaption.setFont(Typography.CAPTION_BOLD);
         totalCaption.setForeground(labelColor);
 
-        totalValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 26));
+        totalValue.setFont(Typography.HERO);
         totalValue.setForeground(totalColor);
 
         JPanel payable = new JPanel(new BorderLayout(14, 0));

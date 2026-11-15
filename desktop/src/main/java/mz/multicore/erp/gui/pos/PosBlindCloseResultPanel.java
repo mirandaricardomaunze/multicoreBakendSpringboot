@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.pos.dto.PosZReportDTO;
@@ -32,25 +33,25 @@ final class PosBlindCloseResultPanel {
         card.setVisible(false);
 
         lblStatusResult = new JLabel("Sessão de Caixa Fechada com Sucesso");
-        lblStatusResult.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        lblStatusResult.setFont(Typography.EMPHASIS_BOLD);
         lblStatusResult.setForeground(UIHelper.APPROVED_GREEN);
         lblStatusResult.setIcon(UIHelper.icon("fas-check-circle", 15, UIHelper.APPROVED_GREEN));
         lblStatusResult.setIconTextGap(8);
 
         lblExpected = new JLabel("Esperado pelo Sistema: —");
-        lblExpected.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        lblExpected.setFont(Typography.EMPHASIS);
         lblExpected.setForeground(UIHelper.TEXT_LIGHT);
 
         lblCounted = new JLabel("Contado pelo Operador: —");
-        lblCounted.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        lblCounted.setFont(Typography.EMPHASIS);
         lblCounted.setForeground(UIHelper.TEXT_LIGHT);
 
         lblDiff = new JLabel("Diferença: —");
-        lblDiff.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        lblDiff.setFont(Typography.EMPHASIS_BOLD);
         lblDiff.setForeground(UIHelper.TEXT_LIGHT);
 
         lblAuditedNotes = new JLabel("");
-        lblAuditedNotes.setFont(new Font(UIHelper.FONT, Font.ITALIC, 11));
+        lblAuditedNotes.setFont(Typography.CAPTION.deriveFont(Font.ITALIC));
         lblAuditedNotes.setForeground(UIHelper.TEXT_MUTED);
 
         card.add(lblStatusResult);

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.users;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.UserApiClient;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -112,7 +113,7 @@ public class UserEditorDialog {
 
     private JLabel createLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setFont(Typography.BODY_BOLD);
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }

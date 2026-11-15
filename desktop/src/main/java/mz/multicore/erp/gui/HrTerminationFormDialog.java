@@ -93,7 +93,7 @@ public final class HrTerminationFormDialog {
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
         JLabel detailLabel = new JLabel(detail.toString());
-        detailLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        detailLabel.setFont(Typography.EMPHASIS);
         detailLabel.setForeground(UIHelper.TEXT_LIGHT);
         card.add(detailLabel, BorderLayout.CENTER);
 

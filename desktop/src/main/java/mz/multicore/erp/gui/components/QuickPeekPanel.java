@@ -52,12 +52,12 @@ public class QuickPeekPanel extends JPanel {
         textStack.setOpaque(false);
 
         titleLabel = new JLabel("Detalhes do Registo");
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
         textStack.add(titleLabel);
 
         subtitleLabel = new JLabel("Visualização rápida (Espaço)");
-        subtitleLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        subtitleLabel.setFont(Typography.CAPTION);
         subtitleLabel.setForeground(UIHelper.TEXT_MUTED);
         textStack.add(subtitleLabel);
 
@@ -122,7 +122,7 @@ public class QuickPeekPanel extends JPanel {
         footer.add(openFullBtn, BorderLayout.CENTER);
 
         hintLabel = new JLabel("Pressione Espaço ou ESC para alternar", SwingConstants.CENTER);
-        hintLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        hintLabel.setFont(Typography.CAPTION);
         hintLabel.setForeground(UIHelper.TEXT_MUTED);
         footer.add(hintLabel, BorderLayout.SOUTH);
 
@@ -184,16 +184,16 @@ public class QuickPeekPanel extends JPanel {
                 row.setBorder(new EmptyBorder(6, 0, 6, 0));
 
                 JLabel lbl = new JLabel(item.label());
-                lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+                lbl.setFont(Typography.CAPTION);
                 lbl.setForeground(UIHelper.TEXT_MUTED);
                 row.add(lbl, BorderLayout.NORTH);
 
                 JLabel val = new JLabel(item.value());
                 if (item.isHighlight()) {
-                    val.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+                    val.setFont(Typography.TITLE);
                     val.setForeground(UIHelper.ACCENT_BLUE);
                 } else {
-                    val.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+                    val.setFont(Typography.BODY_BOLD);
                     val.setForeground(UIHelper.TEXT_LIGHT);
                 }
                 row.add(val, BorderLayout.CENTER);

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -60,11 +61,11 @@ public class PosShiftHandoverDialog extends JDialog {
 
         JLabel icon = new JLabel(UIHelper.icon("fas-people-arrows", 28, UIHelper.ACCENT_CYAN));
         JLabel title = new JLabel("Passagem de Turno");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 18)); title.setForeground(Color.WHITE);
+        title.setFont(Typography.TITLE); title.setForeground(Color.WHITE);
 
         String effectiveOp = session.currentOperator() != null ? session.currentOperator() : session.operator();
         JLabel subtitle = new JLabel("Operador actual: " + (effectiveOp != null ? effectiveOp : "—") + " | Sessão #" + session.id());
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); subtitle.setForeground(UIHelper.TEXT_LIGHT);
+        subtitle.setFont(Typography.BODY); subtitle.setForeground(UIHelper.TEXT_LIGHT);
 
         JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 2)); textPanel.setOpaque(false);
         textPanel.add(title); textPanel.add(subtitle);
@@ -98,10 +99,10 @@ public class PosShiftHandoverDialog extends JDialog {
         panel.setAlignmentX(Component.LEFT_ALIGNMENT); panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
         JLabel lblOp = new JLabel("Operador Seguinte (username):");
-        lblOp.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); lblOp.setForeground(Color.WHITE);
+        lblOp.setFont(Typography.EMPHASIS_BOLD); lblOp.setForeground(Color.WHITE);
 
         incomingOperatorField = new JTextField(); UIHelper.styleTextField(incomingOperatorField);
-        incomingOperatorField.setFont(new Font(UIHelper.FONT, Font.PLAIN, 14));
+        incomingOperatorField.setFont(Typography.EMPHASIS);
         incomingOperatorField.putClientProperty("JTextField.placeholderText", "Ex.: operador2");
 
         panel.add(lblOp, BorderLayout.NORTH); panel.add(incomingOperatorField, BorderLayout.CENTER);
@@ -114,9 +115,9 @@ public class PosShiftHandoverDialog extends JDialog {
         panel.setAlignmentX(Component.LEFT_ALIGNMENT); panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
 
         JLabel lbl = new JLabel("Observações / Justificação (opcional):");
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); lbl.setForeground(UIHelper.TEXT_LIGHT);
+        lbl.setFont(Typography.BODY_BOLD); lbl.setForeground(UIHelper.TEXT_LIGHT);
 
-        notesArea = new JTextArea(2, 20); notesArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        notesArea = new JTextArea(2, 20); notesArea.setFont(Typography.BODY);
         notesArea.setLineWrap(true); notesArea.setWrapStyleWord(true);
         notesArea.setBackground(UIHelper.ROW_ALT); notesArea.setForeground(Color.WHITE);
         notesArea.setCaretColor(Color.WHITE); notesArea.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));

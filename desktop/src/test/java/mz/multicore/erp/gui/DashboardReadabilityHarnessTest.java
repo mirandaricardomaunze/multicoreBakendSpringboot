@@ -105,7 +105,7 @@ class DashboardReadabilityHarnessTest {
     @DisplayName("DA-13: com ou sem pílula de variação, o valor começa no mesmo sítio")
     void da13_valueNotIndentedByTrendBadge() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            JLabel value = KpiCard.valueLabel("1.460,00 MT", 19);
+            JLabel value = KpiCard.valueLabel("1.460,00 MT");
             KpiCard.create("VENDAS POS", "fas-cash-register", UIHelper.KPI_SUCCESS_SOFT, value,
                     new KpiCard.TrendBadge(BigDecimal.TEN), new JLabel("1 venda"), UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN);
             value.getParent().setSize(300, 40);

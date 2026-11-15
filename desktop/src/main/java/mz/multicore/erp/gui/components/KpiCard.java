@@ -28,10 +28,10 @@ public final class KpiCard {
 
     private KpiCard() {}
 
-    /** Creates a prominent value label using the requested font size. */
-    public static JLabel valueLabel(String text, int size) {
+    /** Creates a prominent value label in the {@link Typography#METRIC} role. */
+    public static JLabel valueLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, size));
+        l.setFont(Typography.METRIC);
         l.setForeground(UIHelper.isLight() ? UIHelper.TEXT_LIGHT : Color.WHITE);
         return l;
     }
@@ -88,7 +88,7 @@ public final class KpiCard {
         JPanel titleRow = new JPanel(new BorderLayout(6, 0));
         titleRow.setOpaque(false);
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        titleLabel.setFont(Typography.CAPTION_BOLD);
         titleLabel.setForeground(pal.title);
         titleRow.add(titleLabel, BorderLayout.CENTER);
         JLabel iconLabel = iconCode == null || iconCode.isBlank() ? null : new JLabel(UIHelper.icon(iconCode, 18, pal.title));
@@ -97,7 +97,7 @@ public final class KpiCard {
         card.add(titleRow, BorderLayout.NORTH);
 
         if (valueLabel != null) {
-            valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
+            valueLabel.setFont(Typography.METRIC);
             valueLabel.setForeground(pal.value);
         }
 
@@ -112,7 +112,7 @@ public final class KpiCard {
         }
 
         if (subLabel != null) {
-            subLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+            subLabel.setFont(Typography.CAPTION);
             subLabel.setForeground(pal.subtitle);
             card.add(subLabel, BorderLayout.SOUTH);
         }
@@ -140,14 +140,14 @@ public final class KpiCard {
         textPanel.setOpaque(false);
 
         JLabel titleLbl = new JLabel(title.toUpperCase());
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        titleLbl.setFont(Typography.CAPTION_BOLD);
         titleLbl.setForeground(pal.title);
         titleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         textPanel.add(titleLbl);
         textPanel.add(Box.createVerticalStrut(3));
 
         if (valueLabel != null) {
-            valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 19));
+            valueLabel.setFont(Typography.METRIC);
             valueLabel.setForeground(pal.value);
         }
 
@@ -159,7 +159,7 @@ public final class KpiCard {
         textPanel.add(valueRow);
 
         if (subLabel != null) {
-            subLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+            subLabel.setFont(Typography.CAPTION);
             subLabel.setForeground(pal.subtitle);
             subLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
             textPanel.add(Box.createVerticalStrut(3));

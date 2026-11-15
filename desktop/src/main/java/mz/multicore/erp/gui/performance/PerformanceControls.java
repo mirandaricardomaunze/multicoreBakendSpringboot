@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.performance;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.FormField;
 import mz.multicore.erp.gui.components.MoneyField;
@@ -87,7 +88,7 @@ public final class PerformanceControls {
         JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         group.setOpaque(false);
         JLabel label = new JLabel(labelText);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        label.setFont(Typography.BODY_BOLD);
         label.setForeground(UIHelper.TEXT_LIGHT);
         group.add(label);
         group.add(control);

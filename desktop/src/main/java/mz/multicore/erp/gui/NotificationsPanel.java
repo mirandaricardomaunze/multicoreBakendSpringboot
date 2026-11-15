@@ -46,7 +46,7 @@ public class NotificationsPanel extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(22, 25, 22, 25));
         summaryLabel = new JLabel("Alertas operacionais da empresa ativa");
-        summaryLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        summaryLabel.setFont(Typography.EMPHASIS);
         summaryLabel.setForeground(UIHelper.TEXT_MUTED);
         add(feedback, BorderLayout.NORTH);
 

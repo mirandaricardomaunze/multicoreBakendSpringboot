@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.sector;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.UIHelper;
 
@@ -32,7 +33,7 @@ public class ModulePage extends JPanel {
         text.setOpaque(false);
         JLabel heading = UIHelper.createHeading(title);
         text.add(heading, BorderLayout.NORTH);
-        text.add(ResponsiveSupport.wrappingText(subtitle, new Font(UIHelper.FONT, Font.PLAIN, 13), UIHelper.TEXT_MUTED),
+        text.add(ResponsiveSupport.wrappingText(subtitle, Typography.EMPHASIS, UIHelper.TEXT_MUTED),
                 BorderLayout.CENTER);
         header.add(text, BorderLayout.CENTER);
 
@@ -41,7 +42,7 @@ public class ModulePage extends JPanel {
         // Indicators fill one row on wide windows and wrap to two on a laptop instead of squeezing their text.
         ResponsiveSupport.adaptiveColumns(kpiGrid, (GridLayout) kpiGrid.getLayout(), 210, Math.max(1, kpis.length));
         for (String[] kpi : kpis) {
-            JLabel value = KpiCard.valueLabel("—", 22);
+            JLabel value = KpiCard.valueLabel("—");
             indicators.put(kpi[0], value);
             kpiGrid.add(KpiCard.createMetricCard(kpi[0], value, kpi[1], kpi[2], accentFor(kpi.length > 3 ? kpi[3] : null, accent)));
         }

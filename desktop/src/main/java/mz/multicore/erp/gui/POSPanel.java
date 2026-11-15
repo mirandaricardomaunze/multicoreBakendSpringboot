@@ -189,7 +189,7 @@ public class POSPanel extends JPanel {
         barcodeField = new JTextField();
         UIHelper.styleTextField(barcodeField);
         barcodeField.putClientProperty("JTextField.placeholderText", "Leia ou escreva o código (F3)");
-        barcodeField.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        barcodeField.setFont(mz.multicore.erp.gui.components.Typography.EMPHASIS_BOLD);
         barcodeField.addActionListener(e -> handleBarcodeScan());
         JPanel barcodeBox = PosLayout.iconInputBox("fas-barcode", 16, UIHelper.ACCENT, barcodeField);
 

@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.ToastManager;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.documents.model.DocumentType;
@@ -78,7 +79,7 @@ public final class ConfigDocumentColumnsOperations {
         row.setOpaque(false);
         JLabel lbl = new JLabel("Predefinições:");
         lbl.setForeground(UIHelper.TEXT_MUTED);
-        lbl.setFont(new java.awt.Font(UIHelper.FONT, java.awt.Font.BOLD, 12));
+        lbl.setFont(Typography.BODY_BOLD);
         row.add(lbl);
 
         mz.multicore.erp.gui.components.ModernButton btn1 = UIHelper.createSecondaryButton("Comercial Executivo");

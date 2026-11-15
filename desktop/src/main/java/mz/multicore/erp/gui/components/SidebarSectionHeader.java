@@ -46,7 +46,7 @@ public class SidebarSectionHeader extends JPanel {
             label.setIcon(icon);
             label.setIconTextGap(5);
         }
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        label.setFont(Typography.CAPTION_BOLD);
         label.setForeground(UIHelper.isLight() ? new Color(148, 163, 184) : new Color(156, 163, 175));
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         label.setBorder(new EmptyBorder(0, 10, 3, 0));

@@ -92,7 +92,7 @@ public class SmartAlertsDialog extends JDialog {
         JLabel title = UIHelper.createHeading("Alertas Inteligentes & Acções Proativas");
         title.setIcon(UIHelper.icon("fas-bell", 18));
         JLabel subtitle = new JLabel("Situações operacionais que exigem atenção com ações diretas.");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
 
         header.add(title, BorderLayout.NORTH);
@@ -153,7 +153,7 @@ public class SmartAlertsDialog extends JDialog {
 
         if (filtered.isEmpty()) {
             JLabel empty = new JLabel("Nenhum alerta para a categoria selecionada.");
-            empty.setFont(new Font(UIHelper.FONT, Font.ITALIC, 13));
+            empty.setFont(Typography.EMPHASIS.deriveFont(Font.ITALIC));
             empty.setForeground(UIHelper.TEXT_MUTED);
             empty.setBorder(new EmptyBorder(30, 10, 10, 10));
             listContainer.add(empty);
@@ -185,24 +185,24 @@ public class SmartAlertsDialog extends JDialog {
         tagLine.setOpaque(false);
 
         JLabel catTag = new JLabel("[" + alert.category() + "]");
-        catTag.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        catTag.setFont(Typography.CAPTION_BOLD);
         catTag.setForeground(UIHelper.ACCENT_BLUE);
 
         JLabel urgTag = new JLabel(alert.urgency().getLabel());
         urgTag.setIcon(UIHelper.icon(alert.urgency().getIcon(), 11, alert.urgency().getColor()));
-        urgTag.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        urgTag.setFont(Typography.CAPTION_BOLD);
         urgTag.setForeground(alert.urgency().getColor());
 
         tagLine.add(catTag);
         tagLine.add(urgTag);
 
         JLabel titleLbl = new JLabel(alert.title());
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        titleLbl.setFont(Typography.EMPHASIS_BOLD);
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
         titleLbl.setBorder(new EmptyBorder(3, 0, 2, 0));
 
         JLabel detailLbl = new JLabel(alert.detail());
-        detailLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        detailLbl.setFont(Typography.BODY);
         detailLbl.setForeground(UIHelper.TEXT_MUTED);
 
         textPanel.add(tagLine);
@@ -214,7 +214,7 @@ public class SmartAlertsDialog extends JDialog {
         JPanel actionBox = new JPanel(new GridBagLayout());
         actionBox.setOpaque(false);
         ModernButton actionBtn = ButtonStyles.secondary(UIHelper.createPrimaryButton(alert.actionLabel()));
-        actionBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        actionBtn.setFont(Typography.CAPTION_BOLD);
         actionBtn.setIcon(UIHelper.icon("fas-arrow-right", 11));
         actionBtn.addActionListener(e -> {
             dispose();

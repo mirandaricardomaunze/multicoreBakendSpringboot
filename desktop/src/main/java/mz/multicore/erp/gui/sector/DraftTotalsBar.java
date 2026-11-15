@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.sector;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.UIHelper;
 
 import javax.swing.*;
@@ -57,7 +58,7 @@ public final class DraftTotalsBar extends JPanel {
             cell.setBorder(new EmptyBorder(3, 12, 3, 12));
         }
         JLabel label = new JLabel(caption);
-        label.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        label.setFont(Typography.CAPTION);
         label.setForeground(UIHelper.TEXT_MUTED);
         label.setHorizontalAlignment(SwingConstants.RIGHT);
         cell.add(label, BorderLayout.NORTH);
@@ -67,7 +68,7 @@ public final class DraftTotalsBar extends JPanel {
 
     private static JLabel value(boolean emphasis) {
         JLabel label = new JLabel("—");
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, emphasis ? 17 : 13));
+        label.setFont(emphasis ? Typography.TITLE : Typography.EMPHASIS_BOLD);
         label.setForeground(emphasis ? UIHelper.APPROVED_GREEN : UIHelper.TEXT_LIGHT);
         label.setHorizontalAlignment(SwingConstants.RIGHT);
         return label;

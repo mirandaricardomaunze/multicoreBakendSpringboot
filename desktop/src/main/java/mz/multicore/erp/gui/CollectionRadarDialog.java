@@ -208,7 +208,7 @@ public class CollectionRadarDialog {
         subjectField.setEditable(false);
 
         JTextArea messageArea = new JTextArea(10, 45);
-        messageArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        messageArea.setFont(Typography.BODY);
         messageArea.setLineWrap(true);
         messageArea.setWrapStyleWord(true);
         messageArea.setBackground(UIHelper.FIELD_BG);

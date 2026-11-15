@@ -47,14 +47,14 @@ public final class TablePager extends JPanel {
                 new EmptyBorder(8, 4, ACTION_ROW_GAP, 4)));
 
         status.setForeground(UIHelper.TEXT_MUTED);
-        status.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        status.setFont(Typography.BODY);
 
         pageState.setHorizontalAlignment(SwingConstants.CENTER);
         pageState.setForeground(UIHelper.TEXT_LIGHT);
-        pageState.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        pageState.setFont(Typography.BODY_BOLD);
 
         pageLabel.setForeground(UIHelper.TEXT_MUTED);
-        pageLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        pageLabel.setFont(Typography.BODY);
 
         UIHelper.styleComboBox(pageSize);
         pageSize.setPreferredSize(new Dimension(86, UIHelper.FORM_CONTROL_HEIGHT - 4));

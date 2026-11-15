@@ -54,7 +54,7 @@ class DialogButtonsHarnessTest {
         // Excepções nomeadas: confirmação de acção destrutiva (vermelho cheio de propósito), o selector de
         // filtros dos alertas e o botão de cabeçalho de tabela do BonusTab (tratado pelo cabeçalho comum).
         List<String> allowed = List.of(
-                "? UIHelper.createDangerButton(\"Confirmar\")",
+                "? UIHelper.createDangerButton(choices[i])",
                 "UIHelper.createSecondaryButton(\"Todos (\"",
                 "UIHelper.createSecondaryButton(\"Críticos (\"",
                 "UIHelper.createSecondaryButton(\"Atenção (\"",
@@ -124,7 +124,7 @@ class DialogButtonsHarnessTest {
         Path gui = Path.of("src/main/java/mz/multicore/erp/gui");
         assertThat(read(gui.resolve("components/UiThemeAndWindowSupport.java"))).contains("DialogKeys.install();");
         assertThat(read(gui.resolve("components/ModernMessageDialog.java")))
-                .contains("setDefaultButton(type == FeedbackType.ERROR ? cancel : confirmButton)");
+                .contains("setDefaultButton(type == FeedbackType.ERROR ? cancel : choice)");
         assertThat(read(gui.resolve("LicenseAcceptanceDialog.java"))).contains("DialogKeys.NO_ENTER");
     }
 

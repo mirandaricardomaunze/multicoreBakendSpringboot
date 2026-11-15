@@ -67,7 +67,7 @@ public class ForensicAuditPanel extends JPanel {
 
         JLabel title = UIHelper.createHeading("Central de Auditoria Forense & Controlo de Fraude");
         JLabel subtitle = new JLabel("Deteção analítica de faturas canceladas, quebras anormais, desvios e concessão de descontos");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
 
         titles.add(title);
@@ -155,14 +155,14 @@ public class ForensicAuditPanel extends JPanel {
 
     private JPanel buildFilterBar() {
         JLabel lblStart = new JLabel("Início:");
-        lblStart.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblStart.setFont(Typography.BODY);
         lblStart.setForeground(UIHelper.TEXT_MUTED);
 
         startDateField = new DateField(LocalDate.now().minusDays(30));
         startDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
 
         JLabel lblEnd = new JLabel("Fim:");
-        lblEnd.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblEnd.setFont(Typography.BODY);
         lblEnd.setForeground(UIHelper.TEXT_MUTED);
 
         endDateField = new DateField(LocalDate.now());

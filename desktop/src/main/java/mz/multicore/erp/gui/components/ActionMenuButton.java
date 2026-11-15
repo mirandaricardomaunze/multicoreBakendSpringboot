@@ -35,7 +35,7 @@ public class ActionMenuButton extends ModernButton {
             throw new IllegalStateException("O menu de acções não pode ter mais de cinco opções.");
         }
         JMenuItem item = new JMenuItem(cleanLabel, icon);
-        item.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        item.setFont(Typography.EMPHASIS);
         item.setBorder(new EmptyBorder(8, 10, 8, 14));
         item.getAccessibleContext().setAccessibleName(cleanLabel);
         item.addActionListener(e -> {

@@ -1,15 +1,10 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.gui.components.ButtonStyles;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.desktop.client.ApprovalApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.desktop.client.StockTransferApiClient;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.ToastManager;
-import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO;
 
 import javax.swing.*;
@@ -75,18 +70,18 @@ public final class ApprovalDetailsDialog extends JDialog {
 
         JPanel info = new JPanel(); info.setOpaque(false); info.setLayout(new BoxLayout(info, BoxLayout.Y_AXIS));
         JLabel titleLbl = new JLabel(humanType(request.documentType()) + " #" + request.documentId());
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 18)); titleLbl.setForeground(UIHelper.TEXT_LIGHT);
+        titleLbl.setFont(Typography.TITLE); titleLbl.setForeground(UIHelper.TEXT_LIGHT);
         JLabel subLbl = new JLabel("Pedido de Aprovação #" + request.id() + " • Submetido por " + request.submitter());
-        subLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); subLbl.setForeground(UIHelper.TEXT_MUTED);
+        subLbl.setFont(Typography.BODY); subLbl.setForeground(UIHelper.TEXT_MUTED);
         info.add(titleLbl); info.add(Box.createVerticalStrut(2)); info.add(subLbl);
         left.add(info); card.add(left, BorderLayout.WEST);
 
         JPanel right = new JPanel(); right.setOpaque(false); right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
         JLabel amountLbl = new JLabel(String.format("%,.2f MT", request.amount() != null ? request.amount() : BigDecimal.ZERO));
-        amountLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 22)); amountLbl.setForeground(UIHelper.APPROVED_GREEN);
+        amountLbl.setFont(Typography.METRIC); amountLbl.setForeground(UIHelper.APPROVED_GREEN);
         amountLbl.setAlignmentX(Component.RIGHT_ALIGNMENT);
         JLabel roleChip = new JLabel("Perfil Requerido: " + (request.requiredRole() != null ? request.requiredRole() : "MANAGER"));
-        roleChip.setFont(new Font(UIHelper.FONT, Font.BOLD, 11)); roleChip.setForeground(UIHelper.ACCENT_BLUE);
+        roleChip.setFont(Typography.CAPTION_BOLD); roleChip.setForeground(UIHelper.ACCENT_BLUE);
         roleChip.setAlignmentX(Component.RIGHT_ALIGNMENT);
         right.add(amountLbl); right.add(Box.createVerticalStrut(4)); right.add(roleChip);
         card.add(right, BorderLayout.EAST);
@@ -105,7 +100,7 @@ public final class ApprovalDetailsDialog extends JDialog {
         JPanel panel = new JPanel(new BorderLayout(0, 12)); panel.setOpaque(false); panel.setBorder(new EmptyBorder(12, 0, 0, 0));
         ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(0, 8)); card.setBorder(new EmptyBorder(14, 16, 14, 16));
         JTextArea descA = new JTextArea(request.description() != null ? request.description() : "Sem justificação registada.");
-        descA.setEditable(false); descA.setLineWrap(true); descA.setWrapStyleWord(true); descA.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        descA.setEditable(false); descA.setLineWrap(true); descA.setWrapStyleWord(true); descA.setFont(Typography.EMPHASIS);
         UIHelper.styleTextArea(descA);
         JScrollPane scroll = new JScrollPane(descA); scroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1));
         card.add(UIHelper.tableCardTop("Descrição do Solicitante e Parecer do Workflow", null), BorderLayout.NORTH);

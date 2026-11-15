@@ -156,7 +156,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
         JPanel nav = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0)); nav.setOpaque(false);
         ModernButton prev = UIHelper.createIconButton("Página anterior", "fas-chevron-left"); prev.addActionListener(e -> movePage(-1));
         ModernButton next = UIHelper.createIconButton("Página seguinte", "fas-chevron-right"); next.addActionListener(e -> movePage(1));
-        pageLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); pageLabel.setForeground(UIHelper.TEXT_LIGHT);
+        pageLabel.setFont(Typography.EMPHASIS_BOLD); pageLabel.setForeground(UIHelper.TEXT_LIGHT);
         nav.add(prev); nav.add(next); nav.add(Box.createHorizontalStrut(6)); nav.add(pageLabel);
         bar.add(nav, BorderLayout.WEST);
 
@@ -172,7 +172,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
     private JComponent buildFooter() {
         JPanel footer = new JPanel(new BorderLayout()); footer.setOpaque(false);
         footer.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID), new EmptyBorder(12, 0, 0, 0)));
-        summaryLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); summaryLabel.setForeground(UIHelper.TEXT_MUTED);
+        summaryLabel.setFont(Typography.BODY); summaryLabel.setForeground(UIHelper.TEXT_MUTED);
         footer.add(summaryLabel, BorderLayout.WEST);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0)); actions.setOpaque(false);

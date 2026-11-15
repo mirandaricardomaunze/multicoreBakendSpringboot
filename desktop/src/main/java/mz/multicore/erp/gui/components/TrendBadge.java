@@ -20,7 +20,7 @@ public class TrendBadge extends JPanel {
         setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 
         label = new JLabel();
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        label.setFont(Typography.CAPTION_BOLD);
         add(label);
 
         updateTrend(percent, comparisonLabel);

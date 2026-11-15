@@ -65,13 +65,13 @@ final class ModernButtonPainter {
 
     static int calculateShortcutBadgeWidth(ModernButton btn, String shortcutText) {
         if (shortcutText == null || shortcutText.isEmpty()) return 0;
-        Font bf = new Font(Font.MONOSPACED, Font.BOLD, 10);
+        Font bf = Typography.KEYCAP;
         FontMetrics fm = btn.getFontMetrics(bf);
         return (fm != null ? fm.stringWidth(shortcutText) : 24) + 12;
     }
 
     static Dimension computePreferredSize(ModernButton btn, Dimension superPref) {
-        Font font = btn.getFont() != null ? btn.getFont() : new Font(UIHelper.FONT, Font.BOLD, 13);
+        Font font = btn.getFont() != null ? btn.getFont() : Typography.EMPHASIS_BOLD;
         FontMetrics fm = btn.getFontMetrics(font);
         int textW = (btn.getText() != null && fm != null) ? fm.stringWidth(btn.getText()) : 0;
         int iconW = (btn.getIcon() != null) ? (btn.getIcon().getIconWidth() + Math.max(btn.getIconTextGap(), 8)) : 0;
@@ -148,7 +148,7 @@ final class ModernButtonPainter {
         try {
             g3.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g3.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            Font badgeFont = new Font(Font.MONOSPACED, Font.BOLD, 10);
+            Font badgeFont = Typography.KEYCAP;
             g3.setFont(badgeFont);
             FontMetrics fm = g3.getFontMetrics();
             int bw = btn.calculateShortcutBadgeWidth();

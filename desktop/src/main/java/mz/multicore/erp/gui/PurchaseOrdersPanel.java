@@ -105,7 +105,7 @@ final class PurchaseOrdersPanel {
 
         owner.poTotalLabel = new JLabel("Total da Encomenda: 0,00 MT");
         owner.poTotalLabel.setForeground(Color.WHITE);
-        owner.poTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        owner.poTotalLabel.setFont(Typography.EMPHASIS_BOLD);
         JPanel poFooter = new JPanel(new BorderLayout()); poFooter.setOpaque(false);
         poFooter.setBorder(new EmptyBorder(8, 0, 0, 0));
         poFooter.add(owner.poTotalLabel, BorderLayout.WEST);

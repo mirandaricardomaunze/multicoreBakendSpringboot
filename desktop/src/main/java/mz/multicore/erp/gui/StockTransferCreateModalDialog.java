@@ -92,7 +92,7 @@ final class StockTransferCreateModalDialog {
 
         JLabel loadInfoLabel = new JLabel("Carga: a calcular…");
         loadInfoLabel.setIcon(UIHelper.icon("fas-truck", 16, UIHelper.ACCENT_BLUE));
-        loadInfoLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        loadInfoLabel.setFont(Typography.BODY_BOLD);
         loadInfoLabel.setForeground(UIHelper.TEXT_LIGHT);
         ModernPanel loadInfoPanel = new ModernPanel(8);
         loadInfoPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 6));

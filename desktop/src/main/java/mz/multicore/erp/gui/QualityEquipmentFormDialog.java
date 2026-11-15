@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.QualityApiClient;
@@ -63,11 +64,11 @@ public class QualityEquipmentFormDialog extends JDialog {
         UIHelper.styleComboBox(periodUnitCombo);
         activeCheck.setOpaque(false);
         activeCheck.setForeground(UIHelper.TEXT_LIGHT);
-        activeCheck.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        activeCheck.setFont(Typography.EMPHASIS);
 
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
-        descriptionArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        descriptionArea.setFont(Typography.EMPHASIS);
         JScrollPane descScroll = new JScrollPane(descriptionArea);
         descScroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER));
 
@@ -154,7 +155,7 @@ public class QualityEquipmentFormDialog extends JDialog {
         g.gridy = row;
         g.weightx = 0.3;
         JLabel lbl = new JLabel(labelText);
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lbl.setFont(Typography.BODY_BOLD);
         lbl.setForeground(UIHelper.TEXT_LIGHT);
         p.add(lbl, g);
 

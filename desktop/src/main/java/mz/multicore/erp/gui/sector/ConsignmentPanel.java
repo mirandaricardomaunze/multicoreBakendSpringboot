@@ -120,9 +120,9 @@ public class ConsignmentPanel extends JPanel {
         UIHelper.styleTable(lines);
         JScrollPane scroll = new JScrollPane(lines);
         UIHelper.styleScrollPane(scroll);
-        detailTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        detailTitle.setFont(Typography.TITLE);
         detailTitle.setForeground(UIHelper.TEXT_LIGHT);
-        detailTotals.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        detailTotals.setFont(Typography.EMPHASIS_BOLD);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(15, 15, 15, 15));

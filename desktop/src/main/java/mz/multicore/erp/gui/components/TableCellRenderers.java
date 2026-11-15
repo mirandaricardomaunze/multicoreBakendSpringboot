@@ -103,7 +103,7 @@ public final class TableCellRenderers {
         private StatusRenderer() {
             setHorizontalAlignment(SwingConstants.LEFT);
             setBorder(new EmptyBorder(0, 8, 0, 8));
-            setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            setFont(Typography.CAPTION_BOLD);
         }
 
         @Override

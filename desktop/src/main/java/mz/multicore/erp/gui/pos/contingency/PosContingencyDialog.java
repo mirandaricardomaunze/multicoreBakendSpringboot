@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos.contingency;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -49,7 +50,7 @@ public class PosContingencyDialog extends JDialog {
         titleLabel.setIcon(UIHelper.icon("fas-exclamation-triangle", UIHelper.ICON_LG));
 
         summaryLabel = new JLabel();
-        summaryLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        summaryLabel.setFont(Typography.BODY);
         summaryLabel.setForeground(UIHelper.TEXT_MUTED);
 
         headerPanel.add(titleLabel, BorderLayout.NORTH);

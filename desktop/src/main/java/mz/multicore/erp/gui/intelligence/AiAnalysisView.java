@@ -71,7 +71,7 @@ public class AiAnalysisView extends JPanel {
 
         JLabel notice = new JLabel("A IA apenas recomenda; confirme sempre os valores nos módulos operacionais.");
         notice.setForeground(UIHelper.PENDING_YELLOW);
-        notice.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        notice.setFont(Typography.BODY);
 
         JPanel topRow = new JPanel(new BorderLayout(12, 0));
         topRow.setOpaque(false);
@@ -87,7 +87,7 @@ public class AiAnalysisView extends JPanel {
         chipsRow.setOpaque(false);
         JLabel chipsLabel = new JLabel("Sugestões:");
         chipsLabel.setForeground(UIHelper.TEXT_MUTED);
-        chipsLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        chipsLabel.setFont(Typography.CAPTION);
         chipsRow.add(chipsLabel);
         addQuickChip(chipsRow, "Vendas 30 Dias", "Como estão as vendas nos últimos 30 dias?");
         addQuickChip(chipsRow, "Stock Crítico", "Quais artigos estão esgotados ou com stock crítico?");
@@ -102,7 +102,7 @@ public class AiAnalysisView extends JPanel {
 
     private void addQuickChip(JPanel container, String label, String query) {
         ModernButton chip = UIHelper.createSecondaryButton(label);
-        chip.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        chip.setFont(Typography.CAPTION);
         chip.setPreferredSize(new Dimension(chip.getPreferredSize().width, 26));
         chip.addActionListener(e -> {
             questionArea.setText(query);

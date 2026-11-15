@@ -158,18 +158,7 @@ class ProfessionalFeedbackHarnessTest {
     @Test
     void remainingLegacyDialogs_areRestrictedToTheReviewedAllowlist() throws Exception {
         Path gui = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui");
-        Set<String> allowed = Set.of(
-                "CrmTicketActions.java",
-                "CustomerOrderFulfillmentActions.java",
-                "HRPayrollActions.java",
-                "LicenseAcceptanceDialog.java", "MainFrameSubscriptionCoordinator.java",
-                "PosReturnDialog.java",
-                "StockInventoryCountActions.java",
-                "commercial/BillOrderDialog.java",
-                "components/DocumentEditorHost.java", "components/UiThemeAndWindowSupport.java",
-                "PosImportQuotationDialog.java",
-                "PosKeyboardShortcutsHandler.java", "PosQuotationActions.java",
-                "SubscriptionRenewalDialog.java");
+        Set<String> allowed = Set.of("components/ModernMessageDialog.java");
         Set<String> actual;
         try (Stream<Path> files = Files.walk(gui)) {
             actual = files.filter(path -> path.toString().endsWith(".java"))

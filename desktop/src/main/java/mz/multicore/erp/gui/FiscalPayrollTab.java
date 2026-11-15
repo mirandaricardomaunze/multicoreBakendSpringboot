@@ -37,7 +37,7 @@ final class FiscalPayrollTab {
         controls.setOpaque(false);
         JLabel periodLbl = new JLabel("Período:");
         periodLbl.setForeground(UIHelper.TEXT_MUTED);
-        periodLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        periodLbl.setFont(Typography.BODY_BOLD);
         controls.add(periodLbl);
         payrollMonthSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getMonthValue(), 1, 12, 1));
         payrollYearSpinner = UIHelper.createYearSpinner(LocalDate.now().getYear());

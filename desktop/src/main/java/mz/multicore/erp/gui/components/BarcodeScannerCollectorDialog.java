@@ -69,7 +69,7 @@ public class BarcodeScannerCollectorDialog {
         JLabel titleLabel = UIHelper.createHeading("Modo Coletor — " + mode.title);
         titleLabel.setIcon(UIHelper.icon(mode.icon, 20, UIHelper.ACCENT_BLUE));
         JLabel tip = new JLabel("Aponte o scanner laser/óptico para o código de barras ou prima Enter");
-        tip.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); tip.setForeground(UIHelper.TEXT_MUTED);
+        tip.setFont(Typography.BODY); tip.setForeground(UIHelper.TEXT_MUTED);
         header.add(titleLabel, BorderLayout.WEST); header.add(tip, BorderLayout.SOUTH);
         main.add(header, BorderLayout.NORTH);
 
@@ -96,7 +96,7 @@ public class BarcodeScannerCollectorDialog {
     private JPanel buildScanBar() {
         ModernPanel box = new ModernPanel(12); box.setLayout(new BorderLayout(8, 6)); box.setBorder(new EmptyBorder(10, 14, 10, 14));
         scanField = new JTextField(); UIHelper.styleTextField(scanField);
-        scanField.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        scanField.setFont(Typography.TITLE);
         scanField.putClientProperty("JTextField.placeholderText", "Ler código de barras ou digitar SKU e premir Enter...");
         scanField.addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent e) { if (e.getKeyCode() == KeyEvent.VK_ENTER) processScan(scanField.getText().trim()); }
@@ -112,7 +112,7 @@ public class BarcodeScannerCollectorDialog {
 
     private JPanel buildHistoryCard() {
         ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(0, 8)); card.setBorder(new EmptyBorder(12, 14, 12, 14));
-        JLabel cardTitle = new JLabel("Sessão Actual de Leituras"); cardTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        JLabel cardTitle = new JLabel("Sessão Actual de Leituras"); cardTitle.setFont(Typography.EMPHASIS_BOLD);
         cardTitle.setForeground(UIHelper.TEXT_LIGHT); card.add(cardTitle, BorderLayout.NORTH);
         historyModel = new DefaultTableModel(new String[]{"Hora", "Código / SKU", "Produto", "Qtd"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }

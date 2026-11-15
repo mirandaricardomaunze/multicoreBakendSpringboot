@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
@@ -66,7 +67,7 @@ public class PosBlindCloseDialog extends JDialog {
         panel.setBorder(BorderFactory.createEmptyBorder(14, 20, 14, 20));
 
         JLabel title = new JLabel("Fecho Cego de Caixa (Blind Drop)");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         title.setIcon(UIHelper.icon("fas-cash-register", 18, UIHelper.ACCENT_CYAN));
         title.setIconTextGap(10);
@@ -76,7 +77,7 @@ public class PosBlindCloseDialog extends JDialog {
                 session.id(),
                 session.openingBalance() != null ? session.openingBalance() : BigDecimal.ZERO);
         JLabel subtitle = new JLabel(subtitleText);
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
         subtitle.setBorder(BorderFactory.createEmptyBorder(4, 28, 0, 0));
 
@@ -111,13 +112,13 @@ public class PosBlindCloseDialog extends JDialog {
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel lbl = new JLabel("Observações / Justificação de Diferença (opcional):");
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lbl.setFont(Typography.BODY_BOLD);
         lbl.setForeground(UIHelper.TEXT_LIGHT);
 
         notesArea = new JTextArea(2, 20);
         notesArea.setLineWrap(true);
         notesArea.setWrapStyleWord(true);
-        notesArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        notesArea.setFont(Typography.BODY);
         notesArea.setBackground(UIHelper.BG_CARD);
         notesArea.setForeground(UIHelper.TEXT_LIGHT);
         notesArea.setCaretColor(Color.WHITE);

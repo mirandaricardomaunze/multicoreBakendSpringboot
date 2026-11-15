@@ -36,11 +36,11 @@ public class SidebarUserProfileCard extends JPanel {
         Color subColor = UIHelper.isLight() ? new Color(100, 116, 139) : new Color(203, 213, 225);
 
         nameLabel = new JLabel("Multicore");
-        nameLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        nameLabel.setFont(Typography.BODY_BOLD);
         nameLabel.setForeground(headColor);
 
         roleLabel = new JLabel("Sistema");
-        roleLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        roleLabel.setFont(Typography.CAPTION);
         roleLabel.setForeground(subColor);
 
         textStack = new JPanel();
@@ -141,7 +141,7 @@ public class SidebarUserProfileCard extends JPanel {
                 g2.drawOval(0, 0, w - 1, h - 1);
 
                 g2.setColor(Color.WHITE);
-                g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+                g2.setFont(Typography.CAPTION_BOLD);
                 FontMetrics fm = g2.getFontMetrics();
                 int tw = fm.stringWidth(initials);
                 int tx = (w - tw) / 2;

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -30,10 +31,10 @@ public final class MobilePaymentInitiationPanel extends JPanel {
         amountCard.setBorder(new EmptyBorder(10, 16, 10, 16));
         amountCard.setLayout(new BorderLayout(8, 2));
         JLabel amountTitle = new JLabel("TOTAL A COBRAR:");
-        amountTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        amountTitle.setFont(Typography.CAPTION_BOLD);
         amountTitle.setForeground(UIHelper.TEXT_MUTED);
         JLabel amountVal = new JLabel(String.format("%,.2f MT", amount != null ? amount : BigDecimal.ZERO));
-        amountVal.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
+        amountVal.setFont(Typography.METRIC);
         amountVal.setForeground(UIHelper.ACCENT_BLUE);
         amountVal.setHorizontalAlignment(SwingConstants.RIGHT);
         amountCard.add(amountTitle, BorderLayout.WEST); amountCard.add(amountVal, BorderLayout.EAST);
@@ -41,7 +42,7 @@ public final class MobilePaymentInitiationPanel extends JPanel {
         add(amountCard); add(Box.createRigidArea(new Dimension(0, 14)));
 
         JLabel providerLabel = new JLabel("Operador de Pagamento:");
-        providerLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        providerLabel.setFont(Typography.BODY_BOLD);
         providerLabel.setForeground(UIHelper.TEXT_LIGHT);
         providerLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         add(providerLabel); add(Box.createRigidArea(new Dimension(0, 4)));
@@ -65,7 +66,7 @@ public final class MobilePaymentInitiationPanel extends JPanel {
         add(Box.createRigidArea(new Dimension(0, 12)));
 
         JLabel phoneLabel = new JLabel("Número de Telemóvel:");
-        phoneLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        phoneLabel.setFont(Typography.BODY_BOLD);
         phoneLabel.setForeground(UIHelper.TEXT_LIGHT);
         phoneLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         add(phoneLabel);
@@ -73,14 +74,14 @@ public final class MobilePaymentInitiationPanel extends JPanel {
 
         phoneField = new JTextField();
         UIHelper.styleTextField(phoneField);
-        phoneField.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        phoneField.setFont(Typography.TITLE);
         phoneField.putClientProperty("JTextField.placeholderText", "Ex.: 84 123 4567 ou 86 123 4567");
         phoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
         phoneField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         add(phoneField);
 
         validationLabel = new JLabel("Introduza o número de 9 dígitos");
-        validationLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        validationLabel.setFont(Typography.CAPTION);
         validationLabel.setForeground(UIHelper.TEXT_MUTED);
         validationLabel.setBorder(new EmptyBorder(3, 2, 8, 2));
         validationLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -91,7 +92,7 @@ public final class MobilePaymentInitiationPanel extends JPanel {
         sendButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         sendButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         sendButton.setPreferredSize(new Dimension(0, 40));
-        sendButton.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        sendButton.setFont(Typography.BODY_BOLD);
         sendButton.setEnabled(false);
         sendButton.addActionListener(e -> { if (onSend != null) onSend.run(); });
         add(sendButton);

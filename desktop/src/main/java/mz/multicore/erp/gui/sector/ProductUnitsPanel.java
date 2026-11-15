@@ -74,9 +74,9 @@ public class ProductUnitsPanel extends JPanel {
         JPanel text = new JPanel(new GridLayout(2, 1, 0, 2));
         text.setOpaque(false);
         JLabel caption = new JLabel("Unidade base · stock, preços e documentos");
-        caption.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        caption.setFont(Typography.BODY);
         caption.setForeground(UIHelper.TEXT_MUTED);
-        baseValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        baseValue.setFont(Typography.TITLE);
         baseValue.setForeground(UIHelper.TEXT_LIGHT);
         text.add(caption);
         text.add(baseValue);
@@ -84,7 +84,7 @@ public class ProductUnitsPanel extends JPanel {
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
-        lockLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lockLabel.setFont(Typography.BODY);
         lockLabel.setForeground(UIHelper.TEXT_MUTED);
         right.add(lockLabel);
         changeBaseBtn.setIcon(UIHelper.icon("fas-exchange-alt", 14));
@@ -132,12 +132,12 @@ public class ProductUnitsPanel extends JPanel {
         JLabel label = new JLabel("Converter");
         label.setIcon(UIHelper.icon("fas-calculator", 14, UIHelper.ACCENT_BLUE));
         label.setIconTextGap(6);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        label.setFont(Typography.EMPHASIS_BOLD);
         label.setForeground(UIHelper.TEXT_LIGHT);
         convertQty.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleComboBox(convertUnit);
         convertUnit.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
-        convertResult.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        convertResult.setFont(Typography.EMPHASIS_BOLD);
         convertResult.setForeground(UIHelper.TEXT_LIGHT);
         UIHelper.onTextChange(convertQty, this::updateConversion);
         convertUnit.addActionListener(e -> updateConversion());

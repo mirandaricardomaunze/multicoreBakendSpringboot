@@ -52,12 +52,12 @@ public class CollapsibleSidebar extends JPanel {
         setPreferredSize(new Dimension(EXPANDED_WIDTH, 800));
 
         brandLabel.setText(brand != null && !brand.isBlank() ? brand : "MULTICORE");
-        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
+        brandLabel.setFont(Typography.TITLE);
         brandLabel.setForeground(headerText());
         brandLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         setSubBrand(subBrand);
-        brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        brandSubLabel.setFont(Typography.CAPTION);
         brandSubLabel.setForeground(subText());
         brandSubLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -244,7 +244,7 @@ public class CollapsibleSidebar extends JPanel {
 
     private JLabel createFooterVersionLabel() {
         JLabel lbl = new JLabel("MULTICORE v1.0.0");
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        lbl.setFont(Typography.CAPTION);
         lbl.setForeground(subText());
         lbl.setBorder(new EmptyBorder(0, 4, 0, 0));
         lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));

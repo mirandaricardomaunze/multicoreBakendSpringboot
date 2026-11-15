@@ -48,7 +48,7 @@ public class DatabaseBackupDialog extends JDialog {
         JLabel title = UIHelper.createHeading("Cópias de Segurança & Integridade");
         title.setIcon(UIHelper.icon("fas-database", 18));
         JLabel subtitle = new JLabel("Geração de cópias completas dos dados e validação de arquivos.");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
 
         header.add(title, BorderLayout.NORTH);
@@ -69,11 +69,11 @@ public class DatabaseBackupDialog extends JDialog {
         statusBox.setOpaque(false);
 
         statusLabel = new JLabel("Estado: A verificar");
-        statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        statusLabel.setFont(Typography.EMPHASIS_BOLD);
         statusLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         lastRunLabel = new JLabel("Último Backup Automático: --");
-        lastRunLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lastRunLabel.setFont(Typography.BODY);
         lastRunLabel.setForeground(UIHelper.TEXT_MUTED);
 
         statusBox.add(statusLabel);
@@ -94,7 +94,7 @@ public class DatabaseBackupDialog extends JDialog {
         tableCard.setBorder(new EmptyBorder(14, 16, 14, 16));
 
         JLabel tableTitle = new JLabel("Arquivos de Cópia de Segurança no Servidor:");
-        tableTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        tableTitle.setFont(Typography.EMPHASIS_BOLD);
         tableTitle.setForeground(UIHelper.TEXT_LIGHT);
         tableCard.add(tableTitle, BorderLayout.NORTH);
 
@@ -116,7 +116,7 @@ public class DatabaseBackupDialog extends JDialog {
         tableActions.setOpaque(false);
 
         resultSummaryLabel = new JLabel("Selecione um arquivo para verificar.");
-        resultSummaryLabel.setFont(new Font(UIHelper.FONT, Font.ITALIC, 12));
+        resultSummaryLabel.setFont(Typography.BODY.deriveFont(Font.ITALIC));
         resultSummaryLabel.setForeground(UIHelper.TEXT_MUTED);
 
         verifyBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Verificar Integridade"));

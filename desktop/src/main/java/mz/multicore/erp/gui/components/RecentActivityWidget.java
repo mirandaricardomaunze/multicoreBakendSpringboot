@@ -45,7 +45,7 @@ public class RecentActivityWidget extends ModernPanel {
         header.setOpaque(false);
 
         JLabel titleLabel = new JLabel("Atividade Recente");
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel iconLabel = new JLabel(UIHelper.icon("fas-stream", 14, UIHelper.ACCENT_BLUE));
@@ -83,7 +83,7 @@ public class RecentActivityWidget extends ModernPanel {
         listContainer.removeAll();
         if (entries.isEmpty()) {
             JLabel empty = new JLabel("Sem atividade recente registada.");
-            empty.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            empty.setFont(Typography.BODY);
             empty.setForeground(UIHelper.TEXT_MUTED);
             empty.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
             listContainer.add(empty);
@@ -129,11 +129,11 @@ public class RecentActivityWidget extends ModernPanel {
         textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
 
         JLabel titleLbl = new JLabel(item.title());
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        titleLbl.setFont(Typography.BODY_BOLD);
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel detailLbl = new JLabel(item.detail() != null ? item.detail() : "");
-        detailLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        detailLbl.setFont(Typography.CAPTION);
         detailLbl.setForeground(UIHelper.TEXT_MUTED);
 
         textStack.add(titleLbl);
@@ -142,7 +142,7 @@ public class RecentActivityWidget extends ModernPanel {
 
         // Right: Timestamp
         JLabel timeLbl = new JLabel(item.timeAgo() != null ? item.timeAgo() : "");
-        timeLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        timeLbl.setFont(Typography.CAPTION);
         timeLbl.setForeground(UIHelper.TEXT_MUTED);
         row.add(timeLbl, BorderLayout.EAST);
 

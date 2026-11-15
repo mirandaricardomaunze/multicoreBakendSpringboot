@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.PlatformApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
@@ -161,7 +162,7 @@ final class CompanyWizardDialog {
     }
 
     private JPanel adminStepPanel() {
-        summary.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        summary.setFont(Typography.EMPHASIS);
         summary.setForeground(UIHelper.TEXT_LIGHT);
         summary.setIcon(UIHelper.icon("fas-building", 14, UIHelper.ACCENT_BLUE));
         summary.setIconTextGap(8);

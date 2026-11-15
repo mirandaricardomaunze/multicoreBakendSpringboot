@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO;
 
@@ -72,17 +73,17 @@ final class ConfigSubscriptionCardRenderer {
 
     private static JPanel field(String label, String value, Color valueColor) {
         JPanel p = new JPanel(); p.setOpaque(false); p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        JLabel l = new JLabel(label); l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11)); l.setForeground(UIHelper.TEXT_MUTED);
-        JLabel v = new JLabel(value == null ? "—" : value); v.setFont(new Font(UIHelper.FONT, Font.BOLD, 18)); v.setForeground(valueColor);
+        JLabel l = new JLabel(label); l.setFont(Typography.CAPTION_BOLD); l.setForeground(UIHelper.TEXT_MUTED);
+        JLabel v = new JLabel(value == null ? "—" : value); v.setFont(Typography.TITLE); v.setForeground(valueColor);
         p.add(l); p.add(v);
         return p;
     }
 
     private static JPanel bigInfo(String title, String detail, Color color) {
         JPanel p = new JPanel(); p.setOpaque(false); p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        JLabel t = new JLabel(title); t.setFont(new Font(UIHelper.FONT, Font.BOLD, 16)); t.setForeground(color);
+        JLabel t = new JLabel(title); t.setFont(Typography.TITLE); t.setForeground(color);
         JLabel d = new JLabel("<html><body style='width:360px'>" + (detail == null ? "" : detail) + "</body></html>");
-        d.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); d.setForeground(UIHelper.TEXT_MUTED);
+        d.setFont(Typography.BODY); d.setForeground(UIHelper.TEXT_MUTED);
         p.add(t); p.add(Box.createVerticalStrut(6)); p.add(d);
         return p;
     }

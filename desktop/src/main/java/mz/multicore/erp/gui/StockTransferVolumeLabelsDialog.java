@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -68,12 +69,12 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
         header.setBorder(new EmptyBorder(16, 20, 4, 20));
 
         JLabel title = new JLabel("Emissão de Etiquetas de Volume");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
+        title.setFont(Typography.TITLE);
         title.setForeground(Color.WHITE);
         title.setIcon(UIHelper.icon("fas-tags", 18, UIHelper.ACCENT_BLUE));
 
         JLabel subtitle = new JLabel("Identificação de caixas e paletes para conferência de trânsito e carga.");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
 
         header.add(title, BorderLayout.NORTH);

@@ -34,17 +34,17 @@ final class PieSingleShareView {
         Color color = colors[index];
         int right = width - LEFT;
 
-        g.setFont(new Font(UIHelper.FONT, Font.BOLD, 26));
+        g.setFont(Typography.HERO);
         g.setColor(color);
         FontMetrics big = g.getFontMetrics();
         int baseline = TOP + big.getAscent() - 6;
         g.drawString("100%", LEFT, baseline);
         int textX = LEFT + big.stringWidth("100%") + 12;
 
-        g.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        g.setFont(Typography.EMPHASIS_BOLD);
         g.setColor(UIHelper.TEXT_LIGHT);
         g.drawString(label(labels, index), textX, baseline - 12);
-        g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        g.setFont(Typography.BODY);
         g.setColor(UIHelper.TEXT_MUTED);
         g.drawString(SimplePieChart.formatFull(values[index]), textX, baseline + 4);
 
@@ -53,7 +53,7 @@ final class PieSingleShareView {
         g.fillRoundRect(LEFT, barY, right - LEFT, 12, 12, 12);
 
         int rowY = barY + 36;
-        g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        g.setFont(Typography.BODY);
         for (int i = 0; i < values.length && rowY < height - 6; i++) {
             if (i == index) continue;
             g.setColor(colors[i]);

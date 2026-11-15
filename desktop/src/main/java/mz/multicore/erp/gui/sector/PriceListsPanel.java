@@ -133,7 +133,7 @@ public class PriceListsPanel extends JPanel {
         inner.setOpaque(false);
         JLabel icon = new JLabel(UIHelper.icon("fas-tags", 40, UIHelper.ACCENT_PINK), SwingConstants.CENTER);
         JLabel title = new JLabel("Preços por tipo de cliente", SwingConstants.CENTER);
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         JLabel text = new JLabel("<html><div style='text-align:center;width:300px'>Escolha uma tabela à esquerda, "
                 + "ou crie a primeira. Um cliente com tabela paga o preço da tabela na fatura, na encomenda e "
@@ -157,9 +157,9 @@ public class PriceListsPanel extends JPanel {
         header.add(icon, BorderLayout.WEST);
         JPanel text = new JPanel(new GridLayout(2, 1, 0, 2));
         text.setOpaque(false);
-        detailTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        detailTitle.setFont(Typography.TITLE);
         detailTitle.setForeground(UIHelper.TEXT_LIGHT);
-        detailMeta.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        detailMeta.setFont(Typography.BODY);
         detailMeta.setForeground(UIHelper.TEXT_MUTED);
         text.add(detailTitle);
         text.add(detailMeta);

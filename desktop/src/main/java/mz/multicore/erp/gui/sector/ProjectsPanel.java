@@ -126,10 +126,10 @@ public class ProjectsPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(statementTable);
         UIHelper.styleScrollPane(scroll);
         TableEmptyState.install(scroll);
-        detailTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        detailTitle.setFont(Typography.TITLE);
         detailTitle.setForeground(UIHelper.TEXT_LIGHT);
         detailMeta.setForeground(UIHelper.TEXT_MUTED);
-        totals.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        totals.setFont(Typography.EMPHASIS_BOLD);
         totals.setForeground(UIHelper.TEXT_LIGHT);
         JPanel head = new JPanel(new GridLayout(2, 1, 0, 2));
         head.setOpaque(false);

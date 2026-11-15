@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -86,7 +87,7 @@ public class OrderPickingDialog {
         JCheckBox boxModeCheck = new JCheckBox("Bipar Caixa Inteira");
         boxModeCheck.setOpaque(false);
         boxModeCheck.setForeground(UIHelper.TEXT_LIGHT);
-        boxModeCheck.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        boxModeCheck.setFont(Typography.BODY);
 
         ModernButton btnCheckAll = new ModernButton("Conferir Tudo");
         btnCheckAll.setIcon(UIHelper.icon("fas-check-double", 14));
@@ -184,7 +185,7 @@ public class OrderPickingDialog {
         bottomPanel.setBorder(new EmptyBorder(6, 0, 0, 0));
 
         JLabel progressLabel = new JLabel();
-        progressLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        progressLabel.setFont(Typography.EMPHASIS_BOLD);
 
         JTextField notesField = new JTextField();
         UIHelper.styleTextField(notesField);
@@ -355,10 +356,10 @@ public class OrderPickingDialog {
         JPanel chip = new JPanel(new GridLayout(2, 1, 0, 2));
         chip.setOpaque(false);
         JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        lbl.setFont(Typography.CAPTION);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         JLabel val = new JLabel(value);
-        val.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        val.setFont(Typography.BODY_BOLD);
         val.setForeground(valueColor);
         chip.add(lbl);
         chip.add(val);

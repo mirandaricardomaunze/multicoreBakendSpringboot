@@ -21,10 +21,10 @@ public final class SellerDashboardPanel extends JPanel {
     private final POSApiClient posApiClient;
     private final Consumer<String> actionHandler;
     private final JLabel welcomeLabel = new JLabel("Olá, Vendedor.");
-    private final JLabel salesValue = KpiCard.valueLabel("0,00 MT", 19);
-    private final JLabel salesCount = KpiCard.valueLabel("0", 19);
-    private final JLabel ordersValue = KpiCard.valueLabel("0", 19);
-    private final JLabel quotationsValue = KpiCard.valueLabel("0", 19);
+    private final JLabel salesValue = KpiCard.valueLabel("0,00 MT");
+    private final JLabel salesCount = KpiCard.valueLabel("0");
+    private final JLabel ordersValue = KpiCard.valueLabel("0");
+    private final JLabel quotationsValue = KpiCard.valueLabel("0");
     private final JLabel cashStatus = new JLabel("A verificar sessão de caixa...");
     private int refreshVersion;
 

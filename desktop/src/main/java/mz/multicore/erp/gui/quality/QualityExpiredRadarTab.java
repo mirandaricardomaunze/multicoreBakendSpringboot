@@ -68,7 +68,7 @@ public class QualityExpiredRadarTab extends JPanel {
         });
 
         expiredSummaryLabel.setForeground(UIHelper.TEXT_MUTED);
-        expiredSummaryLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        expiredSummaryLabel.setFont(Typography.BODY);
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
         ModernButton renewBtn = UIHelper.createPrimaryButton("Renovar Seleccionado");

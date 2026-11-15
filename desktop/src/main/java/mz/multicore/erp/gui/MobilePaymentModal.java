@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ToastManager;
@@ -72,10 +73,10 @@ public final class MobilePaymentModal extends JDialog implements MobilePaymentWo
         JPanel headerText = new JPanel(new GridLayout(2, 1, 0, 2));
         headerText.setOpaque(false);
         JLabel titleLabel = new JLabel("Pagamento por Telemóvel (Push USSD)");
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        titleLabel.setFont(Typography.TITLE);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
         JLabel subtitleLabel = new JLabel("O cliente receberá uma solicitação no visor para digitar o PIN.");
-        subtitleLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        subtitleLabel.setFont(Typography.CAPTION);
         subtitleLabel.setForeground(UIHelper.TEXT_MUTED);
 
         headerText.add(titleLabel); headerText.add(subtitleLabel);

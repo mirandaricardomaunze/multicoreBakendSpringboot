@@ -78,7 +78,7 @@ final class StockTransferEditorForm {
         UIHelper.styleComboBox(originCombo); UIHelper.styleComboBox(destinationCombo);
         for (JTextField f : List.of(driverField, plateField, responsibleField, vehicleField, notesField)) UIHelper.styleTextField(f);
         requiresReceiptCheck.setOpaque(false);
-        requiresReceiptCheck.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        requiresReceiptCheck.setFont(mz.multicore.erp.gui.components.Typography.BODY);
         requiresReceiptCheck.setSelected(true);
 
         headerModel = new DefaultTableModel(
@@ -221,7 +221,7 @@ final class StockTransferEditorForm {
         tableArea.add(scroll, BorderLayout.CENTER);
 
         totalLinesLabel.setForeground(UIHelper.TEXT_MUTED);
-        totalValueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        totalValueLabel.setFont(mz.multicore.erp.gui.components.Typography.EMPHASIS_BOLD);
         totalValueLabel.setForeground(Color.WHITE);
         JPanel totalsRow = new JPanel(new BorderLayout());
         totalsRow.setOpaque(false);

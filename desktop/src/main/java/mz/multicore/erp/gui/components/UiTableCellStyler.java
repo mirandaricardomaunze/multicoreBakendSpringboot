@@ -16,7 +16,7 @@ final class UiTableCellStyler {
         table.setBackground(UIHelper.BG_CARD);
         table.setForeground(UIHelper.TEXT_LIGHT);
         table.setGridColor(UIHelper.GRID);
-        table.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        table.setFont(Typography.EMPHASIS);
         table.setRowHeight(UiDensityManager.getInstance().getDensity().getTableRowHeight());
         table.setSelectionBackground(UIHelper.SELECTION_BG);
         table.setSelectionForeground(UIHelper.TEXT_LIGHT);
@@ -31,7 +31,7 @@ final class UiTableCellStyler {
         JTableHeader header = table.getTableHeader();
         header.setBackground(UIHelper.TABLE_HEADER_BG);
         header.setForeground(UIHelper.TEXT_LIGHT);
-        header.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        header.setFont(Typography.EMPHASIS_BOLD);
         header.setPreferredSize(new Dimension(100, 38));
         header.setReorderingAllowed(false);
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, UIHelper.GRID));
@@ -43,7 +43,7 @@ final class UiTableCellStyler {
                 setHorizontalAlignment(numeric ? SwingConstants.RIGHT : SwingConstants.LEFT);
                 setBackground(UIHelper.TABLE_HEADER_BG);
                 setForeground(UIHelper.TEXT_LIGHT);
-                setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+                setFont(Typography.EMPHASIS_BOLD);
                 setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 0, 2, 1, UIHelper.GRID),
                         new EmptyBorder(0, numeric ? 8 : 12, 0, numeric ? 14 : 8)));

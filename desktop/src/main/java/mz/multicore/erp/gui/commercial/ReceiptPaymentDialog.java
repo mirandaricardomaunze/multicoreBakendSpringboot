@@ -45,7 +45,7 @@ public final class ReceiptPaymentDialog {
         MoneyField amountField = new MoneyField(invoiceTotal.toString());
 
         JLabel invoiceLabel = new JLabel(invoiceNumber);
-        invoiceLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        invoiceLabel.setFont(Typography.EMPHASIS_BOLD);
         invoiceLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         JPanel form = UIHelper.createDialogForm("Fatura:", invoiceLabel,

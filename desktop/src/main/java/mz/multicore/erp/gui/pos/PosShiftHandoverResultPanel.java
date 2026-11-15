@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.pos.dto.ShiftReconciliationDTO;
@@ -28,19 +29,19 @@ final class PosShiftHandoverResultPanel {
         card.setVisible(false);
 
         JLabel lblTitle = new JLabel("Resultado da Reconciliação:");
-        lblTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        lblTitle.setFont(Typography.EMPHASIS_BOLD);
         lblTitle.setForeground(Color.WHITE);
 
         lblExpected = new JLabel("Esperado: —");
-        lblExpected.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblExpected.setFont(Typography.BODY);
         lblExpected.setForeground(UIHelper.TEXT_LIGHT);
 
         lblCounted = new JLabel("Contado: —");
-        lblCounted.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblCounted.setFont(Typography.BODY);
         lblCounted.setForeground(UIHelper.TEXT_LIGHT);
 
         lblDiff = new JLabel("Diferença: —");
-        lblDiff.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        lblDiff.setFont(Typography.EMPHASIS_BOLD);
         lblDiff.setForeground(UIHelper.TEXT_LIGHT);
 
         card.add(lblTitle);

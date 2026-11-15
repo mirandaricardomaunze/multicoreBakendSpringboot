@@ -1,5 +1,8 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.MySubscriptionApiClient;
 import mz.multicore.erp.desktop.client.POSApiClient;
@@ -79,7 +82,7 @@ public final class SubscriptionRenewalDialog extends JDialog {
         body.add(Box.createRigidArea(new Dimension(0, 14)));
 
         JLabel methodTitle = new JLabel("Forma de Pagamento:");
-        methodTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        methodTitle.setFont(Typography.BODY_BOLD);
         methodTitle.setForeground(UIHelper.TEXT_LIGHT);
         methodTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         body.add(methodTitle);
@@ -133,7 +136,7 @@ public final class SubscriptionRenewalDialog extends JDialog {
         if (bankRadio.isSelected()) {
             String ref = refField.getText().trim();
             if (ref.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Por favor introduza o número do comprovativo ou referência.", "Referência Obrigatória", JOptionPane.WARNING_MESSAGE);
+                ModernMessageDialog.show(this, FeedbackType.WARNING, "Referência Obrigatória", "Por favor introduza o número do comprovativo ou referência.");
                 return;
             }
             SelfServiceSubscriptionPaymentRequest req = new SelfServiceSubscriptionPaymentRequest(planKey, months, "BANK_TRANSFER", null, ref, notesArea.getText().trim());
@@ -144,15 +147,15 @@ public final class SubscriptionRenewalDialog extends JDialog {
                             if (onSuccess != null) onSuccess.accept(result.subscription());
                             dispose();
                         } else {
-                            JOptionPane.showMessageDialog(this, result.message(), "Aviso", JOptionPane.WARNING_MESSAGE);
+                            ModernMessageDialog.show(this, FeedbackType.WARNING, "Aviso", result.message());
                         }
                     },
-                    ex -> JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
+                    ex -> ModernMessageDialog.show(this, FeedbackType.ERROR, "Erro", "Erro: " + ex.getMessage()));
         } else {
             MobilePaymentProvider prov = mpesaRadio.isSelected() ? MobilePaymentProvider.MPESA : MobilePaymentProvider.EMOLA;
             String phone = phoneField.getText().trim();
             if (phone.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Por favor introduza o número de telemóvel.", "Telemóvel Obrigatório", JOptionPane.WARNING_MESSAGE);
+                ModernMessageDialog.show(this, FeedbackType.WARNING, "Telemóvel Obrigatório", "Por favor introduza o número de telemóvel.");
                 return;
             }
             BigDecimal totalAmount = SubscriptionRenewalPricingCalculator.parseAmountFromLabel(totalLabel.getText());
@@ -167,7 +170,7 @@ public final class SubscriptionRenewalDialog extends JDialog {
                                 dispose();
                             }
                         },
-                        ex -> JOptionPane.showMessageDialog(this, "Erro ao finalizar activação: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
+                        ex -> ModernMessageDialog.show(this, FeedbackType.ERROR, "Erro", "Erro ao finalizar activação: " + ex.getMessage()));
             }
         }
     }

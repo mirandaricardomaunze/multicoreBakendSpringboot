@@ -74,7 +74,7 @@ public class CashFlowForecastPanel extends JPanel {
         bar.setOpaque(false);
 
         JLabel title = new JLabel("Projeção de Fluxo de Caixa Previsional (Cash Flow Forecast)");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 15f));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         bar.add(title, BorderLayout.WEST);
 
@@ -110,11 +110,11 @@ public class CashFlowForecastPanel extends JPanel {
         alertBanner.setBorder(new EmptyBorder(8, 12, 8, 12));
         alertBanner.setBackground(UIHelper.KPI_INFO_SOFT);
 
-        lblAlertTitle.setFont(lblAlertTitle.getFont().deriveFont(Font.BOLD, 12f));
+        lblAlertTitle.setFont(Typography.BODY_BOLD);
         lblAlertTitle.setForeground(UIHelper.TEXT_LIGHT);
         alertBanner.add(lblAlertTitle, BorderLayout.NORTH);
 
-        lblAlertRecommendation.setFont(lblAlertRecommendation.getFont().deriveFont(Font.PLAIN, 11f));
+        lblAlertRecommendation.setFont(Typography.CAPTION);
         lblAlertRecommendation.setForeground(UIHelper.TEXT_MUTED);
         alertBanner.add(lblAlertRecommendation, BorderLayout.CENTER);
 
@@ -127,7 +127,7 @@ public class CashFlowForecastPanel extends JPanel {
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         JLabel title = new JLabel("Matriz de Evolução Temporal da Liquidez (Horizontes Previsionais)");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 13f));
+        title.setFont(Typography.EMPHASIS_BOLD);
         title.setForeground(UIHelper.TEXT_LIGHT);
         card.add(title, BorderLayout.NORTH);
 

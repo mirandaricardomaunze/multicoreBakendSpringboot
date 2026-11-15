@@ -26,14 +26,14 @@ public final class RecordDetailsExporter {
         panel.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         JLabel info = new JLabel("Formato de texto tabulado para conferência, partilha ou envio oficial:");
-        info.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        info.setFont(Typography.BODY);
         info.setForeground(UIHelper.TEXT_MUTED);
         panel.add(info, BorderLayout.NORTH);
 
         String summary = buildExecutiveSummary(title, props);
         JTextArea area = new JTextArea(summary);
         area.setEditable(false);
-        area.setFont(new Font("Consolas", Font.PLAIN, 12));
+        area.setFont(Typography.MONO);
         area.setForeground(UIHelper.TEXT_LIGHT);
         area.setBackground(UIHelper.BG_CARD);
         area.setBorder(new EmptyBorder(12, 12, 12, 12));

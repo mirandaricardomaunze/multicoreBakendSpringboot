@@ -19,10 +19,8 @@ final class UiThemeAndWindowSupport {
     private UiThemeAndWindowSupport() {}
 
     static void requestLogout(Component parent) {
-        int opt = JOptionPane.showConfirmDialog(
-                parent, "Deseja realmente terminar a sessão?", "Terminar Sessão",
-                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (opt == JOptionPane.YES_OPTION) {
+        if (ModernMessageDialog.confirm(parent, FeedbackType.INFO, "Terminar Sessão",
+                "Deseja realmente terminar a sessão?", "Terminar sessão")) {
             if (UIHelper.onForcedLogout != null) {
                 UIHelper.onForcedLogout.run();
             } else {
@@ -33,9 +31,7 @@ final class UiThemeAndWindowSupport {
     }
 
     static boolean confirm(Component parent, String message, String title) {
-        int opt = JOptionPane.showConfirmDialog(
-                parent, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        return opt == JOptionPane.YES_OPTION;
+        return ModernMessageDialog.confirm(parent, FeedbackType.WARNING, title, message, "Confirmar");
     }
 
     static Rectangle getUsableScreenBounds(Component ref) {
@@ -327,8 +323,8 @@ final class UiThemeAndWindowSupport {
             UIManager.put("Panel.background", UIHelper.BG_DARK);
             UIManager.put("OptionPane.background", UIHelper.BG_DARK);
             UIManager.put("OptionPane.messageForeground", UIHelper.TEXT_LIGHT);
-            UIManager.put("OptionPane.messageFont", new Font(UIHelper.FONT, Font.BOLD, 13));
-            UIManager.put("OptionPane.buttonFont", new Font(UIHelper.FONT, Font.BOLD, 12));
+            UIManager.put("OptionPane.messageFont", Typography.EMPHASIS_BOLD);
+            UIManager.put("OptionPane.buttonFont", Typography.BODY_BOLD);
 
             UIManager.put("Button.background", UIHelper.BG_CARD);
             UIManager.put("Button.foreground", readableTextOn(UIHelper.BG_CARD));
@@ -355,7 +351,7 @@ final class UiThemeAndWindowSupport {
             UIManager.put("TabbedPane.focus", new Color(0, 0, 0, 0));
 
             UIManager.put("Label.foreground", UIHelper.TEXT_LIGHT);
-            UIManager.put("Label.font", new Font(UIHelper.FONT, Font.PLAIN, 13));
+            UIManager.put("Label.font", Typography.EMPHASIS);
 
             UIManager.put("ComboBox.background", UIHelper.FIELD_BG);
             UIManager.put("ComboBox.foreground", UIHelper.TEXT_LIGHT);
@@ -373,7 +369,7 @@ final class UiThemeAndWindowSupport {
 
             UIManager.put("ToolTip.background", UIHelper.BG_CARD);
             UIManager.put("ToolTip.foreground", UIHelper.TEXT_LIGHT);
-            UIManager.put("ToolTip.font", new Font(UIHelper.FONT, Font.PLAIN, 12));
+            UIManager.put("ToolTip.font", Typography.BODY);
             UIManager.put("ToolTip.border", BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(UIHelper.BORDER, 1, true),
                     BorderFactory.createEmptyBorder(4, 8, 4, 8)));

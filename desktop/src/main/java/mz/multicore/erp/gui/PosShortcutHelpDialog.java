@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -69,7 +70,7 @@ public final class PosShortcutHelpDialog {
         header.setOpaque(false);
         header.add(new JLabel(UIHelper.icon(iconCode, 15, accentColor)));
         JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        titleLbl.setFont(Typography.EMPHASIS_BOLD);
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
         header.add(titleLbl);
 
@@ -81,7 +82,7 @@ public final class PosShortcutHelpDialog {
             item.setOpaque(false);
 
             JLabel badge = new JLabel(row[0], SwingConstants.CENTER);
-            badge.setFont(new Font(Font.MONOSPACED, Font.BOLD, 11));
+            badge.setFont(Typography.KEYCAP);
             badge.setForeground(Color.WHITE);
             badge.setBackground(UIHelper.ACCENT_BLUE);
             badge.setOpaque(true);
@@ -92,7 +93,7 @@ public final class PosShortcutHelpDialog {
             ));
 
             JLabel desc = new JLabel(row[1]);
-            desc.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            desc.setFont(Typography.BODY);
             desc.setForeground(UIHelper.TEXT_MUTED);
 
             item.add(badge, BorderLayout.WEST);

@@ -74,7 +74,7 @@ public class ShelfLabelsDialog extends JDialog {
         leftPanel.setPreferredSize(new Dimension(320, 0));
 
         JLabel leftTitle = new JLabel("Artigos Disponíveis (" + allProducts.size() + ")");
-        leftTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); leftTitle.setForeground(UIHelper.TEXT_LIGHT);
+        leftTitle.setFont(Typography.EMPHASIS_BOLD); leftTitle.setForeground(UIHelper.TEXT_LIGHT);
         JPanel leftTop = new JPanel(new BorderLayout(0, 6)); leftTop.setOpaque(false);
         leftTop.add(leftTitle, BorderLayout.NORTH); leftTop.add(searchField, BorderLayout.SOUTH);
         leftPanel.add(leftTop, BorderLayout.NORTH);
@@ -91,13 +91,13 @@ public class ShelfLabelsDialog extends JDialog {
             item.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
 
             JLabel nameLbl = new JLabel(value != null ? value.name() : "");
-            nameLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            nameLbl.setFont(Typography.BODY);
             nameLbl.setForeground(isSelected ? Color.WHITE : UIHelper.TEXT_LIGHT);
 
             String packText = (value != null && (value.packagesPerBox() > 1 || value.unitsPerPackage() > 1))
                     ? "Cx:" + value.unitsPerBox() + " | Emb:" + value.unitsPerPackage() : "";
             JLabel metaLbl = new JLabel(packText);
-            metaLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+            metaLbl.setFont(Typography.CAPTION);
             metaLbl.setForeground(isSelected ? new Color(224, 231, 255) : UIHelper.TEXT_MUTED);
 
             item.add(nameLbl, BorderLayout.CENTER); item.add(metaLbl, BorderLayout.EAST);
@@ -119,18 +119,18 @@ public class ShelfLabelsDialog extends JDialog {
 
         JPanel previewHeader = new JPanel(new GridLayout(2, 1, 0, 6)); previewHeader.setOpaque(false);
         JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0)); row1.setOpaque(false);
-        JLabel levelLbl = new JLabel("Nível:"); levelLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); levelLbl.setForeground(UIHelper.TEXT_MUTED);
+        JLabel levelLbl = new JLabel("Nível:"); levelLbl.setFont(Typography.BODY_BOLD); levelLbl.setForeground(UIHelper.TEXT_MUTED);
         levelSelector.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT)); levelSelector.addActionListener(e -> updatePreview());
-        JLabel layoutLbl = new JLabel("Formato:"); layoutLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); layoutLbl.setForeground(UIHelper.TEXT_MUTED);
+        JLabel layoutLbl = new JLabel("Formato:"); layoutLbl.setFont(Typography.BODY_BOLD); layoutLbl.setForeground(UIHelper.TEXT_MUTED);
         layoutSelector.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
-        JLabel copiesLbl = new JLabel("Cópias:"); copiesLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); copiesLbl.setForeground(UIHelper.TEXT_MUTED);
+        JLabel copiesLbl = new JLabel("Cópias:"); copiesLbl.setFont(Typography.BODY_BOLD); copiesLbl.setForeground(UIHelper.TEXT_MUTED);
         UIHelper.styleSpinner(copiesSpinner); copiesSpinner.setPreferredSize(new Dimension(65, UIHelper.FORM_CONTROL_HEIGHT));
         row1.add(levelLbl); row1.add(levelSelector); row1.add(layoutLbl); row1.add(layoutSelector); row1.add(copiesLbl); row1.add(copiesSpinner);
 
         JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0)); row2.setOpaque(false);
-        JLabel batchLbl = new JLabel("Lote/OP:"); batchLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); batchLbl.setForeground(UIHelper.TEXT_MUTED);
+        JLabel batchLbl = new JLabel("Lote/OP:"); batchLbl.setFont(Typography.BODY_BOLD); batchLbl.setForeground(UIHelper.TEXT_MUTED);
         batchField.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
-        JLabel expLbl = new JLabel("Validade:"); expLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); expLbl.setForeground(UIHelper.TEXT_MUTED);
+        JLabel expLbl = new JLabel("Validade:"); expLbl.setFont(Typography.BODY_BOLD); expLbl.setForeground(UIHelper.TEXT_MUTED);
         expiryField.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         row2.add(batchLbl); row2.add(batchField); row2.add(expLbl); row2.add(expiryField);
 

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -29,7 +30,7 @@ public final class ForensicAnomalyDetailsDialog {
         area.setEditable(false);
         area.setLineWrap(true);
         area.setWrapStyleWord(true);
-        area.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        area.setFont(Typography.BODY);
         area.setBackground(UIHelper.BG_DARK);
         area.setForeground(UIHelper.TEXT_LIGHT);
         area.setBorder(new EmptyBorder(12, 12, 12, 12));

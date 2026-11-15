@@ -59,7 +59,7 @@ public final class OrderEditorExtras {
         newProjectBtn.getAccessibleContext().setAccessibleName("Nova obra");
         newProjectBtn.setPreferredSize(new Dimension(38, UIHelper.FORM_CONTROL_HEIGHT));
         newProjectBtn.addActionListener(e -> createProject());
-        priceBadge.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        priceBadge.setFont(Typography.BODY_BOLD);
         priceBadge.setForeground(UIHelper.TEXT_MUTED);
         UIHelper.onTextChange(deliveryDays, owner::markOrderEditorDirty);
         UIHelper.onTextChange(deliveryTerms, owner::markOrderEditorDirty);

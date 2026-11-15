@@ -136,7 +136,7 @@ public final class CreditExceptionDialog {
 
     private static JLabel createFormLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        label.setFont(Typography.CAPTION_BOLD);
         label.setForeground(UIHelper.TEXT_MUTED);
         label.setBorder(new EmptyBorder(0, 0, 4, 0));
         return label;

@@ -65,12 +65,12 @@ public final class ClientTablePagination {
 
         // Esquerda: contagem de registos
         statusLeft.setForeground(UIHelper.TEXT_MUTED);
-        statusLeft.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        statusLeft.setFont(Typography.BODY);
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         leftPanel.setOpaque(false);
         JLabel perPageLabel = new JLabel("Por página:");
         perPageLabel.setForeground(UIHelper.TEXT_MUTED);
-        perPageLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        perPageLabel.setFont(Typography.BODY);
         UIHelper.styleComboBox(pageSize);
         pageSize.setSelectedItem(50);
         pageSize.setPreferredSize(new Dimension(86, UIHelper.FORM_CONTROL_HEIGHT - 4));
@@ -83,7 +83,7 @@ public final class ClientTablePagination {
         // Centro: rótulo "Página X de Y"
         pageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         pageLabel.setForeground(UIHelper.TEXT_LIGHT);
-        pageLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        pageLabel.setFont(Typography.BODY_BOLD);
         component.add(pageLabel, BorderLayout.CENTER);
 
         // Direita: botões de navegação ghost

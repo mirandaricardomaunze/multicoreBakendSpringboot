@@ -170,7 +170,7 @@ final class ApprovalDocumentDetailsView {
     }
 
     private static JLabel metaLabel(String text) {
-        JLabel l = new JLabel(text); l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        JLabel l = new JLabel(text); l.setFont(Typography.CAPTION_BOLD);
         l.setForeground(UIHelper.TEXT_MUTED); return l;
     }
 }

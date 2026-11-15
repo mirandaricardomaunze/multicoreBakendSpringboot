@@ -76,7 +76,7 @@ final class PosCatalogController {
 
         pageLabel = new JLabel("Página 1", SwingConstants.CENTER);
         pageLabel.setForeground(UIHelper.TEXT_MUTED);
-        pageLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        pageLabel.setFont(Typography.BODY_BOLD);
         previousButton.addActionListener(e -> loadCatalogPage(currentPage() - 1));
         nextButton.addActionListener(e -> loadCatalogPage(currentPage() + 1));
         paginationBar = new JPanel(new BorderLayout(8, 0));
@@ -178,12 +178,12 @@ final class PosCatalogController {
 
         JLabel name = new JLabel("<html><div style='text-align:center'>" + escapeHtml(p.name()) + "</div></html>", SwingConstants.CENTER);
         name.setForeground(sellable ? UIHelper.TEXT_LIGHT : UIHelper.TEXT_MUTED);
-        name.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        name.setFont(Typography.CAPTION_BOLD);
         card.add(name, BorderLayout.CENTER);
 
         JLabel price = new JLabel(String.format("%,.2f MT", p.unitPrice()), SwingConstants.CENTER);
         price.setForeground(sellable ? UIHelper.ACCENT_BLUE : UIHelper.TEXT_MUTED);
-        price.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        price.setFont(Typography.EMPHASIS_BOLD);
         JPanel footer = new JPanel();
         footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
         footer.setOpaque(false);
@@ -191,7 +191,7 @@ final class PosCatalogController {
         footer.add(price);
         if (!sellable) {
             JLabel unavailable = new JLabel("ESGOTADO");
-            unavailable.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            unavailable.setFont(Typography.CAPTION_BOLD);
             unavailable.setForeground(UIHelper.REJECTED_RED);
             unavailable.setAlignmentX(Component.CENTER_ALIGNMENT);
             footer.add(Box.createRigidArea(new Dimension(0, 3)));
@@ -200,7 +200,7 @@ final class PosCatalogController {
             BigDecimal stock = owner.getProductStock(p.id());
             if (stock != null) {
                 JLabel stockLbl = new JLabel(stockLabel(stock));
-                stockLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+                stockLbl.setFont(Typography.CAPTION_BOLD);
                 stockLbl.setForeground(UIHelper.APPROVED_GREEN);
                 stockLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
                 footer.add(Box.createRigidArea(new Dimension(0, 2)));
