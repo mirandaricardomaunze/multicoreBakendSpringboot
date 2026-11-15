@@ -45,7 +45,7 @@ public class ForensicAuditPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(8, 12, 8, 12));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         add(buildHeader(), BorderLayout.NORTH);
 
@@ -99,7 +99,7 @@ public class ForensicAuditPanel extends JPanel {
     private JPanel buildMainCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         card.add(buildFilterBar(), BorderLayout.NORTH);
 
@@ -224,7 +224,7 @@ public class ForensicAuditPanel extends JPanel {
                     ForensicAuditSummaryDTO summary = get();
                     renderSummary(summary);
                 } catch (Exception ex) {
-                    ToastManager.show(ForensicAuditPanel.this, FeedbackType.ERROR, "Falha ao carregar auditoria forense: " + ex.getMessage());
+                    UserErrors.toast(ForensicAuditPanel.this, "carregar auditoria forense", ex);
                 }
             }
         }.execute();

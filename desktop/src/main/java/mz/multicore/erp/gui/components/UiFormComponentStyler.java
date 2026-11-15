@@ -290,7 +290,7 @@ final class UiFormComponentStyler {
                 rendered.setBackground(isSelected ? UIHelper.SELECTION_BG : UIHelper.FIELD_BG);
                 rendered.setForeground(UIHelper.TEXT_LIGHT);
                 if (rendered instanceof JComponent component) {
-                    component.setBorder(new EmptyBorder(5, 8, 5, 8));
+                    component.setBorder(new EmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM));
                     component.setOpaque(index >= 0);
                 }
                 return rendered;
@@ -318,7 +318,7 @@ final class UiFormComponentStyler {
             tf.setForeground(UIHelper.TEXT_LIGHT);
             tf.setCaretColor(UIHelper.TEXT_LIGHT);
             tf.setFont(Typography.EMPHASIS);
-            tf.setBorder(new EmptyBorder(0, 4, 0, 4));
+            tf.setBorder(new EmptyBorder(0, Spacing.XS, 0, Spacing.XS));
             tf.setOpaque(false);
         }
         applyFormControlHeight(spinner);
@@ -330,7 +330,7 @@ final class UiFormComponentStyler {
         banner.setBackground(UIHelper.PENDING_YELLOW);
         banner.setForeground(UIHelper.BG_DARK);
         banner.setFont(Typography.EMPHASIS_BOLD);
-        banner.setBorder(new EmptyBorder(10, 14, 10, 14));
+        banner.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         banner.setVisible(false);
         return banner;
     }
@@ -425,7 +425,7 @@ final class UiFormComponentStyler {
     private static void flattenComboArrow(JComboBox<?> combo) {
         for (Component child : combo.getComponents()) {
             if (child instanceof AbstractButton arrow) {
-                arrow.setBorder(new EmptyBorder(0, 6, 0, 6));
+                arrow.setBorder(new EmptyBorder(0, Spacing.XS, 0, Spacing.XS));
                 arrow.setBorderPainted(false);
                 arrow.setContentAreaFilled(false);
                 arrow.setFocusable(false);
@@ -444,7 +444,7 @@ final class UiFormComponentStyler {
     static JPanel createDialogForm(int columns, Object... labelsAndComponents) {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(10, 14, 10, 14));
+        panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.NORTHWEST;

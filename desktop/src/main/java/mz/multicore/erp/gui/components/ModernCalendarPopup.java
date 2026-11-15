@@ -63,7 +63,7 @@ public class ModernCalendarPopup extends JPopupMenu {
         setBackground(bg);
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1, true),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                BorderFactory.createEmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
         ));
 
         JPanel content = new JPanel();
@@ -258,7 +258,7 @@ public class ModernCalendarPopup extends JPopupMenu {
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             setFont(Typography.BODY);
             setPreferredSize(new Dimension(34, 28));
-            setBorder(new EmptyBorder(2, 2, 2, 2));
+            setBorder(new EmptyBorder(Spacing.XXS, Spacing.XXS, Spacing.XXS, Spacing.XXS));
             putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 
             addActionListener(e -> {
@@ -291,7 +291,7 @@ public class ModernCalendarPopup extends JPopupMenu {
                 setBorder(BorderFactory.createLineBorder(UIHelper.ACCENT_BLUE, 1, true));
             } else {
                 setOpaque(false);
-                setBorder(new EmptyBorder(2, 2, 2, 2));
+                setBorder(new EmptyBorder(Spacing.XXS, Spacing.XXS, Spacing.XXS, Spacing.XXS));
                 if (isCurrentMonth) {
                     setForeground(UIHelper.isLight() ? Color.DARK_GRAY : Color.WHITE);
                     setFont(Typography.BODY);

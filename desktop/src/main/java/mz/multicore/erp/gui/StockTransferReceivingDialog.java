@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.ClientTablePagination;
@@ -59,7 +60,7 @@ public class StockTransferReceivingDialog {
         infoCard.setBackground(UIHelper.BG_CARD);
         infoCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(10, 14, 10, 14)
+                new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG)
         ));
 
         infoCard.add(createHeaderField("Nº Guia:", transfer.transferNumber() != null ? transfer.transferNumber() : "#" + transfer.id()));
@@ -156,7 +157,7 @@ public class StockTransferReceivingDialog {
         notesField.setCaretColor(UIHelper.TEXT_LIGHT);
         notesField.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(4, 8, 4, 8)
+                new EmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)
         ));
         notesPanel.add(notesLabel, BorderLayout.WEST);
         notesPanel.add(notesField, BorderLayout.CENTER);

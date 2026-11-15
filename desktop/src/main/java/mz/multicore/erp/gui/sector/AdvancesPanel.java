@@ -95,7 +95,7 @@ public class AdvancesPanel extends JPanel {
         state.setSelectedItem(OPEN_LABEL);
         TableFilter.install(table, search, new TableFilter.ColumnFilter(state, 3));
         JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), state);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         receiveBtn.setIcon(UIHelper.icon("fas-hand-holding-usd", 14));
         receiveBtn.setToolTipText("Emite a fatura de adiantamento (com IVA) e o recibo do valor recebido");
@@ -112,7 +112,7 @@ public class AdvancesPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Adiantamentos e Sinais", filters, refreshBtn, printBtn, refundBtn, applyBtn, receiveBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);

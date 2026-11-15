@@ -19,7 +19,7 @@ public final class QualityRenewalDialog {
 
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new GridBagLayout());
-        card.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         GridBagConstraints g = new GridBagConstraints();
         g.insets = new Insets(6, 6, 6, 6);
         g.fill = GridBagConstraints.HORIZONTAL;
@@ -70,7 +70,7 @@ public final class QualityRenewalDialog {
                 if (print && client != null) {
                     QualityPrintHelper.printDeliverySheet(parent, client, renewed.id(), companyId);
                 }
-            }, err -> ToastManager.show(dialog, FeedbackType.ERROR, "Erro ao renovar: " + err.getMessage()));
+            }, err -> UserErrors.toast(dialog, "renovar", err));
         });
 
         footer.add(cancelBtn);

@@ -156,6 +156,6 @@ public final class StockWasteRegistrationDialog {
                 ToastManager.show(parent, FeedbackType.INFO, "Registo guardado com estado 'Pendente Aprovação' por exceder a alçada.");
             }
             if (onSuccess != null) onSuccess.run();
-        }, err -> ToastManager.show(parent, FeedbackType.ERROR, "Erro ao registar: " + err.getMessage()));
+        }, err -> UserErrors.toast(parent, "registar", err));
     }
 }

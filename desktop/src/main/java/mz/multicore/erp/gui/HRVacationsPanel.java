@@ -20,7 +20,7 @@ final class HRVacationsPanel {
     JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Pedido");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -39,7 +39,7 @@ final class HRVacationsPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"ID", "Colaborador", "Início", "Fim", "Dias", "Ano Ref.", "Estado", "Decidido Por"};
         owner.vacationsModel = new DefaultTableModel(cols, 0) {
@@ -68,7 +68,7 @@ final class HRVacationsPanel {
         JPanel vacBar = TableFilter.bar(vacSearch,
                 TableFilter.label("Estado:"), vacEstado,
                 TableFilter.label("Início:", "fas-calendar-alt"), vacPeriodo, refreshBtn);
-        vacBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        vacBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         card.add(UIHelper.tableCardTop("Pedidos de Férias", vacBar,
                 exportBtn, decisionBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);

@@ -32,7 +32,7 @@ public class SupplierStatementPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(4, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         add(buildSummaryCards(), BorderLayout.NORTH);
         add(buildTableCard(), BorderLayout.CENTER);
@@ -53,7 +53,7 @@ public class SupplierStatementPanel extends JPanel {
     private ModernPanel buildTableCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         busyBar = new JProgressBar(); busyBar.setIndeterminate(true); busyBar.setVisible(false);
         busyBar.setPreferredSize(new Dimension(100, 14));
@@ -89,7 +89,7 @@ public class SupplierStatementPanel extends JPanel {
 
         JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
         filtersRow.setOpaque(false);
-        filtersRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+        filtersRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filtersRow.add(filters, BorderLayout.WEST);
         filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 

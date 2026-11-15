@@ -52,7 +52,7 @@ public class ShelfLabelsDialog extends JDialog {
 
         JPanel root = new JPanel(new BorderLayout(0, 16));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(BorderFactory.createEmptyBorder(18, 20, 18, 20));
+        root.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         root.add(UIHelper.buildPremiumHeader(
                 "fas-barcode", "Gerador de Etiquetas, Lotes e Códigos de Barras",
@@ -70,7 +70,7 @@ public class ShelfLabelsDialog extends JDialog {
 
     private JPanel buildLeftPanel() {
         JPanel leftPanel = new ModernPanel(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
-        leftPanel.setLayout(new BorderLayout(0, 8)); leftPanel.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+        leftPanel.setLayout(new BorderLayout(0, 8)); leftPanel.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         leftPanel.setPreferredSize(new Dimension(320, 0));
 
         JLabel leftTitle = new JLabel("Artigos Disponíveis (" + allProducts.size() + ")");
@@ -88,7 +88,7 @@ public class ShelfLabelsDialog extends JDialog {
         productList.setCellRenderer((list, value, index, isSelected, cellHasFocus) -> {
             JPanel item = new JPanel(new BorderLayout(4, 2)); item.setOpaque(true);
             item.setBackground(isSelected ? UIHelper.ACCENT_BLUE : UIHelper.BG_CARD);
-            item.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+            item.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
 
             JLabel nameLbl = new JLabel(value != null ? value.name() : "");
             nameLbl.setFont(Typography.BODY);
@@ -115,7 +115,7 @@ public class ShelfLabelsDialog extends JDialog {
 
     private JPanel buildRightPanel() {
         JPanel rightPanel = new ModernPanel(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
-        rightPanel.setLayout(new BorderLayout(0, 10)); rightPanel.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+        rightPanel.setLayout(new BorderLayout(0, 10)); rightPanel.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
 
         JPanel previewHeader = new JPanel(new GridLayout(2, 1, 0, 6)); previewHeader.setOpaque(false);
         JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0)); row1.setOpaque(false);

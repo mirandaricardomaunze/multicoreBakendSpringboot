@@ -50,7 +50,7 @@ public class QualityAssignmentsTab extends JPanel {
     private void initTab() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(BorderFactory.createEmptyBorder(12, 12, 8, 12));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cols = {"ID", "Colaborador", "Departamento", "Código", "Equipamento", "Qtd", "Entrega", "Validade", "Estado"};
         assignmentsTableModel = new DefaultTableModel(cols, 0) {
@@ -163,7 +163,7 @@ public class QualityAssignmentsTab extends JPanel {
             if (assignmentsPager != null) {
                 assignmentsPager.apply(resp);
             }
-        }, err -> ToastManager.show(this, FeedbackType.ERROR, "Erro ao carregar atribuições: " + err.getMessage()));
+        }, err -> UserErrors.toast(this, "carregar atribuições", err));
     }
 
     private void openNewAssignmentDialog() {
@@ -220,6 +220,6 @@ public class QualityAssignmentsTab extends JPanel {
         }, done -> {
             ToastManager.show(this, FeedbackType.SUCCESS, "Equipamento Devolvido ao stock com sucesso.");
             if (onDataChanged != null) onDataChanged.run();
-        }, err -> ToastManager.show(this, FeedbackType.ERROR, "Erro ao devolver: " + err.getMessage()));
+        }, err -> UserErrors.toast(this, "devolver", err));
     }
 }

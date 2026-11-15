@@ -102,7 +102,7 @@ public final class TableCellRenderers {
 
         private StatusRenderer() {
             setHorizontalAlignment(SwingConstants.LEFT);
-            setBorder(new EmptyBorder(0, 8, 0, 8));
+            setBorder(new EmptyBorder(0, Spacing.SM, 0, Spacing.SM));
             setFont(Typography.CAPTION_BOLD);
         }
 

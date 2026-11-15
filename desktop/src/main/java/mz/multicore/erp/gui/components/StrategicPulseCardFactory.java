@@ -36,7 +36,7 @@ final class StrategicPulseCardFactory {
         JLabel sub = new JLabel("Indicadores em tempo real de Governação, Liquidez, Risco e Metas.");
         sub.setFont(Typography.CAPTION);
         sub.setForeground(UIHelper.TEXT_MUTED);
-        sub.setBorder(new EmptyBorder(3, 26, 0, 0));
+        sub.setBorder(new EmptyBorder(Spacing.XXS, Spacing.XL, 0, 0));
         titleBox.add(sub);
 
         header.add(titleBox, BorderLayout.WEST);
@@ -64,7 +64,7 @@ final class StrategicPulseCardFactory {
         card.putClientProperty("card.border", pal.border);
         card.putClientProperty("kpi.accent", pal.accent);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         card.setPreferredSize(new Dimension(card.getPreferredSize().width, KpiCard.STANDARD_CARD_HEIGHT));
         card.setMinimumSize(new Dimension(KpiCard.STANDARD_CARD_MIN_WIDTH, KpiCard.STANDARD_CARD_HEIGHT));
 

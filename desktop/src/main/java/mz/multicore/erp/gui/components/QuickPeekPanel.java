@@ -39,7 +39,7 @@ public class QuickPeekPanel extends JPanel {
         // 1. Cabeçalho
         JPanel header = new JPanel(new BorderLayout(8, 0));
         header.setOpaque(false);
-        header.setBorder(new EmptyBorder(14, 16, 12, 16));
+        header.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JPanel titleBox = new JPanel(new BorderLayout(8, 2));
         titleBox.setOpaque(false);
@@ -97,7 +97,7 @@ public class QuickPeekPanel extends JPanel {
         fieldsContainer = new JPanel();
         fieldsContainer.setLayout(new BoxLayout(fieldsContainer, BoxLayout.Y_AXIS));
         fieldsContainer.setOpaque(false);
-        fieldsContainer.setBorder(new EmptyBorder(4, 16, 12, 16));
+        fieldsContainer.setBorder(new EmptyBorder(Spacing.XS, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JScrollPane scrollPane = new JScrollPane(fieldsContainer);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -110,7 +110,7 @@ public class QuickPeekPanel extends JPanel {
         // 3. Rodapé com Ação Completa e Dica de Teclado
         JPanel footer = new JPanel(new BorderLayout(0, 6));
         footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(10, 16, 14, 16));
+        footer.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.LG, Spacing.LG));
 
         openFullBtn = UIHelper.createSecondaryButton("Ver Detalhes Completos");
         openFullBtn.setIcon(UIHelper.icon("fas-external-link-alt", 12, Color.WHITE));
@@ -181,7 +181,7 @@ public class QuickPeekPanel extends JPanel {
 
                 JPanel row = new JPanel(new BorderLayout(4, 2));
                 row.setOpaque(false);
-                row.setBorder(new EmptyBorder(6, 0, 6, 0));
+                row.setBorder(new EmptyBorder(Spacing.XS, 0, Spacing.XS, 0));
 
                 JLabel lbl = new JLabel(item.label());
                 lbl.setFont(Typography.CAPTION);

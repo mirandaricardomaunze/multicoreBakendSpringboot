@@ -28,7 +28,7 @@ final class UnitQuantityDialog {
         Long companyId = CurrentUserContext.findCurrentCompanyId();
         if (companyId == null || productId == null) return;
         UIHelper.loadAsync(parent, () -> api.productUnits(companyId, productId), units -> open(parent, api, companyId, units, onBaseQuantity),
-                error -> ToastManager.show(parent, FeedbackType.ERROR, "Não foi possível ler as unidades: " + error.getMessage()));
+                error -> UserErrors.toast(parent, "ler as unidades", error));
     }
 
     private static void open(JComponent parent, UnitsApiClient api, Long companyId, ProductUnitsDTO units,

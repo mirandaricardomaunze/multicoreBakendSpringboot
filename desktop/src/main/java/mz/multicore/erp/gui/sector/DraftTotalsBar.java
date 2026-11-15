@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.sector;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.UIHelper;
 
@@ -53,9 +54,9 @@ public final class DraftTotalsBar extends JPanel {
         cell.setOpaque(emphasis);
         if (emphasis) {
             cell.setBackground(UIHelper.withAlpha(UIHelper.APPROVED_GREEN, 28));
-            cell.setBorder(new CompoundBorder(UIHelper.fieldBorder(UIHelper.APPROVED_GREEN, 1), new EmptyBorder(3, 12, 3, 12)));
+            cell.setBorder(new CompoundBorder(UIHelper.fieldBorder(UIHelper.APPROVED_GREEN, 1), new EmptyBorder(Spacing.XXS, Spacing.MD, Spacing.XXS, Spacing.MD)));
         } else {
-            cell.setBorder(new EmptyBorder(3, 12, 3, 12));
+            cell.setBorder(new EmptyBorder(Spacing.XXS, Spacing.MD, Spacing.XXS, Spacing.MD));
         }
         JLabel label = new JLabel(caption);
         label.setFont(Typography.CAPTION);

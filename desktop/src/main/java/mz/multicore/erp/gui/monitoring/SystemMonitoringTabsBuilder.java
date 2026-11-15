@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.monitoring;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -69,7 +70,7 @@ public class SystemMonitoringTabsBuilder {
     public JPanel buildAlertsPanel(Window parentDialog, Runnable onTestEmail) {
         ModernPanel panel = new ModernPanel();
         panel.setLayout(new BorderLayout(0, 10));
-        panel.setBorder(new EmptyBorder(12, 14, 12, 14));
+        panel.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JPanel topBar = new JPanel(new BorderLayout(10, 0));
         topBar.setOpaque(false);
@@ -181,7 +182,7 @@ public class SystemMonitoringTabsBuilder {
     private ModernPanel createTabCard(String titleText) {
         ModernPanel panel = new ModernPanel();
         panel.setLayout(new BorderLayout(0, 8));
-        panel.setBorder(new EmptyBorder(10, 12, 10, 12));
+        panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         JLabel title = new JLabel(titleText);
         title.setFont(Typography.EMPHASIS_BOLD);
         title.setForeground(UIHelper.TEXT_LIGHT);

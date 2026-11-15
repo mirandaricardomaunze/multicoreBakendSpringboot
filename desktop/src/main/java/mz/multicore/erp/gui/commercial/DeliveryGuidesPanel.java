@@ -59,7 +59,7 @@ public final class DeliveryGuidesPanel extends JPanel {
         this.printApiClient = printApiClient;
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(4, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
         ModernButton transfersBtn = null;
         if (openWarehouseTransfers != null) {
             transfersBtn = UIHelper.createSecondaryButton("Transferências entre Armazéns");
@@ -71,7 +71,7 @@ public final class DeliveryGuidesPanel extends JPanel {
         add(feedback, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         model = new DefaultTableModel(new String[]{"ID", "Nº Guia", "Data", "Encomenda", "Cliente", "Armazém",
                 "Responsável", "Viatura", "Total", "Estado", "Negócio", "Fatura"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -114,7 +114,7 @@ public final class DeliveryGuidesPanel extends JPanel {
                 TableFilter.label("Data:"), periodo,
                 peekToggleBtn
         );
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         if (transfersBtn == null) {
             card.add(UIHelper.tableCardTop("Guias de Remessa", filters, refreshBtn, more, bill, approve), BorderLayout.NORTH);
         } else {

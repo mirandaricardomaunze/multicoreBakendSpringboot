@@ -43,7 +43,7 @@ public class CustomerStatementPanel extends JPanel {
         this.comercialApiClient = comercialApiClient;
         setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(10, 12, 10, 12));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         add(buildSummaryCards(), BorderLayout.NORTH);
         add(buildTableCard(), BorderLayout.CENTER);
@@ -63,7 +63,7 @@ public class CustomerStatementPanel extends JPanel {
     private ModernPanel buildTableCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         busyBar = new JProgressBar();
         busyBar.setIndeterminate(true);
@@ -113,7 +113,7 @@ public class CustomerStatementPanel extends JPanel {
 
         JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
         filtersRow.setOpaque(false);
-        filtersRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+        filtersRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filtersRow.add(filters, BorderLayout.WEST);
         filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 
@@ -164,7 +164,7 @@ public class CustomerStatementPanel extends JPanel {
                             totalDebitsLabel, totalCreditsLabel, closingBalanceLabel, overdueAmountLabel, businessUnitCombo);
                     renderLines();
                 } catch (Exception ex) {
-                    ToastManager.show(CustomerStatementPanel.this, FeedbackType.ERROR, "Erro ao carregar extrato: " + ex.getMessage());
+                    UserErrors.toast(CustomerStatementPanel.this, "carregar extrato", ex);
                 }
             }
         }.execute();

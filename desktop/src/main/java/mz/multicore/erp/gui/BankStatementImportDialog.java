@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -52,7 +54,7 @@ final class BankStatementImportDialog {
         csvArea.setFont(Typography.MONO);
         csvArea.setBackground(UIHelper.FIELD_BG);
         csvArea.setForeground(UIHelper.TEXT_LIGHT);
-        csvArea.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        csvArea.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         csvArea.setText("# Formato: Data;Descrição;Referência;Valor\n"
                 + LocalDate.now() + ";Depósito Cliente ABC;DEP-9988;25000.00\n"
                 + LocalDate.now() + ";Comissão de Manutenção;;-150.00");
@@ -71,7 +73,7 @@ final class BankStatementImportDialog {
                     File f = chooser.getSelectedFile();
                     csvArea.setText(Files.readString(f.toPath()));
                 } catch (Exception ex) {
-                    ToastManager.show(owner, FeedbackType.ERROR, "Erro ao ler ficheiro: " + ex.getMessage());
+                    UserErrors.toast(owner, "ler ficheiro", ex);
                 }
             }
         });

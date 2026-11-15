@@ -26,7 +26,7 @@ final class StockAlertsPanel {
     public JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(10, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, Spacing.XS, Spacing.XS));
 
         JTabbedPane sub = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(sub);
@@ -45,7 +45,7 @@ final class StockAlertsPanel {
 
         ModernPanel expCard = new ModernPanel(16);
         expCard.setLayout(new BorderLayout());
-        expCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        expCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JScrollPane expScroll = new JScrollPane(owner.alertsExpTable);
         UIHelper.styleScrollPane(expScroll);
@@ -72,11 +72,11 @@ final class StockAlertsPanel {
         owner.alertsSummary = new JLabel("A carregar alertas de stock…");
         owner.alertsSummary.setFont(Typography.EMPHASIS_BOLD);
         owner.alertsSummary.setForeground(UIHelper.TEXT_MUTED);
-        owner.alertsSummary.setBorder(new EmptyBorder(8, 2, 0, 0));
+        owner.alertsSummary.setBorder(new EmptyBorder(Spacing.SM, Spacing.XXS, 0, 0));
 
         JPanel expHeaderPanel = new JPanel(new BorderLayout(0, 6));
         expHeaderPanel.setOpaque(false);
-        expHeaderPanel.setBorder(new EmptyBorder(0, 0, 12, 0));
+        expHeaderPanel.setBorder(new EmptyBorder(0, 0, Spacing.MD, 0));
         expHeaderPanel.add(expFilters, BorderLayout.CENTER);
         expHeaderPanel.add(owner.alertsSummary, BorderLayout.SOUTH);
 
@@ -95,7 +95,7 @@ final class StockAlertsPanel {
 
         ModernPanel outCard = new ModernPanel(16);
         outCard.setLayout(new BorderLayout());
-        outCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        outCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JScrollPane outScroll = new JScrollPane(owner.alertsOutTable);
         UIHelper.styleScrollPane(outScroll);
@@ -121,11 +121,11 @@ final class StockAlertsPanel {
         outSummary = new JLabel(" ");
         outSummary.setFont(Typography.EMPHASIS_BOLD);
         outSummary.setForeground(UIHelper.TEXT_MUTED);
-        outSummary.setBorder(new EmptyBorder(8, 2, 0, 0));
+        outSummary.setBorder(new EmptyBorder(Spacing.SM, Spacing.XXS, 0, 0));
 
         JPanel outHeaderPanel = new JPanel(new BorderLayout(0, 6));
         outHeaderPanel.setOpaque(false);
-        outHeaderPanel.setBorder(new EmptyBorder(0, 0, 12, 0));
+        outHeaderPanel.setBorder(new EmptyBorder(0, 0, Spacing.MD, 0));
         outHeaderPanel.add(outFilters, BorderLayout.CENTER);
         outHeaderPanel.add(outSummary, BorderLayout.SOUTH);
 

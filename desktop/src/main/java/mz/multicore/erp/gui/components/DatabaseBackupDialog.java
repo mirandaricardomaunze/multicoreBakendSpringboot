@@ -40,7 +40,7 @@ public class DatabaseBackupDialog extends JDialog {
     private void initComponents() {
         JPanel root = new JPanel(new BorderLayout(0, 16));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(20, 22, 20, 22));
+        root.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         // Topo
         JPanel header = new JPanel(new BorderLayout(0, 6));
@@ -62,7 +62,7 @@ public class DatabaseBackupDialog extends JDialog {
         // Card 1: Estado e Ação Rápida
         ModernPanel quickCard = new ModernPanel(16);
         quickCard.setLayout(new BorderLayout(14, 0));
-        quickCard.setBorder(new EmptyBorder(14, 16, 14, 16));
+        quickCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JPanel statusBox = new JPanel();
         statusBox.setLayout(new BoxLayout(statusBox, BoxLayout.Y_AXIS));
@@ -91,7 +91,7 @@ public class DatabaseBackupDialog extends JDialog {
         // Card 2: Ficheiros de Backup e Verificação
         ModernPanel tableCard = new ModernPanel(16);
         tableCard.setLayout(new BorderLayout(0, 10));
-        tableCard.setBorder(new EmptyBorder(14, 16, 14, 16));
+        tableCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JLabel tableTitle = new JLabel("Arquivos de Cópia de Segurança no Servidor:");
         tableTitle.setFont(Typography.EMPHASIS_BOLD);

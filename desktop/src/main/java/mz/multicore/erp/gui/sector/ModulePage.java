@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.sector;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -23,7 +24,7 @@ public class ModulePage extends JPanel {
     public ModulePage(String iconCode, Color accent, String title, String subtitle, String[][] kpis, JComponent content) {
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(14, 16, 12, 16));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JPanel header = new JPanel(new BorderLayout(12, 0));
         header.setOpaque(false);

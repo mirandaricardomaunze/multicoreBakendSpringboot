@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -82,7 +83,7 @@ final class PosCashBreakdownPanel {
 
     private JPanel createDenominationsCard() {
         ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14)); card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG)); card.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel header = new JLabel("Contagem Física de Cédulas e Moedas da Gaveta");
         header.setFont(Typography.EMPHASIS_BOLD); header.setForeground(UIHelper.TEXT_LIGHT);
         header.setIcon(UIHelper.icon("fas-coins", 14, UIHelper.PENDING_YELLOW));
@@ -108,7 +109,7 @@ final class PosCashBreakdownPanel {
 
     private JPanel createDenominationRow(BigDecimal denom, boolean isNote) {
         JPanel row = new JPanel(new BorderLayout(8, 0)); row.setBackground(UIHelper.ROW_ALT);
-        row.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1), BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+        row.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1), BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)));
         row.setMaximumSize(new Dimension(Short.MAX_VALUE, 38));
 
         String labelText = denom.compareTo(BigDecimal.ONE) >= 0 ? String.format("%,.0f MT", denom) : String.format("%,.2f MT", denom);
@@ -161,7 +162,7 @@ final class PosCashBreakdownPanel {
 
     private JPanel createDirectAmountCard() {
         ModernPanel card = new ModernPanel(14); card.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 12));
-        card.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15)); card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG)); card.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel lbl = new JLabel("Montante Total Contado (MT):"); lbl.setFont(Typography.EMPHASIS_BOLD); lbl.setForeground(UIHelper.TEXT_LIGHT);
         directAmountField = new JTextField(12); UIHelper.styleTextField(directAmountField);
         directAmountField.setFont(Typography.TITLE);
@@ -172,7 +173,7 @@ final class PosCashBreakdownPanel {
 
     private JPanel createTotalSummaryCard() {
         ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(15, 0)); card.setBackground(UIHelper.ROW_ALT);
-        card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(UIHelper.ACCENT_BLUE, 1), BorderFactory.createEmptyBorder(10, 16, 10, 16)));
+        card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(UIHelper.ACCENT_BLUE, 1), BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG)));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JPanel left = new JPanel(); left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS)); left.setOpaque(false);

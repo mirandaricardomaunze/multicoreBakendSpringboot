@@ -69,7 +69,7 @@ public class ArrowScrollPanel extends JPanel {
         this.sideNav = new JPanel(new BorderLayout(0, 6));
         sideNav.setOpaque(false);
         sideNav.setPreferredSize(new Dimension(34, 0));
-        sideNav.setBorder(new EmptyBorder(4, 0, 4, 0));
+        sideNav.setBorder(new EmptyBorder(Spacing.XS, 0, Spacing.XS, 0));
         sideNav.add(btnUp, BorderLayout.NORTH);
         sideNav.add(indicatorTrack, BorderLayout.CENTER);
         sideNav.add(btnDown, BorderLayout.SOUTH);

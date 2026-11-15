@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.POSApiClient;
@@ -57,7 +58,7 @@ public class PosShiftHandoverDialog extends JDialog {
     private JPanel createHeaderPanel() {
         JPanel header = new ModernPanel(16);
         header.setLayout(new BorderLayout(12, 8)); header.setBackground(UIHelper.SELECTION_BG);
-        header.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+        header.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JLabel icon = new JLabel(UIHelper.icon("fas-people-arrows", 28, UIHelper.ACCENT_CYAN));
         JLabel title = new JLabel("Passagem de Turno");
@@ -76,7 +77,7 @@ public class PosShiftHandoverDialog extends JDialog {
 
     private JComponent createContentPanel() {
         JPanel content = new JPanel(); content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(UIHelper.BG_DARK); content.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
+        content.setBackground(UIHelper.BG_DARK); content.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.XL, Spacing.MD, Spacing.XL));
 
         content.add(createOperatorPanel());
         content.add(Box.createVerticalStrut(8));
@@ -95,7 +96,7 @@ public class PosShiftHandoverDialog extends JDialog {
 
     private JPanel createOperatorPanel() {
         JPanel panel = new ModernPanel(12); panel.setLayout(new BorderLayout(8, 4));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        panel.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         panel.setAlignmentX(Component.LEFT_ALIGNMENT); panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
         JLabel lblOp = new JLabel("Operador Seguinte (username):");
@@ -111,7 +112,7 @@ public class PosShiftHandoverDialog extends JDialog {
 
     private JPanel createNotesPanel() {
         JPanel panel = new ModernPanel(12); panel.setLayout(new BorderLayout(8, 4));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+        panel.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         panel.setAlignmentX(Component.LEFT_ALIGNMENT); panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
 
         JLabel lbl = new JLabel("Observações / Justificação (opcional):");
@@ -120,7 +121,7 @@ public class PosShiftHandoverDialog extends JDialog {
         notesArea = new JTextArea(2, 20); notesArea.setFont(Typography.BODY);
         notesArea.setLineWrap(true); notesArea.setWrapStyleWord(true);
         notesArea.setBackground(UIHelper.ROW_ALT); notesArea.setForeground(Color.WHITE);
-        notesArea.setCaretColor(Color.WHITE); notesArea.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        notesArea.setCaretColor(Color.WHITE); notesArea.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
 
         panel.add(lbl, BorderLayout.NORTH); panel.add(notesArea, BorderLayout.CENTER);
         return panel;

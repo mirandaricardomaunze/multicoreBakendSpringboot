@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -58,7 +59,7 @@ public class PurchaseOrderReceivingDialog {
         infoCard.setBackground(UIHelper.BG_CARD);
         infoCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(10, 14, 10, 14)
+                new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG)
         ));
 
         infoCard.add(createHeaderField("Nº Encomenda:", order.orderNumber() != null ? order.orderNumber() : "#" + order.id()));

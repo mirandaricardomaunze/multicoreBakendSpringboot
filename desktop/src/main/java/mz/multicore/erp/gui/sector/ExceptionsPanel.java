@@ -78,13 +78,13 @@ public class ExceptionsPanel extends JPanel {
         sector.setPreferredSize(new Dimension(150, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(table, search, new TableFilter.ColumnFilter(severity, 0), new TableFilter.ColumnFilter(sector, 1));
         JPanel filters = TableFilter.bar(TableFilter.label("Período:"), period, search, TableFilter.label("Gravidade:"), severity, sector);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         ModernButton pdfBtn = UIHelper.createSecondaryButton("Exportar PDF");
         pdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         pdfBtn.addActionListener(e -> exportPdf());
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Relatório de Excepções", filters, UIHelper.createRefreshButton(this::reload), pdfBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -95,7 +95,7 @@ public class ExceptionsPanel extends JPanel {
     private JComponent buildDetail() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(10, 0));
-        card.setBorder(new EmptyBorder(12, 16, 12, 16));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         card.add(new JLabel(UIHelper.icon("fas-search", 18, UIHelper.ACCENT_BLUE)), BorderLayout.WEST);
         card.add(detail, BorderLayout.CENTER);
         return card;

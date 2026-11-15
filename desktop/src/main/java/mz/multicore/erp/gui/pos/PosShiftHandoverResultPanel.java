@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -24,7 +25,7 @@ final class PosShiftHandoverResultPanel {
         card.setLayout(new GridLayout(4, 1, 4, 4));
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1),
-                BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+                BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG)));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.setVisible(false);
 

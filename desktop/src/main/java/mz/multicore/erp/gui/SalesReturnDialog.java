@@ -39,7 +39,7 @@ public class SalesReturnDialog {
         headerCard.setBackground(UIHelper.BG_CARD);
         headerCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(10, 12, 10, 12)
+                new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD)
         ));
 
         headerCard.add(createHeaderItem("Fatura Original:", invoice.invoiceNumber()));
@@ -54,7 +54,7 @@ public class SalesReturnDialog {
         // 2. Grelha de linhas devolvíveis
         ModernPanel tableCard = new ModernPanel(16);
         tableCard.setLayout(new BorderLayout(0, 8));
-        tableCard.setBorder(new EmptyBorder(10, 12, 10, 12));
+        tableCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cols = {"ID", "Produto", "SKU", "Preço Unit.", "Faturado", "Já Devolvido", "Disponível", "Cx.", "Qtd a Devolver", "Reintegrar Stock?"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
@@ -184,7 +184,7 @@ public class SalesReturnDialog {
                             });
                         }
                     },
-                    err -> ToastManager.show(tableCard, FeedbackType.ERROR, "Erro ao carregar linhas: " + err.getMessage())
+                    err -> UserErrors.toast(tableCard, "carregar linhas", err)
             );
         };
 

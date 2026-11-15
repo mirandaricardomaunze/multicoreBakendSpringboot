@@ -41,7 +41,7 @@ public final class OutstandingAccountsPanel extends JPanel {
         this.posApiClient = posApiClient;
         setLayout(new BorderLayout(0, 12));
         setOpaque(false);
-        setBorder(new EmptyBorder(15, 5, 5, 5));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton pay = UIHelper.createSuccessButton("Receber Pagamento");
         pay.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
@@ -58,7 +58,7 @@ public final class OutstandingAccountsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         model = new DefaultTableModel(
                 new String[]{"Nº Fatura", "Data", "Negócio", "Cliente", "NUIT", "Total", "Pago", "Em Dívida",
                         "Vencimento", "Dias em Atraso", "Antiguidade", "Estado"}, 0) {
@@ -112,7 +112,7 @@ public final class OutstandingAccountsPanel extends JPanel {
                 TableFilter.label("Data:"), period,
                 peekToggleBtn
         );
-        filters.setBorder(new EmptyBorder(0, 0, 8, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         agingSummary = new OutstandingAccountsAgingSummaryView();
         JPanel filterHeader = new JPanel(new BorderLayout(0, 4));
         filterHeader.setOpaque(false);

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -48,7 +49,7 @@ public final class MobilePaymentModal extends JDialog implements MobilePaymentWo
 
         JPanel content = new JPanel(new BorderLayout(0, 16));
         content.setBackground(UIHelper.BG_DARK);
-        content.setBorder(new EmptyBorder(20, 24, 20, 24));
+        content.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
         content.add(buildHeader(), BorderLayout.NORTH);
 
         JPanel centerPanel = new JPanel();

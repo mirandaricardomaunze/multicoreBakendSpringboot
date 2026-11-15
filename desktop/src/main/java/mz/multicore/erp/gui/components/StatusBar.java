@@ -25,7 +25,7 @@ public class StatusBar extends JPanel {
         setLayout(new BorderLayout(0, 0));
         setPreferredSize(new Dimension(0, BAR_HEIGHT));
         setBackground(barBg());
-        setBorder(new EmptyBorder(0, 8, 0, 8));
+        setBorder(new EmptyBorder(0, Spacing.SM, 0, Spacing.SM));
 
         // Lado direito — aviso de versão (quando houver), hora
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));

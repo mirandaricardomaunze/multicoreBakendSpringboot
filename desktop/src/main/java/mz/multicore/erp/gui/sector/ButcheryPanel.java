@@ -96,7 +96,7 @@ public class ButcheryPanel extends JPanel {
         search.setPreferredSize(new Dimension(190, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(table, search);
         JPanel filters = TableFilter.bar(search);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Desmancha");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -108,7 +108,7 @@ public class ButcheryPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Desmanchas (últimos 90 dias)", filters, refreshBtn, cancelBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
@@ -142,7 +142,7 @@ public class ButcheryPanel extends JPanel {
         head.add(detailMeta);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(head, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(detailTotals, BorderLayout.SOUTH);
@@ -170,7 +170,7 @@ public class ButcheryPanel extends JPanel {
         note.setForeground(UIHelper.TEXT_MUTED);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Modelos de Desmancha", note, UIHelper.createRefreshButton(this::reload), editTemplateBtn, newBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);

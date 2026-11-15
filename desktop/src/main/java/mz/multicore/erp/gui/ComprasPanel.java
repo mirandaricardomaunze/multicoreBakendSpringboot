@@ -123,7 +123,7 @@ public class ComprasPanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
@@ -152,7 +152,7 @@ public class ComprasPanel extends JPanel {
     private JPanel createComprasTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         VScrollForm formCard = new VScrollForm(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -223,7 +223,7 @@ public class ComprasPanel extends JPanel {
 
         ModernPanel historyCard = new ModernPanel(16);
         historyCard.setLayout(new BorderLayout(0, 6));
-        historyCard.setBorder(new EmptyBorder(8, 12, 8, 12));
+        historyCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] historyCols = {"Nº Documento", "Fornecedor", "Armazém", "Total Faturado", "Imposto", "Data", "Negócio"};
         purchasesModel = new DefaultTableModel(historyCols, 0) {
@@ -252,7 +252,7 @@ public class ComprasPanel extends JPanel {
                         TableFilter.label("Negócio:"), histBusinessUnitCombo,
                         TableFilter.label("Data:", "fas-calendar-alt"), histPeriodo},
                 null);
-        histFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
+        histFilters.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         historyCard.add(UIHelper.tableCardTop("Faturas de Compra Registadas", histFilters,
                 refreshBtn, returnBtn, refundBtn, newPurchaseBtn), BorderLayout.NORTH);
         historyCard.add(histScroll, BorderLayout.CENTER);

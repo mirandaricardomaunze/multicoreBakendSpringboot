@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
@@ -54,7 +56,7 @@ public class QualityEquipmentFormDialog extends JDialog {
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+        content.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
         content.setOpaque(false);
 
         // Estilos
@@ -97,7 +99,7 @@ public class QualityEquipmentFormDialog extends JDialog {
         // Formulário em grid
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new GridBagLayout());
-        card.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         GridBagConstraints g = new GridBagConstraints();
         g.insets = new Insets(6, 6, 6, 6);
         g.fill = GridBagConstraints.HORIZONTAL;
@@ -219,7 +221,7 @@ public class QualityEquipmentFormDialog extends JDialog {
             dispose();
             if (onSuccess != null) onSuccess.run();
         }, err -> {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao gravar: " + err.getMessage());
+            UserErrors.toast(this, "gravar", err);
         });
     }
 }

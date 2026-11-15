@@ -59,7 +59,7 @@ public class ModernFormDialog {
 
         JPanel main = new JPanel(new BorderLayout(0, 16));
         main.setBackground(UIHelper.BG_DARK);
-        main.setBorder(new EmptyBorder(22, 26, 20, 26));
+        main.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         // Header premium — badge com ícone + título + subtítulo + divisória
         main.add(UIHelper.buildPremiumHeader(code, title, subtitle), BorderLayout.NORTH);
@@ -94,7 +94,7 @@ public class ModernFormDialog {
         buttonRow.setOpaque(false);
         buttonRow.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
-                new EmptyBorder(14, 0, 0, 0)));
+                new EmptyBorder(Spacing.LG, 0, 0, 0)));
         buttonRow.add(cancelBtn);
         buttonRow.add(saveBtn);
         main.add(buttonRow, BorderLayout.SOUTH);

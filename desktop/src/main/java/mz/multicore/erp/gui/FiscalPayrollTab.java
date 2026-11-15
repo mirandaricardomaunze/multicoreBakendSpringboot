@@ -31,7 +31,7 @@ final class FiscalPayrollTab {
     public JPanel buildTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         controls.setOpaque(false);
@@ -61,8 +61,8 @@ final class FiscalPayrollTab {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        controls.setBorder(new EmptyBorder(0, 0, 12, 0));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
+        controls.setBorder(new EmptyBorder(0, 0, Spacing.MD, 0));
         card.add(controls, BorderLayout.NORTH);
 
         payrollFiscalModel = new DefaultTableModel(

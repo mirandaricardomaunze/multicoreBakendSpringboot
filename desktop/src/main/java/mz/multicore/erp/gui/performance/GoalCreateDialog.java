@@ -28,7 +28,7 @@ public final class GoalCreateDialog {
         dialog.setLocationRelativeTo(window);
         JPanel form = new JPanel(new GridBagLayout());
         form.setBackground(UIHelper.BG_CARD);
-        form.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+        form.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         GridBagConstraints gc = new GridBagConstraints();
         gc.insets = new Insets(6, 6, 6, 6);

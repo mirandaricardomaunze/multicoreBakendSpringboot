@@ -45,7 +45,7 @@ public final class ForensicAuditOperationsCoordinator {
                         ToastManager.show(parent, FeedbackType.WARNING, "Dossiê PDF vazio devolvido pelo servidor.");
                     }
                 } catch (Exception ex) {
-                    ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gerar PDF forense: " + ex.getMessage());
+                    UserErrors.toast(parent, "gerar PDF forense", ex);
                 }
             }
         }.execute();

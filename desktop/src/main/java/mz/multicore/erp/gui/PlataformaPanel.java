@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.desktop.client.PlatformApiClient;
 import mz.multicore.erp.desktop.client.SystemMonitoringApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -41,7 +42,7 @@ public class PlataformaPanel extends JPanel implements PlatformFeedbackHandler {
     public PlataformaPanel(PlatformApiClient platformApiClient, SystemMonitoringApiClient monitoringApiClient) {
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         this.companiesView = new PlatformCompaniesView(platformApiClient, this);
         this.subscriptionsView = new PlatformSubscriptionsView(platformApiClient, this);

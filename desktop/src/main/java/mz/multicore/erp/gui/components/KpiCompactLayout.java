@@ -44,7 +44,7 @@ final class KpiCompactLayout {
         if (!(card.getClientProperty(PARTS) instanceof Parts parts) || isCompact(card)) return;
         card.removeAll();
         card.setLayout(new BorderLayout(10, 0));
-        card.setBorder(new EmptyBorder(6, 14, 6, 12));
+        card.setBorder(new EmptyBorder(Spacing.XS, Spacing.LG, Spacing.XS, Spacing.MD));
         card.setPreferredSize(new Dimension(card.getPreferredSize().width, HEIGHT));
         card.setMinimumSize(new Dimension(KpiCard.STANDARD_CARD_MIN_WIDTH, HEIGHT));
 

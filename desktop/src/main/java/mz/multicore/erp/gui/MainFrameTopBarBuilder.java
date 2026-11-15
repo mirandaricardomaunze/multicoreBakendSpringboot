@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.gui.components.TopNavBar;
@@ -56,7 +57,7 @@ final class MainFrameTopBarBuilder {
         JLabel btn = new JLabel(UIHelper.icon("fas-history", 18, UIHelper.TEXT_MUTED));
         btn.setToolTipText("Histórico de Itens Recentes (Ctrl+H)");
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+        btn.setBorder(BorderFactory.createEmptyBorder(0, Spacing.XS, 0, Spacing.XS));
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mousePressed(java.awt.event.MouseEvent e) { openHistory.run(); }
         });
@@ -71,7 +72,7 @@ final class MainFrameTopBarBuilder {
         JLabel toggle = new JLabel(UIHelper.icon(code, 18, UIHelper.TEXT_MUTED));
         toggle.setToolTipText(tip);
         toggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        toggle.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+        toggle.setBorder(BorderFactory.createEmptyBorder(0, Spacing.XS, 0, Spacing.XS));
         toggle.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mousePressed(java.awt.event.MouseEvent e) { UIHelper.cycleTheme(); }
         });

@@ -263,7 +263,7 @@ final class UiIconAndImageSupport {
             subLbl.setFont(Typography.BODY);
             subLbl.setForeground(UIHelper.TEXT_MUTED);
             subLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-            subLbl.setBorder(new EmptyBorder(2, 0, 0, 0));
+            subLbl.setBorder(new EmptyBorder(Spacing.XXS, 0, 0, 0));
             texts.add(subLbl);
         }
 
@@ -280,7 +280,7 @@ final class UiIconAndImageSupport {
         header.add(row, BorderLayout.CENTER);
         header.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, UIHelper.GRID),
-                new EmptyBorder(0, 0, 14, 0)));
+                new EmptyBorder(0, 0, Spacing.LG, 0)));
         return header;
     }
 }

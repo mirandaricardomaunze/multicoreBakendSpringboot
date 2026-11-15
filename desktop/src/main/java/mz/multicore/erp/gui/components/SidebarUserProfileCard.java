@@ -54,7 +54,7 @@ public class SidebarUserProfileCard extends JPanel {
         logoutBtn.setToolTipText("Terminar Sessão (Logout)");
         logoutBtn.setFocusPainted(false);
         logoutBtn.setContentAreaFilled(false);
-        logoutBtn.setBorder(new EmptyBorder(4, 4, 4, 4));
+        logoutBtn.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         logoutBtn.addActionListener(e -> UIHelper.requestLogout(SidebarUserProfileCard.this));
 
@@ -86,7 +86,7 @@ public class SidebarUserProfileCard extends JPanel {
         JPopupMenu popup = new JPopupMenu();
         popup.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                new EmptyBorder(4, 6, 4, 6)));
+                new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS)));
         JMenuItem header = new JMenuItem(displayName + " (" + role + ")");
         header.setEnabled(false);
         popup.add(header);

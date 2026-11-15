@@ -105,7 +105,7 @@ public class CustomOrdersPanel extends JPanel {
         stage.setPreferredSize(new Dimension(150, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(table, search, new TableFilter.ColumnFilter(stage, 6));
         JPanel filters = TableFilter.bar(TableFilter.label("Período:"), period, search, TableFilter.label("Estado:"), stage);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         ModernButton scheduleBtn = UIHelper.createSuccessButton("Agendar Encomenda");
         scheduleBtn.setIcon(UIHelper.icon("fas-calendar-plus", 14));
@@ -127,7 +127,7 @@ public class CustomOrdersPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Agenda de Encomendas", filters, refreshBtn, printBtn, stageBtn, planBtn, editBtn, scheduleBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -153,7 +153,7 @@ public class CustomOrdersPanel extends JPanel {
         photo.setForeground(UIHelper.TEXT_MUTED);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(detailTitle, BorderLayout.NORTH);
         card.add(new JScrollPane(detailBody) {{ setOpaque(false); getViewport().setOpaque(false); setBorder(null); }}, BorderLayout.CENTER);
         card.add(photo, BorderLayout.SOUTH);

@@ -214,7 +214,7 @@ public class POSPanel extends JPanel {
 
         JPanel salesTab = new JPanel(new BorderLayout(0, PosLayout.SECTION_VERTICAL_GAP));
         salesTab.setOpaque(false);
-        salesTab.setBorder(new EmptyBorder(4, 5, 4, 5));
+        salesTab.setBorder(new EmptyBorder(mz.multicore.erp.gui.components.Spacing.XS, mz.multicore.erp.gui.components.Spacing.XS, mz.multicore.erp.gui.components.Spacing.XS, mz.multicore.erp.gui.components.Spacing.XS));
         salesTab.add(PosWorkspaceBuilder.buildTopSelectsBar(this, barcodeBox), BorderLayout.NORTH);
         salesTab.add(PosWorkspaceBuilder.buildWorkspace(this), BorderLayout.CENTER);
 

@@ -45,7 +45,7 @@ public class InvoiceInstallmentsDialog {
         headerCard.setBackground(UIHelper.BG_CARD);
         headerCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(10, 12, 10, 12)
+                new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD)
         ));
 
         headerCard.add(createHeaderItem("Fatura", invoice.invoiceNumber() != null ? invoice.invoiceNumber() : "—"));
@@ -135,7 +135,7 @@ public class InvoiceInstallmentsDialog {
                         });
                     }
                 },
-                error -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao carregar prestações: " + error.getMessage())
+                error -> UserErrors.toast(dialog.getDialog(), "carregar prestações", error)
         );
 
         loadInstallments.run();
@@ -161,7 +161,7 @@ public class InvoiceInstallmentsDialog {
                         loadInstallments.run();
                         if (onPlanUpdated != null) onPlanUpdated.run();
                     },
-                    err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao gerar plano: " + err.getMessage())
+                    err -> UserErrors.toast(dialog.getDialog(), "gerar plano", err)
             );
         });
 
@@ -182,9 +182,9 @@ public class InvoiceInstallmentsDialog {
                             loadInstallments.run();
                             if (onPlanUpdated != null) onPlanUpdated.run();
                         },
-                        err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao receber: " + err.getMessage())
+                        err -> UserErrors.toast(dialog.getDialog(), "receber", err)
                 );
-            }, err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao carregar contas: " + err.getMessage()));
+            }, err -> UserErrors.toast(dialog.getDialog(), "carregar contas", err));
         });
 
         dialog.addActionButton(generateBtn);

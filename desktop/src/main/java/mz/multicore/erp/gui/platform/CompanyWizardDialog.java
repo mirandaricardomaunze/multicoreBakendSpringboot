@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.PlatformApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -114,7 +115,7 @@ final class CompanyWizardDialog {
 
         JPanel content = new WidthTrackingPanel(new BorderLayout(0, 8));
         content.setOpaque(false);
-        content.setBorder(new EmptyBorder(0, 0, 0, 4));
+        content.setBorder(new EmptyBorder(0, 0, 0, Spacing.XS));
         content.add(top, BorderLayout.NORTH);
         content.add(cardPanel, BorderLayout.CENTER);
 
@@ -166,7 +167,7 @@ final class CompanyWizardDialog {
         summary.setForeground(UIHelper.TEXT_LIGHT);
         summary.setIcon(UIHelper.icon("fas-building", 14, UIHelper.ACCENT_BLUE));
         summary.setIconTextGap(8);
-        summary.setBorder(new EmptyBorder(2, 14, 10, 14));
+        summary.setBorder(new EmptyBorder(Spacing.XXS, Spacing.LG, Spacing.SM, Spacing.LG));
         summary.setAlignmentX(Component.LEFT_ALIGNMENT);
         JPanel panel = CompanyFormFields.column();
         panel.add(summary);

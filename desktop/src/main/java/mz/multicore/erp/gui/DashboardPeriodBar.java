@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -36,18 +37,18 @@ final class DashboardPeriodBar {
         tv.setFont(Typography.BODY_BOLD);
         tv.setToolTipText("Abrir Painel TV em ecrã inteiro (F11)");
         tv.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.BORDER, 1, true), BorderFactory.createEmptyBorder(5, 12, 5, 12)));
+                BorderFactory.createLineBorder(UIHelper.BORDER, 1, true), BorderFactory.createEmptyBorder(Spacing.XS, Spacing.MD, Spacing.XS, Spacing.MD)));
         tv.addActionListener(e -> openTv.run());
         bar.add(tv);
         bar.add(Box.createHorizontalStrut(16));
 
         segments.putClientProperty("card.border", UIHelper.BORDER);
         segments.setLayout(new FlowLayout(FlowLayout.LEFT, 2, 0));
-        segments.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
+        segments.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XXS, Spacing.XXS, Spacing.XXS));
         for (DashboardPanel.PeriodFilter period : DashboardPanel.PeriodFilter.values()) {
             ModernButton button = new ModernButton(period.getLabel(), idleBackground(), idleHover());
             button.setFont(Typography.BODY_BOLD);
-            button.setBorder(BorderFactory.createEmptyBorder(5, 14, 5, 14));
+            button.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.LG, Spacing.XS, Spacing.LG));
             button.setPreferredSize(new Dimension(button.getPreferredSize().width, 28));
             button.addActionListener(e -> onSelect.accept(period));
             buttons.put(period, button);

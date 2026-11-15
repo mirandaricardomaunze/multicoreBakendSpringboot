@@ -35,7 +35,7 @@ public class ScaleSettingsPanel extends JPanel {
     public ScaleSettingsPanel() {
         setLayout(new BorderLayout(0, 12));
         setOpaque(false);
-        setBorder(new EmptyBorder(16, 16, 16, 16));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         enabled.setOpaque(false);
         enabled.setForeground(UIHelper.TEXT_LIGHT);
         port.setEditable(true);
@@ -80,7 +80,7 @@ public class ScaleSettingsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 14));
-        card.setBorder(new EmptyBorder(18, 18, 18, 18));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(form, BorderLayout.NORTH);
         card.add(liveBox, BorderLayout.CENTER);
         card.add(actions, BorderLayout.SOUTH);

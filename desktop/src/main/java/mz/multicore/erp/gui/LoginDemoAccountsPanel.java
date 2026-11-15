@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.UIHelper;
 
@@ -21,7 +22,7 @@ final class LoginDemoAccountsPanel {
         JLabel title = new JLabel("CONTAS DE DEMONSTRAÇÃO", SwingConstants.CENTER);
         title.setFont(Typography.CAPTION_BOLD); title.setForeground(UIHelper.TEXT_MUTED);
         title.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER), new EmptyBorder(10, 0, 0, 0)));
+                BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER), new EmptyBorder(Spacing.SM, 0, 0, 0)));
         panel.add(title, BorderLayout.NORTH);
         JPanel grid = new JPanel(new GridLayout(2, 2, 8, 8)); grid.setOpaque(false);
         grid.add(chip("Maria", "Gestão", "maria", "password", UIHelper.ACCENT_BLUE, onPick));
@@ -50,7 +51,7 @@ final class LoginDemoAccountsPanel {
         btn.setIcon(avatarIcon(name.substring(0, 1), tone));
         btn.setIconTextGap(10); btn.setHorizontalAlignment(SwingConstants.LEFT);
         btn.setContentAreaFilled(false); btn.setBorderPainted(false); btn.setFocusPainted(false); btn.setRolloverEnabled(true);
-        btn.setBorder(new EmptyBorder(5, 10, 5, 8));
+        btn.setBorder(new EmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM));
         btn.setFont(Typography.CAPTION); btn.setForeground(UIHelper.TEXT_LIGHT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setToolTipText("Entrar imediatamente como " + username);

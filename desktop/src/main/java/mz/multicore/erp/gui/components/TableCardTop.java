@@ -37,7 +37,7 @@ final class TableCardTop {
         }
         JPanel top = new JPanel(new RowLayout());
         top.setOpaque(false);
-        top.setBorder(new EmptyBorder(0, 0, 6, 0));
+        top.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
 
         JLabel heading = UIHelper.createSubheading(title);
         heading.putClientProperty(HEADING, title);

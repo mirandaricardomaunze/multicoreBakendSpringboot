@@ -38,7 +38,7 @@ public class QualityCatalogTab extends JPanel {
     private void initTab() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(BorderFactory.createEmptyBorder(12, 12, 8, 12));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cols = {"ID", "Código", "Nome do Equipamento", "Categoria", "Prazo de Validade", "Aviso Prévio", "Estado"};
         equipmentsTableModel = new DefaultTableModel(cols, 0) {
@@ -112,7 +112,7 @@ public class QualityCatalogTab extends JPanel {
             if (equipmentsPager != null) {
                 equipmentsPager.apply(resp);
             }
-        }, err -> ToastManager.show(this, FeedbackType.ERROR, "Erro ao carregar catálogo: " + err.getMessage()));
+        }, err -> UserErrors.toast(this, "carregar catálogo", err));
     }
 
     private void openEquipmentForm(EquipmentDTO eq) {

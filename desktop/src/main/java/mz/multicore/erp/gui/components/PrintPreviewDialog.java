@@ -111,7 +111,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
 
         JPanel main = new JPanel(new BorderLayout(0, 14));
         main.setBackground(UIHelper.BG_DARK);
-        main.setBorder(new EmptyBorder(20, 24, 18, 24));
+        main.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JPanel north = new JPanel(); north.setOpaque(false);
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
@@ -139,7 +139,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
     private JComponent buildPreviewCard() {
         ModernPanel card = new ModernPanel(UIHelper.RADIUS_LG, UIHelper.BG_CARD);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 12, 12, 12));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
         card.add(buildPreviewToolbar(), BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(canvas);
@@ -171,7 +171,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
 
     private JComponent buildFooter() {
         JPanel footer = new JPanel(new BorderLayout()); footer.setOpaque(false);
-        footer.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID), new EmptyBorder(12, 0, 0, 0)));
+        footer.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID), new EmptyBorder(Spacing.MD, 0, 0, 0)));
         summaryLabel.setFont(Typography.BODY); summaryLabel.setForeground(UIHelper.TEXT_MUTED);
         footer.add(summaryLabel, BorderLayout.WEST);
 

@@ -36,7 +36,7 @@ public class CRMPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(25, 25, 25, 25));
+        setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel north = new JPanel();
         north.setOpaque(false);
@@ -55,7 +55,7 @@ public class CRMPanel extends JPanel {
     private JPanel createTicketsTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.LG, 0, 0, 0));
 
         ModernButton newTicketBtn = UIHelper.createSuccessButton("Novo Pedido");
         newTicketBtn.setIcon(UIHelper.icon("fas-headset", 14));
@@ -69,7 +69,7 @@ public class CRMPanel extends JPanel {
 
         ModernPanel ticketsCard = new ModernPanel(16);
         ticketsCard.setLayout(new BorderLayout());
-        ticketsCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        ticketsCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] ticketCols = {"ID", "Data", "Cliente", "Assunto", "Prioridade", "Técnico", "Estado"};
         ticketsModel = new DefaultTableModel(ticketCols, 0) {
@@ -106,7 +106,7 @@ public class CRMPanel extends JPanel {
         JPanel tBar = TableFilter.bar(tSearch, TableFilter.label("Estado:"), tEstado,
                 TableFilter.label("Prioridade:", "fas-flag"), tPrioridade,
                 TableFilter.label("Data:", "fas-calendar-alt"), tPeriodo);
-        tBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        tBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         ticketsCard.add(UIHelper.tableCardTop("Pedidos dos Clientes", tBar,
                 refreshBtn, detailBtn, newTicketBtn), BorderLayout.NORTH);
         ticketsCard.add(tScroll, BorderLayout.CENTER);
@@ -117,7 +117,7 @@ public class CRMPanel extends JPanel {
     private JPanel createWorkSheetsTab() {
         JPanel wsPanel = new JPanel(new BorderLayout(0, 10));
         wsPanel.setOpaque(false);
-        wsPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        wsPanel.setBorder(new EmptyBorder(Spacing.LG, 0, 0, 0));
 
         ModernButton newWsBtn = UIHelper.createSuccessButton("Registar Folha de Obra");
         newWsBtn.setIcon(UIHelper.icon("fas-tools", 14));
@@ -135,7 +135,7 @@ public class CRMPanel extends JPanel {
 
         ModernPanel wsCard = new ModernPanel(16);
         wsCard.setLayout(new BorderLayout());
-        wsCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        wsCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] wsCols = {"ID", "Data", "Cliente", "Técnico", "Horas", "Tarifa/h", "Total", "Estado"};
         worksheetsModel = new DefaultTableModel(wsCols, 0) {
@@ -165,7 +165,7 @@ public class CRMPanel extends JPanel {
                 List.of(new TableFilter.PeriodFilter(wsPeriodo, 1)));
         JPanel wsBar = TableFilter.bar(wsSearch, TableFilter.label("Estado:"), wsEstado,
                 TableFilter.label("Data:", "fas-calendar-alt"), wsPeriodo, refreshWsBtn);
-        wsBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        wsBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         wsCard.add(UIHelper.tableCardTop("Folhas de Obra Registadas", wsBar,
                 moreBtn, billBtn, newWsBtn), BorderLayout.NORTH);
         wsCard.add(wsScroll, BorderLayout.CENTER);

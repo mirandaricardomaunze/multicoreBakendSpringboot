@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.SystemMonitoringApiClient;
 import mz.multicore.erp.gui.SystemMonitoringDialog;
@@ -22,7 +23,7 @@ public class PlatformSystemMonitoringView extends JPanel {
 
         ModernPanel card = new ModernPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(36, 48, 36, 48));
+        card.setBorder(new EmptyBorder(Spacing.XXL, Spacing.XXL, Spacing.XXL, Spacing.XXL));
 
         JLabel icon = new JLabel(UIHelper.icon("fas-heartbeat", 48, UIHelper.ACCENT_CYAN));
         icon.setAlignmentX(Component.CENTER_ALIGNMENT);

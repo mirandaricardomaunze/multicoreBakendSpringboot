@@ -62,7 +62,7 @@ public class PriceListsPanel extends JPanel {
         this.comercialApiClient = comercialApiClient;
         setLayout(new BorderLayout(0, 10));
         setOpaque(false);
-        setBorder(new EmptyBorder(15, 5, 5, 5));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         add(feedback, BorderLayout.NORTH);
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildListCard(), buildDetail());
@@ -101,7 +101,7 @@ public class PriceListsPanel extends JPanel {
         state.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(listTable, search, new TableFilter.ColumnFilter(state, 3));
         JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), state);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         newListBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newListBtn.setToolTipText("Criar uma tabela (ex.: Revendedor, Empreiteiro, Funcionário)");
@@ -110,7 +110,7 @@ public class PriceListsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Tabelas de Preço", filters, refreshBtn, newListBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(listTable), BorderLayout.SOUTH);
@@ -152,7 +152,7 @@ public class PriceListsPanel extends JPanel {
 
         ModernPanel header = new ModernPanel(16);
         header.setLayout(new BorderLayout(12, 0));
-        header.setBorder(new EmptyBorder(14, 16, 14, 16));
+        header.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         JLabel icon = new JLabel(UIHelper.icon("fas-tags", 24, UIHelper.ACCENT_PINK));
         header.add(icon, BorderLayout.WEST);
         JPanel text = new JPanel(new GridLayout(2, 1, 0, 2));
@@ -198,7 +198,7 @@ public class PriceListsPanel extends JPanel {
         search.setPreferredSize(new Dimension(190, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(itemTable, search);
         JPanel filters = TableFilter.bar(search);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         addItemBtn.setIcon(UIHelper.icon("fas-plus", 14));
         addItemBtn.setToolTipText("Preço de um produto nesta tabela; repita com outra quantidade para criar escalões");
@@ -208,7 +208,7 @@ public class PriceListsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(14, 14, 14, 14));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Preços da tabela", filters, removeItemBtn, addItemBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(itemTable), BorderLayout.SOUTH);
@@ -227,7 +227,7 @@ public class PriceListsPanel extends JPanel {
         search.setPreferredSize(new Dimension(190, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(clientTable, search);
         JPanel filters = TableFilter.bar(search);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         assignBtn.setIcon(UIHelper.icon("fas-user-tag", 14));
         assignBtn.addActionListener(e -> assignClient());
@@ -237,7 +237,7 @@ public class PriceListsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(14, 14, 14, 14));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Clientes com esta tabela", filters, unassignBtn, assignBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(clientTable), BorderLayout.SOUTH);

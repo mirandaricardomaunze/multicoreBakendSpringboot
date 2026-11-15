@@ -51,7 +51,7 @@ public class ActivityProfilePanel extends JPanel {
         this.activityApiClient = activityApiClient;
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         add(buildHeader(), BorderLayout.NORTH);
 
@@ -101,7 +101,7 @@ public class ActivityProfilePanel extends JPanel {
     private JComponent buildSummary() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(16, 16, 16, 16));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.setPreferredSize(new Dimension(300, 10));
 
         JPanel top = new JPanel(new BorderLayout(0, 4));

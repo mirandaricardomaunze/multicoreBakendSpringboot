@@ -55,7 +55,7 @@ final class ShelfLabelPrintEngine {
                 job.print();
                 ToastManager.show(parent, FeedbackType.SUCCESS, "Etiquetas enviadas para a impressora com sucesso.");
             } catch (PrinterException ex) {
-                ToastManager.show(parent, FeedbackType.ERROR, "Erro ao imprimir etiquetas: " + ex.getMessage());
+                UserErrors.toast(parent, "imprimir etiquetas", ex);
             }
         }
     }

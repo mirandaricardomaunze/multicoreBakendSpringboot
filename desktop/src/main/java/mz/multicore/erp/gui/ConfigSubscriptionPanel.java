@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -23,7 +24,7 @@ final class ConfigSubscriptionPanel {
     public JPanel buildPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
@@ -44,7 +45,7 @@ final class ConfigSubscriptionPanel {
 
         subscriptionCard = new ModernPanel(16);
         subscriptionCard.setLayout(new GridBagLayout());
-        subscriptionCard.setBorder(new EmptyBorder(24, 24, 24, 24));
+        subscriptionCard.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
         JPanel wrap = new JPanel(new BorderLayout());
         wrap.setOpaque(false);
         wrap.add(subscriptionCard, BorderLayout.NORTH);

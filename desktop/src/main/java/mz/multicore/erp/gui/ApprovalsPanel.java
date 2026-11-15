@@ -63,7 +63,7 @@ public class ApprovalsPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(10, 12, 10, 12));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         JPanel kpiGrid = KpiCard.createGrid(4);
         kpiGrid.add(KpiCard.createCard("Pedidos Pendentes", kpiPendingCount = new JLabel("0"), "Aguardam decisão", "fas-hourglass-half", UIHelper.PENDING_YELLOW));
@@ -110,7 +110,7 @@ public class ApprovalsPanel extends JPanel {
     private JPanel createPendingTab() {
         JPanel pendingPanel = new JPanel(new BorderLayout(0, 8));
         pendingPanel.setOpaque(false);
-        pendingPanel.setBorder(new EmptyBorder(8, 0, 0, 0));
+        pendingPanel.setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         openBtn = UIHelper.createPrimaryButton("Abrir / Decidir");
         openBtn.setIcon(UIHelper.icon("fas-gavel", 14));
@@ -120,7 +120,7 @@ public class ApprovalsPanel extends JPanel {
 
         ModernPanel pendingCard = new ModernPanel(16);
         pendingCard.setLayout(new BorderLayout(0, 10));
-        pendingCard.setBorder(new EmptyBorder(12, 14, 12, 14));
+        pendingCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         String[] pendingCols = {"ID", "Documento", "Submissor", "Valor", "Perfil Requerido"};
         pendingModel = new DefaultTableModel(pendingCols, 0) {
@@ -156,7 +156,7 @@ public class ApprovalsPanel extends JPanel {
         UIHelper.humanizeRoleCombo(pPerfil);
         TableFilter.install(pendingTable, pSearch, new TableFilter.ColumnFilter(pPerfil, 4));
         JPanel pBar = TableFilter.bar(pSearch, TableFilter.label("Perfil:"), pPerfil);
-        pBar.setBorder(new EmptyBorder(0, 0, 4, 0));
+        pBar.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
 
         ModernButton pRefreshBtn = UIHelper.createRefreshButton(this::refreshData);
         pendingCard.setLayout(new BorderLayout(0, 8));

@@ -41,7 +41,7 @@ final class DashboardOverviewTab {
     public JPanel buildTab() {
         JPanel tab1 = new JPanel(new BorderLayout(0, 12));
         tab1.setOpaque(false);
-        tab1.setBorder(new EmptyBorder(12, 4, 4, 4));
+        tab1.setBorder(new EmptyBorder(Spacing.MD, Spacing.XS, Spacing.XS, Spacing.XS));
 
         JPanel commercialKpiGrid = KpiCard.createHeroGrid(4, 10, 10);
 
@@ -106,7 +106,7 @@ final class DashboardOverviewTab {
 
         financialRow = new JPanel(new GridLayout(1, 2, 12, 12));
         financialRow.setOpaque(false);
-        financialRow.setBorder(new EmptyBorder(12, 0, 0, 0));
+        financialRow.setBorder(new EmptyBorder(Spacing.MD, 0, 0, 0));
         financialRow.add(createChartCard(salesChannelPieChart));
         financialRow.add(createChartCard(financialStructurePieChart));
         tab1Center.add(financialRow);
@@ -150,7 +150,7 @@ final class DashboardOverviewTab {
     private ModernPanel createChartCard(JComponent chart) {
         ModernPanel card = new ModernPanel(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         card.add(chart, BorderLayout.CENTER);
         return card;
     }

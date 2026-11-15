@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -265,7 +266,7 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
                 ToastManager.show(this, FeedbackType.SUCCESS, "Etiquetas de volume enviadas para a impressora.");
                 dispose();
             } catch (PrinterException ex) {
-                ToastManager.show(this, FeedbackType.ERROR, "Erro ao imprimir etiquetas: " + ex.getMessage());
+                UserErrors.toast(this, "imprimir etiquetas", ex);
             }
         }
     }

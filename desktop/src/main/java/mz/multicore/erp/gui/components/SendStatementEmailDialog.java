@@ -90,7 +90,7 @@ public class SendStatementEmailDialog {
         messageArea.setCaretColor(UIHelper.TEXT_LIGHT);
         messageArea.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+                BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)));
         JScrollPane scrollMsg = new JScrollPane(messageArea);
         scrollMsg.setPreferredSize(new Dimension(380, 80));
 

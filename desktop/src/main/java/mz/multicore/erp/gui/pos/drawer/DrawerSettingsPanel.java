@@ -22,7 +22,7 @@ public class DrawerSettingsPanel extends JPanel {
     public DrawerSettingsPanel() {
         setLayout(new BorderLayout());
         setOpaque(false);
-        setBorder(new EmptyBorder(16, 16, 16, 16));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         enabled.setOpaque(false);
         enabled.setForeground(UIHelper.TEXT_LIGHT);
         printer.setEditable(true);
@@ -46,7 +46,7 @@ public class DrawerSettingsPanel extends JPanel {
                 "Ligação da gaveta:", pin, "", actions});
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(18, 18, 18, 18));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(form, BorderLayout.NORTH);
         add(card, BorderLayout.NORTH);
         load();

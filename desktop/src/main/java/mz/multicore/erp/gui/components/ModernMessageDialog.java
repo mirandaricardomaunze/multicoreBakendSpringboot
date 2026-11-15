@@ -99,7 +99,7 @@ public final class ModernMessageDialog {
     static JPanel buildMessageBody(FeedbackType type, String message) {
         JPanel body = new ModernPanel(UIHelper.RADIUS_MD);
         body.setLayout(new BorderLayout(12, 0));
-        body.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        body.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         JLabel icon = new JLabel(UIHelper.icon(type.iconCode(), 24, type.color()));
         JLabel detail = new JLabel("<html><body style='width:400px'>" + escape(message) + "</body></html>");
         detail.setFont(Typography.EMPHASIS);
@@ -135,7 +135,7 @@ public final class ModernMessageDialog {
 
             JPanel root = new JPanel(new BorderLayout(0, 16));
             root.setBackground(UIHelper.BG_DARK);
-            root.setBorder(BorderFactory.createEmptyBorder(20, 22, 18, 22));
+            root.setBorder(BorderFactory.createEmptyBorder(Spacing.XL, Spacing.XL, Spacing.LG, Spacing.XL));
             root.add(UIHelper.buildPremiumHeader(type.iconCode(), title, null), BorderLayout.NORTH);
             root.add(buildMessageBody(type, message), BorderLayout.CENTER);
 

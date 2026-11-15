@@ -40,7 +40,7 @@ final class PurchaseBusinessUnitsPanel {
     public JPanel buildPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         JPanel kpiGrid = KpiCard.createGrid(3, 8, 8);
         kpiGrid.add(KpiCard.createCard("Total de Negócios", kpiTotalValue, "Linhas cadastradas", "fas-briefcase", UIHelper.ACCENT_BLUE));
@@ -49,7 +49,7 @@ final class PurchaseBusinessUnitsPanel {
 
         ModernPanel tableCard = new ModernPanel(16);
         tableCard.setLayout(new BorderLayout(0, 8));
-        tableCard.setBorder(new EmptyBorder(12, 12, 12, 12));
+        tableCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
 
         String[] cols = {"Código", "Nome da Linha de Negócio", "Fornecedor Principal", "Artigos", "Descrição Comercial", "Estado"};
         model = new DefaultTableModel(cols, 0) {
@@ -102,7 +102,7 @@ final class PurchaseBusinessUnitsPanel {
 
         JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
         filtersRow.setOpaque(false);
-        filtersRow.setBorder(new EmptyBorder(0, 0, 6, 0));
+        filtersRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filtersRow.add(TableFilter.bar(searchField, TableFilter.label("Estado:"), statusFilter), BorderLayout.WEST);
         filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 

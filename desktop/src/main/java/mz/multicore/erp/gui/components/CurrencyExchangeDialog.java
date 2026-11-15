@@ -48,7 +48,7 @@ public class CurrencyExchangeDialog extends JDialog {
     private void initComponents() {
         JPanel root = new JPanel(new BorderLayout(0, 16));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(20, 24, 20, 24));
+        root.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         // Cabeçalho
         JPanel header = new JPanel(new BorderLayout());
@@ -64,7 +64,7 @@ public class CurrencyExchangeDialog extends JDialog {
         // Formulário em Card
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new GridBagLayout());
-        card.setBorder(new EmptyBorder(16, 16, 16, 16));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(6, 4, 6, 4);

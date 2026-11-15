@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -59,7 +60,7 @@ public class OrderPickingDialog {
         infoCard.setBackground(UIHelper.BG_CARD);
         infoCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(8, 12, 8, 12)
+                new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD)
         ));
 
         infoCard.add(createMetaChip("ENCOMENDA", details.orderNumber(), UIHelper.ACCENT_BLUE));
@@ -71,7 +72,7 @@ public class OrderPickingDialog {
         // 2. Barra de Leitura Óptica
         JPanel scanBar = new JPanel(new BorderLayout(10, 0));
         scanBar.setOpaque(false);
-        scanBar.setBorder(new EmptyBorder(4, 0, 4, 0));
+        scanBar.setBorder(new EmptyBorder(Spacing.XS, 0, Spacing.XS, 0));
 
         JPanel scanInputPanel = new JPanel(new BorderLayout(6, 0));
         scanInputPanel.setOpaque(false);
@@ -182,7 +183,7 @@ public class OrderPickingDialog {
         // 4. Rodapé e Resumo
         JPanel bottomPanel = new JPanel(new BorderLayout(12, 0));
         bottomPanel.setOpaque(false);
-        bottomPanel.setBorder(new EmptyBorder(6, 0, 0, 0));
+        bottomPanel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         JLabel progressLabel = new JLabel();
         progressLabel.setFont(Typography.EMPHASIS_BOLD);

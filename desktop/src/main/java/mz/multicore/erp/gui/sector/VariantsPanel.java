@@ -80,7 +80,7 @@ public class VariantsPanel extends JPanel {
         search.setPreferredSize(new Dimension(190, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(familyTable, search);
         JPanel filters = TableFilter.bar(search);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Família");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.setToolTipText("Cria um artigo por combinação de tamanho, cor, espessura ou sabor");
@@ -91,7 +91,7 @@ public class VariantsPanel extends JPanel {
         priceBtn.addActionListener(e -> openPrice());
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Famílias de Variantes", filters, UIHelper.createRefreshButton(this::reload),
                 priceBtn, addValuesBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -122,7 +122,7 @@ public class VariantsPanel extends JPanel {
         head.add(gridHint, BorderLayout.CENTER);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(head, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         detail.setOpaque(false);

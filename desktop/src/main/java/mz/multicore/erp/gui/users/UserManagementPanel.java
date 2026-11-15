@@ -37,7 +37,7 @@ public class UserManagementPanel extends JPanel {
     private void initUi() {
         setLayout(new BorderLayout(0, 14));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(16, 18, 16, 18));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // 1. KPI Cards Superiores
         JPanel kpiGrid = KpiCard.createGrid(4);
@@ -50,7 +50,7 @@ public class UserManagementPanel extends JPanel {
         // 2. Card Canónico com Tabela e Barra de Ferramentas
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         searchField = TableFilter.searchField("Pesquisar utilizador, nome ou perfil…");
         JComboBox<String> estadoCombo = TableFilter.combo("Todos os estados", "Activo", "Suspenso");
@@ -120,7 +120,7 @@ public class UserManagementPanel extends JPanel {
                     loadedUsers = get();
                     UserOperationsCoordinator.updateTableAndKpis(tableModel, loadedUsers, totalUsersKpi, totalManagersKpi, activeUsersKpi, pinsConfiguredKpi);
                 } catch (Exception ex) {
-                    ToastManager.show(UserManagementPanel.this, FeedbackType.ERROR, "Erro ao carregar utilizadores: " + ex.getMessage());
+                    UserErrors.toast(UserManagementPanel.this, "carregar utilizadores", ex);
                 }
             }
         }.execute();

@@ -22,7 +22,7 @@ public final class CreditExceptionDialog {
         JDialog dialog = new JDialog((Frame) (ancestor instanceof Frame ? ancestor : null), "Pedido de Excepção de Crédito", true);
         dialog.setLayout(new BorderLayout(0, 16));
         dialog.getContentPane().setBackground(UIHelper.BG_DARK);
-        ((JComponent) dialog.getContentPane()).setBorder(new EmptyBorder(20, 24, 20, 24));
+        ((JComponent) dialog.getContentPane()).setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
@@ -55,7 +55,7 @@ public final class CreditExceptionDialog {
         reasonArea.setCaretColor(UIHelper.TEXT_LIGHT);
         reasonArea.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)
+                BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)
         ));
         JScrollPane reasonScroll = new JScrollPane(reasonArea);
         UIHelper.styleScrollPane(reasonScroll);
@@ -117,8 +117,7 @@ public final class CreditExceptionDialog {
                                 "Pedido de excepção submetido com sucesso. ID: #" + approval.id() + " (Perfil: " + approval.requiredRole() + ")");
                         if (onSuccess != null) onSuccess.run();
                     } catch (Exception ex) {
-                        ToastManager.show(parent, FeedbackType.ERROR,
-                                "Erro ao submeter excepção: " + ex.getMessage());
+                        UserErrors.toast(parent, "submeter excepção", ex);
                     }
                 }
             }.execute();
@@ -138,7 +137,7 @@ public final class CreditExceptionDialog {
         JLabel label = new JLabel(text);
         label.setFont(Typography.CAPTION_BOLD);
         label.setForeground(UIHelper.TEXT_MUTED);
-        label.setBorder(new EmptyBorder(0, 0, 4, 0));
+        label.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         return label;
     }
 }

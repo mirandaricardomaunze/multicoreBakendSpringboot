@@ -75,7 +75,7 @@ public final class ProductLookupRemoteDialog {
         paginationPanel.setOpaque(false);
         paginationPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
-                new EmptyBorder(6, 8, 6, 8)));
+                new EmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)));
 
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         leftPanel.setOpaque(false);
@@ -95,7 +95,7 @@ public final class ProductLookupRemoteDialog {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(10, 12, 10, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         card.add(TableFilter.bar(searchField, categoryCombo), BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(table);

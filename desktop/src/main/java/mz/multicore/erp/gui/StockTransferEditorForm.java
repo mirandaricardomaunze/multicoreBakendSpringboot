@@ -191,7 +191,7 @@ final class StockTransferEditorForm {
     private JComponent buildLinesSection() {
         ModernPanel section = new ModernPanel(16);
         section.setLayout(new BorderLayout(0, 10));
-        section.setBorder(new EmptyBorder(14, 16, 14, 16));
+        section.setBorder(new EmptyBorder(mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG));
 
         JLabel instruction = new JLabel("Edite directamente na grelha. Qtd, Emb. e Cx. mantêm-se sincronizadas.");
         instruction.setForeground(UIHelper.TEXT_MUTED);
@@ -225,7 +225,7 @@ final class StockTransferEditorForm {
         totalValueLabel.setForeground(Color.WHITE);
         JPanel totalsRow = new JPanel(new BorderLayout());
         totalsRow.setOpaque(false);
-        totalsRow.setBorder(new EmptyBorder(8, 4, 0, 4));
+        totalsRow.setBorder(new EmptyBorder(mz.multicore.erp.gui.components.Spacing.SM, mz.multicore.erp.gui.components.Spacing.XS, 0, mz.multicore.erp.gui.components.Spacing.XS));
         totalsRow.add(totalLinesLabel, BorderLayout.WEST);
         totalsRow.add(totalValueLabel, BorderLayout.EAST);
         tableArea.add(totalsRow, BorderLayout.SOUTH);

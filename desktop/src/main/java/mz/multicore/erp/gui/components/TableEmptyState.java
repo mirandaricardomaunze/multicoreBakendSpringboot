@@ -96,7 +96,7 @@ public final class TableEmptyState {
         // Ícone elegante proporcional (fas-inbox, 32px)
         JLabel iconLbl = new JLabel(UIHelper.icon("fas-inbox", 32, UIHelper.TEXT_MUTED));
         iconLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
-        iconLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 6, 0));
+        iconLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, Spacing.XS, 0));
         panel.add(iconLbl);
 
         // While the data is on its way: an animated bar in place of the icon (docs/ESTADO_CARREGAR_SPEC.md)
@@ -107,7 +107,7 @@ public final class TableEmptyState {
         busyBar.setVisible(false);
         JPanel busyRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 0, 0));
         busyRow.setOpaque(false);
-        busyRow.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        busyRow.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, Spacing.SM, 0));
         busyRow.setAlignmentX(Component.CENTER_ALIGNMENT);
         busyRow.add(busyBar);
         busyRow.setVisible(false);
@@ -127,7 +127,7 @@ public final class TableEmptyState {
         subLbl.setFont(Typography.BODY);
         subLbl.setHorizontalAlignment(SwingConstants.CENTER);
         subLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
-        subLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        subLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(Spacing.XS, 0, 0, 0));
         panel.add(subLbl);
 
         // Acção: a principal do ecrã quando não há dados, ou "Limpar filtros" quando os filtros escondem tudo
@@ -137,7 +137,7 @@ public final class TableEmptyState {
         actionBtn.addActionListener(e -> runAction(table));
         JPanel actionRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 0, 0));
         actionRow.setOpaque(false);
-        actionRow.setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 0, 0, 0));
+        actionRow.setBorder(javax.swing.BorderFactory.createEmptyBorder(Spacing.MD, 0, 0, 0));
         actionRow.setAlignmentX(Component.CENTER_ALIGNMENT);
         actionRow.add(actionBtn);
         panel.add(actionRow);

@@ -207,7 +207,7 @@ public class SearchableComboBox<T> extends JComboBox<T> {
             JLabel label = new JLabel(value == null ? "" : safe(labelProvider.apply(value)));
             label.setOpaque(true);
             label.setFont(list.getFont());
-            label.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 8, 5, 8));
+            label.setBorder(javax.swing.BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM));
             label.setBackground(selected ? list.getSelectionBackground() : list.getBackground());
             label.setForeground(selected ? list.getSelectionForeground() : list.getForeground());
             return label;

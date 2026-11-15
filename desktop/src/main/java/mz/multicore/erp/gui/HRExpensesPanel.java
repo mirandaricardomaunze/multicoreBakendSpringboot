@@ -15,7 +15,7 @@ final class HRExpensesPanel {
     public JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
@@ -25,7 +25,7 @@ final class HRExpensesPanel {
         submitBtn.addActionListener(e -> submitExpense());
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         String[] cols = {"Colaborador", "Valor", "Categoria", "Estado", "Motivo Rejeição"};
         owner.expensesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -50,7 +50,7 @@ final class HRExpensesPanel {
         TableFilter.install(owner.expensesTable, expSearch,
                 new TableFilter.ColumnFilter(expEstado, 3));
         JPanel expBar = TableFilter.bar(expSearch, TableFilter.label("Estado:"), expEstado);
-        expBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        expBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
         card.add(UIHelper.tableCardTop("Notas de Despesas", expBar,
                 refreshBtn, exportBtn, submitBtn), BorderLayout.NORTH);

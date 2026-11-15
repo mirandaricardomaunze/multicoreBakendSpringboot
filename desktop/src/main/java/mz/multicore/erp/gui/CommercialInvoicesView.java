@@ -16,11 +16,11 @@ final class CommercialInvoicesView {
     static JPanel create(ComercialPanel owner) {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new FlowLayout(FlowLayout.LEFT, 16, 6));
-        formCard.setBorder(new EmptyBorder(10, 14, 10, 14));
+        formCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
 
         owner.clientCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.clientCombo);
@@ -103,12 +103,12 @@ final class CommercialInvoicesView {
 
         JPanel totalRow = new JPanel(new BorderLayout());
         totalRow.setOpaque(false);
-        totalRow.setBorder(new EmptyBorder(12, 0, 0, 0));
+        totalRow.setBorder(new EmptyBorder(Spacing.MD, 0, 0, 0));
         totalRow.add(owner.totalLabel, BorderLayout.EAST);
 
         ModernPanel draftCard = new ModernPanel(16);
         draftCard.setLayout(new BorderLayout(0, 10));
-        draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        draftCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         draftCard.setPreferredSize(new Dimension(0, 280));
         JLabel lineHint = new JLabel("Preparação tabular: edite na grelha ou bipe o código de barras (F2).");
         lineHint.setForeground(UIHelper.TEXT_MUTED);
@@ -142,7 +142,7 @@ final class CommercialInvoicesView {
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 6));
-        listCard.setBorder(new EmptyBorder(8, 12, 8, 12));
+        listCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] invoicesCols = {"ID", "Nº Fatura", "Cliente", "Data", "Negócio", "Estado", "Total", "Em Dívida", "Impressão"};
         owner.invoicesTableModel = new DefaultTableModel(invoicesCols, 0) {

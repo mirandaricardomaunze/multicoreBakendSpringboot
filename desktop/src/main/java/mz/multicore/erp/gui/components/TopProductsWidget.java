@@ -36,7 +36,7 @@ public class TopProductsWidget extends ModernPanel {
     public TopProductsWidget() {
         super(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
         setLayout(new BorderLayout(0, 10));
-        setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // Header
         JPanel header = new JPanel(new BorderLayout());
@@ -83,7 +83,7 @@ public class TopProductsWidget extends ModernPanel {
             JLabel empty = new JLabel("Sem dados de vendas registados.");
             empty.setFont(Typography.BODY);
             empty.setForeground(UIHelper.TEXT_MUTED);
-            empty.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
+            empty.setBorder(BorderFactory.createEmptyBorder(Spacing.XL, Spacing.SM, Spacing.XL, Spacing.SM));
             listContainer.add(empty);
         } else {
             for (int i = 0; i < products.size(); i++) {

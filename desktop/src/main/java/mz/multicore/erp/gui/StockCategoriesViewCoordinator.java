@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.QuickPeekPanel;
@@ -95,7 +96,7 @@ public final class StockCategoriesViewCoordinator {
                 String hex = value == null ? "" : value.toString();
                 setIcon(colorSwatchIcon(hex, 14));
                 setText("  " + (hex.isBlank() ? "—" : hex));
-                setBorder(new EmptyBorder(0, 10, 0, 10));
+                setBorder(new EmptyBorder(0, Spacing.SM, 0, Spacing.SM));
                 return this;
             }
         };

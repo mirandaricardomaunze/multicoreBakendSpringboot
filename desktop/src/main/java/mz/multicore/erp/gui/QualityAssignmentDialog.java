@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
@@ -78,7 +80,7 @@ public class QualityAssignmentDialog extends JDialog {
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+        content.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
         content.setOpaque(false);
 
         // Estilos
@@ -151,7 +153,7 @@ public class QualityAssignmentDialog extends JDialog {
 
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new GridBagLayout());
-        card.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         GridBagConstraints g = new GridBagConstraints();
         g.insets = new Insets(6, 6, 6, 6);
         g.fill = GridBagConstraints.HORIZONTAL;
@@ -248,7 +250,7 @@ public class QualityAssignmentDialog extends JDialog {
             }
             updateCalculatedExpiry();
         }, err -> {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao carregar dados: " + err.getMessage());
+            UserErrors.toast(this, "carregar dados", err);
         });
     }
 
@@ -334,10 +336,10 @@ public class QualityAssignmentDialog extends JDialog {
                     return qualityApiClient.getDeliverySheetPdf(saved.id(), cid);
                 }, pdf -> {
                     PrintPreviewDialog.show(parent, pdf, "termo-entrega-" + saved.id(), "Termo de Entrega de Equipamento / EPI");
-                }, err -> ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gerar Termo de Entrega: " + err.getMessage()));
+                }, err -> UserErrors.toast(parent, "gerar Termo de Entrega", err));
             }
         }, err -> {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao atribuir: " + err.getMessage());
+            UserErrors.toast(this, "atribuir", err);
         });
     }
 }

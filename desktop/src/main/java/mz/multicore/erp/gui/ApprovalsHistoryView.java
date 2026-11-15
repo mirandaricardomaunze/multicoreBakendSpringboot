@@ -22,11 +22,11 @@ public class ApprovalsHistoryView extends JPanel {
     public ApprovalsHistoryView(Runnable onRefresh) {
         setLayout(new BorderLayout(0, 8));
         setOpaque(false);
-        setBorder(new EmptyBorder(8, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         ModernPanel historyCard = new ModernPanel(16);
         historyCard.setLayout(new BorderLayout(0, 8));
-        historyCard.setBorder(new EmptyBorder(12, 14, 12, 14));
+        historyCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         String[] historyCols = {"Data", "Tipo Doc", "Submissor", "Valor", "Estado Final", "Motivo / Comentário"};
         historyModel = new DefaultTableModel(historyCols, 0) {
@@ -64,7 +64,7 @@ public class ApprovalsHistoryView extends JPanel {
 
         JPanel hBar = TableFilter.bar(hSearch, TableFilter.label("Estado final:"), hEstado,
                 TableFilter.label("Data:", "fas-calendar-alt"), hPeriodo);
-        hBar.setBorder(new EmptyBorder(0, 0, 4, 0));
+        hBar.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
 
         ModernButton hRefreshBtn = UIHelper.createRefreshButton(onRefresh != null ? onRefresh : () -> {});
         historyCard.add(UIHelper.tableCardTop("Histórico e Auditoria de Aprovações", hBar, hRefreshBtn), BorderLayout.NORTH);

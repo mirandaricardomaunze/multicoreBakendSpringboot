@@ -142,7 +142,7 @@ public final class ProductionOrderOperationsCoordinator {
                                            Runnable onSuccess) {
         JPanel panel = new JPanel(new GridLayout(4, 1, 10, 10));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         ModernButton startBtn = UIHelper.createPrimaryButton("Iniciar Produção (Passar a EM_PRODUÇÃO)");
         startBtn.setIcon(UIHelper.icon("fas-play", 14));

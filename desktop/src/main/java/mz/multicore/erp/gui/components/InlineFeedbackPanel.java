@@ -45,7 +45,7 @@ public final class InlineFeedbackPanel extends JPanel {
         setOpaque(true);
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                BorderFactory.createEmptyBorder(10, 12, 10, 10)));
+                BorderFactory.createEmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.SM)));
 
         JPanel text = new JPanel();
         text.setOpaque(false);
@@ -215,7 +215,7 @@ public final class InlineFeedbackPanel extends JPanel {
         setBackground(tintedBackground(type.color()));
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                BorderFactory.createEmptyBorder(10, 12, 10, 10)));
+                BorderFactory.createEmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.SM)));
     }
 
     private static String safe(String value, String fallback) {

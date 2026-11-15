@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.SystemMonitoringApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -63,7 +64,7 @@ public class SystemMonitoringDialog {
 
         JPanel mainPanel = new JPanel(new BorderLayout(0, 14));
         mainPanel.setBackground(UIHelper.BG_DARK);
-        mainPanel.setBorder(new EmptyBorder(16, 18, 16, 18));
+        mainPanel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         mainPanel.add(overviewBuilder.buildHeader(), BorderLayout.NORTH);
 

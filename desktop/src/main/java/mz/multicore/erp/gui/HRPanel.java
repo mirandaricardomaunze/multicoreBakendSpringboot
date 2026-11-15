@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -98,7 +99,7 @@ public class HRPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(8, 12, 8, 12));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         JPanel north = new JPanel(); north.setOpaque(false);
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
@@ -147,7 +148,7 @@ public class HRPanel extends JPanel {
     private JPanel buildEmployeesTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Colaborador");
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
@@ -163,7 +164,7 @@ public class HRPanel extends JPanel {
                 .addAction("Alterar Estado", UIHelper.icon("fas-user-shield", 14), this::changeSelectedEmployeeStatus);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"Nº", "Nome", "Email", "Telefone", "Departamento", "Cargo", "Admissão", "Estado", "Salário Base"};
         employeesModel = new DefaultTableModel(cols, 0) {
@@ -204,7 +205,7 @@ public class HRPanel extends JPanel {
         ModernButton refreshEmployeesBtn = UIHelper.createRefreshButton(this::loadEmployees);
         JPanel empBar = TableFilter.bar(empSearch, TableFilter.label("Estado:"), empEstado,
                 refreshEmployeesBtn);
-        empBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        empBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         ActionMenuButton consultationBtn = UIHelper.createActionMenuButton("Consulta")
                 .addAction("Alternar Detalhes", UIHelper.icon("fas-columns", 14), peekController::toggle)
                 .addAction("Ver Perfil", UIHelper.icon("fas-id-card", 14), this::openSelectedEmployeeProfile);
@@ -270,7 +271,7 @@ public class HRPanel extends JPanel {
     private JPanel buildPayslipsTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Gerar Recibo");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -294,7 +295,7 @@ public class HRPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"Nº Recibo", "Colaborador", "Período", "Bruto", "Descontos", "Líquido", "Estado", "Data Pagamento"};
         payslipsModel = new DefaultTableModel(cols, 0) {
@@ -319,7 +320,7 @@ public class HRPanel extends JPanel {
                 new JComponent[]{psSearch, TableFilter.label("Estado:"), psEstado, TableFilter.label("Data pag.:", "fas-calendar-alt"), psPeriodo, refreshPayslipsBtn},
                 null
         );
-        psBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        psBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         card.add(UIHelper.tableCardTop("Recibos de Salário", psBar,
                 documentsBtn, actionsBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -396,7 +397,7 @@ public class HRPanel extends JPanel {
     private JPanel buildAbsencesTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Registar Falta");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -414,7 +415,7 @@ public class HRPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"ID", "Colaborador", "Tipo", "Início", "Fim", "Dias", "Justificada", "Motivo"};
         absencesModel = new DefaultTableModel(cols, 0) {
@@ -437,7 +438,7 @@ public class HRPanel extends JPanel {
         JPanel absBar = TableFilter.bar(absSearch,
                 TableFilter.label("Tipo:"), absTipo,
                 TableFilter.label("Início:", "fas-calendar-alt"), absPeriodo, refreshAbsencesBtn);
-        absBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        absBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         card.add(UIHelper.tableCardTop("Registo de Faltas", absBar,
                 exportBtn, actionsBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);

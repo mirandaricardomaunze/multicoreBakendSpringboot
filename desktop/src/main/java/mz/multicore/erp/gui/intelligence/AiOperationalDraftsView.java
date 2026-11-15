@@ -28,7 +28,7 @@ public class AiOperationalDraftsView extends JPanel {
         this.navigationHandler = navigationHandler;
         setLayout(new BorderLayout(0, 14));
         setOpaque(false);
-        setBorder(new EmptyBorder(12, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.MD, 0, 0, 0));
 
         add(buildInputCard(), BorderLayout.NORTH);
         add(buildResultCard(), BorderLayout.CENTER);
@@ -37,7 +37,7 @@ public class AiOperationalDraftsView extends JPanel {
     private JPanel buildInputCard() {
         ModernPanel inputCard = new ModernPanel(16);
         inputCard.setLayout(new BorderLayout(0, 8));
-        inputCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+        inputCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         draftRequest.setLineWrap(true);
         draftRequest.setWrapStyleWord(true);
         draftRequest.setText("Ex.: Criar cotação; cliente: ABC; produto: Serviço mensal; quantidade: 1");
@@ -74,7 +74,7 @@ public class AiOperationalDraftsView extends JPanel {
     private JPanel buildResultCard() {
         ModernPanel resultCard = new ModernPanel(16);
         resultCard.setLayout(new BorderLayout(0, 10));
-        resultCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        resultCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         draftResultArea.setEditable(false);
         draftResultArea.setLineWrap(true);
         draftResultArea.setWrapStyleWord(true);

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.commercial;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.DecimalField;
@@ -205,7 +206,7 @@ public final class QuotationEditorDialog {
         section.add(scroll, BorderLayout.CENTER);
 
         totalLabel = new JLabel("Total Rascunho: 0,00 MT (incl. IVA)");
-        totalLabel.setBorder(new EmptyBorder(6, 0, 0, 0));
+        totalLabel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
         JPanel totalRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         totalRow.setOpaque(false);
         totalRow.add(totalLabel);

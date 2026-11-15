@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.POSApiClient;
@@ -64,7 +66,7 @@ public class PosBlindCloseDialog extends JDialog {
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(UIHelper.ROW_ALT);
-        panel.setBorder(BorderFactory.createEmptyBorder(14, 20, 14, 20));
+        panel.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JLabel title = new JLabel("Fecho Cego de Caixa (Blind Drop)");
         title.setFont(Typography.TITLE);
@@ -79,7 +81,7 @@ public class PosBlindCloseDialog extends JDialog {
         JLabel subtitle = new JLabel(subtitleText);
         subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
-        subtitle.setBorder(BorderFactory.createEmptyBorder(4, 28, 0, 0));
+        subtitle.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XXL, 0, 0));
 
         panel.add(title, BorderLayout.NORTH);
         panel.add(subtitle, BorderLayout.SOUTH);
@@ -90,7 +92,7 @@ public class PosBlindCloseDialog extends JDialog {
         JPanel root = new JPanel();
         root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        root.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         breakdownPanel.addTo(root);
         root.add(Box.createVerticalStrut(12));
@@ -108,7 +110,7 @@ public class PosBlindCloseDialog extends JDialog {
     private JPanel createNotesCard() {
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel lbl = new JLabel("Observações / Justificação de Diferença (opcional):");
@@ -124,7 +126,7 @@ public class PosBlindCloseDialog extends JDialog {
         notesArea.setCaretColor(Color.WHITE);
         notesArea.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1),
-                BorderFactory.createEmptyBorder(4, 6, 4, 6)
+                BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS)
         ));
 
         card.add(lbl, BorderLayout.NORTH);
@@ -189,7 +191,7 @@ public class PosBlindCloseDialog extends JDialog {
 
             ToastManager.show(this, FeedbackType.SUCCESS, "Caixa fechado com sucesso! Pode agora imprimir o Relatório Z.");
         } catch (Exception ex) {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao fechar caixa: " + ex.getMessage());
+            UserErrors.toast(this, "fechar caixa", ex);
         }
     }
 

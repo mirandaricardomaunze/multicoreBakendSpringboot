@@ -70,7 +70,7 @@ public class BulkStockPanel extends JPanel {
         this.comercialApi = comercialApi;
         setLayout(new BorderLayout(0, 10));
         setOpaque(false);
-        setBorder(new EmptyBorder(12, 5, 5, 5));
+        setBorder(new EmptyBorder(Spacing.MD, Spacing.XS, Spacing.XS, Spacing.XS));
         measureForm = buildMeasureForm();
         JPanel north = new JPanel(new BorderLayout(0, 8));
         north.setOpaque(false);
@@ -131,7 +131,7 @@ public class BulkStockPanel extends JPanel {
 
         JPanel form = new JPanel(new GridLayout(0, 1, 0, 12));
         form.setOpaque(false);
-        form.setBorder(new EmptyBorder(6, 4, 6, 4));
+        form.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         form.add(first);
         form.add(second);
         form.add(block(caption("Observações"), notes));
@@ -172,7 +172,7 @@ public class BulkStockPanel extends JPanel {
     private JComponent buildEmptyBanner(ModernButton settingsBtn) {
         emptyBanner.setOpaque(false);
         emptyBanner.setLayout(new BorderLayout(10, 0));
-        emptyBanner.setBorder(new EmptyBorder(4, 6, 4, 6));
+        emptyBanner.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         JLabel icon = new JLabel(UIHelper.icon("fas-info-circle", 18, UIHelper.ACCENT_BLUE));
         icon.setVerticalAlignment(SwingConstants.TOP);
         JLabel text = new JLabel("<html><b>Primeiro passo:</b> um gestor marca os produtos medidos no monte (areia, brita, "
@@ -226,11 +226,11 @@ public class BulkStockPanel extends JPanel {
         state.setPreferredSize(new Dimension(190, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(table, search, new TableFilter.ColumnFilter(state, 8));
         JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), state);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(14, 14, 14, 14));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Medições de Granel (areia, brita, pedra)", filters, refreshBtn, settingsBtn,
                 rejectBtn, approveBtn, recordBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);

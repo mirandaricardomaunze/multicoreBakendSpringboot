@@ -41,7 +41,7 @@ final class PurchaseReorderPanel {
     public JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.MD, Spacing.XS, Spacing.XS, Spacing.XS));
 
         JPanel kpiGrid = KpiCard.createGrid(4);
         kpiGrid.add(KpiCard.createInteractiveCard("Produtos Esgotados", kpiEsgotados, "Sem stock disponível",
@@ -59,7 +59,7 @@ final class PurchaseReorderPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         String[] cols = {
                 "Produto", "SKU", "Stock Atual", "Mínimo", "Venda/Dia",
@@ -122,7 +122,7 @@ final class PurchaseReorderPanel {
 
         JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
         filtersRow.setOpaque(false);
-        filtersRow.setBorder(new EmptyBorder(0, 0, 6, 0));
+        filtersRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filtersRow.add(reorderFilters, BorderLayout.WEST);
         filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 
@@ -139,7 +139,7 @@ final class PurchaseReorderPanel {
 
         reorderFooter = new JLabel(" ");
         reorderFooter.setForeground(UIHelper.TEXT_MUTED);
-        reorderFooter.setBorder(new EmptyBorder(6, 4, 0, 4));
+        reorderFooter.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, 0, Spacing.XS));
         JPanel reorderSouth = new JPanel(new BorderLayout());
         reorderSouth.setOpaque(false);
         reorderSouth.add(ClientTablePagination.install(reorderTable), BorderLayout.NORTH);

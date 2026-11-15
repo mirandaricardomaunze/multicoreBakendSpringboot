@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.Typography;
@@ -62,7 +64,7 @@ public final class SubscriptionRenewalDialog extends JDialog {
 
         JPanel content = new JPanel(new BorderLayout(0, 16));
         content.setBackground(UIHelper.BG_DARK);
-        content.setBorder(new EmptyBorder(20, 24, 20, 24));
+        content.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
         content.add(SubscriptionRenewalViewBuilder.buildHeader(), BorderLayout.NORTH);
 
         JPanel body = new JPanel();
@@ -170,7 +172,7 @@ public final class SubscriptionRenewalDialog extends JDialog {
                                 dispose();
                             }
                         },
-                        ex -> ModernMessageDialog.show(this, FeedbackType.ERROR, "Erro", "Erro ao finalizar activação: " + ex.getMessage()));
+                        ex -> UserErrors.show(this, "finalizar activação", ex));
             }
         }
     }

@@ -51,7 +51,7 @@ public final class QuotationsPanel extends JPanel {
 
         setLayout(pages);
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(4, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         JPanel listPage = new JPanel(new BorderLayout(0, 8));
         listPage.setOpaque(false);
@@ -63,7 +63,7 @@ public final class QuotationsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         model = new DefaultTableModel(new String[]{"ID", "Nº Cotação", "Data", "Cliente", "NUIT", "Total", "Estado", "Validade", "Encomenda", "Negócio"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -104,7 +104,7 @@ public final class QuotationsPanel extends JPanel {
 
         JPanel filters = TableFilter.bar(search, TableFilter.label("Negócio:"), businessUnitCombo,
                 TableFilter.label("Estado:"), status, TableFilter.label("Data:"), periodo, peekToggleBtn);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         card.add(UIHelper.tableCardTop("Cotações", filters, UIHelper.createRefreshButton(this::refresh), more, decision, newBtn), BorderLayout.NORTH);
 
         UIHelper.ensureHeadersFit(table);

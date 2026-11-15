@@ -52,8 +52,7 @@ public final class TableExportAction {
         UIHelper.runWithProgress(owner, "A gerar o PDF da listagem…",
                 () -> printApiClient.renderTable(companyId, request),
                 pdf -> PrintPreviewDialog.show(owner, pdf, baseName + "-export", title),
-                error -> ToastManager.show(owner, FeedbackType.ERROR,
-                        "Não foi possível exportar: " + error.getMessage()));
+                error -> UserErrors.toast(owner, "exportar", error));
     }
 
     /**

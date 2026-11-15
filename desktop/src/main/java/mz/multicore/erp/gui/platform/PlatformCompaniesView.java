@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.desktop.client.PlatformApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -38,7 +39,7 @@ public class PlatformCompaniesView extends JPanel {
 
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Registar Empresa");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -51,7 +52,7 @@ public class PlatformCompaniesView extends JPanel {
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
-        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        listCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"Empresa", "NUIT", "Localidade", "Telefone", "Email", "Utilizadores", "Estado"};
         companiesModel = new DefaultTableModel(cols, 0) {
@@ -77,7 +78,7 @@ public class PlatformCompaniesView extends JPanel {
         JComboBox<String> cEstado = TableFilter.combo("Todos os estados", "Activa", "Suspensa");
         TableFilter.install(companiesTable, cSearch, new TableFilter.ColumnFilter(cEstado, 6));
         JPanel cBar = TableFilter.bar(cSearch, TableFilter.label("Estado:"), cEstado);
-        cBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        cBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         listCard.add(UIHelper.tableCardTop("Empresas da Plataforma", cBar, refreshBtn, moreBtn, newBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);

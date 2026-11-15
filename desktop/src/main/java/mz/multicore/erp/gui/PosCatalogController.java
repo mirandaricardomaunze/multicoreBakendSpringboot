@@ -81,7 +81,7 @@ final class PosCatalogController {
         nextButton.addActionListener(e -> loadCatalogPage(currentPage() + 1));
         paginationBar = new JPanel(new BorderLayout(8, 0));
         paginationBar.setOpaque(false);
-        paginationBar.setBorder(new EmptyBorder(8, 0, 0, 0));
+        paginationBar.setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
         paginationBar.add(previousButton, BorderLayout.WEST);
         paginationBar.add(pageLabel, BorderLayout.CENTER);
         paginationBar.add(nextButton, BorderLayout.EAST);
@@ -144,7 +144,7 @@ final class PosCatalogController {
                     ? "Não há produtos cadastrados."
                     : "Nenhum produto corresponde à pesquisa.");
             empty.setForeground(UIHelper.TEXT_MUTED);
-            empty.setBorder(new EmptyBorder(20, 8, 20, 8));
+            empty.setBorder(new EmptyBorder(Spacing.XL, Spacing.SM, Spacing.XL, Spacing.SM));
             owner.productGrid.add(empty);
         } else {
             for (ProductDTO p : owner.filteredProducts) {

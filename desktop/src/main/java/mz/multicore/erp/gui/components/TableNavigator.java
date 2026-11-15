@@ -230,7 +230,7 @@ public final class TableNavigator {
         NavigationBar(JScrollBar scrollBar) {
             super(new GridBagLayout());
             setOpaque(false);
-            setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
+            setBorder(BorderFactory.createEmptyBorder(0, Spacing.SM, 0, 0));
             top = navButton("fas-angle-double-up", "Ir para o início da lista (Home)",
                     () -> TableNavigator.top(scrollBar));
             pageUp = navButton("fas-angle-up", "Subir uma página (Page Up)",
@@ -262,7 +262,7 @@ public final class TableNavigator {
         Strip() {
             setOpaque(false);
             setLayout(new GridLayout(4, 1, 0, 3));
-            setBorder(BorderFactory.createEmptyBorder(6, 4, 6, 4));
+            setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         }
 
         @Override

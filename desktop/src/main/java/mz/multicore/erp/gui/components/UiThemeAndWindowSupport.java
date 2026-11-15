@@ -372,7 +372,7 @@ final class UiThemeAndWindowSupport {
             UIManager.put("ToolTip.font", Typography.BODY);
             UIManager.put("ToolTip.border", BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(UIHelper.BORDER, 1, true),
-                    BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+                    BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)));
             ToolTipManager.sharedInstance().setInitialDelay(600);
             ToolTipManager.sharedInstance().setDismissDelay(8000);
         } catch (Exception ignored) {}

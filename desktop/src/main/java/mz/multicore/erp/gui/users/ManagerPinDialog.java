@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.users;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -47,7 +48,7 @@ public class ManagerPinDialog {
 
         JPanel root = new JPanel(new BorderLayout(0, 12));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(16, 18, 16, 18));
+        root.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // Header
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));

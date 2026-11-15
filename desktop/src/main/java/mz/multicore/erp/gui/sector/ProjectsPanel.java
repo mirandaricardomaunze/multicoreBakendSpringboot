@@ -88,7 +88,7 @@ public class ProjectsPanel extends JPanel {
         state.setSelectedItem("Activa");
         TableFilter.install(projectTable, search, new TableFilter.ColumnFilter(state, 6));
         JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), state);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> openDialog(null));
@@ -101,7 +101,7 @@ public class ProjectsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Obras e Projectos", filters, refreshBtn, editBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(projectTable), BorderLayout.SOUTH);
@@ -137,7 +137,7 @@ public class ProjectsPanel extends JPanel {
         head.add(detailMeta);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(head, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(totals, BorderLayout.SOUTH);

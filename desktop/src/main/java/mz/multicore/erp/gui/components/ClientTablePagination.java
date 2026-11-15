@@ -61,7 +61,7 @@ public final class ClientTablePagination {
         component.setOpaque(false);
         component.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
-                new EmptyBorder(6, 8, 6, 8)));
+                new EmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)));
 
         // Esquerda: contagem de registos
         statusLeft.setForeground(UIHelper.TEXT_MUTED);

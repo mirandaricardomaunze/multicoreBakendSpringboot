@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.monitoring;
 
+import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.desktop.client.SystemMonitoringApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernMessageDialog;
@@ -31,7 +32,7 @@ public final class SystemMonitoringExporter {
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, sel);
             ToastManager.success(dialog, "Relatório de diagnóstico copiado para a área de transferência.");
         } catch (Exception ex) {
-            ToastManager.show(dialog, FeedbackType.ERROR, "Erro ao copiar: " + ex.getMessage());
+            UserErrors.toast(dialog, "copiar", ex);
         }
     }
 
@@ -50,7 +51,7 @@ public final class SystemMonitoringExporter {
                 Files.writeString(target.toPath(), lastDiagnosticsExport.reportFormattedText());
                 ToastManager.success(dialog, "Relatório exportado com sucesso para: " + target.getAbsolutePath());
             } catch (Exception ex) {
-                ToastManager.show(dialog, FeedbackType.ERROR, "Erro ao gravar ficheiro: " + ex.getMessage());
+                UserErrors.toast(dialog, "gravar ficheiro", ex);
             }
         }
     }
@@ -77,7 +78,7 @@ public final class SystemMonitoringExporter {
                                 res != null ? res.message() : "Falha ao enviar alerta de teste.");
                     }
                 } catch (Exception ex) {
-                    ToastManager.show(dialog, FeedbackType.ERROR, "Erro ao disparar teste: " + ex.getMessage());
+                    UserErrors.toast(dialog, "disparar teste", ex);
                 }
             }
         };

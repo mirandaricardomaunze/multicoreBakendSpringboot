@@ -31,7 +31,7 @@ public class AiAnalysisView extends JPanel {
         this.apiClient = Objects.requireNonNull(apiClient, "O cliente de inteligência é obrigatório.");
         setLayout(new BorderLayout(0, 12));
         setOpaque(false);
-        setBorder(new EmptyBorder(8, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         evidenceModel = new DefaultTableModel(new String[]{"Indicador", "Valor", "Período"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -52,7 +52,7 @@ public class AiAnalysisView extends JPanel {
     private JPanel buildQuestionCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 16, 12, 16));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         questionArea.setLineWrap(true);
         questionArea.setWrapStyleWord(true);
@@ -117,7 +117,7 @@ public class AiAnalysisView extends JPanel {
         // 1. Aba: Análise Executiva
         ModernPanel answerCard = new ModernPanel(16);
         answerCard.setLayout(new BorderLayout(0, 10));
-        answerCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        answerCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         answerArea.setEditable(false);
         answerArea.setLineWrap(true);
         answerArea.setWrapStyleWord(true);
@@ -149,7 +149,7 @@ public class AiAnalysisView extends JPanel {
 
         ModernPanel evidenceCard = new ModernPanel(16);
         evidenceCard.setLayout(new BorderLayout(0, 10));
-        evidenceCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        evidenceCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         JLabel evidenceHint = new JLabel("Indicadores e dados contabilísticos/operacionais que sustentam a análise.");
         evidenceHint.setForeground(UIHelper.TEXT_MUTED);
         ModernButton exportBtn = UIHelper.createExportButton(evidenceTable, "evidencias-analise-ia");

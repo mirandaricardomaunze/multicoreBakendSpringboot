@@ -101,7 +101,7 @@ public final class BillOrderDialog {
         JPanel selector = UIHelper.createDialogForm("Pesquisar (nº ou cliente):", search, "Encomenda a faturar:", combo);
         ModernPanel summary = new ModernPanel(16);
         summary.setLayout(new GridLayout(2, 4, 12, 4));
-        summary.setBorder(new EmptyBorder(14, 16, 14, 16));
+        summary.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         summary.add(label("Encomenda")); summary.add(label("Cliente")); summary.add(label("Data")); summary.add(label("Total"));
         summary.add(number); summary.add(client); summary.add(date); summary.add(total);
         JPanel content = new JPanel(new BorderLayout(0, 12));

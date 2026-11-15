@@ -38,7 +38,7 @@ public class ShortcutHelpDialog extends JDialog {
 
         JPanel root = new JPanel(new BorderLayout(0, 16));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        root.setBorder(BorderFactory.createEmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         // Header
         root.add(UIHelper.buildPremiumHeader(
@@ -111,7 +111,7 @@ public class ShortcutHelpDialog extends JDialog {
     private JPanel buildCategoryCard(String title, String iconCode, Color accent, List<ShortcutItem> shortcuts) {
         ModernPanel card = new ModernPanel(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
         card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // Card Header
         JPanel cardHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -132,7 +132,7 @@ public class ShortcutHelpDialog extends JDialog {
         for (ShortcutItem s : shortcuts) {
             JPanel row = new JPanel(new BorderLayout(8, 0));
             row.setOpaque(false);
-            row.setBorder(BorderFactory.createEmptyBorder(5, 2, 5, 2));
+            row.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XXS, Spacing.XS, Spacing.XXS));
 
             // Key pill
             JLabel keyLabel = new JLabel(s.key());
@@ -140,7 +140,7 @@ public class ShortcutHelpDialog extends JDialog {
             keyLabel.setForeground(UIHelper.TEXT_LIGHT);
             keyLabel.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(ThemeColors.outline(), 1),
-                    BorderFactory.createEmptyBorder(2, 6, 2, 6)
+                    BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS)
             ));
 
             // Description

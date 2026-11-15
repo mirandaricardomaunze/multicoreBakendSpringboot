@@ -76,7 +76,7 @@ final class IssuePickupDialog {
 
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(10, 10, 10, 10));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
         card.add(ResponsiveSupport.cardTop("Quantidades a entregar", null, clearBtn, allBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 

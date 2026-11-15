@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -134,7 +135,7 @@ final class PosWorkspaceBuilder {
         owner.statusLabel.setForeground(UIHelper.PENDING_YELLOW);
         owner.sessionBanner = PosLayout.createSessionBanner(owner.statusLabel, null);
         owner.sessionBanner.setBackground(UIHelper.ROW_ALT);
-        owner.sessionBanner.setBorder(new EmptyBorder(2, 10, 2, 10));
+        owner.sessionBanner.setBorder(new EmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM));
 
         JPanel sessionBar = new JPanel(new BorderLayout(0, 2));
         sessionBar.setOpaque(false);
@@ -155,7 +156,7 @@ final class PosWorkspaceBuilder {
     static JPanel buildTopSelectsBar(POSPanel owner, JPanel barcodeBox) {
         owner.topSelectsBar = new JPanel(new GridBagLayout());
         owner.topSelectsBar.setOpaque(false);
-        owner.topSelectsBar.setBorder(new EmptyBorder(4, 0, 4, 0));
+        owner.topSelectsBar.setBorder(new EmptyBorder(Spacing.XS, 0, Spacing.XS, 0));
         GridBagConstraints tg = new GridBagConstraints();
         tg.fill = GridBagConstraints.HORIZONTAL;
         tg.anchor = GridBagConstraints.NORTH;
@@ -241,7 +242,7 @@ final class PosWorkspaceBuilder {
 
         ModernPanel catalogCard = new ModernPanel(16);
         catalogCard.setLayout(new BorderLayout());
-        catalogCard.setBorder(new EmptyBorder(8, 8, 8, 8));
+        catalogCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
         catalogCard.add(owner.productGridScroll, BorderLayout.CENTER);
         catalogCard.add(owner.catalogController.buildPaginationBar(), BorderLayout.SOUTH);
         leftPanel.add(catalogCard, BorderLayout.CENTER);
@@ -285,7 +286,7 @@ final class PosWorkspaceBuilder {
 
         ModernPanel cartCard = new ModernPanel(16);
         cartCard.setLayout(new BorderLayout(0, PosLayout.CARD_VERTICAL_GAP));
-        cartCard.setBorder(new EmptyBorder(10, 12, 10, 12));
+        cartCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cartCols = {"Artigo", "Qtd", "Preço", "Desc.", "IVA", "Total"};
         owner.cartModel = new DefaultTableModel(cartCols, 0) {

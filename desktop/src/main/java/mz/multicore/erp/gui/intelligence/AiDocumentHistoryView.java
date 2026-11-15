@@ -38,7 +38,7 @@ public class AiDocumentHistoryView extends JPanel {
         this.documentRequestSupplier = documentRequestSupplier != null ? documentRequestSupplier : () -> null;
         setLayout(new BorderLayout(0, 14));
         setOpaque(false);
-        setBorder(new EmptyBorder(12, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.MD, 0, 0, 0));
 
         add(buildCard(), BorderLayout.CENTER);
         SwingUtilities.invokeLater(this::refresh);
@@ -47,7 +47,7 @@ public class AiDocumentHistoryView extends JPanel {
     private JPanel buildCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         UIHelper.styleTable(documentTable);
         documentTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);

@@ -49,7 +49,7 @@ public class SidebarSectionHeader extends JPanel {
         label.setFont(Typography.CAPTION_BOLD);
         label.setForeground(ThemeColors.controlSubtle());
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        label.setBorder(new EmptyBorder(0, 10, 3, 0));
+        label.setBorder(new EmptyBorder(0, Spacing.SM, Spacing.XXS, 0));
         add(label);
     }
 

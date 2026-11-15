@@ -84,7 +84,7 @@ public class SmartAlertsDialog extends JDialog {
     private void initComponents() {
         JPanel root = new JPanel(new BorderLayout(0, 14));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(18, 20, 18, 20));
+        root.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         // Topo
         JPanel header = new JPanel(new BorderLayout(0, 8));
@@ -155,7 +155,7 @@ public class SmartAlertsDialog extends JDialog {
             JLabel empty = new JLabel("Nenhum alerta para a categoria selecionada.");
             empty.setFont(Typography.EMPHASIS.deriveFont(Font.ITALIC));
             empty.setForeground(UIHelper.TEXT_MUTED);
-            empty.setBorder(new EmptyBorder(30, 10, 10, 10));
+            empty.setBorder(new EmptyBorder(Spacing.XXL, Spacing.SM, Spacing.SM, Spacing.SM));
             listContainer.add(empty);
         } else {
             for (SmartAlert alert : filtered) {
@@ -173,7 +173,7 @@ public class SmartAlertsDialog extends JDialog {
         card.setLayout(new BorderLayout(12, 0));
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 4, 0, 0, alert.urgency().getColor()),
-                BorderFactory.createEmptyBorder(10, 14, 10, 14)
+                BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG)
         ));
 
         // Lado Esquerdo / Centro: Textos
@@ -199,7 +199,7 @@ public class SmartAlertsDialog extends JDialog {
         JLabel titleLbl = new JLabel(alert.title());
         titleLbl.setFont(Typography.EMPHASIS_BOLD);
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
-        titleLbl.setBorder(new EmptyBorder(3, 0, 2, 0));
+        titleLbl.setBorder(new EmptyBorder(Spacing.XXS, 0, Spacing.XXS, 0));
 
         JLabel detailLbl = new JLabel(alert.detail());
         detailLbl.setFont(Typography.BODY);

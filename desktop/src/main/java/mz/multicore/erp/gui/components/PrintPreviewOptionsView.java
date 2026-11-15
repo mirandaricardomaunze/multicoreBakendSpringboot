@@ -49,7 +49,7 @@ public class PrintPreviewOptionsView {
 
     private void initUi() {
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(14, 16, 14, 16));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.setPreferredSize(new Dimension(OPTIONS_WIDTH, 10));
 
         OptionsColumn fields = new OptionsColumn();
@@ -186,7 +186,7 @@ public class PrintPreviewOptionsView {
         JPanel row = new JPanel(new java.awt.GridLayout(1, 2, 12, 0));
         row.setOpaque(false);
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        row.setBorder(new EmptyBorder(2, 0, 2, 0));
+        row.setBorder(new EmptyBorder(Spacing.XXS, 0, Spacing.XXS, 0));
         FormField leftField = new FormField(leftLabel, left, false, null);
         row.add(leftField);
         row.add(new FormField(rightLabel, right, false, null));
@@ -199,7 +199,7 @@ public class PrintPreviewOptionsView {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        row.setBorder(new EmptyBorder(2, 0, 2, 0));
+        row.setBorder(new EmptyBorder(Spacing.XXS, 0, Spacing.XXS, 0));
         row.add(formField, BorderLayout.CENTER);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, formField.getPreferredSize().height + 6));
         return row;

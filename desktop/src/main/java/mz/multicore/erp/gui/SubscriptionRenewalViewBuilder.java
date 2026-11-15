@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -38,7 +39,7 @@ final class SubscriptionRenewalViewBuilder {
     static ModernPanel buildTotalCard(JLabel discountBadge, JLabel totalLabel) {
         ModernPanel totalCard = new ModernPanel(12);
         totalCard.setBackground(UIHelper.ROW_ALT);
-        totalCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+        totalCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         totalCard.setLayout(new BorderLayout(8, 2));
         totalCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -81,7 +82,7 @@ final class SubscriptionRenewalViewBuilder {
     static ModernPanel buildMobileCard(JTextField phoneField) {
         ModernPanel mobileCard = new ModernPanel(10);
         mobileCard.setBackground(UIHelper.ROW_ALT);
-        mobileCard.setBorder(new EmptyBorder(12, 14, 12, 14));
+        mobileCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         mobileCard.setLayout(new BorderLayout(8, 6));
         mobileCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -101,7 +102,7 @@ final class SubscriptionRenewalViewBuilder {
     static ModernPanel buildBankCard(JTextField refField, JTextArea notesArea) {
         ModernPanel bankCard = new ModernPanel(10);
         bankCard.setBackground(UIHelper.ROW_ALT);
-        bankCard.setBorder(new EmptyBorder(12, 14, 12, 14));
+        bankCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         bankCard.setLayout(new BoxLayout(bankCard, BoxLayout.Y_AXIS));
         bankCard.setAlignmentX(Component.LEFT_ALIGNMENT);
         bankCard.setVisible(false);

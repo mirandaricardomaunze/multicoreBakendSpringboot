@@ -73,7 +73,7 @@ public class CollapsibleSidebar extends JPanel {
 
         body.setOpaque(false);
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setBorder(new EmptyBorder(4, 6, 10, 6));
+        body.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.SM, Spacing.XS));
 
         favoritesContainer.setOpaque(false);
         favoritesContainer.setLayout(new BoxLayout(favoritesContainer, BoxLayout.Y_AXIS));
@@ -215,7 +215,7 @@ public class CollapsibleSidebar extends JPanel {
         footerPanel.removeAll();
         if (collapsed) {
             headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
-            headerPanel.setBorder(new EmptyBorder(12, 6, 10, 6));
+            headerPanel.setBorder(new EmptyBorder(Spacing.MD, Spacing.XS, Spacing.SM, Spacing.XS));
             logoBadge.setAlignmentX(Component.CENTER_ALIGNMENT);
             toggleButton.setAlignmentX(Component.CENTER_ALIGNMENT);
             headerPanel.add(logoBadge);
@@ -223,18 +223,18 @@ public class CollapsibleSidebar extends JPanel {
             headerPanel.add(toggleButton);
 
             footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
-            footerPanel.setBorder(new EmptyBorder(8, 6, 12, 6));
+            footerPanel.setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, Spacing.MD, Spacing.XS));
             userProfileCard.setAlignmentX(Component.CENTER_ALIGNMENT);
             footerPanel.add(userProfileCard);
         } else {
             headerPanel.setLayout(new BorderLayout(8, 0));
-            headerPanel.setBorder(new EmptyBorder(14, 12, 12, 12));
+            headerPanel.setBorder(new EmptyBorder(Spacing.LG, Spacing.MD, Spacing.MD, Spacing.MD));
             headerPanel.add(logoBadge, BorderLayout.WEST);
             headerPanel.add(brandStack, BorderLayout.CENTER);
             headerPanel.add(toggleButton, BorderLayout.EAST);
 
             footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
-            footerPanel.setBorder(new EmptyBorder(8, 12, 12, 12));
+            footerPanel.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.MD, Spacing.MD));
             userProfileCard.setAlignmentX(Component.LEFT_ALIGNMENT);
             footerPanel.add(userProfileCard);
         }
@@ -246,7 +246,7 @@ public class CollapsibleSidebar extends JPanel {
         JLabel lbl = new JLabel("MULTICORE v1.0.0");
         lbl.setFont(Typography.CAPTION);
         lbl.setForeground(subText());
-        lbl.setBorder(new EmptyBorder(0, 4, 0, 0));
+        lbl.setBorder(new EmptyBorder(0, Spacing.XS, 0, 0));
         lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         lbl.setToolTipText("MULTICORE ERP • Clique para ver detalhes e licença do sistema");
         lbl.addMouseListener(new java.awt.event.MouseAdapter() {

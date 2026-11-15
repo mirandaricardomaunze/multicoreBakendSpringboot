@@ -54,7 +54,7 @@ public class PickupsPanel extends JPanel {
         this.api = api;
         setLayout(new BorderLayout(0, 10));
         setOpaque(false);
-        setBorder(new EmptyBorder(15, 5, 5, 5));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
         add(feedback, BorderLayout.NORTH);
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildAccountsCard(), buildDetail());
         split.setOpaque(false);
@@ -94,7 +94,7 @@ public class PickupsPanel extends JPanel {
         yardBtn.setPreferredSize(new Dimension(38, UIHelper.FORM_CONTROL_HEIGHT));
         yardBtn.addActionListener(e -> PendingYardStockDialog.show(this, api, feedback));
         JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), state, yardBtn);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         registerBtn.setIcon(UIHelper.icon("fas-plus", 14));
         registerBtn.setToolTipText("O cliente pagou e vai levantar aos poucos");
@@ -106,7 +106,7 @@ public class PickupsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Material por Levantar", filters, refreshBtn, registerBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(accountTable), BorderLayout.SOUTH);
@@ -146,7 +146,7 @@ public class PickupsPanel extends JPanel {
         panel.setOpaque(false);
         ModernPanel header = new ModernPanel(16);
         header.setLayout(new BorderLayout(12, 0));
-        header.setBorder(new EmptyBorder(14, 16, 14, 16));
+        header.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         header.add(new JLabel(UIHelper.icon("fas-file-invoice", 24, UIHelper.MODULE_COMERCIAL)), BorderLayout.WEST);
         JPanel text = new JPanel(new GridLayout(2, 1, 0, 2));
         text.setOpaque(false);
@@ -179,7 +179,7 @@ public class PickupsPanel extends JPanel {
         TableEmptyState.install(scroll);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(14, 14, 14, 14));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("O que o cliente ainda tem no estaleiro", null), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         return card;
@@ -200,7 +200,7 @@ public class PickupsPanel extends JPanel {
         cancelBtn.addActionListener(e -> cancelSelected());
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(14, 14, 14, 14));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Talões emitidos", null, cancelBtn, printBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         return card;

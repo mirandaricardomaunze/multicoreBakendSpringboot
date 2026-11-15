@@ -125,7 +125,7 @@ final class UiAsyncTaskSupport {
         JPanel panel = new JPanel(new BorderLayout(0, 12));
         panel.setBackground(UIHelper.BG_CARD);
         panel.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(UIHelper.BORDER, 1, true), new EmptyBorder(18, 26, 18, 26)));
+                new LineBorder(UIHelper.BORDER, 1, true), new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL)));
         JLabel label = new JLabel(message);
         label.setForeground(UIHelper.TEXT_LIGHT);
         label.setFont(Typography.EMPHASIS_BOLD);

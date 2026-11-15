@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.desktop.client.PlatformApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -32,13 +33,13 @@ public class PlatformClientVersionsView extends JPanel {
 
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         ModernButton refresh = UIHelper.createRefreshButton(() -> loadClientVersions());
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"Empresa", "Versão", "Último acesso", "Utilizador", "Visto pela 1.ª vez"};
         versionsModel = new DefaultTableModel(cols, 0) {
@@ -56,14 +57,14 @@ public class PlatformClientVersionsView extends JPanel {
         JTextField search = TableFilter.searchField("Empresa, versão ou utilizador…");
         TableFilter.install(versionsTable, search);
         JPanel bar = TableFilter.bar(search);
-        bar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        bar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         card.add(UIHelper.tableCardTop("Versões dos Clientes — quem está em quê", bar, refresh), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         versionsSummary = new JLabel(" ");
         versionsSummary.setForeground(UIHelper.TEXT_LIGHT);
-        versionsSummary.setBorder(new EmptyBorder(10, 2, 0, 2));
+        versionsSummary.setBorder(new EmptyBorder(Spacing.SM, Spacing.XXS, 0, Spacing.XXS));
         card.add(versionsSummary, BorderLayout.SOUTH);
 
         add(card, BorderLayout.CENTER);

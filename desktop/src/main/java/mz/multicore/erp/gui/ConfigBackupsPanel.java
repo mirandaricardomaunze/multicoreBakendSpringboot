@@ -25,7 +25,7 @@ final class ConfigBackupsPanel {
     public JPanel buildPanel() {
         JPanel panel = new JPanel(new GridLayout(1, 2, 20, 0));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JPanel leftPanel = new JPanel(new BorderLayout(0, 15));
         leftPanel.setOpaque(false);
@@ -33,7 +33,7 @@ final class ConfigBackupsPanel {
 
         ModernPanel consoleCard = new ModernPanel(16);
         consoleCard.setLayout(new BorderLayout(0, 15));
-        consoleCard.setBorder(new EmptyBorder(20, 20, 20, 20));
+        consoleCard.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JLabel desc = new JLabel("<html><body>O <b>backup lógico (.json)</b> é um snapshot de verificação por empresa (auditoria). Para recuperação use o <b>backup físico (BD)</b>, restaurável via pg_dump/pg_restore. O <b>backup automático</b> corre diariamente e apaga cópias antigas conforme retenção.</body></html>");
         desc.setFont(Typography.EMPHASIS);
@@ -41,7 +41,7 @@ final class ConfigBackupsPanel {
 
         backupAutoStatus = new JLabel(" ");
         backupAutoStatus.setFont(Typography.BODY_BOLD);
-        backupAutoStatus.setBorder(new EmptyBorder(8, 0, 0, 0));
+        backupAutoStatus.setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         JPanel northInfo = new JPanel(new BorderLayout(0, 4));
         northInfo.setOpaque(false);
@@ -72,7 +72,7 @@ final class ConfigBackupsPanel {
         rightPanel.setOpaque(false);
         ModernPanel archiveCard = new ModernPanel(16);
         archiveCard.setLayout(new BorderLayout(0, 10));
-        archiveCard.setBorder(new EmptyBorder(20, 20, 20, 20));
+        archiveCard.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         backupFilesModel = new DefaultTableModel(new String[]{"Nome do Ficheiro", "Tamanho (KB)"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }

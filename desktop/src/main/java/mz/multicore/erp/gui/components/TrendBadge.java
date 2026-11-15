@@ -16,7 +16,7 @@ public class TrendBadge extends JPanel {
 
     public TrendBadge(BigDecimal percent, String comparisonLabel) {
         setOpaque(false);
-        setBorder(new EmptyBorder(1, 6, 1, 6));
+        setBorder(new EmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS));
         setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 
         label = new JLabel();

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -23,7 +24,7 @@ public final class ForensicAnomalyDetailsDialog {
 
         JPanel p = new JPanel(new BorderLayout(0, 14));
         p.setBackground(UIHelper.BG_CARD);
-        p.setBorder(new EmptyBorder(16, 20, 16, 20));
+        p.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
         p.add(UIHelper.createHeading("Ocorrência: " + (a.documentOrReference() != null ? a.documentOrReference() : "—")), BorderLayout.NORTH);
 
         JTextArea area = new JTextArea();
@@ -33,7 +34,7 @@ public final class ForensicAnomalyDetailsDialog {
         area.setFont(Typography.BODY);
         area.setBackground(UIHelper.BG_DARK);
         area.setForeground(UIHelper.TEXT_LIGHT);
-        area.setBorder(new EmptyBorder(12, 12, 12, 12));
+        area.setBorder(new EmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
 
         String time = a.timestamp() != null ? a.timestamp().format(UIHelper.DATETIME_FMT) : "—";
         String impact = UIHelper.formatMzn(a.financialImpact() != null ? a.financialImpact() : BigDecimal.ZERO);

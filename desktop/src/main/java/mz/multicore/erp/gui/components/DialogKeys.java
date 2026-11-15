@@ -60,6 +60,7 @@ public final class DialogKeys {
                 root.setDefaultButton(button);
             }
         }
+        KeyboardAccess.apply(dialog);
     }
 
     private static void collectMains(Container parent, List<AbstractButton> out) {

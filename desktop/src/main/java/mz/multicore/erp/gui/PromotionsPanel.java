@@ -39,7 +39,7 @@ public class PromotionsPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 12));
         setOpaque(false);
-        setBorder(new EmptyBorder(15, 5, 5, 5));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Promoção");
         newBtn.setIcon(UIHelper.icon("fas-tags", 14));
@@ -62,7 +62,7 @@ public class PromotionsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
 
@@ -96,7 +96,7 @@ public class PromotionsPanel extends JPanel {
                 TableFilter.label("Estado:"), promoEstado,
                 peekToggleBtn
         );
-        promoFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        promoFilters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         UIHelper.ensureHeadersFit(table);
         TableQuickPeekController peekController = TableQuickPeekController.install(table, card,

@@ -70,7 +70,7 @@ public class CollectionRadarDialog {
         // 2. Card com tabela e filtros
         ModernPanel tableCard = new ModernPanel(16);
         tableCard.setLayout(new BorderLayout(0, 8));
-        tableCard.setBorder(new EmptyBorder(10, 12, 10, 12));
+        tableCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cols = {"ID", "Nº Fatura", "Cliente", "NUIT", "Emissão", "Vencimento", "Saldo em Dívida", "Dias", "Horizonte"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
@@ -158,7 +158,7 @@ public class CollectionRadarDialog {
                             item.bucket() != null ? item.bucket().label() : "-"
                     });
                 }
-            }, err -> ToastManager.show(tableCard, FeedbackType.ERROR, "Erro ao carregar radar: " + err.getMessage()));
+            }, err -> UserErrors.toast(tableCard, "carregar radar", err));
         };
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadData.run());
@@ -215,7 +215,7 @@ public class CollectionRadarDialog {
         messageArea.setForeground(UIHelper.TEXT_LIGHT);
         messageArea.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                new EmptyBorder(8, 8, 8, 8)
+                new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
         ));
 
         JScrollPane msgScroll = new JScrollPane(messageArea);
@@ -231,7 +231,7 @@ public class CollectionRadarDialog {
                         messageArea.setText(dto.message() != null ? dto.message() : "");
                         messageArea.setCaretPosition(0);
                     },
-                    err -> ToastManager.show(parent, FeedbackType.ERROR, "Erro ao carregar modelo: " + err.getMessage())
+                    err -> UserErrors.toast(parent, "carregar modelo", err)
             );
         };
 

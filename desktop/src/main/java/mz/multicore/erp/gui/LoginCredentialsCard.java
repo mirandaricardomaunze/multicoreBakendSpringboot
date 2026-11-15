@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -43,7 +44,7 @@ class LoginCredentialsCard {
         card = new ModernPanel(16, Color.WHITE);
         card.putClientProperty("card.border", UIHelper.withAlpha(UIHelper.BORDER, 160));
         card.setLayout(new GridBagLayout());
-        card.setBorder(new EmptyBorder(24, 36, 18, 36));
+        card.setBorder(new EmptyBorder(Spacing.XL, Spacing.XXL, Spacing.LG, Spacing.XXL));
 
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0; c.fill = GridBagConstraints.HORIZONTAL; c.weightx = 1.0; c.gridy = 0;
@@ -255,7 +256,7 @@ class LoginCredentialsCard {
         p.setOpaque(false); p.setBackground(Color.WHITE);
         p.setBorder(UIHelper.fieldBorder(UIHelper.BORDER, 1));
         JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 15, UIHelper.TEXT_MUTED));
-        iconLabel.setBorder(new EmptyBorder(0, 10, 0, 0));
+        iconLabel.setBorder(new EmptyBorder(0, Spacing.SM, 0, 0));
         field.putClientProperty("noFocusBorder", Boolean.TRUE);
         field.setBorder(new EmptyBorder(8, 4, 8, trailing != null ? 4 : 10));
         field.setOpaque(false);

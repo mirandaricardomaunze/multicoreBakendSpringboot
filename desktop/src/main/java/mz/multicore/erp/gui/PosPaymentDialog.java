@@ -86,7 +86,7 @@ final class PosPaymentDialog {
         // Visor de Troco / Saldo em Destaque Executivo
         ModernPanel changeDisplay = new ModernPanel(12);
         changeDisplay.setBackground(UIHelper.ROW_ALT);
-        changeDisplay.setBorder(new EmptyBorder(10, 16, 10, 16));
+        changeDisplay.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         changeDisplay.setLayout(new BorderLayout(8, 2));
 
         JLabel changeTitleLabel = new JLabel("TROCO A DEVOLVER");
@@ -157,7 +157,7 @@ final class PosPaymentDialog {
         JLabel quickLabel = new JLabel("Cédulas rápidas (Meticais):");
         quickLabel.setForeground(UIHelper.TEXT_MUTED);
         quickLabel.setFont(Typography.CAPTION_BOLD);
-        quickLabel.setBorder(new EmptyBorder(6, 4, 2, 4));
+        quickLabel.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XXS, Spacing.XS));
 
         JPanel quickCashSection = new JPanel();
         quickCashSection.setLayout(new BoxLayout(quickCashSection, BoxLayout.Y_AXIS));

@@ -38,7 +38,7 @@ public class RecentActivityWidget extends ModernPanel {
     public RecentActivityWidget() {
         super(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
         setLayout(new BorderLayout(0, 10));
-        setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // Header
         JPanel header = new JPanel(new BorderLayout());
@@ -85,7 +85,7 @@ public class RecentActivityWidget extends ModernPanel {
             JLabel empty = new JLabel("Sem atividade recente registada.");
             empty.setFont(Typography.BODY);
             empty.setForeground(UIHelper.TEXT_MUTED);
-            empty.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
+            empty.setBorder(BorderFactory.createEmptyBorder(Spacing.XL, Spacing.SM, Spacing.XL, Spacing.SM));
             listContainer.add(empty);
         } else {
             for (int i = 0; i < entries.size(); i++) {
@@ -103,7 +103,7 @@ public class RecentActivityWidget extends ModernPanel {
     private JPanel createTimelineRow(ActivityEntry item, boolean isLast) {
         JPanel row = new JPanel(new BorderLayout(10, 0));
         row.setOpaque(false);
-        row.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+        row.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS));
 
         // Left Icon Badge
         Color color = item.accentColor() != null ? item.accentColor() : UIHelper.ACCENT_BLUE;

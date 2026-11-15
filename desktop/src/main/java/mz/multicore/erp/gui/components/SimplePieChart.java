@@ -57,7 +57,7 @@ public class SimplePieChart extends JPanel {
         this.title = title;
         this.donut = donut;
         setOpaque(false);
-        setBorder(new EmptyBorder(14, 16, 14, 16));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         setPreferredSize(new Dimension(340, 220));
         setMinimumSize(new Dimension(280, 180));
 

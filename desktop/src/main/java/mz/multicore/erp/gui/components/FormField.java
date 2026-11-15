@@ -42,7 +42,7 @@ public final class FormField extends JPanel {
         errorLabel.setVisible(false);
         messages.add(errorLabel, BorderLayout.SOUTH);
         add(messages, BorderLayout.SOUTH);
-        setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, 0, Spacing.XXS, 0));
     }
 
     public boolean validateRequired() {

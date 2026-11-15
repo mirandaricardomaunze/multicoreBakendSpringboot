@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.HROverviewMetricsCoordinator.OverviewLabels;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.SimpleBarChart;
@@ -25,7 +26,7 @@ final class HROverviewTabPanel {
     JPanel buildPanel() {
         JPanel content = new JPanel(new BorderLayout(0, 16));
         content.setOpaque(false);
-        content.setBorder(new EmptyBorder(15, 5, 5, 5));
+        content.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         JPanel grid = new JPanel(new GridLayout(0, 3, 12, 12));
         grid.setOpaque(false);

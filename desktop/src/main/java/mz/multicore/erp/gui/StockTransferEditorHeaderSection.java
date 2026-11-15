@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
 
@@ -18,7 +19,7 @@ final class StockTransferEditorHeaderSection {
                             JTextField vehicleField, JTextField notesField, JCheckBox requiresReceiptCheck) {
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new GridBagLayout());
-        formCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+        formCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
 

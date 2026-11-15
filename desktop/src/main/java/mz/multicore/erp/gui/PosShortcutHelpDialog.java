@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -20,7 +21,7 @@ public final class PosShortcutHelpDialog {
         JPanel root = new JPanel();
         root.setOpaque(false);
         root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
-        root.setBorder(new EmptyBorder(10, 10, 10, 10));
+        root.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         JPanel cardsPanel = new JPanel(new GridLayout(1, 3, 12, 12));
         cardsPanel.setOpaque(false);
@@ -64,7 +65,7 @@ public final class PosShortcutHelpDialog {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBackground(UIHelper.BG_CARD);
-        card.setBorder(new EmptyBorder(12, 14, 14, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         header.setOpaque(false);
@@ -89,7 +90,7 @@ public final class PosShortcutHelpDialog {
             badge.setPreferredSize(new Dimension(54, 22));
             badge.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(UIHelper.BORDER, 1),
-                    BorderFactory.createEmptyBorder(2, 4, 2, 4)
+                    BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS)
             ));
 
             JLabel desc = new JLabel(row[1]);

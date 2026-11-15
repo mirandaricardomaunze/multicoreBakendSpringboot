@@ -47,13 +47,13 @@ public class DocumentEditorHost extends JPanel {
         this.onBack = onBack;
         setLayout(new BorderLayout(0, 12));
         setOpaque(false);
-        setBorder(new EmptyBorder(4, 4, 4, 4));
+        setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
 
         add(buildToolbar(title, onSave), BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(16, 16, 16, 16));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(verticalScroll(content), BorderLayout.CENTER);
         add(card, BorderLayout.CENTER);
 

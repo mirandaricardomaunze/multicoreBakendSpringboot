@@ -46,7 +46,7 @@ final class PendingYardStockDialog {
 
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(10, 10, 10, 10));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
         JLabel hint = new JLabel("<html>Material já faturado (e já fora do stock do sistema) que continua fisicamente no "
                 + "estaleiro. Some estas quantidades ao stock do sistema quando conferir uma contagem física.</html>");
         hint.setForeground(UIHelper.TEXT_MUTED);

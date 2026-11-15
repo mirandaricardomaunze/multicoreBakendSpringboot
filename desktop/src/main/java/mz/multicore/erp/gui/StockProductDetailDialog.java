@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -37,7 +38,7 @@ public class StockProductDetailDialog {
 
         JPanel mainPanel = new JPanel(new BorderLayout(0, 12));
         mainPanel.setBackground(UIHelper.BG_DARK);
-        mainPanel.setBorder(new EmptyBorder(14, 20, 14, 20));
+        mainPanel.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         // 1. Cabeçalho Executivo
         mainPanel.add(buildHeader(), BorderLayout.NORTH);
@@ -102,7 +103,7 @@ public class StockProductDetailDialog {
     private JPanel buildFooter() {
         JPanel footer = new JPanel(new BorderLayout());
         footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(10, 0, 0, 0));
+        footer.setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         JPanel leftActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftActions.setOpaque(false);
@@ -142,7 +143,7 @@ public class StockProductDetailDialog {
         l.setForeground(color);
         l.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(color, 1, true),
-                new EmptyBorder(2, 8, 2, 8)
+                new EmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM)
         ));
         return l;
     }

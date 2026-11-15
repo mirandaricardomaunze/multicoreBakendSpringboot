@@ -29,7 +29,7 @@ public class BarcodeScannerProductDetailsCard {
 
     public BarcodeScannerProductDetailsCard(CollectorMode mode, ActionListener actionListener) {
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JLabel cardTitle = new JLabel("Artigo Identificado");
         cardTitle.setFont(Typography.EMPHASIS_BOLD);
@@ -60,7 +60,7 @@ public class BarcodeScannerProductDetailsCard {
 
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         actionRow.setOpaque(false);
-        actionRow.setBorder(new EmptyBorder(8, 0, 0, 0));
+        actionRow.setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         spinQuantity.setPreferredSize(new Dimension(80, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleSpinner(spinQuantity);

@@ -28,7 +28,7 @@ public class StockWasteRadarView extends JPanel {
         super(new BorderLayout(0, 0));
         this.onWasteFromBatch = onWasteFromBatch;
         setOpaque(false);
-        setBorder(new EmptyBorder(2, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.XXS, 0, 0, 0));
 
         urgencyFilterCombo = new JComboBox<>(new String[]{"Todas as Urgências", "Vencidos", "Crítico (≤ 3 dias)", "Alto (≤ 7 dias)", "Médio (≤ 15 dias)", "Atenção (≤ 30 dias)"});
         UIHelper.styleComboBox(urgencyFilterCombo);
@@ -54,7 +54,7 @@ public class StockWasteRadarView extends JPanel {
         peekRadarBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
         JPanel radarFilters = TableFilter.bar(radarSearchField, urgencyFilterCombo, peekRadarBtn);
-        radarFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
+        radarFilters.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
 
         String[] cols = {"Lote", "Produto", "Categoria", "Armazém", "Qtd Disponível", "Custo Unit.", "Perda Estimada", "Data Validade", "Dias Restantes", "Urgência"};
         radarTableModel = new DefaultTableModel(cols, 0) {
@@ -93,7 +93,7 @@ public class StockWasteRadarView extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         card.add(UIHelper.tableCardTop("Radar de Validades & Prevenção", radarFilters, reloadRadarBtn, wasteRadarBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(radarTable), BorderLayout.SOUTH);

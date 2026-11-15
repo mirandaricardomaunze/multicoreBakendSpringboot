@@ -124,7 +124,7 @@ public final class RecordDetailsDialog {
     public static JComponent buildPropertySheet(List<PropertyItem> items) {
         JPanel root = new JPanel(new BorderLayout(0, 8));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(10, 12, 10, 12));
+        root.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cols = {"Propriedade", "Valor Registado"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
@@ -176,7 +176,7 @@ public final class RecordDetailsDialog {
         JLabel countLbl = new JLabel(items.size() + " atributos");
         countLbl.setFont(Typography.CAPTION);
         countLbl.setForeground(UIHelper.TEXT_MUTED);
-        countLbl.setBorder(new EmptyBorder(0, 8, 0, 0));
+        countLbl.setBorder(new EmptyBorder(0, Spacing.SM, 0, 0));
         topBar.add(countLbl, BorderLayout.EAST);
 
         root.add(topBar, BorderLayout.NORTH);

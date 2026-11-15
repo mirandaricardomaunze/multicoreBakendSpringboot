@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.AuthApiClient;
 import mz.multicore.erp.desktop.session.DesktopSession;
@@ -98,7 +99,7 @@ public class LoginDialog extends JFrame {
     private JPanel buildFooter() {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER));
         footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(8, 20, 16, 20));
+        footer.setBorder(new EmptyBorder(Spacing.SM, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JLabel info = new JLabel("Multicore ERP v1.0.0 • Sistema Integrado de Gestão Empresarial • Moçambique");
         info.setFont(Typography.CAPTION);
@@ -115,7 +116,7 @@ public class LoginDialog extends JFrame {
     private JPanel buildContent() {
         JPanel wrapper = new JPanel(new GridBagLayout());
         wrapper.setOpaque(false);
-        wrapper.setBorder(new EmptyBorder(20, 24, 20, 24));
+        wrapper.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
         GridBagConstraints g = new GridBagConstraints();
         g.gridx = 0; g.gridy = 0; g.anchor = GridBagConstraints.CENTER;
         wrapper.add(credentialsCard.getCard(), g);

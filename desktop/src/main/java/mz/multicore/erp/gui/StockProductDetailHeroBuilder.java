@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -31,7 +32,7 @@ public final class StockProductDetailHeroBuilder {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 4));
         card.setPreferredSize(new Dimension(96, KpiCard.STANDARD_CARD_HEIGHT));
-        card.setBorder(new EmptyBorder(6, 6, 6, 6));
+        card.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
 
         JLabel imgLabel = new JLabel("", SwingConstants.CENTER);
         imgLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -77,7 +78,7 @@ public final class StockProductDetailHeroBuilder {
         JDialog viewDlg = new JDialog(parentDialog, product.name() + " — Fotografia", Dialog.ModalityType.APPLICATION_MODAL);
         viewDlg.getContentPane().setBackground(UIHelper.BG_DARK);
         JLabel fullLabel = new JLabel(fullIcon);
-        fullLabel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        fullLabel.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
         viewDlg.add(fullLabel);
         viewDlg.pack();
         viewDlg.setLocationRelativeTo(parentDialog);

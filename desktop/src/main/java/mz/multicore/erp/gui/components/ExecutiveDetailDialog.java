@@ -81,7 +81,7 @@ public class ExecutiveDetailDialog {
 
         JPanel root = new JPanel(new BorderLayout(0, 14));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(18, 20, 16, 20));
+        root.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         // 1. Top Section: Header + KPIs
         JPanel topContainer = new JPanel(new BorderLayout(0, 14));
@@ -136,7 +136,7 @@ public class ExecutiveDetailDialog {
         statusBadgeLabel.setFont(Typography.BODY_BOLD);
         statusBadgeLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1),
-                new EmptyBorder(6, 16, 6, 16)
+                new EmptyBorder(Spacing.XS, Spacing.LG, Spacing.XS, Spacing.LG)
         ));
 
         header.add(left, BorderLayout.WEST);
@@ -222,7 +222,7 @@ public class ExecutiveDetailDialog {
     public ExecutiveDetailDialog addKpi(String label, String value, String subtext, Color accentColor, String iconName) {
         ModernPanel card = new ModernPanel(12);
         card.setLayout(new BorderLayout(8, 4));
-        card.setBorder(new EmptyBorder(10, 14, 10, 14));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         card.setPreferredSize(new Dimension(190, 68));
 
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));

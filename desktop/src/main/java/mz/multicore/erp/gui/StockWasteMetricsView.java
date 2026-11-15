@@ -32,7 +32,7 @@ public class StockWasteMetricsView extends JPanel {
         this.wasteApiClient = wasteApiClient;
         this.onSummaryLoaded = onSummaryLoaded;
         setOpaque(false);
-        setBorder(new EmptyBorder(10, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         LocalDate now = LocalDate.now();
         dateStartField = new JTextField(now.minusDays(30).format(UIHelper.DATE_FMT));
@@ -53,7 +53,7 @@ public class StockWasteMetricsView extends JPanel {
 
         ModernPanel filterCard = new ModernPanel(16);
         filterCard.setLayout(new BorderLayout());
-        filterCard.setBorder(new EmptyBorder(10, 14, 10, 14));
+        filterCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
 
         JPanel filterToolbar = UIHelper.tableCardTop("Métricas & Relatório Executivo",
                 TableFilter.bar(TableFilter.label("Data Início:", "fas-calendar-alt"), dateStartField,
@@ -67,7 +67,7 @@ public class StockWasteMetricsView extends JPanel {
 
         ModernPanel reasonCard = new ModernPanel(16);
         reasonCard.setLayout(new BorderLayout(0, 8));
-        reasonCard.setBorder(new EmptyBorder(12, 14, 12, 14));
+        reasonCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         reasonCard.add(UIHelper.createSubheading("Perdas por Motivo"), BorderLayout.NORTH);
         reasonMetricsModel = new DefaultTableModel(new String[]{"Motivo de Quebra", "Custo Total (MT)"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -81,7 +81,7 @@ public class StockWasteMetricsView extends JPanel {
 
         ModernPanel catCard = new ModernPanel(16);
         catCard.setLayout(new BorderLayout(0, 8));
-        catCard.setBorder(new EmptyBorder(12, 14, 12, 14));
+        catCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         catCard.add(UIHelper.createSubheading("Perdas por Categoria de Produto"), BorderLayout.NORTH);
         categoryMetricsModel = new DefaultTableModel(new String[]{"Categoria", "Custo Total (MT)"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -114,7 +114,7 @@ public class StockWasteMetricsView extends JPanel {
                     applySummary(s);
                     if (onSummaryLoaded != null) onSummaryLoaded.accept(s);
                 } catch (Exception ex) {
-                    ToastManager.show(StockWasteMetricsView.this, FeedbackType.ERROR, "Erro ao carregar métricas: " + ex.getMessage());
+                    UserErrors.toast(StockWasteMetricsView.this, "carregar métricas", ex);
                 }
             }
         }.execute();
@@ -144,7 +144,7 @@ public class StockWasteMetricsView extends JPanel {
         UIHelper.runWithProgress(this, "A gerar relatório oficial de quebras em PDF...", () -> {
             return wasteApiClient.renderReportPdf(companyId, start, end);
         }, pdf -> PrintPreviewDialog.show(this, pdf, "relatorio-quebras-perdas"),
-        err -> ToastManager.show(this, FeedbackType.ERROR, "Erro ao gerar PDF: " + err.getMessage()));
+        err -> UserErrors.toast(this, "gerar PDF", err));
     }
 
     private LocalDate parseDate(String text, LocalDate fallback) {

@@ -39,7 +39,7 @@ final class FiscalWithholdingsTab {
     public JPanel buildTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
         ModernButton newBtn = UIHelper.createSuccessButton("Registar Retenção");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         ModernButton deliverBtn = UIHelper.createSuccessButton("Marcar como Entregue");
@@ -52,7 +52,7 @@ final class FiscalWithholdingsTab {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         withholdingsModel = new DefaultTableModel(
                 new String[]{"Data", "Beneficiário", "NUIT", "Descrição", "Categoria",
@@ -95,7 +95,7 @@ final class FiscalWithholdingsTab {
         JPanel whBar = TableFilter.bar(whSearch,
                 TableFilter.label("Estado:"), whEstado,
                 TableFilter.label("Data:", "fas-calendar-alt"), whPeriodo);
-        whBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        whBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         ModernButton whRefreshBtn = UIHelper.createRefreshButton(this::loadWithholdings);
         card.add(UIHelper.tableCardTop("Retenções na Fonte", whBar,
                 whRefreshBtn, deleteBtn, deliverBtn, newBtn), BorderLayout.NORTH);

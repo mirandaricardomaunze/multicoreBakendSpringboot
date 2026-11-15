@@ -79,7 +79,7 @@ public class WeighbridgePanel extends JPanel {
         liveStatus.setForeground(UIHelper.TEXT_MUTED);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(14, 2));
-        card.setBorder(new EmptyBorder(12, 16, 12, 16));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         card.add(liveWeight, BorderLayout.WEST);
         card.add(liveStatus, BorderLayout.CENTER);
         return card;
@@ -102,7 +102,7 @@ public class WeighbridgePanel extends JPanel {
         state.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(table, search, new TableFilter.ColumnFilter(state, 1));
         JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), state);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         ModernButton firstBtn = UIHelper.createSuccessButton("1.ª Pesagem");
         firstBtn.setIcon(UIHelper.icon("fas-sign-in-alt", 14));
         firstBtn.setToolTipText("Camião à entrada");
@@ -114,7 +114,7 @@ public class WeighbridgePanel extends JPanel {
         printBtn.addActionListener(e -> print(selected()));
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Talões de Pesagem (7 dias)", filters, UIHelper.createRefreshButton(this::reload),
                 printBtn, secondBtn, firstBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);

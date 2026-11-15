@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -26,7 +27,7 @@ final class CommercialOrderHeaderForm {
     static ModernPanel createHeaderCard(ComercialPanel owner) {
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new GridBagLayout());
-        formCard.setBorder(new EmptyBorder(12, 16, 10, 16));
+        formCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.SM, Spacing.LG));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;

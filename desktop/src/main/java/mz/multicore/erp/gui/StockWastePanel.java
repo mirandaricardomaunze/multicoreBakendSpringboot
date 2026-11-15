@@ -79,7 +79,7 @@ public class StockWastePanel extends JPanel {
 
         setLayout(new BorderLayout(0, 6));
         setOpaque(false);
-        setBorder(new EmptyBorder(6, 4, 4, 4));
+        setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         add(buildKpiBar(), BorderLayout.NORTH);
 
         JTabbedPane tabs = new JTabbedPane();
@@ -102,7 +102,7 @@ public class StockWastePanel extends JPanel {
     private JPanel buildHistoryTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 0));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(2, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.XXS, 0, 0, 0));
 
         statusFilterCombo = new JComboBox<>(new String[]{"Todos os Estados", "Aprovado", "Pendente Aprovação", "Rejeitado"});
         UIHelper.styleComboBox(statusFilterCombo);
@@ -152,7 +152,7 @@ public class StockWastePanel extends JPanel {
 
         JPanel filters = TableFilter.bar(wasteSearchField, TableFilter.label("Negócio:"), wasteBusinessUnitCombo,
                 statusFilterCombo, reasonFilterCombo, periodFilterCombo, peekToggleBtn);
-        filters.setBorder(new EmptyBorder(0, 0, 4, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
 
         String[] cols = {"ID", "Data", "Produto", "Armazém", "Lote", "Motivo", "Quantidade", "Custo Unit.", "Total Perda", "Estado", "Registado Por", "Aprovado Por", "Negócio"};
         wasteTableModel = new DefaultTableModel(cols, 0) {
@@ -193,7 +193,7 @@ public class StockWastePanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         card.add(UIHelper.tableCardTop("Registo de Quebras & Perdas", filters, reloadBtn, registerBtn, approveBtn, rejectBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(wasteTable), BorderLayout.SOUTH);
@@ -250,7 +250,7 @@ public class StockWastePanel extends JPanel {
                     }
                     applyWasteFilters();
                 } catch (Exception ex) {
-                    ToastManager.show(StockWastePanel.this, FeedbackType.ERROR, "Erro ao carregar quebras: " + ex.getMessage());
+                    UserErrors.toast(StockWastePanel.this, "carregar quebras", ex);
                 }
             }
         }.execute();
@@ -264,7 +264,7 @@ public class StockWastePanel extends JPanel {
                     long riskCount = currentRadarList.stream().filter(b -> b.daysUntilExpiration() <= 7).count();
                     kpiRiskBatches.setText(riskCount + " lotes");
                 } catch (Exception ex) {
-                    ToastManager.show(StockWastePanel.this, FeedbackType.ERROR, "Erro ao carregar radar: " + ex.getMessage());
+                    UserErrors.toast(StockWastePanel.this, "carregar radar", ex);
                 }
             }
         }.execute();
@@ -368,7 +368,7 @@ public class StockWastePanel extends JPanel {
         }, res -> {
             ToastManager.success(this, "Registo " + (approve ? "aprovado" : "rejeitado") + " com sucesso!");
             reloadData();
-        }, err -> ToastManager.show(this, FeedbackType.ERROR, "Falha ao processar: " + err.getMessage()));
+        }, err -> UserErrors.toast(this, "processar", err));
     }
 
     private void openRegisterWasteDialog(ExpiringBatchAlertDTO prefillBatch) {

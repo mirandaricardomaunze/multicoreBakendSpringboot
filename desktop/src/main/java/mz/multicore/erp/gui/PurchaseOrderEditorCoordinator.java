@@ -137,7 +137,7 @@ final class PurchaseOrderEditorCoordinator {
                                Runnable addBlankAction, Runnable removeAction, Runnable lookupAction) {
         ModernPanel draftCard = new ModernPanel(16);
         draftCard.setLayout(new BorderLayout(0, 10));
-        draftCard.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        draftCard.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         ModernButton addGridLineBtn = UIHelper.createAddLineButton();
         addGridLineBtn.setText("Adicionar linha");
         addGridLineBtn.addActionListener(event -> addBlankAction.run());

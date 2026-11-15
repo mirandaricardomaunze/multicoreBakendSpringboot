@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.monitoring;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.SoundAlertManager;
@@ -33,7 +34,7 @@ public class SystemMonitoringOverviewBuilder {
         overallBadge.setForeground(UIHelper.TEXT_MUTED);
         overallBadge.setFont(Typography.BODY_BOLD);
         overallBadge.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.BORDER, 1), new EmptyBorder(6, 16, 6, 16)));
+                BorderFactory.createLineBorder(UIHelper.BORDER, 1), new EmptyBorder(Spacing.XS, Spacing.LG, Spacing.XS, Spacing.LG)));
         uptimeLabel.setFont(Typography.BODY);
         uptimeLabel.setForeground(UIHelper.TEXT_MUTED);
     }
@@ -175,7 +176,7 @@ public class SystemMonitoringOverviewBuilder {
     private ModernPanel createCard(String title, String iconName, Color iconColor) {
         ModernPanel p = new ModernPanel();
         p.setLayout(new BorderLayout(0, 6));
-        p.setBorder(new EmptyBorder(8, 10, 8, 10));
+        p.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         header.setOpaque(false);

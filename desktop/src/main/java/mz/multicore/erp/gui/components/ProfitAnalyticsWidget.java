@@ -25,7 +25,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
     public ProfitAnalyticsWidget() {
         super(16);
         setLayout(new BorderLayout(0, 14));
-        setBorder(new EmptyBorder(16, 18, 16, 18));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         initComponents();
     }
 
@@ -64,7 +64,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         // Secção de Comparativo de Canais
         JPanel channelsPanel = new JPanel(new GridLayout(2, 1, 0, 6));
         channelsPanel.setOpaque(false);
-        channelsPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
+        channelsPanel.setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         posLabel = new JLabel("Vendas POS Balcão: 0,00 MT (0%)");
         posLabel.setFont(Typography.CAPTION);
@@ -145,7 +145,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         marginBadge.setBackground(background);
         marginBadge.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(foreground, 1, true),
-                BorderFactory.createEmptyBorder(3, 8, 3, 8)
+                BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM)
         ));
     }
 }

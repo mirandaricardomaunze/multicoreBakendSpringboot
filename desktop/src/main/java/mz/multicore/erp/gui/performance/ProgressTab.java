@@ -28,7 +28,7 @@ public class ProgressTab extends JPanel {
 
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
 
         buildUI();
     }
@@ -103,7 +103,7 @@ public class ProgressTab extends JPanel {
         card.setLayout(new BorderLayout(15, 12));
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1),
-                BorderFactory.createEmptyBorder(16, 20, 16, 20)
+                BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL)
         ));
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
 
@@ -125,7 +125,7 @@ public class ProgressTab extends JPanel {
         lblTrack.setForeground(Color.WHITE);
         lblTrack.setOpaque(true);
         lblTrack.setBackground(p.isOnTrack() ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
-        lblTrack.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+        lblTrack.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM));
         badgeRow.add(lblTrack);
 
         // Alert Level badge
@@ -194,7 +194,7 @@ public class ProgressTab extends JPanel {
         lbl.setForeground(Color.WHITE);
         lbl.setOpaque(true);
         lbl.setBackground(bg);
-        lbl.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+        lbl.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM));
         return lbl;
     }
 

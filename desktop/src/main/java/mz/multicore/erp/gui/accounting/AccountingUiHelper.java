@@ -49,7 +49,7 @@ public final class AccountingUiHelper {
     public static ModernPanel createTableCard(JTable table) {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
@@ -78,7 +78,7 @@ public final class AccountingUiHelper {
     public static JPanel wrapTabCard(JPanel card) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(15, 5, 5, 5));
+        panel.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
         panel.add(card, BorderLayout.CENTER);
         return panel;
     }
@@ -86,7 +86,7 @@ public final class AccountingUiHelper {
     public static JLabel createMutedLabel() {
         JLabel label = new JLabel(" ");
         label.setForeground(UIHelper.TEXT_LIGHT);
-        label.setBorder(new EmptyBorder(10, 2, 0, 2));
+        label.setBorder(new EmptyBorder(Spacing.SM, Spacing.XXS, 0, Spacing.XXS));
         return label;
     }
 

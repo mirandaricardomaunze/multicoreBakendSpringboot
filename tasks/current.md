@@ -79,6 +79,14 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
     em vez de "Sem registos.". SPEC `docs/ESTADO_CARREGAR_SPEC.md`, `TableLoadingStateHarnessTest`.
 44. **Cores do cromo em três temas (2026-11-15):** `ThemeColors` com valores para claro, escuro e alto contraste;
     proibido `isLight() ? new Color(..) : new Color(..)`. SPEC `docs/CORES_TEMA_SPEC.md`, `ThemeColorsHarnessTest`.
+45. **Densidade e espaçamentos (2026-11-15):** a densidade escala letra, altura dos campos e espaços (reconstrói a janela);
+    margens só com `Spacing.*`. SPEC `docs/DENSIDADE_ESPACAMENTO_SPEC.md`, `DensitySpacingHarnessTest`.
+46. **Memória do ecrã (2026-11-15):** colunas, ordem e ordenação por tabela (`TablePrefs`, "Repor colunas") e
+    tamanho/posição da janela (`WindowPrefs`). SPEC `docs/MEMORIA_ECRA_SPEC.md`, `ScreenMemoryHarnessTest`.
+47. **Mensagens de erro (2026-11-15):** "Não foi possível {acção}. {motivo}" via `UserErrors`; erros técnicos só no log.
+    SPEC `docs/MENSAGENS_ERRO_SPEC.md`, `UserErrorsHarnessTest`.
+48. **Teclado nos diálogos (2026-11-15):** Alt+letra automático e único por diálogo; tooltip como nome acessível.
+    SPEC `docs/TECLADO_ACESSIBILIDADE_SPEC.md`, `KeyboardAccessHarnessTest`.
 
 35. **Painel Executivo com Tema e Modais Próprios:**
     - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.

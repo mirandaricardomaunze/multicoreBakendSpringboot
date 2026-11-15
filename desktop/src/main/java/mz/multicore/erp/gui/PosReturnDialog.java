@@ -200,7 +200,7 @@ final class PosReturnDialog {
     private void showVoucherIssuedModal(StoreVoucherDTO voucher, CreditNoteDTO note) {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(16, 20, 16, 20));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JLabel titleLabel = new JLabel("VALE DE COMPRAS EMITIDO");
         titleLabel.setFont(Typography.TITLE);

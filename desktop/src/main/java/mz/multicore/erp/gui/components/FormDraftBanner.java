@@ -33,7 +33,7 @@ public class FormDraftBanner extends JPanel {
         setBackground(new Color(40, 35, 20)); // Fundo âmbar suave compatível com tema escuro
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, UIHelper.PENDING_YELLOW),
-                new EmptyBorder(6, 12, 6, 12)
+                new EmptyBorder(Spacing.XS, Spacing.MD, Spacing.XS, Spacing.MD)
         ));
 
         if (currentDraft == null || currentDraft.payload().isEmpty()) {

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.MySubscriptionApiClient;
@@ -59,7 +60,7 @@ final class MainFrameSubscriptionCoordinator {
         chip.setFont(Typography.BODY_BOLD);
         chip.setForeground(color);
         chip.setToolTipText("Veja Configurações → A Minha Assinatura, ou contacte o suporte.");
-        chip.setBorder(new EmptyBorder(0, 6, 0, 6));
+        chip.setBorder(new EmptyBorder(0, Spacing.XS, 0, Spacing.XS));
         return chip;
     }
 

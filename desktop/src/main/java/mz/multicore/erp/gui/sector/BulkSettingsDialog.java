@@ -58,7 +58,7 @@ final class BulkSettingsDialog {
         scroll.setPreferredSize(new Dimension(520, 160));
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(10, 10, 10, 10));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
         card.add(ResponsiveSupport.cardTop("Produtos já a granel", null), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 

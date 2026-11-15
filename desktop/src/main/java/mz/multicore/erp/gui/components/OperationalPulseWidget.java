@@ -65,7 +65,7 @@ public class OperationalPulseWidget extends ModernPanel {
         this.currencyFormatter = new DecimalFormat("#,##0.00 MT", symbols);
 
         setLayout(new BorderLayout(0, 12));
-        setBorder(new EmptyBorder(16, 18, 16, 18));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         buildHeader();
         buildCards();
@@ -93,7 +93,7 @@ public class OperationalPulseWidget extends ModernPanel {
         JLabel sub = new JLabel("Produção fabril, logística de viaturas, carteira de contratos e imobilizado corporativo.");
         sub.setFont(Typography.CAPTION);
         sub.setForeground(UIHelper.TEXT_MUTED);
-        sub.setBorder(new EmptyBorder(3, 26, 0, 0));
+        sub.setBorder(new EmptyBorder(Spacing.XXS, Spacing.XL, 0, 0));
         titleBox.add(sub);
 
         header.add(titleBox, BorderLayout.WEST);
@@ -167,7 +167,7 @@ public class OperationalPulseWidget extends ModernPanel {
         card.putClientProperty("card.border", pal.border);
         card.putClientProperty("kpi.accent", pal.accent);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         card.setPreferredSize(new Dimension(card.getPreferredSize().width, KpiCard.STANDARD_CARD_HEIGHT));
         card.setMinimumSize(new Dimension(KpiCard.STANDARD_CARD_MIN_WIDTH, KpiCard.STANDARD_CARD_HEIGHT));
 

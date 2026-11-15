@@ -176,7 +176,7 @@ public final class KpiCard {
         ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, pal.bg);
         card.putClientProperty("card.border", pal.border);
         card.setLayout(new BorderLayout(hgap, 4));
-        card.setBorder(new EmptyBorder(10, 14, 10, 14));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         card.setPreferredSize(new Dimension(card.getPreferredSize().width, STANDARD_CARD_HEIGHT));
         card.setMinimumSize(new Dimension(STANDARD_CARD_MIN_WIDTH, STANDARD_CARD_HEIGHT));
         return card;

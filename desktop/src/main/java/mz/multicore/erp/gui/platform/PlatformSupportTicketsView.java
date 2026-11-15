@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.desktop.client.PlatformApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -38,7 +39,7 @@ public class PlatformSupportTicketsView extends JPanel {
 
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         ModernButton openBtn = UIHelper.createPrimaryButton("Abrir / Responder");
         openBtn.setIcon(UIHelper.icon("fas-comments", 14));
@@ -52,7 +53,7 @@ public class PlatformSupportTicketsView extends JPanel {
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
-        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        listCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"#", "Empresa", "Assunto", "Prioridade", "Estado", "Responsável", "Mensagens"};
         ticketsModel = new DefaultTableModel(cols, 0) {
@@ -80,7 +81,7 @@ public class PlatformSupportTicketsView extends JPanel {
         TableFilter.install(ticketsTable, tSearch,
                 new TableFilter.ColumnFilter(tEstado, 4), new TableFilter.ColumnFilter(tPrio, 3));
         JPanel tBar = TableFilter.bar(tSearch, TableFilter.label("Estado:"), tEstado, TableFilter.label("Prioridade:"), tPrio);
-        tBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        tBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         listCard.add(UIHelper.tableCardTop("Pedidos de Assistência", tBar, refreshBtn, statusBtn, openBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);

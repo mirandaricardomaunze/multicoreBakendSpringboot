@@ -52,7 +52,7 @@ public class ProductUnitsPanel extends JPanel {
         this.productId = productId;
         setLayout(new BorderLayout(0, 10));
         setOpaque(false);
-        setBorder(new EmptyBorder(10, 4, 4, 4));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, Spacing.XS, Spacing.XS));
 
         JPanel north = new JPanel(new BorderLayout(0, 8));
         north.setOpaque(false);
@@ -67,7 +67,7 @@ public class ProductUnitsPanel extends JPanel {
     private JComponent buildBaseCard() {
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new BorderLayout(12, 0));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         JLabel icon = new JLabel(UIHelper.icon("fas-ruler-combined", 22, UIHelper.MODULE_STOCK));
         card.add(icon, BorderLayout.WEST);
 
@@ -118,7 +118,7 @@ public class ProductUnitsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(14, 14, 14, 14));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Unidades de compra e venda", null, addBtn, editBtn, removeBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         syncButtons();
@@ -128,7 +128,7 @@ public class ProductUnitsPanel extends JPanel {
     private JComponent buildConverterCard() {
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        card.setBorder(new EmptyBorder(10, 14, 10, 14));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         JLabel label = new JLabel("Converter");
         label.setIcon(UIHelper.icon("fas-calculator", 14, UIHelper.ACCENT_BLUE));
         label.setIconTextGap(6);

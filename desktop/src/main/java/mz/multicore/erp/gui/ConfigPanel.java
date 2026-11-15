@@ -76,7 +76,7 @@ public class ConfigPanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         add(buildAppearanceBar(), BorderLayout.NORTH);
 
@@ -149,11 +149,11 @@ public class ConfigPanel extends JPanel {
     private JPanel createAuditTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(20, 20, 20, 20));
+        card.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         String[] cols = {"Data/Hora", "Utilizador", "Ação", "Detalhes do Evento"};
         auditTableModel = new DefaultTableModel(cols, 0) {
@@ -172,7 +172,7 @@ public class ConfigPanel extends JPanel {
                 List.of(new TableFilter.PeriodFilter(auditPeriodo, 0)));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadAuditLogs);
         JPanel auditToolbar = TableFilter.bar(auditSearch, TableFilter.label("Data:", "fas-calendar-alt"), auditPeriodo);
-        auditToolbar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        auditToolbar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         card.add(UIHelper.tableCardTop("Registo de Auditoria de Acções Críticas", auditToolbar, refreshBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         TableQuickPeekController.install(auditTable, card, (peek, row) -> {

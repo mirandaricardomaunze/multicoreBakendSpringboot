@@ -62,6 +62,7 @@ class TypographyHarnessTest {
     @Test
     @DisplayName("TY-03: a escala tem um número fixo de tamanhos, todos da família da aplicação")
     void ty03_scaleIsClosed() throws IllegalAccessException {
+        Typography.applyScale(1f); // the "Padrão" density
         Set<Integer> sizes = new TreeSet<>();
         for (Field field : Typography.class.getDeclaredFields()) {
             if (field.getType() != Font.class || !Modifier.isPublic(field.getModifiers())) continue;

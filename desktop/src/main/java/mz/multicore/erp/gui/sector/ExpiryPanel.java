@@ -88,7 +88,7 @@ public class ExpiryPanel extends JPanel {
         stage.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(table, search, new TableFilter.ColumnFilter(stage, 0));
         JPanel filters = TableFilter.bar(search, TableFilter.label("Situação:"), stage);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         markdownBtn.setIcon(UIHelper.icon("fas-tag", 14));
         markdownBtn.setToolTipText("Desconto no POS até ao fim da validade do lote (só gestão)");
@@ -104,7 +104,7 @@ public class ExpiryPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Lotes Vencidos e por Vencer (14 dias)", filters, refreshBtn, applyBtn, writeOffBtn, markdownBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -130,7 +130,7 @@ public class ExpiryPanel extends JPanel {
         note.setForeground(UIHelper.TEXT_MUTED);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop("Regras de Remarcação", note, UIHelper.createRefreshButton(this::reload), editRuleBtn, newBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);

@@ -78,7 +78,7 @@ public class DashboardPanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(20, 22, 20, 22));
+        setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         add(buildHeaderPanel(), BorderLayout.NORTH);
 
@@ -126,7 +126,7 @@ public class DashboardPanel extends JPanel {
     private JPanel buildProfitTab() {
         JPanel tab3 = new JPanel(new BorderLayout(0, 12));
         tab3.setOpaque(false);
-        tab3.setBorder(new EmptyBorder(12, 4, 4, 4));
+        tab3.setBorder(new EmptyBorder(Spacing.MD, Spacing.XS, Spacing.XS, Spacing.XS));
         JPanel center = new JPanel();
         center.setOpaque(false);
         center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));

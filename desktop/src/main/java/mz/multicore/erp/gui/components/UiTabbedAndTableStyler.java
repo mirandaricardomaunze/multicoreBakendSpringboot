@@ -26,6 +26,7 @@ final class UiTabbedAndTableStyler {
         UiTableFooterSupport.installRowSelector(table);
         UiTableFooterSupport.installListingFooter(table);
         TableHorizontalScrollSupport.install(table);
+        TablePrefs.install(table);
     }
 
     static void installDoubleClick(JTable table, Runnable onDoubleClick) { UiTableInteractionSupport.installDoubleClick(table, onDoubleClick); }

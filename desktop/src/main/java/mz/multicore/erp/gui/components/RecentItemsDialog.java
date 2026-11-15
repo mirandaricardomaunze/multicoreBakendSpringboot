@@ -74,7 +74,7 @@ public class RecentItemsDialog extends JDialog {
         // Corpo Central
         JPanel body = new JPanel(new BorderLayout(0, 10));
         body.setOpaque(false);
-        body.setBorder(new EmptyBorder(12, 16, 12, 16));
+        body.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         // Barra de Pesquisa Rápida
         JPanel searchBox = new JPanel(new BorderLayout(8, 0));
@@ -147,7 +147,7 @@ public class RecentItemsDialog extends JDialog {
         // Rodapé de Ações
         JPanel footer = new JPanel(new BorderLayout());
         footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(8, 16, 14, 16));
+        footer.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.LG, Spacing.LG));
 
         ModernButton clearBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Limpar Histórico"));
         clearBtn.setIcon(UIHelper.icon("fas-trash-alt", 13, UIHelper.REJECTED_RED));
@@ -241,7 +241,7 @@ public class RecentItemsDialog extends JDialog {
             }
 
             JPanel panel = new JPanel(new BorderLayout(12, 0));
-            panel.setBorder(new EmptyBorder(8, 10, 8, 10));
+            panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
             panel.setBackground(isSelected ? UIHelper.SELECTION_BG : (index % 2 == 0 ? UIHelper.BG_CARD : UIHelper.ROW_ALT));
 
             // Ícone Temático à Esquerda

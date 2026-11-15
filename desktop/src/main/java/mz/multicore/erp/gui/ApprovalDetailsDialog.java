@@ -56,7 +56,7 @@ public final class ApprovalDetailsDialog extends JDialog {
         UIHelper.applyStandardModalBounds(this, 920, 610);
 
         JPanel root = new JPanel(new BorderLayout(0, 12)); root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(16, 20, 16, 20));
+        root.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
         root.add(buildHeaderCard(), BorderLayout.NORTH);
         root.add(buildContentTabs(), BorderLayout.CENTER);
         root.add(buildActionsBar(), BorderLayout.SOUTH);
@@ -64,7 +64,7 @@ public final class ApprovalDetailsDialog extends JDialog {
     }
 
     private JPanel buildHeaderCard() {
-        ModernPanel card = new ModernPanel(16); card.setLayout(new BorderLayout(16, 0)); card.setBorder(new EmptyBorder(14, 18, 14, 18));
+        ModernPanel card = new ModernPanel(16); card.setLayout(new BorderLayout(16, 0)); card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0)); left.setOpaque(false);
         left.add(new JLabel(UIHelper.icon(resolveIcon(request.documentType()), 32, resolveColor(request.documentType()))));
 
@@ -97,8 +97,8 @@ public final class ApprovalDetailsDialog extends JDialog {
     }
 
     private JPanel buildJustificationTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 12)); panel.setOpaque(false); panel.setBorder(new EmptyBorder(12, 0, 0, 0));
-        ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(0, 8)); card.setBorder(new EmptyBorder(14, 16, 14, 16));
+        JPanel panel = new JPanel(new BorderLayout(0, 12)); panel.setOpaque(false); panel.setBorder(new EmptyBorder(Spacing.MD, 0, 0, 0));
+        ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(0, 8)); card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         JTextArea descA = new JTextArea(request.description() != null ? request.description() : "Sem justificação registada.");
         descA.setEditable(false); descA.setLineWrap(true); descA.setWrapStyleWord(true); descA.setFont(Typography.EMPHASIS);
         UIHelper.styleTextArea(descA);
@@ -109,7 +109,7 @@ public final class ApprovalDetailsDialog extends JDialog {
     }
 
     private JPanel buildActionsBar() {
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0)); bar.setOpaque(false); bar.setBorder(new EmptyBorder(6, 0, 0, 0));
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0)); bar.setOpaque(false); bar.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
         ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.setIcon(UIHelper.icon("fas-times", 14)); closeBtn.addActionListener(e -> dispose());
 
@@ -133,7 +133,7 @@ public final class ApprovalDetailsDialog extends JDialog {
         }, ignored -> {
             decisionTaken = true; ToastManager.success(this, "Documento rejeitado com sucesso.");
             dispose(); if (onDecisionCompleted != null) onDecisionCompleted.run();
-        }, error -> ToastManager.show(this, FeedbackType.ERROR, "Não foi possível rejeitar: " + error.getMessage()));
+        }, error -> UserErrors.toast(this, "rejeitar", error));
     }
 
     private void handleApprove(ModernButton trigger) {
@@ -152,7 +152,7 @@ public final class ApprovalDetailsDialog extends JDialog {
         }, ignored -> {
             decisionTaken = true; ToastManager.success(this, "Documento aprovado com sucesso!");
             dispose(); if (onDecisionCompleted != null) onDecisionCompleted.run();
-        }, error -> ToastManager.show(this, FeedbackType.ERROR, "Não foi possível aprovar: " + error.getMessage()));
+        }, error -> UserErrors.toast(this, "aprovar", error));
     }
 
     private static String humanType(String dt) {

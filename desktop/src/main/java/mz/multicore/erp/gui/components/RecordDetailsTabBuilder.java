@@ -22,7 +22,7 @@ public final class RecordDetailsTabBuilder {
     public static JComponent buildDocumentLinesTable(OrderDTO order) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(10, 12, 10, 12));
+        panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cols = {"#", "Artigo / Designação", "Lote", "Quantidade", "Embalagem", "Preço Unit.", "Total"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {

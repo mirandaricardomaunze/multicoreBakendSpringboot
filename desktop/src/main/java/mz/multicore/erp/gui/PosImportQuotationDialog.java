@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.Typography;
@@ -63,7 +65,7 @@ public class PosImportQuotationDialog extends JDialog {
         // Header
         JPanel header = new JPanel(new BorderLayout(10, 0));
         header.setOpaque(false);
-        header.setBorder(new EmptyBorder(16, 20, 12, 20));
+        header.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.MD, Spacing.XL));
 
         JLabel titleIcon = new JLabel(UIHelper.icon("fas-file-import", 22, UIHelper.ACCENT_CYAN));
         JPanel titlePanel = new JPanel();
@@ -89,7 +91,7 @@ public class PosImportQuotationDialog extends JDialog {
         // Center card
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(14, 16, 14, 16));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"ID", "Nº Cotação", "Data", "Cliente", "NUIT", "Total", "Validade", "Linhas"};
         model = new DefaultTableModel(cols, 0) {
@@ -128,7 +130,7 @@ public class PosImportQuotationDialog extends JDialog {
 
         JPanel centerWrapper = new JPanel(new BorderLayout());
         centerWrapper.setOpaque(false);
-        centerWrapper.setBorder(new EmptyBorder(0, 16, 10, 16));
+        centerWrapper.setBorder(new EmptyBorder(0, Spacing.LG, Spacing.SM, Spacing.LG));
         centerWrapper.add(card, BorderLayout.CENTER);
         add(centerWrapper, BorderLayout.CENTER);
 
@@ -189,8 +191,7 @@ public class PosImportQuotationDialog extends JDialog {
                         table.setRowSelectionInterval(0, 0);
                     }
                 },
-                ex -> ModernMessageDialog.show(this, FeedbackType.ERROR, "Erro",
-                        "Erro ao carregar cotações: " + ex.getMessage())
+                ex -> UserErrors.show(this, "carregar cotações", ex)
         );
     }
 
@@ -219,8 +220,7 @@ public class PosImportQuotationDialog extends JDialog {
                         onImportCallback.accept(fullQuotation);
                     }
                 },
-                ex -> ModernMessageDialog.show(this, FeedbackType.ERROR, "Erro",
-                        "Falha ao carregar cotação: " + ex.getMessage())
+                ex -> UserErrors.show(this, "carregar cotação", ex)
         );
     }
 

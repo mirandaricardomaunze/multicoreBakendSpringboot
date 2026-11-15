@@ -88,7 +88,7 @@ public class GlobalSearchDialog extends JDialog {
         root.setBackground(UIHelper.BG_DARK);
         root.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeColors.hairline(), 1),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)
+                BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG)
         ));
 
         // Top Search Bar
@@ -126,14 +126,14 @@ public class GlobalSearchDialog extends JDialog {
         JScrollPane scrollPane = new JScrollPane(resultList);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, 0, Spacing.SM, 0));
         scrollPane.getVerticalScrollBar().setUnitIncrement(14);
         root.add(scrollPane, BorderLayout.CENTER);
 
         // Footer Bar
         JPanel footerBar = new JPanel(new BorderLayout());
         footerBar.setOpaque(false);
-        footerBar.setBorder(BorderFactory.createEmptyBorder(6, 4, 0, 4));
+        footerBar.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, 0, Spacing.XS));
 
         countLabel.setFont(Typography.CAPTION);
         countLabel.setForeground(UIHelper.TEXT_MUTED);
@@ -288,7 +288,7 @@ public class GlobalSearchDialog extends JDialog {
                 }
             };
             itemPanel.setOpaque(false);
-            itemPanel.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+            itemPanel.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
             // Left icon
             JLabel iconLabel = new JLabel(item.icon());
@@ -319,7 +319,7 @@ public class GlobalSearchDialog extends JDialog {
                 hintLabel.setForeground(isSelected ? UIHelper.ACCENT_BLUE : UIHelper.TEXT_MUTED);
                 hintLabel.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(ThemeColors.outline(), 1),
-                        BorderFactory.createEmptyBorder(2, 6, 2, 6)
+                        BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS)
                 ));
                 hintPanel.add(hintLabel);
                 itemPanel.add(hintPanel, BorderLayout.EAST);

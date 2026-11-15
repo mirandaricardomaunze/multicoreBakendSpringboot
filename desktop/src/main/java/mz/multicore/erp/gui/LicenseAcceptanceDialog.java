@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.Typography;
@@ -62,7 +63,7 @@ public class LicenseAcceptanceDialog extends JDialog {
 
     private void buildUi() {
         JPanel root = new JPanel(new BorderLayout(12, 12));
-        root.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        root.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         root.setBackground(UIHelper.BG_DARK);
 
         JLabel title = new JLabel("Contrato de Licença do Utilizador Final");
@@ -75,7 +76,7 @@ public class LicenseAcceptanceDialog extends JDialog {
         contractArea.setWrapStyleWord(true);
         contractArea.setText("A carregar o contrato vigente…");
         contractArea.setCaretPosition(0);
-        contractArea.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        contractArea.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
         JScrollPane scroll = new JScrollPane(contractArea);
         root.add(scroll, BorderLayout.CENTER);
 

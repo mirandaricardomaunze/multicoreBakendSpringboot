@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.TableFilter;
@@ -59,7 +61,7 @@ public class PosSessionHistoryDialog extends JDialog {
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(UIHelper.ROW_ALT);
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        panel.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JLabel title = new JLabel("Histórico de Fechos de Caixa (Relatório Z)");
         title.setFont(Typography.TITLE);
@@ -77,7 +79,7 @@ public class PosSessionHistoryDialog extends JDialog {
     private JPanel createCenterPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 15, 12, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         String[] cols = {"ID", "Operador", "Abertura", "Fecho", "Esperado", "Contado", "Diferença", "Total Vendas", "Estado"};
         tableModel = new DefaultTableModel(cols, 0) {
@@ -148,7 +150,7 @@ public class PosSessionHistoryDialog extends JDialog {
                 });
             }
         } catch (Exception ex) {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao carregar histórico de caixa: " + ex.getMessage());
+            UserErrors.toast(this, "carregar histórico de caixa", ex);
         }
     }
 

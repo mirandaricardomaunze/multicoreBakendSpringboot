@@ -38,7 +38,7 @@ public class StatusBadge extends JLabel {
 
         setFont(Typography.CAPTION_BOLD);
         setHorizontalAlignment(SwingConstants.CENTER);
-        setBorder(new EmptyBorder(3, 10, 3, 10));
+        setBorder(new EmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM));
 
         // Cor do texto com alto contraste garantido
         Color fg = isDarkTheme ? this.badgeColor.brighter() : this.badgeColor.darker();

@@ -54,7 +54,7 @@ public class TopNavBar extends JPanel {
     public TopNavBar(String brand, String subBrand) {
         setLayout(new BorderLayout(12, 0));
         setBackground(barBg());
-        setBorder(new EmptyBorder(8, 16, 8, 16));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
 
         // ---- Brand / Active title block (left)
         brandLabel = new JLabel(brand != null && !brand.isBlank() ? brand : "Painel Inicial");
@@ -92,7 +92,7 @@ public class TopNavBar extends JPanel {
 
         JPanel brandWrapper = new JPanel(new BorderLayout());
         brandWrapper.setOpaque(false);
-        brandWrapper.setBorder(new EmptyBorder(0, 0, 0, 8));
+        brandWrapper.setBorder(new EmptyBorder(0, 0, 0, Spacing.SM));
         brandWrapper.add(brandStack, BorderLayout.CENTER);
         add(brandWrapper, BorderLayout.WEST);
 
@@ -150,7 +150,7 @@ public class TopNavBar extends JPanel {
         JPopupMenu popup = new JPopupMenu();
         popup.setBorder(javax.swing.BorderFactory.createCompoundBorder(
                 javax.swing.BorderFactory.createLineBorder(UIHelper.BORDER),
-                new EmptyBorder(6, 6, 6, 6)));
+                new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS)));
 
         final TopNavItem[] holder = new TopNavItem[1];
         TopNavItem menuItem = new TopNavItem(icon, tooltip, accent,
@@ -162,7 +162,7 @@ public class TopNavBar extends JPanel {
         for (MenuEntry entry : entries) {
             JMenuItem option = new JMenuItem(entry.label(), entry.icon());
             option.setFont(Typography.EMPHASIS);
-            option.setBorder(new EmptyBorder(8, 10, 8, 14));
+            option.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.LG));
             option.getAccessibleContext().setAccessibleName(entry.label());
             option.addActionListener(e -> {
                 setActive(entry.label());
@@ -191,7 +191,7 @@ public class TopNavBar extends JPanel {
         searchPill.putClientProperty("search.action", onSearchClick);
         searchPill.setBorder(javax.swing.BorderFactory.createCompoundBorder(
                 javax.swing.BorderFactory.createLineBorder(ThemeColors.hairline(), 1),
-                new EmptyBorder(5, 12, 5, 10)
+                new EmptyBorder(Spacing.XS, Spacing.MD, Spacing.XS, Spacing.SM)
         ));
 
         JLabel icon = new JLabel(UIHelper.icon("fas-search", 13, UIHelper.TEXT_MUTED));
@@ -204,7 +204,7 @@ public class TopNavBar extends JPanel {
         badge.setForeground(UIHelper.TEXT_MUTED);
         badge.setBorder(javax.swing.BorderFactory.createCompoundBorder(
                 javax.swing.BorderFactory.createLineBorder(ThemeColors.outline(), 1),
-                new EmptyBorder(1, 4, 1, 4)
+                new EmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS)
         ));
 
         searchPill.add(icon, BorderLayout.WEST);

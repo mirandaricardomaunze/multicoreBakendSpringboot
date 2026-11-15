@@ -87,7 +87,7 @@ public final class ConfigBackupOperations {
             owner.loadAuditLogs();
         }, error -> {
             appendLog(logArea, ">> ERRO: " + error.getMessage());
-            ToastManager.show(owner, FeedbackType.ERROR, "Erro ao gerar backup físico: " + error.getMessage());
+            mz.multicore.erp.gui.components.UserErrors.toast(owner, "gerar backup físico", error);
         });
     }
 

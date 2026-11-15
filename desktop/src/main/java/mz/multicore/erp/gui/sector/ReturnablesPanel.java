@@ -80,7 +80,7 @@ public class ReturnablesPanel extends JPanel {
         search.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(balanceTable, search);
         JPanel filters = TableFilter.bar(search);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         ModernButton outBtn = UIHelper.createSuccessButton("Entregar ao Cliente");
         outBtn.setIcon(UIHelper.icon("fas-arrow-right", 14));
         outBtn.addActionListener(e -> openMovement(ReturnableMovementType.OUT, null));
@@ -104,7 +104,7 @@ public class ReturnablesPanel extends JPanel {
         search.setPreferredSize(new Dimension(220, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(table, search);
         JPanel filters = TableFilter.bar(search);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         return card("Movimentos (60 dias)", filters, scroll, UIHelper.createRefreshButton(this::reload));
     }
 
@@ -294,7 +294,7 @@ public class ReturnablesPanel extends JPanel {
     private JComponent card(String title, JComponent filters, JComponent body, JComponent... actions) {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(ResponsiveSupport.cardTop(title, filters, actions), BorderLayout.NORTH);
         card.add(body, BorderLayout.CENTER);
         return card;

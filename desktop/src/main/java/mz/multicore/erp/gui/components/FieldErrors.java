@@ -91,7 +91,7 @@ public final class FieldErrors {
         caption.setForeground(UIHelper.REJECTED_RED);
         caption.setOpaque(true);
         caption.setBackground(UIHelper.BG_DARK);
-        caption.setBorder(BorderFactory.createEmptyBorder(1, 4, 1, 4));
+        caption.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS));
         caption.getAccessibleContext().setAccessibleName("Erro: " + text);
         JLayeredPane layers = root.getLayeredPane();
         Point at = SwingUtilities.convertPoint(field.getParent(), field.getX(), field.getY() + field.getHeight() + 2, layers);

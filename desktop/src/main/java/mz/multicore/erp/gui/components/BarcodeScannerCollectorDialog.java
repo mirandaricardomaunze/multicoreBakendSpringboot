@@ -63,7 +63,7 @@ public class BarcodeScannerCollectorDialog {
         dialog.setMinimumSize(new Dimension(740, 500)); dialog.setLocationRelativeTo(parent);
 
         JPanel main = new JPanel(new BorderLayout(0, 12)); main.setOpaque(false);
-        main.setBorder(new EmptyBorder(16, 18, 16, 18));
+        main.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JPanel header = new JPanel(new BorderLayout()); header.setOpaque(false);
         JLabel titleLabel = UIHelper.createHeading("Modo Coletor — " + mode.title);
@@ -94,7 +94,7 @@ public class BarcodeScannerCollectorDialog {
     }
 
     private JPanel buildScanBar() {
-        ModernPanel box = new ModernPanel(12); box.setLayout(new BorderLayout(8, 6)); box.setBorder(new EmptyBorder(10, 14, 10, 14));
+        ModernPanel box = new ModernPanel(12); box.setLayout(new BorderLayout(8, 6)); box.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         scanField = new JTextField(); UIHelper.styleTextField(scanField);
         scanField.setFont(Typography.TITLE);
         scanField.putClientProperty("JTextField.placeholderText", "Ler código de barras ou digitar SKU e premir Enter...");
@@ -111,7 +111,7 @@ public class BarcodeScannerCollectorDialog {
     }
 
     private JPanel buildHistoryCard() {
-        ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(0, 8)); card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(0, 8)); card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         JLabel cardTitle = new JLabel("Sessão Actual de Leituras"); cardTitle.setFont(Typography.EMPHASIS_BOLD);
         cardTitle.setForeground(UIHelper.TEXT_LIGHT); card.add(cardTitle, BorderLayout.NORTH);
         historyModel = new DefaultTableModel(new String[]{"Hora", "Código / SKU", "Produto", "Qtd"}, 0) {

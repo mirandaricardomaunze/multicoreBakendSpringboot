@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -28,7 +29,7 @@ public final class MobilePaymentInitiationPanel extends JPanel {
 
         ModernPanel amountCard = new ModernPanel(10);
         amountCard.setBackground(UIHelper.ROW_ALT);
-        amountCard.setBorder(new EmptyBorder(10, 16, 10, 16));
+        amountCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         amountCard.setLayout(new BorderLayout(8, 2));
         JLabel amountTitle = new JLabel("TOTAL A COBRAR:");
         amountTitle.setFont(Typography.CAPTION_BOLD);
@@ -83,7 +84,7 @@ public final class MobilePaymentInitiationPanel extends JPanel {
         validationLabel = new JLabel("Introduza o número de 9 dígitos");
         validationLabel.setFont(Typography.CAPTION);
         validationLabel.setForeground(UIHelper.TEXT_MUTED);
-        validationLabel.setBorder(new EmptyBorder(3, 2, 8, 2));
+        validationLabel.setBorder(new EmptyBorder(Spacing.XXS, Spacing.XXS, Spacing.SM, Spacing.XXS));
         validationLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         add(validationLabel);
 

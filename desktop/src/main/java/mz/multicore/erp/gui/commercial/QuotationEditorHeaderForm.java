@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.commercial;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.QuantityField;
@@ -52,7 +53,7 @@ final class QuotationEditorHeaderForm {
     JPanel buildPanel() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(12, 16, 12, 16));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
         row1.setOpaque(false);

@@ -51,7 +51,7 @@ public class FinanceiroPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(12, 16, 12, 16));
+        setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JPanel north = new JPanel();
         north.setOpaque(false);
@@ -78,11 +78,11 @@ public class FinanceiroPanel extends JPanel {
     private JPanel createAccountsTab() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.LG, 0, 0, 0));
 
         ModernPanel accountsCard = new ModernPanel(16);
         accountsCard.setLayout(new BorderLayout());
-        accountsCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        accountsCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] accountCols = {"Conta de Tesouraria", "Tipo", "IBAN / Nº Conta", "Saldo Atual"};
         accountsModel = new DefaultTableModel(accountCols, 0) {
@@ -99,7 +99,7 @@ public class FinanceiroPanel extends JPanel {
         JTextField aSearch = TableFilter.searchField("Conta ou IBAN…");
         TableFilter.install(accountsTable, aSearch);
         JPanel aBar = TableFilter.bar(aSearch);
-        aBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        aBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         accountsCard.add(UIHelper.tableCardTop("Contas de Tesouraria & Saldos", aBar), BorderLayout.NORTH);
         accountsCard.add(accScroll, BorderLayout.CENTER);
         TableQuickPeekController.install(accountsTable, accountsCard, (peek, row) ->
@@ -111,7 +111,7 @@ public class FinanceiroPanel extends JPanel {
     private JPanel createMovementsTab() {
         JPanel movementsPanel = new JPanel(new BorderLayout(0, 10));
         movementsPanel.setOpaque(false);
-        movementsPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        movementsPanel.setBorder(new EmptyBorder(Spacing.LG, 0, 0, 0));
 
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Recebimento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
@@ -120,7 +120,7 @@ public class FinanceiroPanel extends JPanel {
 
         ModernPanel movementsCard = new ModernPanel(16);
         movementsCard.setLayout(new BorderLayout());
-        movementsCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        movementsCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] movementCols = {"Data", "Conta", "Descrição", "Tipo", "Valor"};
         movementsModel = new DefaultTableModel(movementCols, 0) {
@@ -144,7 +144,7 @@ public class FinanceiroPanel extends JPanel {
                 List.of(new TableFilter.PeriodFilter(mPeriodo, 0)));
         JPanel mBar = TableFilter.bar(mSearch, TableFilter.label("Tipo:"), mTipo,
                 TableFilter.label("Data:", "fas-calendar-alt"), mPeriodo);
-        mBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        mBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         movementsCard.add(UIHelper.tableCardTop("Histórico de Fluxo de Caixa", mBar, payBtn), BorderLayout.NORTH);
         movementsCard.add(movScroll, BorderLayout.CENTER);

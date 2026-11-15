@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.company.model.CompanyLegalForm;
@@ -270,12 +271,12 @@ final class CompanyFormFields {
         JPanel panel = new JPanel(new BorderLayout(0, 2));
         panel.setOpaque(false);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.setBorder(new EmptyBorder(0, 0, 8, 0));
+        panel.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         if (title != null) {
             JLabel heading = new JLabel(title);
             heading.setFont(Typography.EMPHASIS_BOLD);
             heading.setForeground(UIHelper.TEXT_LIGHT);
-            heading.setBorder(new EmptyBorder(4, 14, 0, 14));
+            heading.setBorder(new EmptyBorder(Spacing.XS, Spacing.LG, 0, Spacing.LG));
             panel.add(heading, BorderLayout.NORTH);
         }
         form.setOpaque(false);
@@ -291,7 +292,7 @@ final class CompanyFormFields {
             hintText.setOpaque(false);
             hintText.setFont(Typography.BODY);
             hintText.setForeground(UIHelper.TEXT_MUTED);
-            hintText.setBorder(new EmptyBorder(0, 21, 0, 21));
+            hintText.setBorder(new EmptyBorder(0, Spacing.XL, 0, Spacing.XL));
             panel.add(hintText, BorderLayout.SOUTH);
         }
         return panel;

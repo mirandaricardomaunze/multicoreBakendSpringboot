@@ -61,7 +61,7 @@ public class StrategicPulseWidget extends ModernPanel {
         this.navigationHandler = navigationHandler;
 
         setLayout(new BorderLayout(0, 12));
-        setBorder(new EmptyBorder(16, 18, 16, 18));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         add(StrategicPulseCardFactory.buildHeader(this::loadData), BorderLayout.NORTH);
         buildCards();

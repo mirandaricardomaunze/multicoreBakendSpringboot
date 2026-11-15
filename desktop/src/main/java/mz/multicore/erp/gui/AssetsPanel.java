@@ -56,7 +56,7 @@ public final class AssetsPanel extends JPanel {
         this.printApiClient = printApiClient;
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(15, 20, 20, 20));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel headerPanel = new JPanel();
         headerPanel.setOpaque(false);
@@ -85,7 +85,7 @@ public final class AssetsPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         String[] cols = {
                 "Código", "Designação / Descrição", "Categoria", "Data Aquisição",

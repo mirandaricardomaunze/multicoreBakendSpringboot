@@ -33,7 +33,7 @@ final class DashboardOperationsTab {
     public JPanel buildTab() {
         JPanel tab2 = new JPanel(new BorderLayout(0, 12));
         tab2.setOpaque(false);
-        tab2.setBorder(new EmptyBorder(12, 4, 4, 4));
+        tab2.setBorder(new EmptyBorder(Spacing.MD, Spacing.XS, Spacing.XS, Spacing.XS));
 
         JPanel operationalKpiGrid = KpiCard.createHeroGrid(4, 10, 10);
 

@@ -55,7 +55,7 @@ public class BankReconciliationPanel extends JPanel {
         JPanel mainContent = new JPanel();
         mainContent.setOpaque(false);
         mainContent.setLayout(new BoxLayout(mainContent, BoxLayout.Y_AXIS));
-        mainContent.setBorder(new EmptyBorder(10, 0, 15, 0));
+        mainContent.setBorder(new EmptyBorder(Spacing.SM, 0, Spacing.LG, 0));
 
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
         mainContent.add(feedback);
@@ -75,7 +75,7 @@ public class BankReconciliationPanel extends JPanel {
 
     private JPanel buildKpiCards() {
         JPanel grid = KpiCard.createGrid(4);
-        grid.setBorder(new EmptyBorder(0, 0, 4, 0));
+        grid.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
 
         JPanel cardBank = KpiCard.createInteractiveCard("Saldo no Extracto", kpiBankBalance, "Posição bancária oficial", "fas-university", UIHelper.ACCENT_BLUE,
                 "Mostrar todos os movimentos", () -> { if (statusFilter != null) statusFilter.setSelectedIndex(0); });
@@ -92,7 +92,7 @@ public class BankReconciliationPanel extends JPanel {
     private JPanel buildTableCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(12, 12, 12, 12));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
 
         String[] cols = {"Data", "Descrição do Movimento", "Referência", "Valor", "Estado", "Transacção Vinculada (ERP)"};
         itemsModel = new DefaultTableModel(cols, 0) {

@@ -97,7 +97,7 @@ final class StandaloneDeliveryGuideDialog {
 
         ModernPanel lineCard = new ModernPanel(16);
         lineCard.setLayout(new BorderLayout(0, 8));
-        lineCard.setBorder(new EmptyBorder(8, 12, 8, 12));
+        lineCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         lineCard.add(UIHelper.tableCardTop("Artigos da guia", new JPanel(), add, remove), BorderLayout.NORTH);
         JScrollPane tableScroll = new JScrollPane(table);
         tableScroll.setPreferredSize(new Dimension(820, 240));

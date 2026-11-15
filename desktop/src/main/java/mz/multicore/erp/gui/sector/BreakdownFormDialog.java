@@ -128,7 +128,7 @@ final class BreakdownFormDialog {
         cutsBox.add(addRow, BorderLayout.NORTH);
         cutsBox.add(scroll, BorderLayout.CENTER);
         cutsBox.add(summary, BorderLayout.SOUTH);
-        cutsBox.setBorder(new EmptyBorder(4, 0, 0, 0));
+        cutsBox.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         FormField carcassForm = new FormField("Carcaça", carcass, true, null);
         FormField kgForm = new FormField("Peso da carcaça (kg)", inputKg, true, "Pese na balança antes de cortar");

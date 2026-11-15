@@ -23,7 +23,7 @@ public final class RecordDetailsExporter {
     public static JComponent buildSharePreviewTab(String title, List<RecordDetailsDialog.PropertyItem> props) {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(12, 14, 12, 14));
+        panel.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JLabel info = new JLabel("Formato de texto tabulado para conferência, partilha ou envio oficial:");
         info.setFont(Typography.BODY);
@@ -36,7 +36,7 @@ public final class RecordDetailsExporter {
         area.setFont(Typography.MONO);
         area.setForeground(UIHelper.TEXT_LIGHT);
         area.setBackground(UIHelper.BG_CARD);
-        area.setBorder(new EmptyBorder(12, 12, 12, 12));
+        area.setBorder(new EmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
         area.setCaretPosition(0);
 
         JScrollPane scroll = new JScrollPane(area);
@@ -101,7 +101,7 @@ public final class RecordDetailsExporter {
                 Files.writeString(file.toPath(), content, StandardCharsets.UTF_8);
                 ToastManager.success(parent, "Ficheiro exportado para " + file.getName());
             } catch (Exception ex) {
-                ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gravar: " + ex.getMessage());
+                UserErrors.toast(parent, "gravar", ex);
             }
         }
     }

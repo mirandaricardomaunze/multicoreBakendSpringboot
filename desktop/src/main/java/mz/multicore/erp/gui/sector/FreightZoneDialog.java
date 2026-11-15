@@ -34,7 +34,7 @@ final class FreightZoneDialog {
         UIHelper.loadAsync(parent, api::getAllProducts, products -> open(parent, api,
                         products.stream().filter(FreightZoneDialog::isFreightZone)
                                 .sorted(Comparator.comparing(ProductDTO::name)).toList(), onZone),
-                error -> ToastManager.show(parent, FeedbackType.ERROR, "Não foi possível carregar as zonas: " + error.getMessage()));
+                error -> UserErrors.toast(parent, "carregar as zonas", error));
     }
 
     private static void open(JComponent parent, ComercialApiClient api, List<ProductDTO> zones, Consumer<ProductDTO> onZone) {

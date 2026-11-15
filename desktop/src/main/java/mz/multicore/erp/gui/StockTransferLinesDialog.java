@@ -26,7 +26,7 @@ final class StockTransferLinesDialog {
 
         ModernPanel infoCard = new ModernPanel(16);
         infoCard.setLayout(new GridLayout(2, 3, 14, 8));
-        infoCard.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+        infoCard.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         String driver = transfer.driverName() != null && !transfer.driverName().isBlank()
                 ? transfer.driverName() : (transfer.responsible() != null && !transfer.responsible().isBlank() ? transfer.responsible() : "—");
@@ -103,7 +103,7 @@ final class StockTransferLinesDialog {
 
         ModernPanel totalsCard = new ModernPanel(16);
         totalsCard.setLayout(new FlowLayout(FlowLayout.RIGHT, 18, 8));
-        totalsCard.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        totalsCard.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         totalsCard.add(createTotalBadge("Linhas", String.valueOf(lines.size())));
         totalsCard.add(createTotalBadge("Qtd Total", totalQty.stripTrailingZeros().toPlainString()));
         totalsCard.add(createTotalBadge("Total Líquido", MultiCurrencyEngine.formatCurrency(totalNet, MultiCurrencyEngine.Currency.MZN)));

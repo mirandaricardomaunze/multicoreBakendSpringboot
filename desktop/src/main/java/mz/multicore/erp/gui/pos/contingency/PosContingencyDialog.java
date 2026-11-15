@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos.contingency;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.TableFilter;
@@ -41,7 +42,7 @@ public class PosContingencyDialog extends JDialog {
 
         JPanel root = new JPanel(new BorderLayout(0, 14));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(16, 18, 16, 18));
+        root.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // Header
         JPanel headerPanel = new JPanel(new BorderLayout(0, 6));

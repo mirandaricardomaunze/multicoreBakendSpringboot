@@ -43,7 +43,7 @@ public class CashFlowForecastPanel extends JPanel {
         JPanel mainContent = new JPanel();
         mainContent.setOpaque(false);
         mainContent.setLayout(new BoxLayout(mainContent, BoxLayout.Y_AXIS));
-        mainContent.setBorder(new EmptyBorder(8, 8, 16, 8));
+        mainContent.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.LG, Spacing.SM));
 
         mainContent.add(buildToolbar());
         mainContent.add(Box.createVerticalStrut(10));
@@ -107,7 +107,7 @@ public class CashFlowForecastPanel extends JPanel {
 
     private ModernPanel buildAlertBannerPanel() {
         alertBanner.setLayout(new BorderLayout(0, 2));
-        alertBanner.setBorder(new EmptyBorder(8, 12, 8, 12));
+        alertBanner.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         alertBanner.setBackground(UIHelper.KPI_INFO_SOFT);
 
         lblAlertTitle.setFont(Typography.BODY_BOLD);
@@ -124,7 +124,7 @@ public class CashFlowForecastPanel extends JPanel {
     private ModernPanel buildBucketsCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JLabel title = new JLabel("Matriz de Evolução Temporal da Liquidez (Horizontes Previsionais)");
         title.setFont(Typography.EMPHASIS_BOLD);

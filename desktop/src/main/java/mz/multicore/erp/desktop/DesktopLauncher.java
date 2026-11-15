@@ -92,8 +92,9 @@ public class DesktopLauncher {
             return;
         }
 
-        // Arranque após login: janela maximizada (loja trabalha em ecrã cheio).
-        showMainFrame(null, java.awt.Frame.MAXIMIZED_BOTH);
+        // Arranque após login: tamanho e posição da última sessão; maximizada por omissão (docs/MEMORIA_ECRA_SPEC.md).
+        showMainFrame(mz.multicore.erp.gui.components.WindowPrefs.savedBounds(),
+                mz.multicore.erp.gui.components.WindowPrefs.savedState(), true);
     }
 
     private boolean ensureLicenseAccepted() {
@@ -138,15 +139,16 @@ public class DesktopLauncher {
         if (currentFrame != null) {
             currentFrame.dispose(); // dispose programático → não dispara o logout (que é em windowClosing)
         }
-        showMainFrame(bounds, extendedState);
+        showMainFrame(bounds, extendedState, false);
     }
 
-    private void showMainFrame(java.awt.Rectangle bounds, int extendedState) {
+    private void showMainFrame(java.awt.Rectangle bounds, int extendedState, boolean firstStart) {
         MainFrame mainFrame = context.getBean(MainFrame.class); // prototype → instância nova com o tema activo
         mainFrame.applyAuthenticatedUser(session.displayName(), session.activeRole());
         mainFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent event) {
+                mz.multicore.erp.gui.components.WindowPrefs.save(mainFrame);
                 try {
                     authApiClient.logout(session);
                 } finally {
@@ -164,8 +166,8 @@ public class DesktopLauncher {
         mainFrame.setVisible(true);
         mainFrame.toFront();
         mainFrame.requestFocus();
-        // Aviso de assinatura só no primeiro arranque (bounds == null), não na reconstrução por tema.
-        if (bounds == null) {
+        // Aviso de assinatura só no primeiro arranque, não na reconstrução por tema.
+        if (firstStart) {
             java.awt.EventQueue.invokeLater(mainFrame::checkSubscriptionOnStartup);
         }
     }

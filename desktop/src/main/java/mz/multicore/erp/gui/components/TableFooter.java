@@ -36,7 +36,7 @@ public final class TableFooter {
         label.setFont(Typography.BODY);
         label.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
-                new EmptyBorder(6, 4, 0, 4)));
+                new EmptyBorder(Spacing.XS, Spacing.XS, 0, Spacing.XS)));
 
         // A actualização é DIFERIDA (invokeLater, coalescida): os eventos de modelo/sorter disparam
         // durante a mutação da tabela (ex.: setRowCount(0) + addRow), antes de o RowSorter reprocessar
