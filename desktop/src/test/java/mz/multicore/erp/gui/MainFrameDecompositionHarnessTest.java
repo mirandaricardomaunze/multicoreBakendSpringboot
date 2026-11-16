@@ -103,6 +103,6 @@ class MainFrameDecompositionHarnessTest {
                 .contains("KeyEvent.VK_F12")
                 .contains("openGlobalSearch()")
                 .contains("buildSearchIndex()")
-                .contains("buildSellerSearchIndex()");
+                .contains("MainFrameSellerSearchIndex.build(");
     }
 }
