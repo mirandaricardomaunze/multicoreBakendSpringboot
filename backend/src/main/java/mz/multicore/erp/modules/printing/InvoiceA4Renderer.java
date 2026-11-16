@@ -120,7 +120,7 @@ public class InvoiceA4Renderer {
         PdfPCell notes = borderless();
         notes.setPaddingLeft(10f);
         notes.addElement(title("OBSERVAÇÕES"));
-        StringBuilder text = new StringBuilder("Prazo de entrega e garantia conforme condições comerciais contratadas.");
+        StringBuilder text = new StringBuilder("Prazo de entrega e garantia conforme condições comerciais contratadas, sem prejuízo da garantia legal.");
         append(text, "Motivo de Anulação: ", invoice.getCancellationReason());
         append(text, "Emitido em regime de contingência: ", invoice.getContingencyReference());
         if (invoice.getStatus() != null) text.append("\nEstado: ").append(DocumentLabels.status(invoice.getStatus()));
@@ -144,7 +144,7 @@ public class InvoiceA4Renderer {
     private List<LineItemsTableRenderer.Row> toRows(List<InvoiceLine> lines) {
         return lines.stream().map(line -> lineRowMapper.map(line.getProduct(), line.getBatchNumber(),
                 line.getQuantity(), line.getUnitPrice(), line.getTaxRate(), line.getDiscountPercentage(),
-                line.getLineTotal())).toList();
+                line.getLineTotal(), line.effectiveExemptionReason())).toList();
     }
 
 

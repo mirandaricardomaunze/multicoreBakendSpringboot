@@ -106,6 +106,20 @@ incorrectos. As decisões de negócio ainda abertas estão no fim.
 - A guia calcula o valor com o desconto: antes o total não batia com o subtotal.
 - "Referência" repetia o número do documento e dá lugar à moeda.
 
+### Texto legal da fatura (revisão de 2026-11-14)
+
+- Uma fatura que não cobra IVA indica a norma concreta que o justifica. O texto vem da base legal
+  da taxa (`TaxRate.legalBasis`) e sai como "Isento — {base legal}" no quadro de IVA. Linhas com
+  motivos diferentes ficam em grupos separados. Saiu o genérico "Isento (Art. 9/10)".
+- O motivo fica gravado na linha da fatura ao emitir (`invoice_lines.exemption_reason`, V135):
+  reimprimir não muda o texto que o cliente recebeu. Linhas anteriores usam a base legal actual.
+- Sem base legal configurada sai "Isento de IVA": o sistema nunca inventa um artigo.
+- Uma taxa de IVA a 0% (isenta ou exportação) não se grava sem base legal.
+- Fatura simplificada (talão): taxa ou "Isento" em cada linha, quadro de IVA por taxa com o
+  motivo, e morada do cliente quando tem NUIT.
+- Observações da fatura A4: "garantia conforme condições comerciais contratadas, sem prejuízo da
+  garantia legal".
+
 ## Harness
 
 | Id | Cenário | Espera-se |
@@ -124,7 +138,16 @@ incorrectos. As decisões de negócio ainda abertas estão no fim.
 | GF-03 | Anular fatura de guia | Guia e encomenda prontas a faturar de novo |
 | GF-04 | Anular fatura de encomenda | Encomenda volta a pendente |
 
-Testes: `ComercialDocumentosHarnessTest` e `DeliveryGuideBillingHarnessTest`.
+| LT-01 | Quadro de IVA com linhas isentas | "Isento — {base legal}" por motivo, nunca "Art. 9/10" |
+| LT-02 | Isenção sem base legal | "Isento de IVA", sem artigo inventado |
+| LT-03 | Base legal muda depois da emissão | A linha mantém o motivo gravado |
+| LT-04 | Linha tributada / linha anterior à V135 | Sem motivo / base legal actual |
+| LT-05 | Talão de fatura simplificada | Taxa por linha, motivo e morada do cliente com NUIT |
+| LT-06 | Fatura A4 | Motivo da isenção e ressalva da garantia legal |
+| LT-07 | Taxa de IVA a 0% sem base legal | Recusada |
+
+Testes: `ComercialDocumentosHarnessTest`, `DeliveryGuideBillingHarnessTest` e
+`InvoiceLegalTextHarnessTest`.
 
 ## Limites
 
@@ -137,5 +160,8 @@ Testes: `ComercialDocumentosHarnessTest` e `DeliveryGuideBillingHarnessTest`.
 
 - **Pedidos de separação:** um desconto acima de 10% não pede aprovação, mas só um gerente os fatura.
 
-- **Texto legal da fatura:** o jurista deve confirmar as menções obrigatórias, incluindo a isenção
-  "Art. 9/10" e os juros de mora.
+- **Texto legal da fatura:** revisão técnica feita em 2026-11-14 (ver "Texto legal da fatura"). O
+  jurista ainda confirma: (1) o artigo, número e alínea de cada isenção, a configurar na base legal
+  das taxas; (2) se o software de faturação precisa de autorização da AT e que menção imprimir; (3) o
+  nome do talão ("Fatura Simplificada", "Venda a Dinheiro") e o seu limite; (4) a lei que fixou o IVA
+  em 16% (as taxas semeadas citam "DL 8/2024", por confirmar); (5) a redacção dos juros de mora.

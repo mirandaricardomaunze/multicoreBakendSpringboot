@@ -41,6 +41,7 @@ public class TaxRateService {
         } catch (IllegalArgumentException e) {
             throw new BusinessRuleException("Tipo fiscal inválido: " + request.type());
         }
+        requireLegalBasisWhenVatFree(type, request.rate(), request.legalBasis());
         TaxRate t = new TaxRate();
         t.setCode(request.code());
         t.setName(request.name());
@@ -63,6 +64,7 @@ public class TaxRateService {
         } catch (IllegalArgumentException e) {
             throw new BusinessRuleException("Tipo fiscal inválido: " + request.type());
         }
+        requireLegalBasisWhenVatFree(type, request.rate(), request.legalBasis());
         t.setName(request.name());
         t.setType(type);
         t.setRate(request.rate());
@@ -100,5 +102,19 @@ public class TaxRateService {
 
     private TaxRateDTO toDTO(TaxRate t) {
         return new TaxRateDTO(t.getId(), t.getCode(), t.getName(), t.getType().name(), t.getRate(), t.getLegalBasis(), t.isActive());
+    }
+
+    /**
+     * An invoice that does not charge VAT must state the legal provision that justifies it (Código do IVA),
+     * and the printed reason comes from this field. Refuse a 0% VAT rate without one.
+     */
+    private static void requireLegalBasisWhenVatFree(TaxType type, java.math.BigDecimal rate, String legalBasis) {
+        boolean vat = type == TaxType.IVA_STANDARD || type == TaxType.IVA_REDUCED
+                || type == TaxType.IVA_ZERO || type == TaxType.IVA_EXEMPT;
+        boolean vatFree = type == TaxType.IVA_ZERO || type == TaxType.IVA_EXEMPT || (rate != null && rate.signum() == 0);
+        if (vat && vatFree && (legalBasis == null || legalBasis.isBlank())) {
+            throw new BusinessRuleException("Indique a base legal da isenção (artigo, número e alínea do Código do IVA). "
+                    + "É o motivo que a fatura imprime quando não cobra IVA.");
+        }
     }
 }

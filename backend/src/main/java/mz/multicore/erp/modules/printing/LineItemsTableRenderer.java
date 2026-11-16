@@ -38,8 +38,17 @@ public final class LineItemsTableRenderer {
             BigDecimal unitPrice,
             BigDecimal taxRate,
             BigDecimal discountPercentage,
-            BigDecimal lineTotal
-    ) {}
+            BigDecimal lineTotal,
+            /** Legal reason for not charging VAT; only meaningful when {@code taxRate} is zero. */
+            String exemptionReason
+    ) {
+        public Row(String barcode, String reference, String description, LocalDate expiryDate, BigDecimal quantity,
+                   Integer packagesPerBox, Integer unitsPerPackage, BigDecimal unitPrice, BigDecimal taxRate,
+                   BigDecimal discountPercentage, BigDecimal lineTotal) {
+            this(barcode, reference, description, expiryDate, quantity, packagesPerBox, unitsPerPackage, unitPrice,
+                    taxRate, discountPercentage, lineTotal, null);
+        }
+    }
 
     private LineItemsTableRenderer() {}
 
