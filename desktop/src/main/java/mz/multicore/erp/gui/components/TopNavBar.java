@@ -31,15 +31,18 @@ import java.util.Map;
  */
 public class TopNavBar extends JPanel {
 
+    private static final int SECTION_MAX_WIDTH = 380;
+
     // ── Cores sensíveis ao tema. Lidas a partir dos slots de UIHelper (claro/escuro) e não fixas,
     //    para a barra de topo acompanhar a troca de tema como o resto da janela. ─────────────────
-    private static Color barBg()       { return UIHelper.isLight() ? new Color(255, 255, 255) : new Color(24, 32, 47); }
-    private static Color barBorder()   { return UIHelper.isLight() ? new Color(226, 232, 240) : new Color(45, 55, 72); }
-    private static Color headerText()  { return UIHelper.isLight() ? new Color(31, 41, 55)    : new Color(243, 244, 246); }
-    private static Color subText()     { return UIHelper.isLight() ? new Color(100, 116, 139) : new Color(203, 213, 225); }
+    private static Color barBg()       { return ThemeColors.chromeBg(); }
+    private static Color barBorder()   { return ThemeColors.chromeBorder(); }
+    private static Color headerText()  { return UIHelper.TEXT_LIGHT; }
+    private static Color subText()     { return ThemeColors.textSoft(); }
 
     private final JLabel brandLabel;
     private final JLabel brandSubLabel;
+    private final JLabel sectionLabel;
     private final JPanel navPanel;
     private final JPanel trailingPanel;
     private final List<TopNavItem> navItems = new ArrayList<>();
@@ -51,30 +54,45 @@ public class TopNavBar extends JPanel {
     public TopNavBar(String brand, String subBrand) {
         setLayout(new BorderLayout(12, 0));
         setBackground(barBg());
-        setBorder(new EmptyBorder(8, 16, 8, 16));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
 
         // ---- Brand / Active title block (left)
         brandLabel = new JLabel(brand != null && !brand.isBlank() ? brand : "Painel Inicial");
-        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
+        brandLabel.setFont(Typography.TITLE);
         brandLabel.setForeground(headerText());
 
         brandSubLabel = new JLabel(subBrand != null ? subBrand : "");
-        brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        brandSubLabel.setFont(Typography.CAPTION);
         brandSubLabel.setForeground(subText());
         brandSubLabel.setToolTipText("Empresa ativa");
         brandSubLabel.setVisible(subBrand != null && !subBrand.isBlank());
 
+        // "Module › Tab": the path shows where the user is, so screens need not repeat the tab name.
+        sectionLabel = new JLabel() {
+            @Override public Dimension getPreferredSize() {
+                Dimension size = super.getPreferredSize();
+                return new Dimension(Math.min(size.width, SECTION_MAX_WIDTH), size.height);
+            }
+        };
+        sectionLabel.setFont(Typography.TITLE_REGULAR);
+        sectionLabel.setForeground(headerText());
+        sectionLabel.setVisible(false);
+        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        titleRow.setOpaque(false);
+        titleRow.add(brandLabel);
+        titleRow.add(sectionLabel);
+
         JPanel brandStack = new JPanel();
         brandStack.setOpaque(false);
         brandStack.setLayout(new BoxLayout(brandStack, BoxLayout.Y_AXIS));
-        brandLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         brandSubLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        brandStack.add(brandLabel);
+        brandStack.add(titleRow);
         brandStack.add(brandSubLabel);
 
         JPanel brandWrapper = new JPanel(new BorderLayout());
         brandWrapper.setOpaque(false);
-        brandWrapper.setBorder(new EmptyBorder(0, 0, 0, 8));
+        brandWrapper.setBorder(new EmptyBorder(0, 0, 0, Spacing.SM));
         brandWrapper.add(brandStack, BorderLayout.CENTER);
         add(brandWrapper, BorderLayout.WEST);
 
@@ -92,8 +110,21 @@ public class TopNavBar extends JPanel {
     /** Update the title shown on the left of the top bar. */
     public void setTitle(String text) {
         if (text != null && !text.isBlank()) {
+            if (!text.equals(brandLabel.getText())) setSection(null);
             brandLabel.setText(text);
         }
+    }
+
+    /** Second part of the path ("Stock › Transferências"); null or blank shows the module alone. */
+    public void setSection(String section) {
+        boolean has = section != null && !section.isBlank();
+        sectionLabel.setText(has ? "  ›  " + section.trim() : "");
+        sectionLabel.setToolTipText(has ? section.trim() : null);
+        sectionLabel.setVisible(has);
+    }
+
+    public String getSection() {
+        return sectionLabel.isVisible() ? sectionLabel.getToolTipText() : null;
     }
 
     /** Update the sub-brand line (active company name shown under the brand). */
@@ -119,7 +150,7 @@ public class TopNavBar extends JPanel {
         JPopupMenu popup = new JPopupMenu();
         popup.setBorder(javax.swing.BorderFactory.createCompoundBorder(
                 javax.swing.BorderFactory.createLineBorder(UIHelper.BORDER),
-                new EmptyBorder(6, 6, 6, 6)));
+                new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS)));
 
         final TopNavItem[] holder = new TopNavItem[1];
         TopNavItem menuItem = new TopNavItem(icon, tooltip, accent,
@@ -130,8 +161,8 @@ public class TopNavBar extends JPanel {
 
         for (MenuEntry entry : entries) {
             JMenuItem option = new JMenuItem(entry.label(), entry.icon());
-            option.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
-            option.setBorder(new EmptyBorder(8, 10, 8, 14));
+            option.setFont(Typography.EMPHASIS);
+            option.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.LG));
             option.getAccessibleContext().setAccessibleName(entry.label());
             option.addActionListener(e -> {
                 setActive(entry.label());
@@ -159,21 +190,21 @@ public class TopNavBar extends JPanel {
         searchPill.setToolTipText("Pesquisar módulos ou ações (Ctrl+K)");
         searchPill.putClientProperty("search.action", onSearchClick);
         searchPill.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85), 1),
-                new EmptyBorder(5, 12, 5, 10)
+                javax.swing.BorderFactory.createLineBorder(ThemeColors.hairline(), 1),
+                new EmptyBorder(Spacing.XS, Spacing.MD, Spacing.XS, Spacing.SM)
         ));
 
         JLabel icon = new JLabel(UIHelper.icon("fas-search", 13, UIHelper.TEXT_MUTED));
         JLabel text = new JLabel("Pesquisar módulos ou ações...");
-        text.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        text.setFont(Typography.BODY);
         text.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel badge = new JLabel("Ctrl+K");
-        badge.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        badge.setFont(Typography.CAPTION_BOLD);
         badge.setForeground(UIHelper.TEXT_MUTED);
         badge.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(71, 85, 105), 1),
-                new EmptyBorder(1, 4, 1, 4)
+                javax.swing.BorderFactory.createLineBorder(ThemeColors.outline(), 1),
+                new EmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS)
         ));
 
         searchPill.add(icon, BorderLayout.WEST);

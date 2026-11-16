@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.platform;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.desktop.client.PlatformApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.KpiCard;
@@ -48,7 +49,7 @@ public class PlatformSubscriptionsView extends JPanel {
 
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Pagamento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
@@ -76,7 +77,7 @@ public class PlatformSubscriptionsView extends JPanel {
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
-        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        listCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"Empresa", "Plano", "Estado", "Válida até", "Preço/mês", "Nº Pagamentos"};
         subsModel = new DefaultTableModel(cols, 0) {
@@ -108,14 +109,14 @@ public class PlatformSubscriptionsView extends JPanel {
         JComboBox<String> sPlano = TableFilter.combo("Todos os planos", "Avaliação", "Básico", "Profissional", "Empresarial");
         TableFilter.install(subsTable, sSearch, new TableFilter.ColumnFilter(sEstado, 2), new TableFilter.ColumnFilter(sPlano, 1));
         JPanel sBar = TableFilter.bar(sSearch, TableFilter.label("Estado:"), sEstado, TableFilter.label("Plano:"), sPlano);
-        sBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        sBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         listCard.add(UIHelper.tableCardTop("Subscrições das Empresas", sBar, refreshBtn, moreBtn, payBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
 
         ModernPanel chartCard = new ModernPanel(16);
         chartCard.setLayout(new BorderLayout());
-        chartCard.setBorder(new EmptyBorder(12, 14, 12, 14));
+        chartCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         chartCard.setPreferredSize(new Dimension(280, 0));
         subPlansChart = new SimplePieChart("Distribuição por Plano", true);
         chartCard.add(subPlansChart, BorderLayout.CENTER);

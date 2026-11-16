@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.assets.model.Asset;
 import mz.multicore.erp.modules.assets.model.AssetStatus;
 import mz.multicore.erp.modules.assets.repository.AssetRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -17,11 +17,11 @@ import java.util.List;
 public class AssetLifecycleService {
 
     private final AssetRepository assetRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
 
-    public AssetLifecycleService(AssetRepository assetRepository, CompanyRepository companyRepository) {
+    public AssetLifecycleService(AssetRepository assetRepository, CompanyLookup companyLookup) {
         this.assetRepository = assetRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
     }
 
     public AssetDTO createAsset(Long companyId, CreateAssetRequest request) {
@@ -32,8 +32,7 @@ public class AssetLifecycleService {
             throw new BusinessRuleException("Já existe um activo registado com o código '" + request.assetCode() + "'.");
         }
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada: " + companyId));
+        Company company = companyLookup.require(companyId);
 
         BigDecimal rate = request.annualDepreciationRate();
         if (rate == null || rate.compareTo(BigDecimal.ZERO) <= 0) {

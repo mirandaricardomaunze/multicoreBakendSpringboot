@@ -20,10 +20,10 @@ public class CollapsibleSidebar extends JPanel {
     private static final int ANIMATION_DURATION_MS = 140;
     private static final int ANIMATION_TICK_MS = 14;
 
-    private static Color sidebarBg()     { return UIHelper.isLight() ? new Color(255, 255, 255) : new Color(24, 32, 47); }
-    private static Color sidebarBorder() { return UIHelper.isLight() ? new Color(226, 232, 240) : new Color(45, 55, 72); }
-    private static Color headerText()    { return UIHelper.isLight() ? new Color(31, 41, 55)    : new Color(243, 244, 246); }
-    private static Color subText()       { return UIHelper.isLight() ? new Color(100, 116, 139) : new Color(203, 213, 225); }
+    private static Color sidebarBg()     { return ThemeColors.chromeBg(); }
+    private static Color sidebarBorder() { return ThemeColors.chromeBorder(); }
+    private static Color headerText()    { return UIHelper.TEXT_LIGHT; }
+    private static Color subText()       { return ThemeColors.textSoft(); }
 
     private final JPanel body = new JPanel();
     private final JPanel headerPanel = new JPanel();
@@ -52,12 +52,12 @@ public class CollapsibleSidebar extends JPanel {
         setPreferredSize(new Dimension(EXPANDED_WIDTH, 800));
 
         brandLabel.setText(brand != null && !brand.isBlank() ? brand : "MULTICORE");
-        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
+        brandLabel.setFont(Typography.TITLE);
         brandLabel.setForeground(headerText());
         brandLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         setSubBrand(subBrand);
-        brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        brandSubLabel.setFont(Typography.CAPTION);
         brandSubLabel.setForeground(subText());
         brandSubLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -73,7 +73,7 @@ public class CollapsibleSidebar extends JPanel {
 
         body.setOpaque(false);
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setBorder(new EmptyBorder(4, 6, 10, 6));
+        body.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.SM, Spacing.XS));
 
         favoritesContainer.setOpaque(false);
         favoritesContainer.setLayout(new BoxLayout(favoritesContainer, BoxLayout.Y_AXIS));
@@ -117,6 +117,7 @@ public class CollapsibleSidebar extends JPanel {
     public void addSection(String title) {
         boolean showDivider = !sectionHeaders.isEmpty() || !navItems.isEmpty();
         SidebarSectionHeader section = new SidebarSectionHeader(title, showDivider);
+        section.setCollapsed(collapsed);
         sectionHeaders.add(section);
         body.add(section);
     }
@@ -131,6 +132,7 @@ public class CollapsibleSidebar extends JPanel {
 
     private SidebarNavItem registerItem(SidebarNavItem item) {
         item.setAlignmentX(Component.LEFT_ALIGNMENT);
+        item.setCollapsed(collapsed);
         navItems.add(item);
         body.add(item);
         body.add(Box.createRigidArea(new Dimension(0, 2)));
@@ -164,7 +166,8 @@ public class CollapsibleSidebar extends JPanel {
     public List<SidebarNavItem> getNavItems() { return List.copyOf(navItems); }
     public void onCollapsedChanged(Consumer<Boolean> listener) { this.collapseListener = listener; }
     public boolean isCollapsedState() { return collapsed; }
-    public void toggle() { setCollapsedState(!collapsed); }
+    /** The user's own toggle (button, Ctrl+B): remembered for the next start. */
+    public void toggle() { setCollapsedState(!collapsed); SidebarCollapsePreference.remember(collapsed); }
 
     public void setCollapsedState(boolean target) {
         if (this.collapsed == target) return;
@@ -212,7 +215,7 @@ public class CollapsibleSidebar extends JPanel {
         footerPanel.removeAll();
         if (collapsed) {
             headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
-            headerPanel.setBorder(new EmptyBorder(12, 6, 10, 6));
+            headerPanel.setBorder(new EmptyBorder(Spacing.MD, Spacing.XS, Spacing.SM, Spacing.XS));
             logoBadge.setAlignmentX(Component.CENTER_ALIGNMENT);
             toggleButton.setAlignmentX(Component.CENTER_ALIGNMENT);
             headerPanel.add(logoBadge);
@@ -220,18 +223,18 @@ public class CollapsibleSidebar extends JPanel {
             headerPanel.add(toggleButton);
 
             footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
-            footerPanel.setBorder(new EmptyBorder(8, 6, 12, 6));
+            footerPanel.setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, Spacing.MD, Spacing.XS));
             userProfileCard.setAlignmentX(Component.CENTER_ALIGNMENT);
             footerPanel.add(userProfileCard);
         } else {
             headerPanel.setLayout(new BorderLayout(8, 0));
-            headerPanel.setBorder(new EmptyBorder(14, 12, 12, 12));
+            headerPanel.setBorder(new EmptyBorder(Spacing.LG, Spacing.MD, Spacing.MD, Spacing.MD));
             headerPanel.add(logoBadge, BorderLayout.WEST);
             headerPanel.add(brandStack, BorderLayout.CENTER);
             headerPanel.add(toggleButton, BorderLayout.EAST);
 
             footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
-            footerPanel.setBorder(new EmptyBorder(8, 12, 12, 12));
+            footerPanel.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.MD, Spacing.MD));
             userProfileCard.setAlignmentX(Component.LEFT_ALIGNMENT);
             footerPanel.add(userProfileCard);
         }
@@ -241,9 +244,9 @@ public class CollapsibleSidebar extends JPanel {
 
     private JLabel createFooterVersionLabel() {
         JLabel lbl = new JLabel("MULTICORE v1.0.0");
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        lbl.setFont(Typography.CAPTION);
         lbl.setForeground(subText());
-        lbl.setBorder(new EmptyBorder(0, 4, 0, 0));
+        lbl.setBorder(new EmptyBorder(0, Spacing.XS, 0, 0));
         lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         lbl.setToolTipText("MULTICORE ERP • Clique para ver detalhes e licença do sistema");
         lbl.addMouseListener(new java.awt.event.MouseAdapter() {

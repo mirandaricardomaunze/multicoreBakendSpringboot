@@ -9,7 +9,7 @@ import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.inventory.model.StockTransfer;
 import mz.multicore.erp.modules.inventory.model.StockTransferLine;
-import mz.multicore.erp.modules.inventory.repository.ProductBatchRepository;
+import mz.multicore.erp.modules.inventory.service.ProductBatchLookup;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -28,15 +28,15 @@ public class StockTransferPrintLinesTableBuilder {
     private static final Font TABLE_BODY_FONT =
             FontFactory.getFont(FontFactory.HELVETICA, 8f, PdfTheme.TEXT);
 
-    private final ProductBatchRepository batchRepository;
+    private final ProductBatchLookup batchLookup;
 
     public StockTransferPrintLinesTableBuilder() {
         this(null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
-    public StockTransferPrintLinesTableBuilder(ProductBatchRepository batchRepository) {
-        this.batchRepository = batchRepository;
+    public StockTransferPrintLinesTableBuilder(ProductBatchLookup batchLookup) {
+        this.batchLookup = batchLookup;
     }
 
     public PdfPTable buildProfessionalLinesTable(StockTransfer transfer) {
@@ -121,9 +121,9 @@ public class StockTransferPrintLinesTableBuilder {
             return new BatchInfo(line.getBatchNumber(), "-");
         }
         Product product = line.getProduct();
-        if (batchRepository != null && product != null && warehouseId != null) {
+        if (batchLookup != null && product != null && warehouseId != null) {
             try {
-                var batches = batchRepository.findAvailableFEFO(product.getId(), warehouseId);
+                var batches = batchLookup.listAvailableFefo(product.getId(), warehouseId);
                 if (batches != null && !batches.isEmpty()) {
                     var batch = batches.get(0);
                     String expiration = batch.getExpirationDate() == null ? "-"

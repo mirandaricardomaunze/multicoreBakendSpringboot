@@ -34,9 +34,9 @@ public class SidebarNavItem extends JComponent {
     private static final int LEFT_INSET = 8;
     private static final int RIGHT_INSET = 10;
 
-    private static Color textActive()   { return UIHelper.isLight() ? new Color(15, 23, 42) : Color.WHITE; }
-    private static Color textInactive() { return UIHelper.isLight() ? new Color(71, 85, 105) : Color.WHITE; }
-    private static Color hoverOverlay() { return UIHelper.isLight() ? new Color(0, 0, 0, 14) : new Color(255, 255, 255, 16); }
+    private static Color textActive()   { return UIHelper.TEXT_LIGHT; }
+    private static Color textInactive() { return ThemeColors.control(); }
+    private static Color hoverOverlay() { return ThemeColors.hoverOverlay(); }
 
     private final String iconGlyph;
     private final Icon icon;
@@ -249,7 +249,7 @@ public class SidebarNavItem extends JComponent {
     }
 
     private void paintLabel(Graphics2D g2, int h) {
-        g2.setFont(new Font(UIHelper.FONT, active ? Font.BOLD : Font.PLAIN, 13));
+        g2.setFont(active ? Typography.EMPHASIS_BOLD : Typography.EMPHASIS);
         FontMetrics fm = g2.getFontMetrics();
         int labelY = (h + fm.getAscent() - fm.getDescent()) / 2;
         g2.setColor(active ? textActive() : textInactive());
@@ -263,7 +263,7 @@ public class SidebarNavItem extends JComponent {
     private void paintBadge(Graphics2D g2, int w, int h) {
         if (badgeCount <= 0) return;
         String badgeText = badgeCount > 99 ? "99+" : String.valueOf(badgeCount);
-        g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        g2.setFont(Typography.CAPTION_BOLD);
         FontMetrics fm = g2.getFontMetrics();
         int textW = fm.stringWidth(badgeText);
         int badgeH = 16;

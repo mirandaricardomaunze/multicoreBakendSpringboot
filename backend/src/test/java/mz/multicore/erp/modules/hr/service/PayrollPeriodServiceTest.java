@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.model.PayrollPeriod;
 import mz.multicore.erp.modules.hr.repository.PayrollPeriodRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -39,7 +40,7 @@ class PayrollPeriodServiceTest {
         periodRepository = mock(PayrollPeriodRepository.class);
         companyRepository = mock(CompanyRepository.class);
         auditLogService = mock(AuditLogService.class);
-        service = new PayrollPeriodService(periodRepository, companyRepository, auditLogService);
+        service = new PayrollPeriodService(periodRepository, new CompanyLookup(companyRepository), auditLogService);
 
         Company company = new Company();
         company.setId(COMPANY);

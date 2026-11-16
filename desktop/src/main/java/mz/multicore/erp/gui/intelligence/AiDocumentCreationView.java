@@ -35,7 +35,7 @@ public class AiDocumentCreationView extends JPanel {
         this.onDocumentSaved = onDocumentSaved;
         setLayout(new BorderLayout(0, 14));
         setOpaque(false);
-        setBorder(new EmptyBorder(12, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.MD, 0, 0, 0));
 
         add(buildCard(), BorderLayout.CENTER);
     }
@@ -43,7 +43,7 @@ public class AiDocumentCreationView extends JPanel {
     private JPanel buildCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(new EmptyBorder(18, 18, 18, 18));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         UIHelper.styleComboBox(documentType);
         UIHelper.styleTextField(documentTitle);

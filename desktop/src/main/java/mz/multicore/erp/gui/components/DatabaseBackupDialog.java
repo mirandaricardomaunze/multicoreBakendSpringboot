@@ -38,22 +38,8 @@ public class DatabaseBackupDialog extends JDialog {
     }
 
     private void initComponents() {
-        JPanel root = new JPanel(new BorderLayout(0, 16));
-        root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(20, 22, 20, 22));
-
-        // Topo
-        JPanel header = new JPanel(new BorderLayout(0, 6));
-        header.setOpaque(false);
-        JLabel title = UIHelper.createHeading("Cópias de Segurança & Integridade");
-        title.setIcon(UIHelper.icon("fas-database", 18));
-        JLabel subtitle = new JLabel("Geração de cópias completas dos dados e validação de arquivos.");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-
-        header.add(title, BorderLayout.NORTH);
-        header.add(subtitle, BorderLayout.SOUTH);
-        root.add(header, BorderLayout.NORTH);
+        JPanel root = DialogChrome.frame("fas-database", "Cópias de Segurança & Integridade",
+                "Geração de cópias completas dos dados e validação de arquivos.", null, null);
 
         // Painel Central com Cartões
         JPanel center = new JPanel(new BorderLayout(0, 12));
@@ -62,18 +48,18 @@ public class DatabaseBackupDialog extends JDialog {
         // Card 1: Estado e Ação Rápida
         ModernPanel quickCard = new ModernPanel(16);
         quickCard.setLayout(new BorderLayout(14, 0));
-        quickCard.setBorder(new EmptyBorder(14, 16, 14, 16));
+        quickCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JPanel statusBox = new JPanel();
         statusBox.setLayout(new BoxLayout(statusBox, BoxLayout.Y_AXIS));
         statusBox.setOpaque(false);
 
         statusLabel = new JLabel("Estado: A verificar");
-        statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        statusLabel.setFont(Typography.EMPHASIS_BOLD);
         statusLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         lastRunLabel = new JLabel("Último Backup Automático: --");
-        lastRunLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lastRunLabel.setFont(Typography.BODY);
         lastRunLabel.setForeground(UIHelper.TEXT_MUTED);
 
         statusBox.add(statusLabel);
@@ -81,7 +67,7 @@ public class DatabaseBackupDialog extends JDialog {
         statusBox.add(lastRunLabel);
         quickCard.add(statusBox, BorderLayout.CENTER);
 
-        generateBtn = UIHelper.createSuccessButton("Criar Backup Agora");
+        generateBtn = ButtonStyles.main(UIHelper.createSuccessButton("Criar Backup Agora"));
         generateBtn.setIcon(UIHelper.icon("fas-download", 14));
         generateBtn.addActionListener(e -> generateBackup());
         quickCard.add(generateBtn, BorderLayout.EAST);
@@ -91,10 +77,10 @@ public class DatabaseBackupDialog extends JDialog {
         // Card 2: Ficheiros de Backup e Verificação
         ModernPanel tableCard = new ModernPanel(16);
         tableCard.setLayout(new BorderLayout(0, 10));
-        tableCard.setBorder(new EmptyBorder(14, 16, 14, 16));
+        tableCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JLabel tableTitle = new JLabel("Arquivos de Cópia de Segurança no Servidor:");
-        tableTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        tableTitle.setFont(Typography.EMPHASIS_BOLD);
         tableTitle.setForeground(UIHelper.TEXT_LIGHT);
         tableCard.add(tableTitle, BorderLayout.NORTH);
 
@@ -116,10 +102,10 @@ public class DatabaseBackupDialog extends JDialog {
         tableActions.setOpaque(false);
 
         resultSummaryLabel = new JLabel("Selecione um arquivo para verificar.");
-        resultSummaryLabel.setFont(new Font(UIHelper.FONT, Font.ITALIC, 12));
+        resultSummaryLabel.setFont(Typography.BODY.deriveFont(Font.ITALIC));
         resultSummaryLabel.setForeground(UIHelper.TEXT_MUTED);
 
-        verifyBtn = UIHelper.createSecondaryButton("Verificar Integridade");
+        verifyBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Verificar Integridade"));
         verifyBtn.setIcon(UIHelper.icon("fas-shield-alt", 13));
         verifyBtn.addActionListener(e -> verifySelectedBackup());
 
@@ -131,12 +117,9 @@ public class DatabaseBackupDialog extends JDialog {
         root.add(center, BorderLayout.CENTER);
 
         // Rodapé
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        footer.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
-        footer.add(closeBtn);
-        root.add(footer, BorderLayout.SOUTH);
+        root.add(DialogChrome.footer(closeBtn), BorderLayout.SOUTH);
 
         setContentPane(root);
     }

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -41,7 +42,7 @@ final class HRDeductionsPanel {
     JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton stopBtn = UIHelper.createDangerButton("Desactivar");
         stopBtn.setIcon(UIHelper.icon("fas-ban", 14));
@@ -54,7 +55,7 @@ final class HRDeductionsPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"ID", "Colaborador", "Tipo", "Descrição", "Capital (MT)", "Prestação (MT)",
                 "Descontado (MT)", "Em Dívida (MT)", "Início", "Estado"};
@@ -91,7 +92,7 @@ final class HRDeductionsPanel {
         JComboBox<String> estado = TableFilter.combo("Todos os estados", "Activo", "Liquidado", "Desactivado");
         TableFilter.install(table, search, List.of(new TableFilter.ColumnFilter(tipo, 2), new TableFilter.ColumnFilter(estado, 9)), List.of());
         JPanel bar = TableFilter.bar(search, TableFilter.label("Tipo:"), tipo, TableFilter.label("Estado:"), estado);
-        bar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        bar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
         card.add(UIHelper.tableCardTop("Descontos, Adiantamentos e Empréstimos", bar,

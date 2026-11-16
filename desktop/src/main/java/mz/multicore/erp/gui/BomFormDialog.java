@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.desktop.client.ProductionApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
@@ -58,24 +59,21 @@ public final class BomFormDialog {
         dialog.setOnSave(() -> {
             String code = codeField.getText().trim();
             if (code.isEmpty()) {
-                codeField.requestFocus();
-                throw new IllegalArgumentException("O código da ficha é obrigatório.");
+                throw FieldValidationException.of(codeField, "O código da ficha é obrigatório.");
             }
             String name = nameField.getText().trim();
             if (name.isEmpty()) {
-                nameField.requestFocus();
-                throw new IllegalArgumentException("O nome da ficha é obrigatório.");
+                throw FieldValidationException.of(nameField, "O nome da ficha é obrigatório.");
             }
             ProductDTO prod = (ProductDTO) productCombo.getSelectedItem();
-            if (prod == null) throw new IllegalArgumentException("Selecione o produto final.");
+            if (prod == null) throw FieldValidationException.of(productCombo, "Selecione o produto final.");
 
             BigDecimal baseQty;
             try {
                 baseQty = new BigDecimal(baseQtyField.getText().trim().replace(",", "."));
                 if (baseQty.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
             } catch (Exception ex) {
-                baseQtyField.requestFocus();
-                throw new IllegalArgumentException("A quantidade base deve ser positiva.");
+                throw FieldValidationException.of(baseQtyField, "A quantidade base deve ser positiva.");
             }
 
             BigDecimal labor = BigDecimal.ZERO;

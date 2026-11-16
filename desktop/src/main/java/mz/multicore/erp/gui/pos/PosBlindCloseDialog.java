@@ -1,5 +1,10 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -47,48 +52,23 @@ public class PosBlindCloseDialog extends JDialog {
         this.onCloseSuccess = onCloseSuccess;
         this.printApiClient = printApiClient;
 
-        setSize(720, 760);
+        setSize(820, 760); // a contagem de notas e moedas precisa de ~760 px sem scroll horizontal
         setMinimumSize(new Dimension(680, 680));
         setLocationRelativeTo(owner);
-        setLayout(new BorderLayout());
-
-        add(createHeaderPanel(), BorderLayout.NORTH);
-        add(createContentPanel(), BorderLayout.CENTER);
-        add(createFooterPanel(), BorderLayout.SOUTH);
-
-        breakdownPanel.recalculate();
-    }
-
-    private JPanel createHeaderPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIHelper.ROW_ALT);
-        panel.setBorder(BorderFactory.createEmptyBorder(14, 20, 14, 20));
-
-        JLabel title = new JLabel("Fecho Cego de Caixa (Blind Drop)");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
-        title.setForeground(UIHelper.TEXT_LIGHT);
-        title.setIcon(UIHelper.icon("fas-cash-register", 18, UIHelper.ACCENT_CYAN));
-        title.setIconTextGap(10);
-
-        String subtitleText = String.format("Operador: %s  |  Sessão #%d  |  Abertura: %,.2f MT",
+        String subtitle = String.format("Operador: %s  |  Sessão #%d  |  Abertura: %,.2f MT",
                 session.operator() != null ? session.operator() : "—",
                 session.id(),
                 session.openingBalance() != null ? session.openingBalance() : BigDecimal.ZERO);
-        JLabel subtitle = new JLabel(subtitleText);
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-        subtitle.setBorder(BorderFactory.createEmptyBorder(4, 28, 0, 0));
+        setContentPane(DialogChrome.frame("fas-cash-register", "Fecho Cego de Caixa (Blind Drop)", subtitle,
+                createContentPanel(), createFooterPanel()));
 
-        panel.add(title, BorderLayout.NORTH);
-        panel.add(subtitle, BorderLayout.SOUTH);
-        return panel;
+        breakdownPanel.recalculate();
     }
 
     private JComponent createContentPanel() {
         JPanel root = new JPanel();
         root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
-        root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        root.setOpaque(false);
 
         breakdownPanel.addTo(root);
         root.add(Box.createVerticalStrut(12));
@@ -100,29 +80,31 @@ public class PosBlindCloseDialog extends JDialog {
         UIHelper.styleScrollPane(scroll);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
         return scroll;
     }
 
     private JPanel createNotesCard() {
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel lbl = new JLabel("Observações / Justificação de Diferença (opcional):");
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lbl.setFont(Typography.BODY_BOLD);
         lbl.setForeground(UIHelper.TEXT_LIGHT);
 
         notesArea = new JTextArea(2, 20);
         notesArea.setLineWrap(true);
         notesArea.setWrapStyleWord(true);
-        notesArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        notesArea.setFont(Typography.BODY);
         notesArea.setBackground(UIHelper.BG_CARD);
         notesArea.setForeground(UIHelper.TEXT_LIGHT);
         notesArea.setCaretColor(Color.WHITE);
         notesArea.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1),
-                BorderFactory.createEmptyBorder(4, 6, 4, 6)
+                BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS)
         ));
 
         card.add(lbl, BorderLayout.NORTH);
@@ -131,26 +113,20 @@ public class PosBlindCloseDialog extends JDialog {
     }
 
     private JPanel createFooterPanel() {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        footer.setBackground(UIHelper.ROW_ALT);
-
-        btnPrintZ = UIHelper.createPrimaryButton("Imprimir Relatório Z (A4)");
-        btnPrintZ.setIcon(UIHelper.icon("fas-print", 13, Color.WHITE));
+        btnPrintZ = ButtonStyles.secondary(UIHelper.createPrimaryButton("Imprimir Relatório Z (A4)"));
+        btnPrintZ.setIcon(UIHelper.icon("fas-print", 13));
         btnPrintZ.setEnabled(false);
         btnPrintZ.addActionListener(e -> printZReport());
 
-        btnConfirm = UIHelper.createSuccessButton("Confirmar Fecho de Caixa");
-        btnConfirm.setIcon(UIHelper.icon("fas-lock", 13, Color.WHITE));
+        btnConfirm = ButtonStyles.main(UIHelper.createSuccessButton("Confirmar Fecho de Caixa"));
+        btnConfirm.setIcon(UIHelper.icon("fas-lock", 13));
         btnConfirm.addActionListener(e -> executeClose());
 
-        btnCancel = UIHelper.createDangerButton("Cancelar / Voltar");
-        btnCancel.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
+        btnCancel = ButtonStyles.secondary(UIHelper.createDangerButton("Cancelar / Voltar"));
+        btnCancel.setIcon(UIHelper.icon("fas-times", 13));
         btnCancel.addActionListener(e -> dispose());
 
-        footer.add(btnPrintZ);
-        footer.add(btnConfirm);
-        footer.add(btnCancel);
-        return footer;
+        return DialogChrome.footer(btnCancel, btnPrintZ, btnConfirm);
     }
 
     private void executeClose() {
@@ -187,7 +163,7 @@ public class PosBlindCloseDialog extends JDialog {
 
             ToastManager.show(this, FeedbackType.SUCCESS, "Caixa fechado com sucesso! Pode agora imprimir o Relatório Z.");
         } catch (Exception ex) {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao fechar caixa: " + ex.getMessage());
+            UserErrors.toast(this, "fechar caixa", ex);
         }
     }
 

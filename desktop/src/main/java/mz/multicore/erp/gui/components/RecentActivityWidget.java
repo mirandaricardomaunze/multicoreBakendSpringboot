@@ -38,14 +38,14 @@ public class RecentActivityWidget extends ModernPanel {
     public RecentActivityWidget() {
         super(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
         setLayout(new BorderLayout(0, 10));
-        setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // Header
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
 
         JLabel titleLabel = new JLabel("Atividade Recente");
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel iconLabel = new JLabel(UIHelper.icon("fas-stream", 14, UIHelper.ACCENT_BLUE));
@@ -83,9 +83,9 @@ public class RecentActivityWidget extends ModernPanel {
         listContainer.removeAll();
         if (entries.isEmpty()) {
             JLabel empty = new JLabel("Sem atividade recente registada.");
-            empty.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            empty.setFont(Typography.BODY);
             empty.setForeground(UIHelper.TEXT_MUTED);
-            empty.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
+            empty.setBorder(BorderFactory.createEmptyBorder(Spacing.XL, Spacing.SM, Spacing.XL, Spacing.SM));
             listContainer.add(empty);
         } else {
             for (int i = 0; i < entries.size(); i++) {
@@ -103,7 +103,7 @@ public class RecentActivityWidget extends ModernPanel {
     private JPanel createTimelineRow(ActivityEntry item, boolean isLast) {
         JPanel row = new JPanel(new BorderLayout(10, 0));
         row.setOpaque(false);
-        row.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+        row.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS));
 
         // Left Icon Badge
         Color color = item.accentColor() != null ? item.accentColor() : UIHelper.ACCENT_BLUE;
@@ -129,11 +129,11 @@ public class RecentActivityWidget extends ModernPanel {
         textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
 
         JLabel titleLbl = new JLabel(item.title());
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        titleLbl.setFont(Typography.BODY_BOLD);
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel detailLbl = new JLabel(item.detail() != null ? item.detail() : "");
-        detailLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        detailLbl.setFont(Typography.CAPTION);
         detailLbl.setForeground(UIHelper.TEXT_MUTED);
 
         textStack.add(titleLbl);
@@ -142,7 +142,7 @@ public class RecentActivityWidget extends ModernPanel {
 
         // Right: Timestamp
         JLabel timeLbl = new JLabel(item.timeAgo() != null ? item.timeAgo() : "");
-        timeLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        timeLbl.setFont(Typography.CAPTION);
         timeLbl.setForeground(UIHelper.TEXT_MUTED);
         row.add(timeLbl, BorderLayout.EAST);
 

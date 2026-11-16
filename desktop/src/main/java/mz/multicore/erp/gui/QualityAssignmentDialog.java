@@ -1,5 +1,10 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.HRApiClient;
 import mz.multicore.erp.desktop.client.QualityApiClient;
@@ -71,12 +76,10 @@ public class QualityAssignmentDialog extends JDialog {
     }
 
     private void initComponents() {
-        setLayout(new BorderLayout());
         getContentPane().setBackground(UIHelper.BG_DARK);
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
         content.setOpaque(false);
 
         // Estilos
@@ -89,13 +92,13 @@ public class QualityAssignmentDialog extends JDialog {
         sizeOrSpecField.putClientProperty("JTextField.placeholderText", "Ex: Tam. 42, XL, L, 50mm...");
         serialNumberField.putClientProperty("JTextField.placeholderText", "Ex: Lote ou Nº de série do fabricante (opcional)");
 
-        calculatedExpiryLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        calculatedExpiryLabel.setFont(Typography.EMPHASIS_BOLD);
         calculatedExpiryLabel.setForeground(UIHelper.TEXT_MUTED);
         calculatedExpiryLabel.setText("Aguardando selecção de equipamento...");
 
         notesArea.setLineWrap(true);
         notesArea.setWrapStyleWord(true);
-        notesArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        notesArea.setFont(Typography.EMPHASIS);
         JScrollPane notesScroll = new JScrollPane(notesArea);
         notesScroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER));
 
@@ -149,7 +152,7 @@ public class QualityAssignmentDialog extends JDialog {
 
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new GridBagLayout());
-        card.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         GridBagConstraints g = new GridBagConstraints();
         g.insets = new Insets(6, 6, 6, 6);
         g.fill = GridBagConstraints.HORIZONTAL;
@@ -166,7 +169,7 @@ public class QualityAssignmentDialog extends JDialog {
 
         qg.gridx = 1; qg.weightx = 0.28;
         JLabel specLbl = new JLabel("Tamanho / Calibre:");
-        specLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        specLbl.setFont(Typography.EMPHASIS);
         specLbl.setForeground(UIHelper.TEXT_LIGHT);
         qtyAndSpecPanel.add(specLbl, qg);
 
@@ -187,21 +190,14 @@ public class QualityAssignmentDialog extends JDialog {
         addFormRow(card, g, row++, "", printSheetCheck);
 
         content.add(card);
-        add(content, BorderLayout.CENTER);
 
-        // Rodapé
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        footer.setBackground(UIHelper.BG_DARK);
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER));
-
-        ModernButton cancelBtn = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
-        ModernButton saveBtn = UIHelper.createPrimaryButton("Gravar Atribuição");
+        ModernButton saveBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Gravar Atribuição"));
         saveBtn.addActionListener(e -> save());
 
-        footer.add(cancelBtn);
-        footer.add(saveBtn);
-        add(footer, BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-hard-hat", getTitle(),
+                "Entrega de equipamento de protecção a um trabalhador, com validade calculada.", content, DialogChrome.footer(cancelBtn, saveBtn)));
 
         pack();
         UIHelper.applyStandardModalBounds(this, 580, 560);
@@ -212,7 +208,7 @@ public class QualityAssignmentDialog extends JDialog {
         g.gridy = row;
         g.weightx = 0.35;
         JLabel lbl = new JLabel(labelText);
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lbl.setFont(Typography.BODY_BOLD);
         lbl.setForeground(UIHelper.TEXT_LIGHT);
         p.add(lbl, g);
 
@@ -246,7 +242,7 @@ public class QualityAssignmentDialog extends JDialog {
             }
             updateCalculatedExpiry();
         }, err -> {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao carregar dados: " + err.getMessage());
+            UserErrors.toast(this, "carregar dados", err);
         });
     }
 
@@ -332,10 +328,10 @@ public class QualityAssignmentDialog extends JDialog {
                     return qualityApiClient.getDeliverySheetPdf(saved.id(), cid);
                 }, pdf -> {
                     PrintPreviewDialog.show(parent, pdf, "termo-entrega-" + saved.id(), "Termo de Entrega de Equipamento / EPI");
-                }, err -> ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gerar Termo de Entrega: " + err.getMessage()));
+                }, err -> UserErrors.toast(parent, "gerar Termo de Entrega", err));
             }
         }, err -> {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao atribuir: " + err.getMessage());
+            UserErrors.toast(this, "atribuir", err);
         });
     }
 }

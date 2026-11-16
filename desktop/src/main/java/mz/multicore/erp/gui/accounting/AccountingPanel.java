@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.accounting;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.desktop.client.AccountingApiClient;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -31,7 +32,7 @@ public final class AccountingPanel extends JPanel {
         this.accountingApiClient = accountingApiClient;
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(25, 25, 25, 25));
+        setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);

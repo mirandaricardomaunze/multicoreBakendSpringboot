@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.desktop.session.DesktopSessionStore;
@@ -73,7 +74,7 @@ final class MainFrameCompanySelector {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 setBackground(isSelected ? UIHelper.GRID : UIHelper.BG_CARD);
                 setForeground(UIHelper.TEXT_LIGHT);
-                setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+                setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM));
                 if (value instanceof DesktopSession.CompanyAccess company) {
                     String roleColor = isSelected ? "#E5E7EB" : "#9CA3AF";
                     setText("<html>" + company.name()

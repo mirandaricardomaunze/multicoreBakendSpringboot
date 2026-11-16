@@ -37,7 +37,7 @@ public class GoalsTab extends JPanel {
         this.onGoalChanged = onGoalChanged;
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
         buildUI();
     }
 
@@ -47,7 +47,7 @@ public class GoalsTab extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JPanel filterBar = new JPanel(new BorderLayout(10, 0));
         filterBar.setOpaque(false);

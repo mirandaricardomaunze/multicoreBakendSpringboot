@@ -10,7 +10,6 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -57,25 +56,14 @@ public class RecentItemsDialog extends JDialog {
     }
 
     private void initUi() {
-        setLayout(new BorderLayout());
         getContentPane().setBackground(UIHelper.BG_DARK);
         setSize(700, 500);
         setMinimumSize(new Dimension(550, 400));
         UIHelper.containWithinMain(this);
 
-        // Cabeçalho Premium
-        JComponent header = UIHelper.buildPremiumHeader(
-                "Histórico de Itens Recentes",
-                "Alterne e abra instantaneamente os últimos registos acedidos (Ctrl+H)",
-                "fas-history",
-                UIHelper.ACCENT_CYAN
-        );
-        add(header, BorderLayout.NORTH);
-
         // Corpo Central
         JPanel body = new JPanel(new BorderLayout(0, 10));
         body.setOpaque(false);
-        body.setBorder(new EmptyBorder(12, 16, 12, 16));
 
         // Barra de Pesquisa Rápida
         JPanel searchBox = new JPanel(new BorderLayout(8, 0));
@@ -85,7 +73,7 @@ public class RecentItemsDialog extends JDialog {
         searchField.setBackground(UIHelper.FIELD_BG);
         searchField.setForeground(UIHelper.TEXT_LIGHT);
         searchField.setCaretColor(UIHelper.TEXT_LIGHT);
-        searchField.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        searchField.setFont(Typography.EMPHASIS);
         searchField.putClientProperty("JTextField.placeholderText", "Filtrar por nome, NUIT, referência ou categoria...");
 
         searchField.getDocument().addDocumentListener(new DocumentListener() {
@@ -143,14 +131,8 @@ public class RecentItemsDialog extends JDialog {
         scroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1));
         body.add(scroll, BorderLayout.CENTER);
 
-        add(body, BorderLayout.CENTER);
 
-        // Rodapé de Ações
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(8, 16, 14, 16));
-
-        ModernButton clearBtn = UIHelper.createSecondaryButton("Limpar Histórico");
+        ModernButton clearBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Limpar Histórico"));
         clearBtn.setIcon(UIHelper.icon("fas-trash-alt", 13, UIHelper.REJECTED_RED));
         clearBtn.addActionListener(e -> {
             boolean confirmed = ModernMessageDialog.confirm(
@@ -167,10 +149,7 @@ public class RecentItemsDialog extends JDialog {
             }
         });
 
-        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        rightActions.setOpaque(false);
-
-        ModernButton openBtn = UIHelper.createPrimaryButton("Abrir Registo");
+        ModernButton openBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Abrir Registo"));
         openBtn.setIcon(UIHelper.icon("fas-arrow-right", 14, Color.WHITE));
         openBtn.addActionListener(e -> {
             RecentItem selected = itemList.getSelectedValue();
@@ -179,15 +158,12 @@ public class RecentItemsDialog extends JDialog {
             }
         });
 
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
 
-        rightActions.add(clearBtn);
-        rightActions.add(closeBtn);
-        rightActions.add(openBtn);
-        footer.add(rightActions, BorderLayout.EAST);
-
-        add(footer, BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-history", "Histórico de Itens Recentes",
+                "Alterne e abra instantaneamente os últimos registos acedidos (Ctrl+H)",
+                body, DialogChrome.footer(clearBtn, closeBtn, openBtn)));
     }
 
     private void refreshFilteredList() {
@@ -242,7 +218,7 @@ public class RecentItemsDialog extends JDialog {
             }
 
             JPanel panel = new JPanel(new BorderLayout(12, 0));
-            panel.setBorder(new EmptyBorder(8, 10, 8, 10));
+            panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
             panel.setBackground(isSelected ? UIHelper.SELECTION_BG : (index % 2 == 0 ? UIHelper.BG_CARD : UIHelper.ROW_ALT));
 
             // Ícone Temático à Esquerda
@@ -260,12 +236,12 @@ public class RecentItemsDialog extends JDialog {
             titleRow.setOpaque(false);
 
             JLabel titleLabel = new JLabel(item.title());
-            titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+            titleLabel.setFont(Typography.EMPHASIS_BOLD);
             titleLabel.setForeground(UIHelper.TEXT_LIGHT);
             titleRow.add(titleLabel);
 
             JLabel catBadge = new JLabel(" " + item.category() + " ");
-            catBadge.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+            catBadge.setFont(Typography.CAPTION);
             catBadge.setOpaque(true);
             catBadge.setBackground(iconTint);
             catBadge.setForeground(UIHelper.readableTextOn(iconTint));
@@ -275,7 +251,7 @@ public class RecentItemsDialog extends JDialog {
 
             if (item.subtitle() != null && !item.subtitle().isBlank()) {
                 JLabel subLabel = new JLabel(item.subtitle());
-                subLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+                subLabel.setFont(Typography.CAPTION);
                 subLabel.setForeground(UIHelper.TEXT_MUTED);
                 center.add(Box.createVerticalStrut(2));
                 center.add(subLabel);
@@ -285,7 +261,7 @@ public class RecentItemsDialog extends JDialog {
 
             // Direita: Tempo decorrido
             JLabel timeLabel = new JLabel(item.formattedTimeAgo());
-            timeLabel.setFont(new Font(UIHelper.FONT, Font.ITALIC, 11));
+            timeLabel.setFont(Typography.CAPTION.deriveFont(Font.ITALIC));
             timeLabel.setForeground(UIHelper.TEXT_MUTED);
             panel.add(timeLabel, BorderLayout.EAST);
 

@@ -29,7 +29,7 @@ final class HRContractsPanel {
     JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir PDF");
         printBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
@@ -48,7 +48,7 @@ final class HRContractsPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"Nº", "Colaborador", "Tipo", "Função", "Início", "Fim", "Salário", "Estado"};
         model = new DefaultTableModel(cols, 0) {
@@ -74,7 +74,7 @@ final class HRContractsPanel {
         TableFilter.install(table, search, new TableFilter.ColumnFilter(statusFilter, 7));
 
         JPanel bar = TableFilter.bar(search, TableFilter.label("Estado:", "fas-filter"), statusFilter);
-        bar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        bar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         card.add(UIHelper.tableCardTop("Contratos de Trabalho", bar,
                 refreshBtn, manageBtn, printBtn, newBtn), BorderLayout.NORTH);

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.desktop.client.FiscalApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ToastManager;
@@ -32,7 +33,7 @@ public class FiscalPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(8, 12, 8, 12));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);

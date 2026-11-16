@@ -75,10 +75,21 @@ public class SerialScaleReader {
      * Exemplo de trama NCI: "\u000200001.450kg\r" ou "1.450"
      */
     public ScaleReading parseRawFrame(String rawFrame) {
+        if (rawFrame != null) {
+            lastRawFrame = rawFrame;
+            frameCount.incrementAndGet();
+        }
         if (rawFrame == null || rawFrame.isBlank()) {
             return currentReading.get();
         }
 
+        String upper = rawFrame.toUpperCase(java.util.Locale.ROOT);
+        if (upper.contains("OL") || upper.contains("OVER") || upper.contains("HHHH")) {
+            ScaleReading overload = new ScaleReading(BigDecimal.ZERO.setScale(3, RoundingMode.HALF_UP), ScaleStatus.OVERLOAD, "kg",
+                    System.currentTimeMillis());
+            updateReading(overload);
+            return overload;
+        }
         try {
             String cleaned = rawFrame.replaceAll("[^0-9.\\-+]", "").trim();
             if (cleaned.isEmpty()) {
@@ -120,6 +131,41 @@ public class SerialScaleReader {
 
     public BigDecimal getTareWeightKg() {
         return tareWeightKg;
+    }
+
+    private volatile String lastRawFrame;
+    private final java.util.concurrent.atomic.AtomicLong frameCount = new java.util.concurrent.atomic.AtomicLong();
+
+    /** Last frame exactly as the scale sent it, for the on-site acceptance test; {@code null} before the first. */
+    public String getLastRawFrame() {
+        return lastRawFrame;
+    }
+
+    /** Frames received since the program started (counts up while the scale talks). */
+    public long getFrameCount() {
+        return frameCount.get();
+    }
+
+    /** Shows control characters, so "00001.450kg" reads as "<STX>00001.450kg" on the screen. */
+    public static String visible(String frame) {
+        if (frame == null) return "—";
+        StringBuilder out = new StringBuilder();
+        for (char ch : frame.toCharArray()) {
+            switch (ch) {
+                case 0x02 -> out.append("<STX>");
+                case 0x03 -> out.append("<ETX>");
+                case 0x05 -> out.append("<ENQ>");
+                case 0x0D -> out.append("<CR>");
+                case 0x0A -> out.append("<LF>");
+                default -> out.append(ch < 0x20 ? String.format("<%02X>", (int) ch) : String.valueOf(ch));
+            }
+        }
+        return out.toString();
+    }
+
+    /** The serial link stopped answering: the scale shows as disconnected until a new frame arrives. */
+    public void markDisconnected() {
+        updateReading(ScaleReading.disconnected());
     }
 
     public boolean isSimulationMode() {

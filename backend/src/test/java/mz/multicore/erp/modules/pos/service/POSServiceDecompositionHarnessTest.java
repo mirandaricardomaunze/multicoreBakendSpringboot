@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.pos.service;
 
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.pos.dto.PosZReportDTO;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
@@ -22,7 +22,7 @@ class POSServiceDecompositionHarnessTest {
     @Test
     void posServiceDelegatesToCohesiveCollaboratorsAndRespectsLineLimits() throws Exception {
         TillSessionRepository tillSessionRepo = mock(TillSessionRepository.class);
-        CompanyRepository companyRepo = mock(CompanyRepository.class);
+        CompanyLookup companyRepo = mock(CompanyLookup.class);
         FinanceService financeService = mock(FinanceService.class);
         AuditLogService auditLogService = mock(AuditLogService.class);
         PosSessionAndShiftService sessionService = mock(PosSessionAndShiftService.class);

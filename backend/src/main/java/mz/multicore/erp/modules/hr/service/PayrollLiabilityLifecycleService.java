@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
 import mz.multicore.erp.modules.hr.model.PayrollLiability;
@@ -31,7 +31,7 @@ public class PayrollLiabilityLifecycleService {
 
     private final PayrollLiabilityRepository liabilityRepository;
     private final PayslipRepository payslipRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final HrPolicyService hrPolicyService;
     private final FinanceService financeService;
     private final AuditLogService auditLogService;
@@ -39,14 +39,14 @@ public class PayrollLiabilityLifecycleService {
 
     public PayrollLiabilityLifecycleService(PayrollLiabilityRepository liabilityRepository,
                                             PayslipRepository payslipRepository,
-                                            CompanyRepository companyRepository,
+                                            CompanyLookup companyLookup,
                                             HrPolicyService hrPolicyService,
                                             @Lazy FinanceService financeService,
                                             AuditLogService auditLogService,
                                             ApplicationEventPublisher eventPublisher) {
         this.liabilityRepository = liabilityRepository;
         this.payslipRepository = payslipRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.hrPolicyService = hrPolicyService;
         this.financeService = financeService;
         this.auditLogService = auditLogService;
@@ -83,8 +83,7 @@ public class PayrollLiabilityLifecycleService {
 
         PayrollLiability liability = existing.orElseGet(() -> {
             PayrollLiability fresh = new PayrollLiability();
-            fresh.setCompany(companyRepository.findById(companyId)
-                    .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada.")));
+            fresh.setCompany(companyLookup.requireActive(companyId));
             fresh.setYear(year);
             fresh.setMonth(month);
             fresh.setLiabilityType(type);

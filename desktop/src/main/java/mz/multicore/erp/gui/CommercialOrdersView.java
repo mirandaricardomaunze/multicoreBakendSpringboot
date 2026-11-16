@@ -23,7 +23,7 @@ final class CommercialOrdersView {
         // A aba alterna lista <-> editor único; criar e actualizar nunca abrem formulário modal.
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         // ===== EDITOR ÚNICO: inputs de cabeçalho agrupados em linha horizontal =====
         ModernPanel formCard = CommercialOrderHeaderForm.createHeaderCard(owner);
@@ -89,19 +89,19 @@ final class CommercialOrdersView {
         linesScroll.setMinimumSize(new Dimension(0, 260));
 
         owner.orderTotalLabel = new JLabel("Total Rascunho: 0,00 MT (incl. IVA)");
-        owner.orderTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        owner.orderTotalLabel.setFont(Typography.EMPHASIS_BOLD);
         owner.orderTotalLabel.setForeground(Color.WHITE);
         owner.orderLoadLabel = new JLabel("Carga: 0.000 kg");
         owner.orderLoadLabel.setForeground(UIHelper.TEXT_MUTED);
         JPanel totalRow = new JPanel(new BorderLayout());
         totalRow.setOpaque(false);
-        totalRow.setBorder(new EmptyBorder(12, 0, 0, 0));
+        totalRow.setBorder(new EmptyBorder(Spacing.MD, 0, 0, 0));
         totalRow.add(owner.orderLoadLabel, BorderLayout.WEST);
         totalRow.add(owner.orderTotalLabel, BorderLayout.EAST);
 
         ModernPanel draftCard = new ModernPanel(16);
         draftCard.setLayout(new BorderLayout(0, 10));
-        draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        draftCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         draftCard.setPreferredSize(new Dimension(0, 520));
         JPanel emptyFilters = new JPanel();
         emptyFilters.setOpaque(false);
@@ -138,7 +138,7 @@ final class CommercialOrdersView {
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 6));
-        listCard.setBorder(new EmptyBorder(8, 12, 8, 12));
+        listCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         // Colunas novas vão sempre para o fim, para não deslocar os índices já usados pelas acções.
         String[] ordersCols = {"ID", "Nº Encomenda", "Cliente", "Estado", "Total", "Impressões", "Tipo",
@@ -282,7 +282,7 @@ final class CommercialOrdersView {
                         TableFilter.label("Estado:"), ecEstado,
                         TableFilter.label("Entrega:", "fas-calendar-alt"), ecPeriodo},
                 null);
-        ecFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        ecFilters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         owner.ordersTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         owner.ordersPager = new TablePager(owner::loadOrdersPage);
         listCard.add(owner.ordersPager, BorderLayout.SOUTH);

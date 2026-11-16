@@ -1,6 +1,6 @@
 package mz.multicore.erp.modules.platform.dto;
 
-/** Visão da empresa para o superadmin: dados base + estado + nº de utilizadores. */
+/** Superadmin view of a company: base data, professional profile, status and user count. */
 public record PlatformCompanyDTO(
         Long id,
         String name,
@@ -10,5 +10,6 @@ public record PlatformCompanyDTO(
         String phone,
         boolean hasLogo,
         boolean active,
-        long userCount
+        long userCount,
+        CompanyProfile profile
 ) {}

@@ -254,16 +254,16 @@ final class UiIconAndImageSupport {
         texts.setOpaque(false);
         texts.setLayout(new BoxLayout(texts, BoxLayout.Y_AXIS));
         JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 19));
+        titleLbl.setFont(Typography.METRIC);
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
         titleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         texts.add(titleLbl);
         if (subtitle != null && !subtitle.isBlank()) {
             JLabel subLbl = new JLabel(subtitle);
-            subLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            subLbl.setFont(Typography.BODY);
             subLbl.setForeground(UIHelper.TEXT_MUTED);
             subLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-            subLbl.setBorder(new EmptyBorder(2, 0, 0, 0));
+            subLbl.setBorder(new EmptyBorder(Spacing.XXS, 0, 0, 0));
             texts.add(subLbl);
         }
 
@@ -280,7 +280,7 @@ final class UiIconAndImageSupport {
         header.add(row, BorderLayout.CENTER);
         header.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, UIHelper.GRID),
-                new EmptyBorder(0, 0, 14, 0)));
+                new EmptyBorder(0, 0, Spacing.LG, 0)));
         return header;
     }
 }

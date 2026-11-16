@@ -160,6 +160,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    /**
+     * Método HTTP errado é <b>405</b>, não 500. Acontece sobretudo com um desktop mais antigo do que
+     * o servidor (a folha A4 de separação passou de GET a POST): o operador tem de ler "actualize o
+     * programa", não "erro interno".
+     */
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        log.warn("Método não suportado: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(LocalDateTime.now(), HttpStatus.METHOD_NOT_ALLOWED.value(),
+                "Method Not Allowed", "Este endereço não aceita " + ex.getMethod()
+                + ". Se o erro aparece no programa, actualize-o: a versão instalada é anterior à do servidor.");
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
+        if (ex.getSupportedHttpMethods() != null) builder.allow(ex.getSupportedHttpMethods().toArray(new org.springframework.http.HttpMethod[0]));
+        return builder.body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
         // O detalhe da exceção (mensagem, stack, eventual SQL) fica só no log do servidor;

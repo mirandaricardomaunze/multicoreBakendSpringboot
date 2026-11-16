@@ -7,6 +7,9 @@ import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.repository.EmploymentContractRepository;
+import mz.multicore.erp.modules.hr.repository.PayslipRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.quality.dto.*;
 import mz.multicore.erp.modules.quality.model.Equipment;
 import mz.multicore.erp.modules.quality.model.WorkerEquipmentAssignment;
@@ -48,7 +51,10 @@ class QualityEquipmentServiceTest {
         companyService = mock(CompanyService.class);
 
         service = new QualityEquipmentService(
-                equipmentRepository, assignmentRepository, employeeRepository, companyService
+                equipmentRepository, assignmentRepository,
+                new EmployeeLookup(employeeRepository, mock(PayslipRepository.class),
+                        mock(EmploymentContractRepository.class)),
+                companyService
         );
 
         company = new Company();

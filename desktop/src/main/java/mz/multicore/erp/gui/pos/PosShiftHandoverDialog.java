@@ -1,5 +1,9 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -40,41 +44,20 @@ public class PosShiftHandoverDialog extends JDialog {
         this.session = session;
         this.onSuccess = onSuccess;
 
-        setSize(720, 760);
+        setSize(820, 760); // a contagem de notas e moedas precisa de ~760 px sem scroll horizontal
         setMinimumSize(new Dimension(680, 680));
         setLocationRelativeTo(owner);
-        setLayout(new BorderLayout());
-
-        add(createHeaderPanel(), BorderLayout.NORTH);
-        add(createContentPanel(), BorderLayout.CENTER);
-        add(createFooterPanel(), BorderLayout.SOUTH);
+        String effectiveOp = session.currentOperator() != null ? session.currentOperator() : session.operator();
+        setContentPane(DialogChrome.frame("fas-people-arrows", "Passagem de Turno",
+                "Operador actual: " + (effectiveOp != null ? effectiveOp : "—") + " | Sessão #" + session.id(),
+                createContentPanel(), createFooterPanel()));
 
         breakdownPanel.recalculate();
     }
 
-    private JPanel createHeaderPanel() {
-        JPanel header = new ModernPanel(16);
-        header.setLayout(new BorderLayout(12, 8)); header.setBackground(UIHelper.SELECTION_BG);
-        header.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
-
-        JLabel icon = new JLabel(UIHelper.icon("fas-people-arrows", 28, UIHelper.ACCENT_CYAN));
-        JLabel title = new JLabel("Passagem de Turno");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 18)); title.setForeground(Color.WHITE);
-
-        String effectiveOp = session.currentOperator() != null ? session.currentOperator() : session.operator();
-        JLabel subtitle = new JLabel("Operador actual: " + (effectiveOp != null ? effectiveOp : "—") + " | Sessão #" + session.id());
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); subtitle.setForeground(UIHelper.TEXT_LIGHT);
-
-        JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 2)); textPanel.setOpaque(false);
-        textPanel.add(title); textPanel.add(subtitle);
-
-        header.add(icon, BorderLayout.WEST); header.add(textPanel, BorderLayout.CENTER);
-        return header;
-    }
-
     private JComponent createContentPanel() {
         JPanel content = new JPanel(); content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(UIHelper.BG_DARK); content.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
+        content.setOpaque(false);
 
         content.add(createOperatorPanel());
         content.add(Box.createVerticalStrut(8));
@@ -88,19 +71,21 @@ public class PosShiftHandoverDialog extends JDialog {
         UIHelper.styleScrollPane(scroll);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
         return scroll;
     }
 
     private JPanel createOperatorPanel() {
         JPanel panel = new ModernPanel(12); panel.setLayout(new BorderLayout(8, 4));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        panel.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         panel.setAlignmentX(Component.LEFT_ALIGNMENT); panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
         JLabel lblOp = new JLabel("Operador Seguinte (username):");
-        lblOp.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); lblOp.setForeground(Color.WHITE);
+        lblOp.setFont(Typography.EMPHASIS_BOLD); lblOp.setForeground(UIHelper.TEXT_LIGHT);
 
         incomingOperatorField = new JTextField(); UIHelper.styleTextField(incomingOperatorField);
-        incomingOperatorField.setFont(new Font(UIHelper.FONT, Font.PLAIN, 14));
+        incomingOperatorField.setFont(Typography.EMPHASIS);
         incomingOperatorField.putClientProperty("JTextField.placeholderText", "Ex.: operador2");
 
         panel.add(lblOp, BorderLayout.NORTH); panel.add(incomingOperatorField, BorderLayout.CENTER);
@@ -109,33 +94,31 @@ public class PosShiftHandoverDialog extends JDialog {
 
     private JPanel createNotesPanel() {
         JPanel panel = new ModernPanel(12); panel.setLayout(new BorderLayout(8, 4));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+        panel.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         panel.setAlignmentX(Component.LEFT_ALIGNMENT); panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
 
         JLabel lbl = new JLabel("Observações / Justificação (opcional):");
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12)); lbl.setForeground(UIHelper.TEXT_LIGHT);
+        lbl.setFont(Typography.BODY_BOLD); lbl.setForeground(UIHelper.TEXT_LIGHT);
 
-        notesArea = new JTextArea(2, 20); notesArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        notesArea = new JTextArea(2, 20); notesArea.setFont(Typography.BODY);
         notesArea.setLineWrap(true); notesArea.setWrapStyleWord(true);
         notesArea.setBackground(UIHelper.ROW_ALT); notesArea.setForeground(Color.WHITE);
-        notesArea.setCaretColor(Color.WHITE); notesArea.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        notesArea.setCaretColor(Color.WHITE); notesArea.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
 
         panel.add(lbl, BorderLayout.NORTH); panel.add(notesArea, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel createFooterPanel() {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12)); footer.setBackground(UIHelper.ROW_ALT);
-        btnConfirm = UIHelper.createPrimaryButton("Confirmar Passagem");
-        btnConfirm.setIcon(UIHelper.icon("fas-check", 13, Color.WHITE));
+        btnConfirm = ButtonStyles.main(UIHelper.createPrimaryButton("Confirmar Passagem"));
+        btnConfirm.setIcon(UIHelper.icon("fas-check", 13));
         btnConfirm.addActionListener(e -> performHandover());
 
-        btnCancel = UIHelper.createSecondaryButton("Cancelar");
+        btnCancel = ButtonStyles.cancelButton();
         btnCancel.setIcon(UIHelper.icon("fas-times", 13));
         btnCancel.addActionListener(e -> dispose());
 
-        footer.add(btnConfirm); footer.add(btnCancel);
-        return footer;
+        return DialogChrome.footer(btnCancel, btnConfirm);
     }
 
     private void performHandover() {

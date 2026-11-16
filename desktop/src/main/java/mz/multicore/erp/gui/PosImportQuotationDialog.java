@@ -1,5 +1,12 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -53,39 +60,13 @@ public class PosImportQuotationDialog extends JDialog {
 
         setSize(780, 520);
         setLocationRelativeTo(owner);
-        setLayout(new BorderLayout());
         getContentPane().setBackground(UIHelper.BG_DARK);
 
-        // Header
-        JPanel header = new JPanel(new BorderLayout(10, 0));
-        header.setOpaque(false);
-        header.setBorder(new EmptyBorder(16, 20, 12, 20));
-
-        JLabel titleIcon = new JLabel(UIHelper.icon("fas-file-import", 22, UIHelper.ACCENT_CYAN));
-        JPanel titlePanel = new JPanel();
-        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
-        titlePanel.setOpaque(false);
-
-        JLabel title = new JLabel("Importar Cotação / Pró-forma");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
-        title.setForeground(UIHelper.TEXT_LIGHT);
-
-        JLabel subtitle = new JLabel("Selecione uma cotação aberta para preencher o cliente e artigos no carrinho do POS");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-
-        titlePanel.add(title);
-        titlePanel.add(Box.createVerticalStrut(2));
-        titlePanel.add(subtitle);
-
-        header.add(titleIcon, BorderLayout.WEST);
-        header.add(titlePanel, BorderLayout.CENTER);
-        add(header, BorderLayout.NORTH);
 
         // Center card
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(14, 16, 14, 16));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"ID", "Nº Cotação", "Data", "Cliente", "NUIT", "Total", "Validade", "Linhas"};
         model = new DefaultTableModel(cols, 0) {
@@ -122,28 +103,16 @@ public class PosImportQuotationDialog extends JDialog {
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
 
-        JPanel centerWrapper = new JPanel(new BorderLayout());
-        centerWrapper.setOpaque(false);
-        centerWrapper.setBorder(new EmptyBorder(0, 16, 10, 16));
-        centerWrapper.add(card, BorderLayout.CENTER);
-        add(centerWrapper, BorderLayout.CENTER);
-
-        // Bottom footer
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        footer.setBackground(UIHelper.ROW_ALT);
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER));
-
-        ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar");
-        cancelBtn.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
 
-        ModernButton importBtn = UIHelper.createSuccessButton("Importar para o Carrinho");
+        ModernButton importBtn = ButtonStyles.main(UIHelper.createSuccessButton("Importar para o Carrinho"));
         importBtn.setIcon(UIHelper.icon("fas-file-import", 13));
         importBtn.addActionListener(e -> confirmSelection());
 
-        footer.add(cancelBtn);
-        footer.add(importBtn);
-        add(footer, BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-file-import", "Importar Cotação / Pró-forma",
+                "Selecione uma cotação aberta para preencher o cliente e artigos no carrinho do POS",
+                card, DialogChrome.footer(cancelBtn, importBtn)));
 
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -185,18 +154,15 @@ public class PosImportQuotationDialog extends JDialog {
                         table.setRowSelectionInterval(0, 0);
                     }
                 },
-                ex -> JOptionPane.showMessageDialog(this,
-                        "Erro ao carregar cotações: " + ex.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE)
+                ex -> UserErrors.show(this, "carregar cotações", ex)
         );
     }
 
     private void confirmSelection() {
         int selectedRow = table.getSelectedRow();
         if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this,
-                    "Seleccione uma cotação para importar.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            ModernMessageDialog.show(this, FeedbackType.WARNING, "Aviso",
+                    "Seleccione uma cotação para importar.");
             return;
         }
 
@@ -207,9 +173,8 @@ public class PosImportQuotationDialog extends JDialog {
                 () -> comercialApiClient.getQuotationById(id),
                 fullQuotation -> {
                     if (fullQuotation == null || fullQuotation.lines() == null || fullQuotation.lines().isEmpty()) {
-                        JOptionPane.showMessageDialog(this,
-                                "A cotação seleccionada não contém artigos para faturar.",
-                                "Aviso", JOptionPane.WARNING_MESSAGE);
+                        ModernMessageDialog.show(this, FeedbackType.WARNING, "Aviso",
+                                "A cotação seleccionada não contém artigos para faturar.");
                         return;
                     }
                     this.selectedQuotation = fullQuotation;
@@ -218,9 +183,7 @@ public class PosImportQuotationDialog extends JDialog {
                         onImportCallback.accept(fullQuotation);
                     }
                 },
-                ex -> JOptionPane.showMessageDialog(this,
-                        "Falha ao carregar cotação: " + ex.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE)
+                ex -> UserErrors.show(this, "carregar cotação", ex)
         );
     }
 

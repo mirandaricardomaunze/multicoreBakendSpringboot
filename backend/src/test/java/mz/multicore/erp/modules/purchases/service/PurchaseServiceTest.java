@@ -3,11 +3,11 @@ package mz.multicore.erp.modules.purchases.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.purchases.dto.CreateSupplierRequest;
@@ -45,9 +45,9 @@ class PurchaseServiceTest {
         service = new PurchaseService(
                 supplierRepository,
                 purchaseRepository,
-                mock(ProductRepository.class),
-                mock(WarehouseRepository.class),
-                mock(CompanyRepository.class),
+                mock(ProductLookup.class),
+                mock(WarehouseLookup.class),
+                mock(CompanyLookup.class),
                 mock(InventoryService.class),
                 financeService,
                 mock(DocumentNumberService.class),

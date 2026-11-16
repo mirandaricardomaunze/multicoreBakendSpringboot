@@ -28,7 +28,7 @@ final class HRTimeSheetPanel {
     JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         LocalDate today = LocalDate.now();
         yearSpinner = new JSpinner(new SpinnerNumberModel(today.getYear(), 2000, 2100, 1));
@@ -64,7 +64,7 @@ final class HRTimeSheetPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"Colaborador", "Dias prev.", "Dias trab.", "Sem marcação",
                 "H. normais", "Extra dia", "Extra noite", "Descanso/feriado", "Atrasos"};
@@ -97,7 +97,7 @@ final class HRTimeSheetPanel {
         JTextField search = TableFilter.searchField("Colaborador…");
         TableFilter.install(table, search);
         JPanel bar = TableFilter.bar(search, refreshBtn);
-        bar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        bar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         JPanel filters = new JPanel(new BorderLayout(0, 8));
         filters.setOpaque(false);
         filters.add(periodFilters, BorderLayout.NORTH);

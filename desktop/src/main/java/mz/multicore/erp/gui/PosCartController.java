@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.architecture.pricing.TaxRates;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -56,7 +58,7 @@ public class PosCartController {
                     } catch (NumberFormatException ex) {
                         throw new IllegalArgumentException("Introduza uma quantidade válida.");
                     }
-                    if (quantity.signum() <= 0) throw new IllegalArgumentException("A quantidade deve ser maior do que zero.");
+                    if (quantity.signum() <= 0) throw FieldValidationException.of(quantityField, "A quantidade deve ser maior do que zero.");
                     item.qty = quantity;
                 })
                 .showDialog();
@@ -138,11 +140,11 @@ public class PosCartController {
         JLabel icon = new JLabel(UIHelper.icon("fas-shopping-cart", 48, UIHelper.TEXT_MUTED));
         icon.setAlignmentX(0.5f);
         JLabel title = new JLabel("Carrinho vazio");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_MUTED);
         title.setAlignmentX(0.5f);
         JLabel hint = new JLabel("Leia um código de barras ou adicione um artigo.");
-        hint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        hint.setFont(Typography.EMPHASIS);
         hint.setForeground(UIHelper.TEXT_MUTED);
         hint.setAlignmentX(0.5f);
         i.add(icon);

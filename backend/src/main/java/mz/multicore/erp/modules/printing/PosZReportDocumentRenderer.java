@@ -99,6 +99,7 @@ public class PosZReportDocumentRenderer {
         row(table, "(+) Suprimentos", z.suprimentos(), false);
         row(table, "(−) Sangrias", z.sangrias(), false);
         row(table, "(−) Devoluções", z.refunds(), false);
+        if (z.counterReceipts().signum() != 0) row(table, "(+) Recebimentos ao balcão", z.counterReceipts(), false);
         row(table, "= Esperado na gaveta", z.expectedCash(), true);
         row(table, "Contado (saldo físico)", z.countedCash(), false);
         row(table, "= Diferença", z.difference(), true);

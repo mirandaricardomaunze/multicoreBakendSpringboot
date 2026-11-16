@@ -13,12 +13,17 @@ O ecrã permite visualizar com máxima clareza:
 
 ## 2. Princípios de Design para Ecrãs Grandes (3 a 6 Metros de Distância)
 1. **Contraste Nobre e Anti-Ofuscamento (Dark Slate & Executive Light):**
-   - **Tema Escuro (Dark Slate):** Fundo em `Slate 900` (`#0F172A`) e cartões em `Slate 800` (`#1E293B`) com bordas `Slate 700` (`#334155`).
-   - **Tema Claro (Executive Light):** Fundo em `Slate 100` (`#F1F5F9`) e cartões brancos (`#FFFFFF`) com bordas `Slate 200` (`#E2E8F0`).
-   - Alternância instantânea através do botão **`[ Tema Claro / Tema Escuro ]`** no cabeçalho.
-2. **Cabeçalho Estruturado em 2 Linhas (Zero Sobreposição):**
-   - **Linha 1:** Marca `MULTICORE ERP`, Badge da Sala, Relógio Digital em tempo real e Controles de Janela (`Tema`, `Metas`, `Tela Cheia`, `Sair`).
-   - **Linha 2:** Filtros de Período (`Hoje`, `Esta Semana`, `Mês Atual`, `Este Ano`) e Seletor de Unidade com `[ Rodízio TV (15s) ]`.
+   - Todas as cores vivem em `ExecutiveTvTheme` (única fonte de tokens do pacote).
+   - **Tema Escuro (Slate):** fundo `#090E1A`, cabeçalho `#0D1322`, cartões `#11192A` com contorno `#212D45`.
+   - **Tema Claro (Executive Light):** fundo `#F1F5F9`, cartões brancos com contorno `#E2E8F0`.
+   - Cartões arredondados (raio 16) desenhados à mão: o contorno tem o mesmo raio do fundo.
+   - Alternância pelo ícone de sol/lua no cabeçalho.
+2. **Cabeçalho em 2 Linhas (Zero Sobreposição):**
+   - **Linha 1:** ícone e título «Painel Executivo», linha de contexto (unidade · período) e relógio grande com a data por extenso.
+   - **Linha 2:** período num controlo segmentado (`Hoje`, `7 dias`, `Mês`, `Ano`), selector de unidade no tema do painel,
+     botão `Rodízio` (com contagem quando activo) e acções só com ícone e dica: Metas, Vendedores, Tema, Ecrã inteiro, Fechar.
+3. **Rodapé curto:** atalhos à esquerda; à direita, o estado real da sincronização
+   («Actualizado às HH:mm» ou «Sem ligação ao servidor»). Os dados são lidos num `SwingWorker`, fora do EDT.
 3. **Tipografia de Alta Definição e Isenção de Emojis Unicode:**
    - Valores principais em fontes nítidas (18px a 24px).
    - Proibido o uso de emojis Unicode que renderizam como retângulos `▯` no Java 2D do Windows; status textual limpo com badges semânticos e ícones FontAwesome.
@@ -35,19 +40,27 @@ A percentagem da meta atingida define a cor e o estado do negócio:
 - Azul Safira (`#3B82F6` / `#2563EB`) — *80.0% a 99.9% (NO RITMO)*.
 - Verde Esmeralda (`#10B981` / `#059669`) — *100% ou mais (META SUPERADA)*.
 
-Marcadores discretos pontilhados em **25%**, **50%** e **75%** ajudam a balizar visualmente se o negócio já superou as metas quinzenais e semanais.
+- Cinzento neutro — *sem meta definida (SEM META)*. Sem meta não há «ALERTA» nem «meta superada».
+
+Divisões discretas em **25%**, **50%** e **75%** no trilho e, nos períodos de vários dias, um **marcador do ritmo
+esperado** (triângulo e traço): onde a barra devia estar hoje se as vendas fossem constantes. Os números ficam fora
+da barra, em rótulos grandes. Estado e cores vêm de `GoalStatus`.
 
 ---
 
 ## 4. Modos de Apresentação
 1. **Visão Global Consolidada:**
-   - Super barra de progresso da empresa no topo.
-   - Grelha multicard com todas as Unidades de Negócio ativas lado a lado (destacando unidades participantes com metas ativas e unidades desmarcadas como `FORA DA META`).
-   - Gráfico de donut com o share de vendas de cada unidade.
-   - Top 5 Artigos mais faturados.
+   - Cartão principal: faturado em destaque, percentagem da meta, barra com ritmo esperado e quanto falta
+     (ou botão «Definir metas» quando não há meta).
+   - KPIs 2×2 à direita (`ExecutiveTvMetrics`): Faturas e ticket médio, Ritmo diário, Previsão de fecho ao ritmo
+     actual e Necessário por dia nos dias restantes (ou «Acima da meta» / «Meta não definida»).
+   - Cartões por unidade de negócio (estado, faturado, % e meta; `FORA DA META` para unidades excluídas), com estado
+     vazio quando não há unidades activas.
+   - Participação nas vendas: anel com legenda (nome e %); acima de 5 unidades agrupa em «Outras».
+   - Top 5 artigos com posição, valor e barra relativa ao primeiro.
 2. **Visão Focada por Unidade de Negócio:**
-   - Foco na linha de distribuição selecionada (ex.: Unilever).
-   - Metas, realizados, superávit e faturas recentes daquela divisão.
+   - O mesmo cartão principal e KPIs aplicados à unidade (`ExecutiveTvSummaryBuilder`, partilhado).
+   - Top artigos e últimas faturas da unidade.
 3. **Rodízio Automático / Slideshow TV (15 segundos):**
    - Transição periódica contínua sem necessidade de toque em teclado ou rato.
    - Ideal para TV permanente em salas de reuniões, recepção ou gabinete da administração.
@@ -65,6 +78,53 @@ Marcadores discretos pontilhados em **25%**, **50%** e **75%** ajudam a balizar 
 ---
 
 ## 6. Atalhos da Sala de Reuniões
-- **`F11`**: Alternar Tela Cheia / Janela.
+- **`F11`**: Alternar ecrã inteiro / janela.
 - **`Espaço`**: Iniciar ou Pausar o Rodízio Automático de ecrãs.
 - **`ESC`**: Sair do Painel e voltar ao ERP.
+
+---
+
+## 7. Tema e modais (2026-11-08)
+
+O painel tem dois temas, "Slate" (escuro) e "Executive Light" (claro), definidos em `ExecutiveTvTheme`,
+que é a única fonte de cores do pacote.
+
+- **Abertura:** o painel abre no tema da aplicação. O tema claro abre "Executive Light"; o escuro e o
+  alto contraste abrem "Slate".
+- **Troca no painel:** o botão de tema do cabeçalho troca o painel. Os modais lêem o tema actual ao
+  abrir, por isso seguem a troca.
+- **Troca na aplicação:** a troca reconstrói a janela principal. O painel já não é filho dela: não
+  fecha, e acompanha o tema novo (`ThemeChangeListeners`). Antes fechava, e os temporizadores do
+  rodízio e da actualização ficavam a correr.
+- **Modais:** Metas (`ExecutiveTvGoalsDialog`) e Vendedores (`SellerPerformanceDialog`) usam a mesma
+  moldura, `ExecutiveTvDialog`: Ctrl+S grava, Esc fecha, o erro aparece dentro do modal e o painel
+  fica escurecido por trás. Campos, caixas de selecção e tabela vêm de `ExecutiveTvFormControls`.
+  Antes, as Metas abriam brancas por cima do painel escuro, e a tabela dos Vendedores também.
+- **Valores:** os Vendedores mostram os valores com `DisplayNumbers` (`1.460,00 MT`), como o resto
+  do ERP.
+
+| Id | Regra | Harness |
+|----|-------|---------|
+| ET-01 | Os modais do painel não usam cores nem fábricas do tema da aplicação | `ExecutiveThemeConsistencyHarnessTest` |
+| ET-02 | Metas e Vendedores abrem na mesma moldura | idem |
+| ET-03 | Os modais recebem o tema actual do painel | idem |
+| ET-04 | O painel abre no tema da aplicação e acompanha a troca sem fechar | idem e `ThemeChangeListenersTest` |
+| ET-05 | Fechar pára os temporizadores; alternar o ecrã inteiro não | idem |
+| ET-06 | Ranking dos vendedores por faturação, com quota | idem |
+| ET-07 | A moldura pinta-se com o fundo do painel em cada tema | idem |
+
+## 8. Alerta de excepções no rodapé (2026-11-10)
+
+O rodapé mostra, ao centro, as excepções anti-fraude de gravidade **alta** e **média** dos últimos 7 dias
+(`docs/ANTIFRAUDE_SECTORES_SPEC.md`), por exemplo "Excepções a verificar (7 dias): 2 altas · 3 médias — módulo
+Excepções". Sem excepções, sem permissão ou sem servidor, o rodapé fica como antes.
+
+- O painel não depende do módulo de excepções: o módulo regista a fonte em `ExecutiveAlerts` (pacote `gui.tv`).
+- A leitura é feita em segundo plano, com cache de 1 minuto; o rodapé já é reconstruído a cada actualização automática.
+- Cores e tipos de letra do tema do painel (`ExecutiveTvTheme`); o ícone usa as cores de estado.
+- `ExecutiveTvDashboardDialog` não mudou (está no tecto de 215 linhas).
+
+| ID | Regra | Harness |
+|---|---|---|
+| EA-01 | Excepções altas e médias aparecem no centro do rodapé | `ExecutiveAlertsHarnessTest` |
+| EA-02 | Sem excepções ou sem fonte, não aparece alerta | `ExecutiveAlertsHarnessTest` |

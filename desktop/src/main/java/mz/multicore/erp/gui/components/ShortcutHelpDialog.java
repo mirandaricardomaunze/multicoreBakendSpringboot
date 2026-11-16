@@ -38,7 +38,7 @@ public class ShortcutHelpDialog extends JDialog {
 
         JPanel root = new JPanel(new BorderLayout(0, 16));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        root.setBorder(BorderFactory.createEmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         // Header
         root.add(UIHelper.buildPremiumHeader(
@@ -55,6 +55,9 @@ public class ShortcutHelpDialog extends JDialog {
                 new ShortcutItem("Ctrl + K", "Pesquisa Global / Paleta de Comandos"),
                 new ShortcutItem("Ctrl + B", "Alternar Menu Lateral (Recolher/Expandir)"),
                 new ShortcutItem("F1", "Abrir este Guia de Atalhos"),
+                new ShortcutItem("Ctrl + N", "Acção principal do ecrã (Nova Cotação, Emitir…)"),
+                new ShortcutItem("F5", "Actualizar a lista do ecrã"),
+                new ShortcutItem("Ctrl + F", "Ir para a pesquisa dos filtros"),
                 new ShortcutItem("Espaço", "Espreitar Linha Selecionada (Quick-Peek)"),
                 new ShortcutItem("F3", "Pesquisar Artigos no Catálogo de Produtos"),
                 new ShortcutItem("F11", "Alternar Modo Ecrã Completo (Fullscreen)"),
@@ -80,13 +83,10 @@ public class ShortcutHelpDialog extends JDialog {
         root.add(scrollPane, BorderLayout.CENTER);
 
         // Footer Actions
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        footer.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar (ESC)");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar (ESC)"));
         closeBtn.setIcon(UIHelper.icon("fas-times", 14));
         closeBtn.addActionListener(e -> dispose());
-        footer.add(closeBtn);
-        root.add(footer, BorderLayout.SOUTH);
+        root.add(DialogChrome.footer(closeBtn), BorderLayout.SOUTH);
 
         add(root);
 
@@ -108,14 +108,14 @@ public class ShortcutHelpDialog extends JDialog {
     private JPanel buildCategoryCard(String title, String iconCode, Color accent, List<ShortcutItem> shortcuts) {
         ModernPanel card = new ModernPanel(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
         card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // Card Header
         JPanel cardHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         cardHeader.setOpaque(false);
         JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 16, accent));
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
         cardHeader.add(iconLabel);
         cardHeader.add(titleLabel);
@@ -129,20 +129,20 @@ public class ShortcutHelpDialog extends JDialog {
         for (ShortcutItem s : shortcuts) {
             JPanel row = new JPanel(new BorderLayout(8, 0));
             row.setOpaque(false);
-            row.setBorder(BorderFactory.createEmptyBorder(5, 2, 5, 2));
+            row.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XXS, Spacing.XS, Spacing.XXS));
 
             // Key pill
             JLabel keyLabel = new JLabel(s.key());
-            keyLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            keyLabel.setFont(Typography.CAPTION_BOLD);
             keyLabel.setForeground(UIHelper.TEXT_LIGHT);
             keyLabel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(71, 85, 105), 1),
-                    BorderFactory.createEmptyBorder(2, 6, 2, 6)
+                    BorderFactory.createLineBorder(ThemeColors.outline(), 1),
+                    BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS)
             ));
 
             // Description
             JLabel descLabel = new JLabel(s.description());
-            descLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            descLabel.setFont(Typography.BODY);
             descLabel.setForeground(UIHelper.TEXT_MUTED);
 
             row.add(keyLabel, BorderLayout.WEST);

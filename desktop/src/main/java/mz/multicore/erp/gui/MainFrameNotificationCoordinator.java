@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.CollapsibleSidebar;
 import mz.multicore.erp.gui.components.TopNavBar;
@@ -38,9 +40,9 @@ final class MainFrameNotificationCoordinator {
         notificationBadgeLabel.setOpaque(true);
         notificationBadgeLabel.setBackground(UIHelper.REJECTED_RED);
         notificationBadgeLabel.setForeground(Color.WHITE);
-        notificationBadgeLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 9));
+        notificationBadgeLabel.setFont(Typography.BADGE);
         notificationBadgeLabel.setHorizontalAlignment(JLabel.CENTER);
-        notificationBadgeLabel.setBorder(BorderFactory.createEmptyBorder(1, 4, 1, 4));
+        notificationBadgeLabel.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS));
         notificationBadgeLabel.setVisible(false);
     }
 
@@ -67,7 +69,7 @@ final class MainFrameNotificationCoordinator {
         JPopupMenu popup = new JPopupMenu();
         popup.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+                BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS)));
         JMenuItem loading = new JMenuItem("A carregar notificações…");
         loading.setEnabled(false);
         popup.add(loading);

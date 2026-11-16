@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.HrPolicyConfigDTO;
 import mz.multicore.erp.modules.hr.dto.SaveHrPolicyConfigRequest;
 import mz.multicore.erp.modules.hr.model.HrPolicyConfig;
@@ -30,14 +30,14 @@ import java.util.Optional;
 public class HrPolicyService {
 
     private final HrPolicyConfigRepository repository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
 
     public HrPolicyService(HrPolicyConfigRepository repository,
-                           CompanyRepository companyRepository,
+                           CompanyLookup companyLookup,
                            AuditLogService auditLogService) {
         this.repository = repository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -94,8 +94,7 @@ public class HrPolicyService {
             throw new BusinessRuleException("O fim da vigência não pode ser anterior ao início.");
         }
         HrPolicyConfig config = new HrPolicyConfig();
-        config.setCompany(companyRepository.findById(currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada.")));
+        config.setCompany(companyLookup.requireActive(currentCompanyId()));
         config.setName(request.name().trim());
         config.setEffectiveFrom(request.effectiveFrom());
         config.setEffectiveTo(request.effectiveTo());

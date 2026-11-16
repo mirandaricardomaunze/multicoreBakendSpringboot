@@ -1,10 +1,10 @@
 package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseRequest;
@@ -37,9 +37,9 @@ public class DirectPurchaseService {
     public DirectPurchaseService(
             SupplierRepository supplierRepository,
             PurchaseRepository purchaseRepository,
-            ProductRepository productRepository,
-            WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository,
+            ProductLookup productLookup,
+            WarehouseLookup warehouseLookup,
+            CompanyLookup companyLookup,
             InventoryService inventoryService,
             FinanceService financeService,
             DocumentNumberService documentNumberService,
@@ -47,8 +47,8 @@ public class DirectPurchaseService {
     ) {
         this(
                 new DirectPurchaseRegistrationService(
-                        supplierRepository, purchaseRepository, productRepository, warehouseRepository,
-                        companyRepository, inventoryService, financeService, documentNumberService, eventPublisher),
+                        supplierRepository, purchaseRepository, productLookup, warehouseLookup,
+                        companyLookup, inventoryService, financeService, documentNumberService, eventPublisher),
                 new DirectPurchaseQueryService(purchaseRepository)
         );
     }

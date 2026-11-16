@@ -91,8 +91,8 @@ public class CommercialOrderApiClient {
     }
 
     public byte[] printPickingA4(Long id, String terminal) {
-        String url = "/api/comercial/orders/" + id + "/picking-sheet-a4" + (terminal != null ? "?terminal=" + terminal : "");
-        return clientFactory.authenticatedClient().getBytes(url);
+        return clientFactory.authenticatedClient().postForBytes("/api/comercial/orders/" + id + "/picking-sheet-a4",
+                new OrderActionRequest(null, terminal));
     }
 
     public OrderDTO confirmOrderPicking(Long id, CompleteOrderPickingRequest request) {

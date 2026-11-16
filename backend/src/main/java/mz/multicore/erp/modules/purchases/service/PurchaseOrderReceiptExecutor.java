@@ -180,11 +180,11 @@ public class PurchaseOrderReceiptExecutor {
                              Map<PurchaseOrderLine, BigDecimal> accepted) {
         String desc = String.format("Recepção Encomenda %s - Fornecedor %s",
                 order.getOrderNumber(), order.getSupplier().getName());
-        inventoryService.registerMovement(
+        inventoryService.registerPurchase(
                 line.getProduct(),
                 order.getWarehouse(),
                 qty,
-                "PURCHASE",
+                line.getUnitPrice(),
                 line.getBatchNumber(),
                 line.getSerialNumber(),
                 desc,

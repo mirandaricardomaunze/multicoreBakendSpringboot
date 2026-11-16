@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.CreateTerminationRequest;
 import mz.multicore.erp.modules.hr.dto.TerminationDTO;
@@ -44,7 +44,7 @@ public class TerminationService {
     public TerminationService(TerminationRepository terminationRepository,
                               EmployeeRepository employeeRepository,
                               VacationRepository vacationRepository,
-                              CompanyRepository companyRepository,
+                              CompanyLookup companyLookup,
                               EmploymentContractService contractService,
                               SalaryHistoryService salaryHistoryService,
                               PayrollDeductionService payrollDeductionService,
@@ -54,7 +54,7 @@ public class TerminationService {
                               AuditLogService auditLogService) {
         this(createCalculator(employeeRepository, contractService, salaryHistoryService,
                         vacationRepository, hrPolicyService, payrollDeductionService),
-                createLifecycle(terminationRepository, employeeRepository, companyRepository,
+                createLifecycle(terminationRepository, employeeRepository, companyLookup,
                         contractService, documentNumberService, financeService, auditLogService,
                         createCalculator(employeeRepository, contractService, salaryHistoryService,
                                 vacationRepository, hrPolicyService, payrollDeductionService)),
@@ -73,13 +73,13 @@ public class TerminationService {
 
     private static TerminationLifecycleService createLifecycle(TerminationRepository terminationRepository,
                                                                EmployeeRepository employeeRepository,
-                                                               CompanyRepository companyRepository,
+                                                               CompanyLookup companyLookup,
                                                                EmploymentContractService contractService,
                                                                DocumentNumberService documentNumberService,
                                                                FinanceService financeService,
                                                                AuditLogService auditLogService,
                                                                TerminationSettlementCalculator calculator) {
-        return new TerminationLifecycleService(terminationRepository, employeeRepository, companyRepository,
+        return new TerminationLifecycleService(terminationRepository, employeeRepository, companyLookup,
                 contractService, documentNumberService, financeService, auditLogService, calculator);
     }
 

@@ -6,7 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO;
 import mz.multicore.erp.modules.approvals.model.ApprovalRequest;
 import mz.multicore.erp.modules.approvals.model.ApprovalStatus;
-import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
+import mz.multicore.erp.modules.approvals.service.ApprovalRequestLookup;
 import mz.multicore.erp.modules.approvals.service.ApprovalService;
 import mz.multicore.erp.modules.comercial.dto.CreditExceptionApprovalRequest;
 import mz.multicore.erp.modules.comercial.model.Client;
@@ -32,18 +32,18 @@ public class CreditControlService {
 
     private final InvoiceRepository invoiceRepository;
     private final ClientRepository clientRepository;
-    private final ApprovalRequestRepository approvalRequestRepository;
+    private final ApprovalRequestLookup approvalRequestLookup;
     private final ApprovalService approvalService;
 
     public CreditControlService(
             InvoiceRepository invoiceRepository,
             ClientRepository clientRepository,
-            ApprovalRequestRepository approvalRequestRepository,
+            ApprovalRequestLookup approvalRequestLookup,
             ApprovalService approvalService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
-        this.approvalRequestRepository = approvalRequestRepository;
+        this.approvalRequestLookup = approvalRequestLookup;
         this.approvalService = approvalService;
     }
 
@@ -56,9 +56,8 @@ public class CreditControlService {
         LocalDate refDate = referenceDate != null ? referenceDate : LocalDate.now();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
-        List<ApprovalRequest> approvedExceptions = approvalRequestRepository
-                .findByCompanyIdAndDocumentTypeAndDocumentIdAndStatus(
-                        companyId, APPROVAL_DOC_TYPE_CREDIT_EXCEPTION, client.getId(), ApprovalStatus.APPROVED);
+        List<ApprovalRequest> approvedExceptions = approvalRequestLookup.listForDocument(
+                companyId, APPROVAL_DOC_TYPE_CREDIT_EXCEPTION, client.getId(), ApprovalStatus.APPROVED);
 
         if (!approvedExceptions.isEmpty()) {
             return;

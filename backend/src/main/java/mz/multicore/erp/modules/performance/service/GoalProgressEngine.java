@@ -2,9 +2,9 @@ package mz.multicore.erp.modules.performance.service;
 
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.hr.model.Employee;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.performance.dto.SalesGoalProgressDTO;
 import mz.multicore.erp.modules.performance.model.AlertLevel;
 import mz.multicore.erp.modules.performance.model.GoalScope;
@@ -22,15 +22,15 @@ import java.util.List;
 @Service
 public class GoalProgressEngine {
 
-    private final InvoiceRepository invoiceRepository;
-    private final EmployeeRepository employeeRepository;
+    private final InvoiceLookup invoiceLookup;
+    private final EmployeeLookup employeeLookup;
     private final BonusCalculatorEngine bonusCalculatorEngine;
 
-    public GoalProgressEngine(InvoiceRepository invoiceRepository,
-                              EmployeeRepository employeeRepository,
+    public GoalProgressEngine(InvoiceLookup invoiceLookup,
+                              EmployeeLookup employeeLookup,
                               BonusCalculatorEngine bonusCalculatorEngine) {
-        this.invoiceRepository = invoiceRepository;
-        this.employeeRepository = employeeRepository;
+        this.invoiceLookup = invoiceLookup;
+        this.employeeLookup = employeeLookup;
         this.bonusCalculatorEngine = bonusCalculatorEngine;
     }
 
@@ -40,7 +40,7 @@ public class GoalProgressEngine {
         LocalDateTime from = goal.getPeriodStart().atStartOfDay();
         LocalDateTime to = goal.getPeriodEnd().atTime(LocalTime.MAX);
 
-        List<Invoice> invoices = invoiceRepository.findByCompanyIdAndCreatedAtBetween(companyId, from, to);
+        List<Invoice> invoices = invoiceLookup.listCreatedBetween(companyId, from, to);
 
         // Filter realised sales only (CDC-BIZ-12)
         List<Invoice> realisedSales = invoices.stream()
@@ -50,7 +50,7 @@ public class GoalProgressEngine {
         // If scope is EMPLOYEE, find employee identifier to match createdBy
         Employee targetEmployee = null;
         if (goal.getScope() == GoalScope.EMPLOYEE && goal.getScopeRefId() != null) {
-            targetEmployee = employeeRepository.findById(goal.getScopeRefId()).orElse(null);
+            targetEmployee = employeeLookup.find(goal.getScopeRefId()).orElse(null);
         }
 
         BigDecimal currentRevenue = BigDecimal.ZERO;

@@ -166,3 +166,58 @@ não é venda.
 
 Três tabelas: `accounts`, `journal_entries`, `journal_lines`. Índice único parcial em
 `(company_id, source, source_document_id)` para a trava de duplicação.
+
+## Existências fora de vendas e compras (2026-11-10)
+
+`InventoryValueChangedEvent` → `InventoryPostingService`, para a conta Mercadorias (3201) acompanhar o stock físico:
+
+| Origem (`JournalSource`) | Quando | Lançamento |
+|---|---|---|
+| `STOCK_WASTE` | Quebra aprovada | D CMVMC 6101 / C 3201, ao custo do artigo |
+| `STOCK_ADJUSTMENT` | Acerto de inventário (contagem, granel) | Para menos: D 6101 / C 3201; para mais: D 3201 / C 6101 |
+| `CARCASS_BREAKDOWN` / `_CANCEL` | Desmancha / anulação | Carcaça sai ao valor contabilístico, cortes entram ao custo pago (e o inverso) |
+| `PRODUCTION_RUN` | Lote do plano de produção | Ingredientes: D 6101 / C 3201; produto: D 3401 / C Variação da produção 7301 (custo total) |
+| `PRODUCTION_CONSUMPTION` | Ordem de produção concluída | Matéria-prima consumida: D 6101 / C 3201 (o produto acabado continua em `PRODUCTION`) |
+
+Cada documento lança uma só vez (índice `uk_journal_source_document`). Sem plano de contas, não lança. As entradas
+manuais (`ENTRY`) não lançam. Teste: `InventoryPostingHttpIntegrationTest`.
+
+**Produtos fabricados (3401) e mercadorias (3201).** Um artigo é fabricado quando é o produto de uma ficha técnica
+activa (BOM). Esses artigos vivem em **3401 Produtos acabados**: entram pela ordem de produção (`PRODUCTION`) e pelo
+lote do plano (`PRODUCTION_RUN`); a venda credita 3401 pelo custo deles e 3201 pelo resto; a nota de crédito de
+devolução repõe cada parte na sua conta; quebras e acertos desses artigos mexem em 3401. Sem a conta 3401 no plano,
+fica tudo em 3201. Código: `GoodsAccounts` (accounting) e `BomFinishedGoodsLookup` (manufacturing). Testes:
+`GoodsAccountsTest`, `InventoryPostingHttpIntegrationTest`.
+
+## Custo médio, IVA e POS (2026-11-11)
+
+- **Custo médio nas compras:** a compra directa e a recepção de encomenda passam a actualizar o custo do artigo
+  pela média ponderada (stock da empresa ao custo antigo + quantidade comprada ao preço sem IVA)
+  (`InventoryService.registerPurchase`, `WeightedAverageCost`). Antes o custo ficava o que estava na ficha, e o CMVMC,
+  as quebras e os acertos usavam um custo desactualizado. Artigo sem custo ou sem stock fica com o preço da compra.
+- **Apuramento do IVA:** conta as faturas pagas em parte (antes só aprovadas e pagas) e as notas de crédito e de
+  débito aprovadas no mês (`FiscalSummaryService`). Teste: `VatSettlementHarnessTest`.
+- **POS:** linha `CREDIT` fica em dívida; pagamento misto lança numerário em Caixa e o resto em Banco; vale de loja
+  abate a Clientes; reembolso de devolução em dinheiro lança D Clientes / C Caixa ou Banco (`CUSTOMER_REFUND`).
+- **Compra sem validade obrigatória:** só os artigos perecíveis (`tracksExpiry`) exigem validade na entrada.
+
+## Acerto de existências (2026-11-12)
+
+O stock inicial entra como entrada manual (`ENTRY`) e não é lançado; sem acerto, Mercadorias (3201) fica abaixo do
+stock e chega a negativo à medida que as vendas tiram o custo. Em Contabilidade → Balancete, **"Acertar existências"**
+valoriza o stock ao custo médio, separa o que é fabricado (3401) do que é comprado (3201) e lança a diferença face ao
+saldo contabilístico contra **5901 Resultados transitados** (`INVENTORY_ADJUSTMENT`, um por dia). Usa-se no arranque
+(inventário inicial) e depois de contagens grandes. *A contrapartida é a confirmar pelo contabilista.*
+Código: `InventoryAdjustmentService`, `StockValuationService`. Teste: `InventoryPostingHttpIntegrationTest`.
+
+## Recebimentos sempre por recibo e pagamentos automáticos lançados (2026-11-12)
+
+- **Recebimentos de clientes:** "Registar Recebimento" na Tesouraria e "Amortizar Parcela" no plano de prestações
+  passam a emitir um recibo (RC) pelo `InvoiceSettlementService`. Antes a fatura ficava paga sem documento e sem
+  lançamento (Clientes nunca creditada), e a amortização de prestações não recebia dinheiro nenhum. O plano de
+  prestações acompanha os recibos (`InstallmentReceiptListener`), incluindo a anulação.
+- **Pagamentos automáticos do RH:** subsídios e acertos finais (D 6301), adiantamentos e empréstimos ao pessoal
+  (D 2602, abatidos depois pelos descontos no recibo), despesas reembolsadas e exames de saúde (D 6201); crédito na
+  Caixa (`TreasuryPayoutEvent`, `TREASURY_PAYOUT`). Antes o dinheiro saía da tesouraria sem lançamento.
+- **Reembolso do fornecedor** depois de devolução de compra já paga: D Caixa/Banco / C Fornecedores.
+

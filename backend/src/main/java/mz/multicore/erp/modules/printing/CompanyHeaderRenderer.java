@@ -51,23 +51,23 @@ public final class CompanyHeaderRenderer {
 
         addLogo(cell, company);
 
-        Paragraph name = new Paragraph(safe(company == null ? null : company.getName(), "Empresa"), PdfTheme.titleFont());
+        Paragraph name = new Paragraph(CompanyIdentityText.displayName(company, "Empresa"), PdfTheme.titleFont());
         name.setSpacingAfter(2f);
         cell.addElement(name);
 
         if (company != null) {
+            addLine(cell, CompanyIdentityText.legalNameLine(company), PdfTheme.bodyFont());
             if (company.getTaxId() != null) {
                 cell.addElement(new Paragraph("NUIT: " + company.getTaxId(), PdfTheme.bodyFont()));
             }
-            if (notBlank(company.getAddress())) {
-                cell.addElement(new Paragraph(company.getAddress(), PdfTheme.bodyFont()));
+            addLine(cell, CompanyIdentityText.legalLine(company), PdfTheme.smallFont());
+            addLine(cell, company.formattedAddress(), PdfTheme.bodyFont());
+            String phones = CompanyIdentityText.phones(company);
+            if (phones != null) {
+                cell.addElement(new Paragraph("Tel: " + phones, PdfTheme.bodyFont()));
             }
-            if (notBlank(company.getPhone())) {
-                cell.addElement(new Paragraph("Tel: " + company.getPhone(), PdfTheme.bodyFont()));
-            }
-            if (notBlank(company.getEmail())) {
-                cell.addElement(new Paragraph(company.getEmail(), PdfTheme.bodyFont()));
-            }
+            addLine(cell, company.getEmail(), PdfTheme.bodyFont());
+            addLine(cell, company.getWebsite(), PdfTheme.bodyFont());
         }
         return cell;
     }
@@ -85,8 +85,8 @@ public final class CompanyHeaderRenderer {
         }
     }
 
-    private static boolean notBlank(String value) {
-        return value != null && !value.isBlank();
+    private static void addLine(PdfPCell cell, String text, com.lowagie.text.Font font) {
+        if (text != null && !text.isBlank()) cell.addElement(new Paragraph(text.trim(), font));
     }
 
     private static PdfPCell documentCell(String title, String number, String copyLabel, String statusLabel) {

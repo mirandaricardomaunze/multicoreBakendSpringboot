@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.fleet.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fleet.dto.CreateVehicleRequest;
 import mz.multicore.erp.modules.fleet.dto.VehicleDTO;
 import mz.multicore.erp.modules.fleet.model.Vehicle;
@@ -17,12 +17,12 @@ import java.util.List;
 public class FleetVehicleManagementService {
 
     private final VehicleRepository vehicleRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
 
     public FleetVehicleManagementService(VehicleRepository vehicleRepository,
-                                         CompanyRepository companyRepository) {
+                                         CompanyLookup companyLookup) {
         this.vehicleRepository = vehicleRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
     }
 
     public VehicleDTO createVehicle(Long companyId, CreateVehicleRequest request) {
@@ -33,8 +33,7 @@ public class FleetVehicleManagementService {
             throw new BusinessRuleException("Já existe uma viatura registada com a matrícula '" + plate + "'.");
         }
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada: " + companyId));
+        Company company = companyLookup.require(companyId);
 
         Vehicle vehicle = new Vehicle();
         vehicle.setCompany(company);

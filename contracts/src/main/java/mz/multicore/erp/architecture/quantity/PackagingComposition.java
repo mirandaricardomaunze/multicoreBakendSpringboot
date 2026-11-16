@@ -2,7 +2,7 @@ package mz.multicore.erp.architecture.quantity;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 
-/** Composição imutável da caixa comercial de um produto. */
+/** Immutable composition of a product's commercial case. */
 public record PackagingComposition(int packagesPerBox, int unitsPerPackage, int unitsPerBox) {
 
     public static PackagingComposition of(int packagesPerBox, int unitsPerPackage) {
@@ -20,7 +20,7 @@ public record PackagingComposition(int packagesPerBox, int unitsPerPackage, int 
         }
     }
 
-    /** Compatibilidade com produtos/clientes que conhecem apenas unidades por caixa. */
+    /** Compatibility with products and clients that only know units per case. */
     public static PackagingComposition legacy(int unitsPerBox) {
         return of(Math.max(1, unitsPerBox), 1);
     }

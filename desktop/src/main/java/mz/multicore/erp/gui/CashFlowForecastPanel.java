@@ -43,7 +43,7 @@ public class CashFlowForecastPanel extends JPanel {
         JPanel mainContent = new JPanel();
         mainContent.setOpaque(false);
         mainContent.setLayout(new BoxLayout(mainContent, BoxLayout.Y_AXIS));
-        mainContent.setBorder(new EmptyBorder(8, 8, 16, 8));
+        mainContent.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.LG, Spacing.SM));
 
         mainContent.add(buildToolbar());
         mainContent.add(Box.createVerticalStrut(10));
@@ -74,7 +74,7 @@ public class CashFlowForecastPanel extends JPanel {
         bar.setOpaque(false);
 
         JLabel title = new JLabel("Projeção de Fluxo de Caixa Previsional (Cash Flow Forecast)");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 15f));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         bar.add(title, BorderLayout.WEST);
 
@@ -107,14 +107,14 @@ public class CashFlowForecastPanel extends JPanel {
 
     private ModernPanel buildAlertBannerPanel() {
         alertBanner.setLayout(new BorderLayout(0, 2));
-        alertBanner.setBorder(new EmptyBorder(8, 12, 8, 12));
+        alertBanner.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         alertBanner.setBackground(UIHelper.KPI_INFO_SOFT);
 
-        lblAlertTitle.setFont(lblAlertTitle.getFont().deriveFont(Font.BOLD, 12f));
+        lblAlertTitle.setFont(Typography.BODY_BOLD);
         lblAlertTitle.setForeground(UIHelper.TEXT_LIGHT);
         alertBanner.add(lblAlertTitle, BorderLayout.NORTH);
 
-        lblAlertRecommendation.setFont(lblAlertRecommendation.getFont().deriveFont(Font.PLAIN, 11f));
+        lblAlertRecommendation.setFont(Typography.CAPTION);
         lblAlertRecommendation.setForeground(UIHelper.TEXT_MUTED);
         alertBanner.add(lblAlertRecommendation, BorderLayout.CENTER);
 
@@ -124,10 +124,10 @@ public class CashFlowForecastPanel extends JPanel {
     private ModernPanel buildBucketsCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JLabel title = new JLabel("Matriz de Evolução Temporal da Liquidez (Horizontes Previsionais)");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 13f));
+        title.setFont(Typography.EMPHASIS_BOLD);
         title.setForeground(UIHelper.TEXT_LIGHT);
         card.add(title, BorderLayout.NORTH);
 

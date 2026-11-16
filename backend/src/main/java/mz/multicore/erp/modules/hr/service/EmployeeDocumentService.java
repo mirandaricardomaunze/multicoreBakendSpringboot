@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.EmployeeDocumentDTO;
 import mz.multicore.erp.modules.hr.dto.SaveEmployeeDocumentRequest;
 import mz.multicore.erp.modules.hr.model.Employee;
@@ -32,16 +32,16 @@ public class EmployeeDocumentService {
 
     private final EmployeeDocumentRepository documentRepository;
     private final EmployeeRepository employeeRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
 
     public EmployeeDocumentService(EmployeeDocumentRepository documentRepository,
                                    EmployeeRepository employeeRepository,
-                                   CompanyRepository companyRepository,
+                                   CompanyLookup companyLookup,
                                    AuditLogService auditLogService) {
         this.documentRepository = documentRepository;
         this.employeeRepository = employeeRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -77,8 +77,7 @@ public class EmployeeDocumentService {
         }
 
         EmployeeDocument document = new EmployeeDocument();
-        document.setCompany(companyRepository.findById(currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada.")));
+        document.setCompany(companyLookup.requireActive(currentCompanyId()));
         document.setEmployee(employee);
         document.setDocumentType(request.documentType().trim().toUpperCase());
         document.setDocumentNumber(blankToNull(request.documentNumber()));

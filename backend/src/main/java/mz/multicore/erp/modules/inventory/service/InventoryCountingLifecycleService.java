@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.inventory.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.dto.CreateInventorySessionRequest;
 import mz.multicore.erp.modules.inventory.dto.InventorySessionDTO;
 import mz.multicore.erp.modules.inventory.dto.InventoryStatus;
@@ -25,20 +25,20 @@ public class InventoryCountingLifecycleService {
 
     private final InventoryPhysicalSessionRepository sessionRepository;
     private final InventoryPhysicalItemRepository itemRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final InventoryService inventoryService;
     private final InventoryCountingQueryService queryService;
 
     public InventoryCountingLifecycleService(InventoryPhysicalSessionRepository sessionRepository,
                                              InventoryPhysicalItemRepository itemRepository,
-                                             ProductRepository productRepository,
+                                             ProductLookup productLookup,
                                              WarehouseRepository warehouseRepository,
                                              InventoryService inventoryService,
                                              InventoryCountingQueryService queryService) {
         this.sessionRepository = sessionRepository;
         this.itemRepository = itemRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.inventoryService = inventoryService;
         this.queryService = queryService;
@@ -62,7 +62,7 @@ public class InventoryCountingLifecycleService {
         session.setStartDate(LocalDateTime.now());
         session.setCompanyId(companyId);
 
-        List<Product> products = productRepository.findDistinctByCompaniesIdOrderByName(companyId).stream()
+        List<Product> products = productLookup.listForCompany(companyId).stream()
                 .filter(Product::isStockTracked)
                 .toList();
 

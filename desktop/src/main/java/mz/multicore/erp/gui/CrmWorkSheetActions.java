@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.desktop.client.CRMApiClient;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.TableFilter;
@@ -192,7 +193,7 @@ final class CrmWorkSheetActions {
         dlg.setOnSaveAsync(() -> {
             BigDecimal rate = parseMoney(rateField, "A tarifa horária");
             if (rate.signum() <= 0) {
-                throw new IllegalArgumentException("A tarifa horária tem de ser maior que zero.");
+                throw FieldValidationException.of(rateField, "A tarifa horária tem de ser maior que zero.");
             }
             return () -> crmApiClient.updateSettings(new UpdateCrmSettingsRequest(rate));
         });
@@ -230,13 +231,13 @@ final class CrmWorkSheetActions {
 
     private String requireTechnician(JTextField field) {
         String tech = field.getText().trim();
-        if (tech.isEmpty()) throw new IllegalArgumentException("O nome do técnico é obrigatório.");
+        if (tech.isEmpty()) throw FieldValidationException.of(field, "O nome do técnico é obrigatório.");
         return tech;
     }
 
     private String requireDescription(JTextField field) {
         String desc = field.getText().trim();
-        if (desc.isEmpty()) throw new IllegalArgumentException("A descrição do serviço é obrigatória.");
+        if (desc.isEmpty()) throw FieldValidationException.of(field, "A descrição do serviço é obrigatória.");
         return desc;
     }
 

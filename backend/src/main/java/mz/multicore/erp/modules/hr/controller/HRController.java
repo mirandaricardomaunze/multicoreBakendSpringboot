@@ -122,8 +122,9 @@ public class HRController {
     }
 
     @PostMapping("/payslips/{id}/mark-paid")
-    public ResponseEntity<PayslipDTO> markPaid(@PathVariable Long id) {
-        return ResponseEntity.ok(hrService.markPayslipPaid(id));
+    public ResponseEntity<PayslipDTO> markPaid(@PathVariable Long id,
+                                               @RequestParam(required = false) Long financeAccountId) {
+        return ResponseEntity.ok(hrService.markPayslipPaid(id, financeAccountId));
     }
 
     @PostMapping("/payslips/{id}/cancel")

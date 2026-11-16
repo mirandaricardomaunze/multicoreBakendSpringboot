@@ -7,6 +7,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.model.OccupationalHealthExam;
 import mz.multicore.erp.modules.hr.repository.OccupationalHealthExamRepository;
 import mz.multicore.erp.modules.hr.service.AttachmentEncryptionMigrator;
@@ -38,7 +39,7 @@ class SharedAccountSecurityHarnessTest {
     private final AppUserCompanyAccessRepository accesses = mock(AppUserCompanyAccessRepository.class);
     private final AuthSessionService sessions = mock(AuthSessionService.class);
     private final UserAccountAdministrationService service = new UserAccountAdministrationService(
-            users, encoder, companies, accesses, mock(AuditLogService.class), sessions);
+            users, encoder, new CompanyLookup(companies), accesses, mock(AuditLogService.class), sessions);
 
     private final Company companyA = company(1L);
     private final Company companyB = company(2L);

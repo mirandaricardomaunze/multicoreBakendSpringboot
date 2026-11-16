@@ -60,7 +60,8 @@ public class Order extends BaseEntity {
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     @Column(name = "status", nullable = false)
-    private String status = "PENDING"; // PENDING_APPROVAL, PENDING, GUIDE_PENDING, GUIDED, BILLED, CANCELLED
+    /** Nome de um {@link OrderStatus}; texto na base, comparado sempre através do enum. */
+    private String status = OrderStatus.PENDING.name();
 
     /**
      * Via da encomenda — decide aprovação, formato do documento e se entra na separação.
@@ -184,8 +185,6 @@ public class Order extends BaseEntity {
         if (today == null || expectedDeliveryDate == null || !today.isAfter(expectedDeliveryDate)) {
             return false;
         }
-        return !"BILLED".equalsIgnoreCase(status)
-                && !"GUIDED".equalsIgnoreCase(status)
-                && !"CANCELLED".equalsIgnoreCase(status);
+        return !OrderStatus.isClosed(status);
     }
 }

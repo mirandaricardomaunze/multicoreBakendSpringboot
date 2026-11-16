@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
@@ -35,7 +36,7 @@ final class PosSalesHistoryViewCoordinator {
         grid.add(KpiCard.createMetricCard("Total POS", salesTotalValue, "Facturado no período", "fas-cash-register", UIHelper.APPROVED_GREEN));
         grid.add(KpiCard.createMetricCard("Variação", salesVariationValue, "Face ao período anterior", "fas-chart-line", UIHelper.ACCENT_CYAN));
         grid.add(KpiCard.createMetricCard("Total da Página", pageTotalValue, pageSubtitle, "fas-file-invoice-dollar", UIHelper.PENDING_YELLOW));
-        grid.setBorder(new EmptyBorder(0, 0, 10, 0));
+        grid.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         return grid;
     }
 

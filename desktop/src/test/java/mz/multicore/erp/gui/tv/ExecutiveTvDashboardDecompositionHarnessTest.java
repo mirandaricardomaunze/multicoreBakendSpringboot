@@ -155,11 +155,12 @@ class ExecutiveTvDashboardDecompositionHarnessTest {
                     List.of(unit), List.of(), ExecutiveTvDashboardDialog.Period.HOJE, lightMode);
             assertOpaqueBackground(consolidated);
 
-            SellerPerformanceDialog sellers = new SellerPerformanceDialog(null, List.of(), "Hoje", lightMode);
+            assertOpaqueBackground(SellerPerformanceDialog.buildContent(List.of(), "Hoje", lightMode));
+            ExecutiveTvDialog frame = new ExecutiveTvDialog(null, "Vendedores", "fas-user-tie", "Hoje", lightMode);
             try {
-                assertOpaqueBackground(sellers.getContentPane());
+                assertOpaqueBackground(frame.window().getContentPane());
             } finally {
-                sellers.dispose();
+                frame.window().dispose();
             }
         }
     }

@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.ConfigDocumentColumnsOperations.ColumnBoxGroup;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -25,7 +27,7 @@ final class ConfigDocumentColumnsPanel {
     public JPanel buildPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JPanel north = new JPanel(new BorderLayout(0, 10));
         north.setOpaque(false);
@@ -45,14 +47,14 @@ final class ConfigDocumentColumnsPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 15));
-        card.setBorder(new EmptyBorder(20, 20, 20, 20));
+        card.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel topCard = new JPanel(new BorderLayout(0, 10));
         topCard.setOpaque(false);
         JLabel desc = new JLabel("<html><body>Escolha que colunas aparecem na tabela de linhas da <b>Fatura</b>, "
                 + "<b>Encomenda</b>, <b>Nota de Crédito</b> e <b>Guia de Remessa</b>. A configuração é por empresa "
                 + "e não altera totais nem IVA — apenas a presença visual das colunas.</body></html>");
-        desc.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        desc.setFont(Typography.EMPHASIS);
         desc.setForeground(UIHelper.TEXT_MUTED);
         topCard.add(desc, BorderLayout.NORTH);
         topCard.add(ConfigDocumentColumnsOperations.buildPresetsRow(

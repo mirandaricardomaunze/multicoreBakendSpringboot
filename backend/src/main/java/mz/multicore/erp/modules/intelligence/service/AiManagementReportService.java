@@ -10,7 +10,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.intelligence.dto.AiAssistantResponse;
 import mz.multicore.erp.modules.intelligence.dto.AiEvidenceDTO;
 import mz.multicore.erp.modules.intelligence.dto.AiProfessionalDocumentRequest;
@@ -26,12 +26,12 @@ import java.util.Set;
 @Service
 public class AiManagementReportService {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
     private static final Set<String> ALLOWED_TYPES = Set.of("RELATORIO", "MEMORANDO", "PROPOSTA", "CARTA", "ACTA", "PLANO_ACCAO");
 
-    public AiManagementReportService(CompanyRepository companyRepository, AuditLogService auditLogService) {
-        this.companyRepository = companyRepository;
+    public AiManagementReportService(CompanyLookup companyLookup, AuditLogService auditLogService) {
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -42,8 +42,7 @@ public class AiManagementReportService {
         if (response == null || response.answer() == null || response.answer().isBlank()) {
             throw new BusinessRuleException("Execute uma análise antes de gerar o relatório.");
         }
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(companyId);
         byte[] pdf = PdfDocumentBuilder.buildA4(doc -> {
             doc.add(CompanyHeaderRenderer.build(company, "Relatório de Gestão Assistido por IA", "RG-IA"));
             Paragraph meta = new Paragraph("Gerado em " + response.generatedAt().format(DATE_TIME), PdfTheme.smallFont());
@@ -77,8 +76,7 @@ public class AiManagementReportService {
         if (!ALLOWED_TYPES.contains(type)) {
             throw new BusinessRuleException("Este tipo de documento deve ser preparado e confirmado no módulo operacional correspondente.");
         }
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(companyId);
         String title = request.title().trim();
         String instructions = request.instructions().trim();
         byte[] pdf = PdfDocumentBuilder.buildA4(doc -> {

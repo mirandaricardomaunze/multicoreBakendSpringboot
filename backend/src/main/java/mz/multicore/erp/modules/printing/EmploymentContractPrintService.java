@@ -1,9 +1,8 @@
 package mz.multicore.erp.modules.printing;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.hr.model.EmploymentContract;
-import mz.multicore.erp.modules.hr.repository.EmploymentContractRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,25 +13,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class EmploymentContractPrintService {
 
-    private final EmploymentContractRepository contractRepository;
+    private final EmployeeLookup employeeLookup;
     private final EmploymentContractDocumentRenderer documentRenderer;
 
     @Autowired
-    public EmploymentContractPrintService(EmploymentContractRepository contractRepository,
+    public EmploymentContractPrintService(EmployeeLookup employeeLookup,
                                           EmploymentContractDocumentRenderer documentRenderer) {
-        this.contractRepository = contractRepository;
+        this.employeeLookup = employeeLookup;
         this.documentRenderer = documentRenderer;
     }
 
-    public EmploymentContractPrintService(EmploymentContractRepository contractRepository) {
-        this(contractRepository, new EmploymentContractDocumentRenderer());
+    public EmploymentContractPrintService(EmployeeLookup employeeLookup) {
+        this(employeeLookup, new EmploymentContractDocumentRenderer());
     }
 
     @Transactional(readOnly = true)
     public byte[] render(Long contractId) {
-        EmploymentContract contract = contractRepository
-                .findByIdWithEmployeeAndCompanyId(contractId, CurrentUserContext.requireCurrentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Contrato não encontrado."));
+        EmploymentContract contract = employeeLookup
+                .requireContractForCompany(contractId, CurrentUserContext.requireCurrentCompanyId());
         return documentRenderer.renderA4(contract);
     }
 }

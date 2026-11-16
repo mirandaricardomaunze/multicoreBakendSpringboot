@@ -25,7 +25,7 @@ final class StockWarehousesPanel {
     public JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
+        tab.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         JPanel kpiGrid = KpiCard.createGrid(4);
         kpiGrid.add(KpiCard.createMetricCard("Armazéns Activos", kpiActiveWarehouses,
@@ -48,7 +48,7 @@ final class StockWarehousesPanel {
                 .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedWarehouse);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         String[] cols = {"Nome", "Nº", "Tipo", "Capacidade", "Localização", "Responsável", "Telefone", "Vendas", "Estado"};
         owner.warehousesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -91,7 +91,7 @@ final class StockWarehousesPanel {
                 TableFilter.label("Estado:"), whEstado,
                 peekToggleBtn
         );
-        whFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
+        whFilters.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         card.add(UIHelper.tableCardTop("Gestão de Armazéns", whFilters,
                 refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
         UIHelper.ensureHeadersFit(owner.warehousesTable);

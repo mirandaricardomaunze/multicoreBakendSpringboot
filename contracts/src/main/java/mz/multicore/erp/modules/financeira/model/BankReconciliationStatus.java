@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.financeira.model;
 
 /**
- * Estado do processo de reconciliação de um extracto bancário.
+ * Status of the bank-statement reconciliation process.
  */
 public enum BankReconciliationStatus {
     OPEN("Em Aberto"),

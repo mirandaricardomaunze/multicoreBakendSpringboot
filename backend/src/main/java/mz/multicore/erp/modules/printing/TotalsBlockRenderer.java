@@ -216,10 +216,11 @@ public final class TotalsBlockRenderer {
     public static List<TaxBreakdown> calculateBreakdowns(List<LineItemsTableRenderer.Row> rows) {
         if (rows == null || rows.isEmpty()) return List.of();
 
-        Map<BigDecimal, TaxAccumulator> map = new LinkedHashMap<>();
+        Map<TaxKey, TaxAccumulator> map = new LinkedHashMap<>();
         for (LineItemsTableRenderer.Row row : rows) {
             BigDecimal rate = row.taxRate() != null ? row.taxRate() : BigDecimal.ZERO;
-            TaxAccumulator acc = map.computeIfAbsent(rate, r -> new TaxAccumulator(r));
+            String reason = rate.signum() == 0 ? exemptionReasonOrNull(row.exemptionReason()) : null;
+            TaxAccumulator acc = map.computeIfAbsent(new TaxKey(rate, reason), k -> new TaxAccumulator(rate, reason));
 
             BigDecimal qty = row.quantity() != null ? row.quantity() : BigDecimal.ZERO;
             BigDecimal price = row.unitPrice() != null ? row.unitPrice() : BigDecimal.ZERO;
@@ -234,7 +235,7 @@ public final class TotalsBlockRenderer {
         List<TaxBreakdown> result = new ArrayList<>();
         for (TaxAccumulator acc : map.values()) {
             String label = acc.rate.signum() == 0
-                    ? "Isento (Art. 9/10)"
+                    ? exemptLabel(acc.reason)
                     : String.format(Locale.forLanguageTag("pt-MZ"), "IVA %.1f%%", acc.rate.multiply(BigDecimal.valueOf(100)).doubleValue());
 
             result.add(new TaxBreakdown(
@@ -247,13 +248,35 @@ public final class TotalsBlockRenderer {
         return result;
     }
 
+    /**
+     * Label of a VAT-free group: the legal reason the line carries. The law asks for the specific
+     * provision, so without a configured reason no article is invented.
+     */
+    public static String exemptLabel(String reason) {
+        String r = exemptionReasonOrNull(reason);
+        return r == null ? "Isento de IVA" : "Isento — " + r;
+    }
+
+    private static String exemptionReasonOrNull(String reason) {
+        return reason == null || reason.isBlank() ? null : reason.trim();
+    }
+
+    /** VAT-free lines with different legal reasons stay in separate groups. */
+    private record TaxKey(BigDecimal rate, String reason) {
+        TaxKey {
+            rate = rate.stripTrailingZeros();
+        }
+    }
+
     private static final class TaxAccumulator {
         final BigDecimal rate;
+        final String reason;
         BigDecimal taxable = BigDecimal.ZERO;
         BigDecimal tax = BigDecimal.ZERO;
 
-        TaxAccumulator(BigDecimal rate) {
+        TaxAccumulator(BigDecimal rate, String reason) {
             this.rate = rate;
+            this.reason = reason;
         }
     }
 }

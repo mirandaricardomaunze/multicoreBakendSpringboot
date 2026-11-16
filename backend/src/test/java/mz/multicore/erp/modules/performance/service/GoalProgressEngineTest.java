@@ -35,7 +35,12 @@ class GoalProgressEngineTest {
         invoiceRepository = mock(InvoiceRepository.class);
         employeeRepository = mock(EmployeeRepository.class);
         bonusCalculatorEngine = new BonusCalculatorEngine();
-        progressEngine = new GoalProgressEngine(invoiceRepository, employeeRepository, bonusCalculatorEngine);
+        progressEngine = new GoalProgressEngine(
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
+                new mz.multicore.erp.modules.hr.service.EmployeeLookup(employeeRepository,
+                        mock(mz.multicore.erp.modules.hr.repository.PayslipRepository.class),
+                        mock(mz.multicore.erp.modules.hr.repository.EmploymentContractRepository.class)),
+                bonusCalculatorEngine);
     }
 
     private SalesGoal createMonthlyGoal(BigDecimal targetRevenue) {

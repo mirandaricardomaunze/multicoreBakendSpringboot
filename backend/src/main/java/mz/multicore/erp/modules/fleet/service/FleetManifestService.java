@@ -1,8 +1,8 @@
 package mz.multicore.erp.modules.fleet.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fleet.dto.CreateFleetManifestRequest;
 import mz.multicore.erp.modules.fleet.dto.FleetManifestDTO;
 import mz.multicore.erp.modules.fleet.model.FleetManifest;
@@ -32,11 +32,11 @@ public class FleetManifestService {
     /** Construtor retrocompatível preservado para testes e integrações existentes. */
     public FleetManifestService(FleetManifestRepository manifestRepository,
                                 VehicleRepository vehicleRepository,
-                                DeliveryGuideRepository guideRepository,
-                                CompanyRepository companyRepository,
+                                OrderLookup orderLookup,
+                                CompanyLookup companyLookup,
                                 DocumentNumberService documentNumberService) {
-        this(new FleetManifestBuilder(manifestRepository, vehicleRepository, guideRepository,
-                        companyRepository, documentNumberService),
+        this(new FleetManifestBuilder(manifestRepository, vehicleRepository, orderLookup,
+                        companyLookup, documentNumberService),
                 new FleetManifestQueryService(manifestRepository));
     }
 

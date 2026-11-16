@@ -139,9 +139,15 @@ public class CommercialInvoiceApiClient {
                 .getList("/api/comercial/invoices/" + invoiceId + "/installments", InvoiceInstallmentDTO.class);
     }
 
-    public List<InvoiceInstallmentDTO> payInvoiceInstallment(Long invoiceId, BigDecimal amount) {
-        return clientFactory.authenticatedClient()
-                .postForList("/api/comercial/invoices/" + invoiceId + "/installments/pay?amount=" + amount, null, InvoiceInstallmentDTO.class);
+    /** Recebe o valor por recibo (RC) na conta indicada; o plano de prestações acompanha. */
+    public List<InvoiceInstallmentDTO> payInvoiceInstallment(Long invoiceId, BigDecimal amount, Long financeAccountId) {
+        return clientFactory.authenticatedClient().postForList("/api/comercial/invoices/" + invoiceId
+                + "/installments/pay?amount=" + amount + "&financeAccountId=" + financeAccountId, null, InvoiceInstallmentDTO.class);
+    }
+
+    public List<mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO> treasuryAccounts() {
+        return clientFactory.authenticatedClient().getList("/api/finance/accounts",
+                mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO.class);
     }
 
     public CollectionRadarSummaryDTO getCollectionRadarSummary(Long companyId) {

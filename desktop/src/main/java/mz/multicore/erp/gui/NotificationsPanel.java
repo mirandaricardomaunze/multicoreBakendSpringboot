@@ -44,15 +44,15 @@ public class NotificationsPanel extends JPanel {
         this.unreadCountListener = onUnreadCountChanged;
         setLayout(new BorderLayout(0, 16));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(22, 25, 22, 25));
+        setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
         summaryLabel = new JLabel("Alertas operacionais da empresa ativa");
-        summaryLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        summaryLabel.setFont(Typography.EMPHASIS);
         summaryLabel.setForeground(UIHelper.TEXT_MUTED);
         add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(18, 18, 18, 18));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] columns = {"Tipo", "Notificação", "Detalhes", "Data / Estado", "Leitura"};
         tableModel = new DefaultTableModel(columns, 0) {
@@ -91,7 +91,7 @@ public class NotificationsPanel extends JPanel {
 
         JPanel filters = UIHelper.filterBar(new JComponent[]{
                 search, TableFilter.label("Tipo:"), type, TableFilter.label("Leitura:"), readState}, null);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         JPanel filterStack = new JPanel(new BorderLayout(0, 6));
         filterStack.setOpaque(false);

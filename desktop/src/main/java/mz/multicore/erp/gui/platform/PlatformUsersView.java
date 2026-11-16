@@ -46,7 +46,7 @@ public class PlatformUsersView extends JPanel {
 
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBorder(new EmptyBorder(mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Utilizador");
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
@@ -67,7 +67,7 @@ public class PlatformUsersView extends JPanel {
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
-        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        listCard.setBorder(new EmptyBorder(mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG));
 
         String[] cols = {"Utilizador", "Nome", "Empresas & Papéis", "Estado"};
         usersModel = new DefaultTableModel(cols, 0) {
@@ -90,7 +90,7 @@ public class PlatformUsersView extends JPanel {
         JComboBox<String> uEstado = TableFilter.combo("Todos os estados", "Activo", "Inactivo", "SuperAdmin");
         TableFilter.install(usersTable, uSearch, new TableFilter.ColumnFilter(uEstado, 3));
         JPanel uBar = TableFilter.bar(uSearch, TableFilter.label("Estado:"), uEstado);
-        uBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        uBar.setBorder(new EmptyBorder(0, 0, mz.multicore.erp.gui.components.Spacing.SM, 0));
 
         listCard.add(UIHelper.tableCardTop("Utilizadores de Todas as Empresas", uBar, refreshBtn, resetTwoFactorBtn, moreBtn, newBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
@@ -138,7 +138,7 @@ public class PlatformUsersView extends JPanel {
                 "fas-pen", "Utilizador: " + user.username(), form).setConfirmButton("Guardar", "fas-check");
         dlg.setOnSaveAsync(() -> {
             if (nameField.getText().trim().isEmpty()) {
-                throw new IllegalArgumentException("O nome é obrigatório.");
+                throw mz.multicore.erp.gui.components.FieldValidationException.of(nameField, "O nome é obrigatório.");
             }
             String name = nameField.getText().trim();
             return () -> platformApiClient.updateUser(user.username(), name);
@@ -265,7 +265,7 @@ public class PlatformUsersView extends JPanel {
                 "fas-key", "Utilizador: " + user.username(), form).setConfirmButton("Repor", "fas-check");
         dlg.setOnSaveAsync(() -> {
             if (passwordField.getPassword().length == 0) {
-                throw new IllegalArgumentException("Indique a nova senha.");
+                throw mz.multicore.erp.gui.components.FieldValidationException.of(passwordField, "Indique a nova senha.");
             }
             String password = new String(passwordField.getPassword());
             return () -> {

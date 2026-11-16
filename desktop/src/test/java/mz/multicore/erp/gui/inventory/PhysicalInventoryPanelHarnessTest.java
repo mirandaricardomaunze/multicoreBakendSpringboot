@@ -70,8 +70,8 @@ public class PhysicalInventoryPanelHarnessTest {
         java.awt.Component top = cardLayout.getLayoutComponent(BorderLayout.NORTH);
         assertTrue(top instanceof java.awt.Container, "O topo do card deve conter filtros e ações");
         java.awt.Container topContainer = (java.awt.Container) top;
-        java.awt.Container header = (java.awt.Container) ((BorderLayout) topContainer.getLayout()).getLayoutComponent(BorderLayout.NORTH);
-        java.awt.Container actions = (java.awt.Container) ((BorderLayout) header.getLayout()).getLayoutComponent(BorderLayout.EAST);
+        // Cabeçalho numa só fila: as acções ficam no EAST do próprio topo.
+        java.awt.Container actions = (java.awt.Container) ((BorderLayout) topContainer.getLayout()).getLayoutComponent(BorderLayout.EAST);
         java.util.List<javax.swing.AbstractButton> buttons = new java.util.ArrayList<>();
         collectButtons(actions, buttons);
         boolean hasActionMenu = buttons.stream()

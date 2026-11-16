@@ -5,10 +5,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Extracto de uma conta (razão) num período.
+ * Account ledger statement for a period.
  *
- * @param openingBalance saldo à data inicial (tudo o que foi lançado antes)
- * @param closingBalance saldo no fim do período
+ * @param openingBalance balance at the start date, including all prior entries
+ * @param closingBalance balance at the end of the period
  */
 public record LedgerDTO(
         String accountCode,

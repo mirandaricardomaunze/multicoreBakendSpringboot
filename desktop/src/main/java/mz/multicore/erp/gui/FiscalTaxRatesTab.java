@@ -36,7 +36,7 @@ final class FiscalTaxRatesTab {
     public JPanel buildTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Taxa");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -50,7 +50,7 @@ final class FiscalTaxRatesTab {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         taxRatesModel = new DefaultTableModel(
                 new String[]{"Código", "Designação", "Tipo", "Taxa (%)", "Base Legal", "Estado"}, 0) {
@@ -78,7 +78,7 @@ final class FiscalTaxRatesTab {
         JComboBox<String> trEstado = TableFilter.combo("Todos os estados", "Activa", "Inactiva");
         TableFilter.install(taxRatesTable, trSearch, new TableFilter.ColumnFilter(trEstado, 5));
         JPanel trBar = TableFilter.bar(trSearch, TableFilter.label("Estado:"), trEstado);
-        trBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        trBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         ModernButton trRefreshBtn = UIHelper.createRefreshButton(this::loadTaxRates);
         card.add(UIHelper.tableCardTop("Tabela de Taxas Fiscais", trBar,
                 trRefreshBtn, toggleBtn, editBtn, newBtn), BorderLayout.NORTH);

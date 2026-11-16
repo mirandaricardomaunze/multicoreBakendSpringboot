@@ -113,11 +113,11 @@ public final class CommercialNotesPanel {
                             ModernButton... buttons) {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
         tab.add(table == creditTable ? creditFeedback : debitFeedback, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JTextField search = TableFilter.searchField("Nº nota, fatura ou cliente…");
         JComboBox<String> reason = TableFilter.combo(withFirst("Todos os motivos", reasons));
@@ -142,7 +142,7 @@ public final class CommercialNotesPanel {
                 TableFilter.label("Motivo:"), reason,
                 TableFilter.label("Estado:"), status,
                 TableFilter.label("Período:"), period);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);

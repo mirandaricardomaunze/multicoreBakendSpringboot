@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.printing;
 
 import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -10,14 +10,14 @@ import java.util.List;
 @Component
 public class CompanyBankDetails {
 
-    private final TreasuryAccountRepository treasuryAccountRepository;
+    private final TreasuryAccountLookup treasuryAccountLookup;
 
-    public CompanyBankDetails(TreasuryAccountRepository treasuryAccountRepository) {
-        this.treasuryAccountRepository = treasuryAccountRepository;
+    public CompanyBankDetails(TreasuryAccountLookup treasuryAccountLookup) {
+        this.treasuryAccountLookup = treasuryAccountLookup;
     }
 
     List<String> forCompany(Long companyId) {
-        return treasuryAccountRepository.findByCompanyIdOrderByName(companyId).stream()
+        return treasuryAccountLookup.listForCompany(companyId).stream()
                 .filter(account -> account.getAccountType() == TreasuryAccountType.BANK)
                 .filter(account -> account.getAccountNumber() != null && !account.getAccountNumber().isBlank())
                 .map(account -> account.getName() + " · Conta: " + account.getAccountNumber().trim())

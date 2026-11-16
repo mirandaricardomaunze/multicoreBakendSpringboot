@@ -67,7 +67,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
     private final PrintPreviewOptionsView optionsView = new PrintPreviewOptionsView(this);
     private final JLabel pageLabel = new JLabel();
     private final JLabel summaryLabel = new JLabel();
-    private final ModernButton printButton = UIHelper.createPrimaryButton("Imprimir");
+    private final ModernButton printButton = ButtonStyles.main(UIHelper.createPrimaryButton("Imprimir"));
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     private int pageIndex;
@@ -111,7 +111,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
 
         JPanel main = new JPanel(new BorderLayout(0, 14));
         main.setBackground(UIHelper.BG_DARK);
-        main.setBorder(new EmptyBorder(20, 24, 18, 24));
+        main.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel north = new JPanel(); north.setOpaque(false);
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
@@ -139,7 +139,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
     private JComponent buildPreviewCard() {
         ModernPanel card = new ModernPanel(UIHelper.RADIUS_LG, UIHelper.BG_CARD);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 12, 12, 12));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
         card.add(buildPreviewToolbar(), BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(canvas);
@@ -156,7 +156,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
         JPanel nav = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0)); nav.setOpaque(false);
         ModernButton prev = UIHelper.createIconButton("Página anterior", "fas-chevron-left"); prev.addActionListener(e -> movePage(-1));
         ModernButton next = UIHelper.createIconButton("Página seguinte", "fas-chevron-right"); next.addActionListener(e -> movePage(1));
-        pageLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); pageLabel.setForeground(UIHelper.TEXT_LIGHT);
+        pageLabel.setFont(Typography.EMPHASIS_BOLD); pageLabel.setForeground(UIHelper.TEXT_LIGHT);
         nav.add(prev); nav.add(next); nav.add(Box.createHorizontalStrut(6)); nav.add(pageLabel);
         bar.add(nav, BorderLayout.WEST);
 
@@ -170,26 +170,19 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
     }
 
     private JComponent buildFooter() {
-        JPanel footer = new JPanel(new BorderLayout()); footer.setOpaque(false);
-        footer.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID), new EmptyBorder(12, 0, 0, 0)));
-        summaryLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); summaryLabel.setForeground(UIHelper.TEXT_MUTED);
-        footer.add(summaryLabel, BorderLayout.WEST);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0)); actions.setOpaque(false);
-        ModernButton cancel = UIHelper.createSecondaryButton("Cancelar");
+        summaryLabel.setFont(Typography.BODY); summaryLabel.setForeground(UIHelper.TEXT_MUTED);
+        ModernButton cancel = ButtonStyles.cancelButton();
         cancel.setIcon(UIHelper.icon("fas-times", 14)); cancel.setPreferredSize(new Dimension(120, 38)); cancel.addActionListener(e -> close());
 
-        ModernButton openInViewer = UIHelper.createSecondaryButton("Abrir no leitor");
+        ModernButton openInViewer = ButtonStyles.secondary(UIHelper.createSecondaryButton("Abrir no leitor"));
         openInViewer.setIcon(UIHelper.icon("fas-external-link-alt", 14)); openInViewer.setPreferredSize(new Dimension(150, 38)); openInViewer.addActionListener(e -> saveDocument(true));
 
-        ModernButton save = UIHelper.createSecondaryButton("Guardar PDF");
+        ModernButton save = ButtonStyles.secondary(UIHelper.createSecondaryButton("Guardar PDF"));
         save.setIcon(UIHelper.icon("fas-save", 14)); save.setPreferredSize(new Dimension(150, 38)); save.addActionListener(e -> saveDocument(false));
 
         printButton.setIcon(UIHelper.icon("fas-print", 14)); printButton.setPreferredSize(new Dimension(150, 38)); printButton.addActionListener(e -> print());
 
-        actions.add(cancel); actions.add(openInViewer); actions.add(save); actions.add(printButton);
-        footer.add(actions, BorderLayout.EAST);
-        return footer;
+        return DialogChrome.footerWithNote(summaryLabel, cancel, openInViewer, save, printButton);
     }
 
     private void installShortcuts() {

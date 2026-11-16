@@ -10,8 +10,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Anotação para validação declarativa de número de telefone em Moçambique.
- * Suporta redes móveis (82/83, 84/85, 86/87) e fixas (21-28), com ou sem indicativo +258.
+ * Annotation for declarative validation of Mozambican telephone numbers.
+ * Supports mobile (82/83, 84/85, 86/87) and landline (21-28) networks, with or without +258.
  */
 @Documented
 @Constraint(validatedBy = ValidPhoneMZValidator.class)

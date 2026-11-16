@@ -106,7 +106,9 @@ public class MainFrame extends JFrame {
     private final MainFrameTopBarBuilder topBarBuilder = new MainFrameTopBarBuilder();
     private final MainFrameNotificationCoordinator notificationCoordinator;
     private TopNavBar topBar;
+    private MainFrameBreadcrumb breadcrumb;
     private CollapsibleSidebar sidebar;
+    private SectorModules sectorModules;
     private mz.multicore.erp.gui.components.StatusBar statusBar;
     private String sessionDisplayName;
     private boolean sidebarCollapsedForPos;
@@ -158,7 +160,14 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.RecurringContractApiClient recurringContractApiClient,
             mz.multicore.erp.desktop.client.DashboardApiClient dashboardApiClient,
             AiAssistantApiClient aiAssistantApiClient,
-            mz.multicore.erp.desktop.client.QualityApiClient qualityApiClient
+            mz.multicore.erp.desktop.client.QualityApiClient qualityApiClient,
+            mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
+            mz.multicore.erp.desktop.client.UnitsApiClient unitsApiClient,
+            mz.multicore.erp.desktop.client.PricingApiClient pricingApiClient,
+            mz.multicore.erp.desktop.client.PickupApiClient pickupApiClient,
+            mz.multicore.erp.desktop.client.BulkStockApiClient bulkStockApiClient,
+            mz.multicore.erp.desktop.client.ProjectsApiClient projectsApiClient,
+            mz.multicore.erp.desktop.client.SectorApiClients sectorApiClients
     ) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
@@ -220,7 +229,7 @@ public class MainFrame extends JFrame {
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient,
                     promotionApiClient, scaleBarcodeParser, printApiClient);
             comprasPanel    = sellerSession ? null : new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient);
-            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient);
+            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient, activityApiClient);
             performancePanel = sellerSession ? null : new PerformancePanel(performanceApiClient, desktopSessionStore);
             forensicAuditPanel = sellerSession ? null : new ForensicAuditPanel(forensicAuditApiClient);
             aiAssistantPanel = sellerSession ? null : new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);
@@ -231,6 +240,8 @@ public class MainFrame extends JFrame {
                     this::navigateFromNotification, this::updateNotificationBadge);
             notificationCoordinator = new MainFrameNotificationCoordinator(notificationFeed, notificationReadStore, this::navigateFromNotification);
             plataformaPanel = null;
+            sectorModules = SectorModules.create(comercialPanel, stockPanel, configPanel, comercialApiClient, inventoryApiClient, promotionApiClient,
+                    activityApiClient, unitsApiClient, pricingApiClient, pickupApiClient, bulkStockApiClient, projectsApiClient, financeApiClient, productionApiClient, sectorApiClients);
             addCard(sellerDashboardPanel != null ? sellerDashboardPanel : dashboardPanel, "dashboard");
             addCard(posPanel, "pos");
             addCard(comercialPanel, "comercial"); addCard(comprasPanel, "compras");
@@ -248,18 +259,21 @@ public class MainFrame extends JFrame {
             addCard(forensicAuditPanel, "auditoria_forense");
             addCard(aiAssistantPanel, "assistente_ia");
             addCard(notificationsPanel, "notifications");
+            sectorModules.registerCards(this::addCard);
         }
 
         setLayout(new BorderLayout());
         // A empresa guardada é escolhida primeiro: o nome e o menu da sidebar dependem dela.
         JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
         sidebar = buildSidebar();
+        if (sectorModules != null) sectorModules.applyProfileAsync(sidebar);
         if (comercialPanel != null) comercialPanel.onTabChanged(() -> syncSidebar("comercial", ""));
         topBar = topBarBuilder.build(superAdmin, this, this::openGlobalSearch, this::openRecentItemsHistory,
                 notificationCoordinator != null ? notificationCoordinator.buildNotificationBell() : null,
                 buildSubscriptionChip(), companyCombo,
                 desktopSessionStore.requireSession().companies().size() > 1);
         if (notificationCoordinator != null) notificationCoordinator.attachNavComponents(topBar, sidebar);
+        breadcrumb = new MainFrameBreadcrumb(topBar, contentPanel);
         statusBar = new mz.multicore.erp.gui.components.StatusBar();
 
         JPanel centerContainer = new JPanel(new BorderLayout());
@@ -353,7 +367,7 @@ public class MainFrame extends JFrame {
                 desktopSessionStore.requireSession(),
                 superAdmin,
                 this::navigate,
-                comercialPanel
+                comercialPanel, sectorModules
         );
     }
 
@@ -432,6 +446,7 @@ public class MainFrame extends JFrame {
         cardLayout.show(contentPanel, cardName);
         String modName = MainFrameModuleTitles.titleFor(cardName);
         if (topBar != null) topBar.setActive(modName);
+        if (breadcrumb != null) breadcrumb.followVisibleCard();
         syncSidebar(cardName, modName);
         adjustSidebarForPos("pos".equals(cardName));
         RecentItemsHistoryManager.getInstance().record("Módulo", null, modName, "Acesso rápido", cardName, "fas-folder-open");
@@ -468,6 +483,7 @@ public class MainFrame extends JFrame {
             case "config"     -> configPanel.onPanelSelected();
             case "notifications" -> notificationsPanel.onPanelSelected();
             case "plataforma" -> plataformaPanel.onPanelSelected();
+            default -> { if (sectorModules != null) sectorModules.onSelected(cardName); }
         }
     }
 
@@ -567,7 +583,7 @@ public class MainFrame extends JFrame {
         }
 
         String role = CurrentUserContext.getRole();
-        if ("SELLER".equalsIgnoreCase(role)) return buildSellerSearchIndex();
+        if ("SELLER".equalsIgnoreCase(role)) return MainFrameSellerSearchIndex.build(this::navigate, this::handleSellerDashboardAction, this);
         if (!"MANAGER".equalsIgnoreCase(role) && !"ADMIN".equalsIgnoreCase(role)) {
             items.add(new GlobalSearchDialog.SearchItem("mod_dashboard", "Painel Inicial", "Módulos", null,
                     UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), UIHelper.MODULE_DASHBOARD,
@@ -669,38 +685,6 @@ public class MainFrame extends JFrame {
         items.add(new GlobalSearchDialog.SearchItem("act_transfer", "Transferência entre Armazéns", "Stock & Logística", null, UIHelper.icon("fas-dolly", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("stock"), List.of("transferencia", "transferir stock", "guias", "armazens", "logistica")));
         items.add(new GlobalSearchDialog.SearchItem("act_pos_cash_move", "Movimento de Caixa (Sangria / Suprimento)", "POS & Caixa", "F9", UIHelper.icon("fas-money-bill-wave", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> navigate("pos"), List.of("sangria", "suprimento", "caixa", "troco", "retirada", "reforco", "dinheiro", "gaveta")));
 
-        return items;
-    }
-
-    private List<GlobalSearchDialog.SearchItem> buildSellerSearchIndex() {
-        List<GlobalSearchDialog.SearchItem> items = new java.util.ArrayList<>();
-        items.add(new GlobalSearchDialog.SearchItem("seller_dashboard", "Painel do Vendedor", "Vendas", null,
-                UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), UIHelper.MODULE_DASHBOARD,
-                () -> navigate("dashboard"), List.of("inicio", "resumo", "vendedor")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_pos", "Nova venda no POS", "Vendas", "F9",
-                UIHelper.icon("fas-cash-register", 16, UIHelper.MODULE_POS), UIHelper.MODULE_POS,
-                () -> navigate("pos"), List.of("venda", "caixa", "pagamento")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_order", "Criar nova encomenda", "Vendas", null,
-                UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE,
-                () -> handleSellerDashboardAction("new-order"), List.of("encomenda", "pedido")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_quotation", "Criar nova cotação", "Vendas", null,
-                UIHelper.icon("fas-file-signature", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW,
-                () -> handleSellerDashboardAction("new-quotation"), List.of("cotacao", "proposta", "orcamento")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_clients", "Pesquisar clientes", "Vendas", null,
-                UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), UIHelper.MODULE_CLIENTES,
-                () -> navigate("clientes"), List.of("cliente", "contacto", "nuit")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_products", "Consultar produtos", "Vendas", null,
-                UIHelper.icon("fas-box-open", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN,
-                () -> navigate("pos"), List.of("produto", "artigo", "preco", "stock")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_crm", "CRM & Assistência", "Vendas", null,
-                UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), UIHelper.MODULE_CRM,
-                () -> navigate("crm"), List.of("crm", "assistencia", "ticket")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_notifications", "Notificações", "Sistema", null,
-                UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_ORANGE), UIHelper.ACCENT_ORANGE,
-                () -> navigate("notifications"), List.of("alertas", "avisos")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_logout", "Terminar sessão", "Sistema", null,
-                UIHelper.icon("fas-sign-out-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED,
-                () -> UIHelper.requestLogout(this), List.of("logout", "sair")));
         return items;
     }
 

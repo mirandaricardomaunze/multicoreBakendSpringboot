@@ -16,7 +16,7 @@ final class UiTableCellStyler {
         table.setBackground(UIHelper.BG_CARD);
         table.setForeground(UIHelper.TEXT_LIGHT);
         table.setGridColor(UIHelper.GRID);
-        table.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        table.setFont(Typography.EMPHASIS);
         table.setRowHeight(UiDensityManager.getInstance().getDensity().getTableRowHeight());
         table.setSelectionBackground(UIHelper.SELECTION_BG);
         table.setSelectionForeground(UIHelper.TEXT_LIGHT);
@@ -31,7 +31,7 @@ final class UiTableCellStyler {
         JTableHeader header = table.getTableHeader();
         header.setBackground(UIHelper.TABLE_HEADER_BG);
         header.setForeground(UIHelper.TEXT_LIGHT);
-        header.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        header.setFont(Typography.EMPHASIS_BOLD);
         header.setPreferredSize(new Dimension(100, 38));
         header.setReorderingAllowed(false);
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, UIHelper.GRID));
@@ -43,7 +43,7 @@ final class UiTableCellStyler {
                 setHorizontalAlignment(numeric ? SwingConstants.RIGHT : SwingConstants.LEFT);
                 setBackground(UIHelper.TABLE_HEADER_BG);
                 setForeground(UIHelper.TEXT_LIGHT);
-                setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+                setFont(Typography.EMPHASIS_BOLD);
                 setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 0, 2, 1, UIHelper.GRID),
                         new EmptyBorder(0, numeric ? 8 : 12, 0, numeric ? 14 : 8)));
@@ -66,8 +66,8 @@ final class UiTableCellStyler {
                 } else {
                     Color base = row % 2 == 0 ? UIHelper.BG_CARD : UIHelper.ROW_ALT;
                     Color status = rowStatusColor(t, row);
-                    // Só o que precisa de atenção pinta a linha: o estado normal fica na etiqueta.
-                    setBackground(status == null || status.equals(UIHelper.APPROVED_GREEN) ? base : blend(base, status, 0.10f));
+                    // Só o que precisa de atenção pinta a linha: o estado normal fica no texto.
+                    setBackground(status == null ? base : blend(base, status, 0.10f));
                 }
 
                 if (value == null) {
@@ -84,7 +84,7 @@ final class UiTableCellStyler {
                     setForeground(UIHelper.TEXT_LIGHT);
                     setFont(getFont().deriveFont(Font.PLAIN));
                 } else {
-                    Color statusText = statusColorFor(valStr.toUpperCase());
+                    Color statusText = numeric ? null : statusColorFor(valStr);
                     setForeground(statusText != null ? statusText : UIHelper.TEXT_LIGHT);
                     setFont(getFont().deriveFont(statusText != null ? Font.BOLD : Font.PLAIN));
                 }
@@ -96,15 +96,21 @@ final class UiTableCellStyler {
         table.setDefaultRenderer(String.class, cellRenderer);
     }
 
-    /** Texto apresentado na célula: decimais em formato pt-MZ, preservando sufixos (MT, un, kg, %). */
+    /**
+     * Texto apresentado na célula: decimais em formato pt-MZ, preservando sufixos (MT, un, kg, %) e o sinal, e datas
+     * sempre como dd/MM/yyyy (com HH:mm quando há hora), mesmo quando chegam em ISO (2026-11-14T10:20).
+     */
     static String formatValue(Object value) {
+        String date = formatDate(value);
+        if (date != null) return date;
         if (value instanceof BigDecimal bd) return TableCellRenderers.format(bd, 2, "");
         if (value instanceof Double d) return TableCellRenderers.format(BigDecimal.valueOf(d), 2, "");
         if (value instanceof Float f) return TableCellRenderers.format(BigDecimal.valueOf(f), 2, "");
         if (value instanceof String s && !s.trim().isEmpty() && !s.equals("—") && !s.equals("-")) {
             String trimmed = s.trim();
             boolean hasSign = trimmed.startsWith("+");
-            String clean = trimmed.replaceAll("^[+]", "").replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim();
+            boolean negative = trimmed.startsWith("-");
+            String clean = trimmed.replaceAll("^[+-]", "").replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim();
             if (clean.isEmpty()) return s;
             clean = MoneyField.normalize(clean);
             if (clean.matches("^\\d+\\.\\d+$")) {
@@ -114,7 +120,8 @@ final class UiTableCellStyler {
                             : trimmed.endsWith(" un") ? " un"
                             : trimmed.endsWith(" kg") ? " kg"
                             : trimmed.endsWith("%") ? "%" : "";
-                    return (hasSign && parsed.signum() > 0 ? "+" : "") + TableCellRenderers.format(parsed, 2, suffix);
+                    String sign = negative && parsed.signum() != 0 ? "-" : hasSign && parsed.signum() > 0 ? "+" : "";
+                    return sign + TableCellRenderers.format(parsed, 2, suffix);
                 } catch (Exception ex) {
                     return s;
                 }
@@ -124,24 +131,32 @@ final class UiTableCellStyler {
         return value.toString();
     }
 
-    static Color statusColorFor(String upper) {
-        if (upper == null) return null;
-        if (eqAny(upper, "APPROVED", "APROVADO", "APROVADA", "RESOLVED", "PAID", "PAGO",
-                "RECEIVED", "RECEBIDO", "RECEBIDA", "ATIVO", "ACTIVO", "ATIVA", "ACTIVA", "OK", "EM STOCK")) {
-            return UIHelper.APPROVED_GREEN;
-        }
-        if (eqAny(upper, "REJECTED", "REJEITADO", "CANCELLED", "CANCELADO", "CANCELADA",
-                "ANULADO", "ANULADA", "ESGOTADO", "SEM STOCK", "INATIVO", "INACTIVO") || upper.startsWith("VENCIDO")) {
-            return UIHelper.REJECTED_RED;
-        }
-        if (upper.contains("PENDING") || upper.contains("PENDENTE") || upper.startsWith("VENCE")
-                || upper.equals("BAIXO") || upper.equals("STOCK BAIXO")
-                || upper.contains("DÍVIDA") || upper.contains("DIVIDA")
-                || upper.contains("PARCIAL") || upper.contains("PARTIALLY")
-                || upper.contains("DIVERG") || upper.contains("DISCREPANCY")) {
-            return UIHelper.PENDING_YELLOW;
+    private static final java.util.regex.Pattern ISO_DATE = java.util.regex.Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
+    private static final java.util.regex.Pattern ISO_DATE_TIME =
+            java.util.regex.Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?");
+
+    /** dd/MM/yyyy or dd/MM/yyyy HH:mm for a date value or an ISO date text; null when it is not a date. */
+    static String formatDate(Object value) {
+        try {
+            if (value instanceof java.time.LocalDate d) return UIHelper.formatDate(d);
+            if (value instanceof java.time.LocalDateTime d) return UIHelper.formatDateTime(d);
+            if (value instanceof java.time.OffsetDateTime d) return UIHelper.formatDateTime(d.atZoneSameInstant(java.time.ZoneId.systemDefault()));
+            if (value instanceof java.time.ZonedDateTime d) return UIHelper.formatDateTime(d.withZoneSameInstant(java.time.ZoneId.systemDefault()));
+            if (value instanceof String s) {
+                String t = s.trim();
+                if (ISO_DATE.matcher(t).matches()) return UIHelper.formatDate(java.time.LocalDate.parse(t));
+                if (ISO_DATE_TIME.matcher(t).matches()) return UIHelper.formatDateTime(java.time.LocalDateTime.parse(t));
+            }
+        } catch (java.time.DateTimeException ex) {
+            return null;
         }
         return null;
+    }
+
+    /** Colour of a status text, or null when the text is not a known status (shared with {@link StatusTone}). */
+    static Color statusColorFor(String upper) {
+        StatusTone.Tone tone = StatusTone.toneOf(upper);
+        return tone == StatusTone.Tone.NEUTRAL ? null : StatusTone.colorOf(tone);
     }
 
     private static boolean eqAny(String s, String... opts) {
@@ -163,7 +178,9 @@ final class UiTableCellStyler {
         int col = statusColumnIndex(t);
         if (col < 0) return null;
         Object v = t.getValueAt(viewRow, col);
-        return v == null ? null : statusColorFor(v.toString().toUpperCase());
+        if (v == null) return null;
+        StatusTone.Tone tone = StatusTone.toneOf(v.toString());
+        return tone == StatusTone.Tone.BAD || tone == StatusTone.Tone.WARN ? StatusTone.colorOf(tone) : null;
     }
 
     private static Color blend(Color base, Color accent, float ratio) {
@@ -178,7 +195,7 @@ final class UiTableCellStyler {
         if (raw == null) return false;
         String s = raw.trim();
         if (s.isEmpty()) return false;
-        String cleaned = s.replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%)\\s*$", "").trim();
+        String cleaned = s.replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim().replaceFirst("^\\+", "");
         if (cleaned.isEmpty()) return false;
         return cleaned.matches("-?\\d{1,3}([.\\s]\\d{3})*(,\\d+)?")
                 || cleaned.matches("-?\\d{1,3}(,\\d{3})*(\\.\\d+)?")

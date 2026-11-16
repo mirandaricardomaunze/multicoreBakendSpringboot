@@ -33,6 +33,10 @@ Quando o pedido encaixa numa skill, invocar a skill em vez de inventar:
 | `multicore-icons`            | Alterar/adicionar ícones em botões/tabs (`UIHelper.icon`)            |
 | `multicore-solid-review`     | Rever classe ou diff contra SOLID/SRP/DRY do projecto                |
 | `multicore-store-status`     | Relatório operacional rápido (vendas hoje, stock baixo, …)           |
+| `multicore-goal`             | "cria um goal", "quero que a IA faça X sozinha" — SPEC + HARNESS + goal para o Ralph Loop |
+
+**Trabalho autónomo:** fila em [tasks/goals/](tasks/goals/), loop em `scripts/ralph/ralph.ps1`, regras em
+[docs/RALPH_LOOP_SPEC.md](docs/RALPH_LOOP_SPEC.md). Dentro de uma iteração Ralph, seguir `.ralph/iteration-prompt.md`.
 
 ---
 

@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui.users;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.UserApiClient;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -84,12 +86,11 @@ public class UserEditorDialog {
             String role = (String) roleCombo.getSelectedItem();
             String pass = !isEdit ? new String(passwordField.getPassword()).trim() : null;
 
-            if (username.isBlank() || name.isBlank()) {
-                throw new IllegalArgumentException("Username e Nome Completo são obrigatórios.");
-            }
+            if (username.isBlank()) throw FieldValidationException.of(usernameField, "O username é obrigatório.");
+            if (name.isBlank()) throw FieldValidationException.of(nameField, "O nome completo é obrigatório.");
 
             if (!isEdit && (pass == null || pass.length() < 4)) {
-                throw new IllegalArgumentException("A senha inicial deve conter pelo menos 4 caracteres.");
+                throw FieldValidationException.of(passwordField, "A senha inicial deve conter pelo menos 4 caracteres.");
             }
 
             return () -> {
@@ -112,7 +113,7 @@ public class UserEditorDialog {
 
     private JLabel createLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setFont(Typography.BODY_BOLD);
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }

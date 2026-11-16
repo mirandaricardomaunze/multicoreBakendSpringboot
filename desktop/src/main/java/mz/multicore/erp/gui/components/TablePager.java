@@ -28,8 +28,8 @@ public final class TablePager extends JPanel {
     private final JLabel pageState = new JLabel(" ");
     private final JLabel pageLabel = new JLabel("Por página:");
     private final PagerNavButton first = new PagerNavButton("fas-angle-double-left", "Primeira página");
-    private final PagerNavButton previous = new PagerNavButton("fas-chevron-left", "Página anterior");
-    private final PagerNavButton next = new PagerNavButton("fas-chevron-right", "Página seguinte");
+    private final PagerNavButton previous = new PagerNavButton("fas-angle-left", "Página anterior");
+    private final PagerNavButton next = new PagerNavButton("fas-angle-right", "Página seguinte");
     private final PagerNavButton last = new PagerNavButton("fas-angle-double-right", "Última página");
     private final JComboBox<Integer> pageSize = new JComboBox<>(PAGE_SIZES);
     private final BiConsumer<Integer, Integer> loader;
@@ -47,14 +47,14 @@ public final class TablePager extends JPanel {
                 new EmptyBorder(8, 4, ACTION_ROW_GAP, 4)));
 
         status.setForeground(UIHelper.TEXT_MUTED);
-        status.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        status.setFont(Typography.BODY);
 
         pageState.setHorizontalAlignment(SwingConstants.CENTER);
         pageState.setForeground(UIHelper.TEXT_LIGHT);
-        pageState.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        pageState.setFont(Typography.BODY_BOLD);
 
         pageLabel.setForeground(UIHelper.TEXT_MUTED);
-        pageLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        pageLabel.setFont(Typography.BODY);
 
         UIHelper.styleComboBox(pageSize);
         pageSize.setPreferredSize(new Dimension(86, UIHelper.FORM_CONTROL_HEIGHT - 4));
@@ -99,12 +99,8 @@ public final class TablePager extends JPanel {
         }
         page = response.page();
         totalPages = Math.max(response.totalPages(), 1);
-        status.setText(response.totalElements() == 0
-                ? "Sem registos"
-                : String.format("%d registo(s)", response.totalElements()));
-        pageState.setText(response.totalElements() == 0
-                ? ""
-                : String.format("Página  %d  de  %d", page + 1, totalPages));
+        status.setText(ClientTablePagination.recordsText(response.totalElements()));
+        pageState.setText(ClientTablePagination.pageText(page, totalPages));
         setEnabledState();
     }
 

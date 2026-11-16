@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.financeira.model;
 
 /**
- * Estado de conciliação de uma linha individual do extracto bancário.
+ * Reconciliation status of an individual bank-statement line.
  */
 public enum BankStatementItemStatus {
     UNMATCHED("Pendente"),

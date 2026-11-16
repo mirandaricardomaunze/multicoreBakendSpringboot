@@ -76,6 +76,14 @@ public class Product extends BaseEntity {
     @Column(name = "sale_type", nullable = false, length = 20)
     private ProductSaleType saleType = ProductSaleType.UNIT;
 
+    /**
+     * Explicit base unit (SA-C02, {@code docs/UNIDADES_MEDIDA_SPEC.md}). {@code null} for older products,
+     * whose base is then "KG" for weighed sales and "UN" otherwise, which is what their stock always meant.
+     * See {@code ProductUnitService.baseUnitCodeOf}.
+     */
+    @Column(name = "base_unit_code", length = 20)
+    private String baseUnitCode;
+
     @Column(name = "stock_tracked", nullable = false)
     private boolean stockTracked = true;
 
@@ -143,5 +151,17 @@ public class Product extends BaseEntity {
         return taxRate != null && taxRate.getRate() != null
                 ? taxRate.getRate()
                 : mz.multicore.erp.architecture.pricing.TaxRates.STANDARD_VAT;
+    }
+
+    /**
+     * Refuses the system product "Adiantamento" outside the advances module: it is only sold through an
+     * advance invoice with the amount actually received ({@code docs/ADIANTAMENTOS_SPEC.md}).
+     */
+    public Product requireOrdinarySale() {
+        if (mz.multicore.erp.modules.advances.AdvancePayments.isSystemSku(sku)) {
+            throw new mz.multicore.erp.architecture.exception.BusinessRuleException(
+                    "O artigo Adiantamento só se usa no módulo Adiantamentos.");
+        }
+        return this;
     }
 }

@@ -20,6 +20,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     /** Encomendas que ainda não foram faturadas — usado pelo diálogo "Faturar Encomenda". */
     List<Order> findByCompanyIdAndStatusAndInvoiceIdIsNull(Long companyId, String status);
+    /** Encomendas por faturar nos estados indicados, filtradas por número ou nome do cliente ({@code term} em minúsculas; vazio = todas). */
+    @org.springframework.data.jpa.repository.Query("SELECT o FROM Order o LEFT JOIN o.client c WHERE o.company.id = :companyId"
+            + " AND o.status IN :statuses AND o.invoiceId IS NULL AND (:term = ''"
+            + " OR LOWER(o.orderNumber) LIKE CONCAT('%', :term, '%') OR LOWER(c.name) LIKE CONCAT('%', :term, '%'))"
+            + " ORDER BY o.createdAt DESC")
+    List<Order> searchOpen(@org.springframework.data.repository.query.Param("companyId") Long companyId,
+                           @org.springframework.data.repository.query.Param("statuses") java.util.Collection<String> statuses,
+                           @org.springframework.data.repository.query.Param("term") String term);
+
     Optional<Order> findByCompanyIdAndIdempotencyKey(Long companyId, String idempotencyKey);
     Optional<Order> findFirstByCompanyIdAndInvoiceId(Long companyId, Long invoiceId);
     Optional<Order> findFirstByInvoiceId(Long invoiceId);

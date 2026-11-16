@@ -3,7 +3,7 @@ package mz.multicore.erp.architecture.quantity;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import java.math.BigDecimal;
 
-/** Quantidade decomposta nos três níveis comerciais, mantendo um único total em unidades. */
+/** Quantity decomposed into three commercial levels while retaining one total in units. */
 public record PackagingQuantity(
         long boxes,
         long packages,

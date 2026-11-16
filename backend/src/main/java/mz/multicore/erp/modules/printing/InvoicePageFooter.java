@@ -53,7 +53,8 @@ public class InvoicePageFooter extends PdfPageEventHelper {
 
         String name = company != null && company.getName() != null ? company.getName() : "Multicore ERP";
         String taxId = company != null && company.getTaxId() != null ? company.getTaxId() : "";
-        String address = company != null && company.getAddress() != null ? company.getAddress() : "Maputo, Moçambique";
+        String address = company != null && company.formattedAddress() != null
+                ? company.formattedAddress() : "Maputo, Moçambique";
         show(canvas, Element.ALIGN_LEFT, "Processado por computador · Multicore ERP",
                 left, bottom + 6f, 7.2f);
         show(canvas, Element.ALIGN_LEFT, name + " · NUIT " + taxId + " · " + address,

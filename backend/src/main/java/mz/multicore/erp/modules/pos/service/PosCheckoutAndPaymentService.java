@@ -8,14 +8,12 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.*;
-import mz.multicore.erp.modules.comercial.repository.*;
-import mz.multicore.erp.modules.comercial.service.ReceivablesService;
-import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
+import mz.multicore.erp.modules.comercial.service.*;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -36,11 +34,12 @@ import java.util.Optional;
 @Component
 public class PosCheckoutAndPaymentService {
 
-    private final InvoiceRepository invoiceRepository;
-    private final ClientRepository clientRepository;
-    private final ProductRepository productRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final CompanyRepository companyRepository;
+    private final InvoiceLookup invoiceLookup;
+    private final InvoiceCommandService invoiceCommands;
+    private final ClientLookup clientLookup;
+    private final ProductLookup productLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final CompanyLookup companyLookup;
     private final InventoryService inventoryService;
     private final FinanceService financeService;
     private final PaymentEntryRepository paymentEntryRepository;
@@ -50,27 +49,31 @@ public class PosCheckoutAndPaymentService {
     private final AuditLogService auditLogService;
     private final ReceivablesService receivablesService;
     private final ApplicationEventPublisher eventPublisher;
-    private final QuotationRepository quotationRepository;
+    private final OrderCommandService orderCommands;
     private final PosSessionAndShiftService sessionAndShiftService;
     private final PosReturnAndVoucherService returnAndVoucherService;
     private final PosPriceGuard priceGuard;
+    private final mz.multicore.erp.modules.comercial.service.SaleStockIssuer saleStockIssuer; // respeita reservas; nulo só no construtor legado
 
     public PosCheckoutAndPaymentService(
-            InvoiceRepository invoiceRepository, ClientRepository clientRepository,
-            ProductRepository productRepository, WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository, InventoryService inventoryService,
+            InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
+            ProductLookup productLookup, WarehouseLookup warehouseLookup,
+            CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, PaymentEntryRepository paymentEntryRepository,
             TillMovementRepository tillMovementRepository, WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
             ReceivablesService receivablesService, ApplicationEventPublisher eventPublisher,
-            QuotationRepository quotationRepository, PosSessionAndShiftService sessionAndShiftService,
-            PosReturnAndVoucherService returnAndVoucherService, PosPriceGuard priceGuard) {
+            OrderCommandService orderCommands, PosSessionAndShiftService sessionAndShiftService,
+            PosReturnAndVoucherService returnAndVoucherService, PosPriceGuard priceGuard,
+            mz.multicore.erp.modules.comercial.service.SaleStockIssuer saleStockIssuer) {
         this.priceGuard = priceGuard;
-        this.invoiceRepository = invoiceRepository;
-        this.clientRepository = clientRepository;
-        this.productRepository = productRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.companyRepository = companyRepository;
+        this.saleStockIssuer = saleStockIssuer;
+        this.invoiceLookup = invoiceLookup;
+        this.invoiceCommands = invoiceCommands;
+        this.clientLookup = clientLookup;
+        this.productLookup = productLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.companyLookup = companyLookup;
         this.inventoryService = inventoryService;
         this.financeService = financeService;
         this.paymentEntryRepository = paymentEntryRepository;
@@ -80,7 +83,7 @@ public class PosCheckoutAndPaymentService {
         this.auditLogService = auditLogService;
         this.receivablesService = receivablesService;
         this.eventPublisher = eventPublisher;
-        this.quotationRepository = quotationRepository;
+        this.orderCommands = orderCommands;
         this.sessionAndShiftService = sessionAndShiftService;
         this.returnAndVoucherService = returnAndVoucherService;
     }
@@ -92,7 +95,7 @@ public class PosCheckoutAndPaymentService {
 
         String requestFingerprint = posRequestFingerprint(request);
         if (request.contingencyReference() != null && !request.contingencyReference().isBlank()) {
-            Optional<Invoice> existing = invoiceRepository.findByCompanyIdAndContingencyReference(
+            Optional<Invoice> existing = invoiceLookup.findByContingencyReference(
                     request.companyId(), request.contingencyReference().trim());
             if (existing.isPresent()) {
                 Invoice previous = existing.get();
@@ -106,19 +109,16 @@ public class PosCheckoutAndPaymentService {
         if (priceGuard != null) priceGuard.requireAuthorized(request);
         TillSession session = sessionAndShiftService.getActiveSession(request.operator(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Deverá abrir uma sessão de caixa antes de efetuar vendas no POS."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         Client client;
         String walkInLabel = null;
         if (request.clientId() != null) {
-            client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+            client = clientLookup.requireForCompany(request.clientId(), request.companyId());
         } else {
             if (request.walkInName() == null || request.walkInName().trim().isBlank()) {
                 throw new BusinessRuleException("É obrigatório indicar o nome do cliente para efetuar a venda no POS.");
@@ -150,10 +150,10 @@ public class PosCheckoutAndPaymentService {
         BigDecimal totalTax = BigDecimal.ZERO;
 
         for (POSCheckoutLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
+            Product product = productLookup.findForCompany(lineReq.productId(), request.companyId())
+                    .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId())).requireOrdinarySale();
             BigDecimal unitPrice = (lineReq.unitPrice() != null && lineReq.unitPrice().compareTo(BigDecimal.ZERO) > 0)
-                    ? lineReq.unitPrice() : product.effectiveUnitPrice(lineReq.quantity());
+                    ? lineReq.unitPrice() : PosPriceGuard.defaultPrice(priceGuard, request, product, lineReq.quantity());
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
@@ -184,11 +184,11 @@ public class PosCheckoutAndPaymentService {
         List<PosPaymentRequest> payments = request.payments();
         boolean hasMultiPayments = payments != null && !payments.isEmpty();
         BigDecimal totalPaid = BigDecimal.ZERO;
+        PosPaymentSplit split = hasMultiPayments ? PosPaymentSplit.of(payments) : null;
         if (hasMultiPayments) {
-            for (PosPaymentRequest p : payments) totalPaid = totalPaid.add(p.amount());
-            totalPaid = totalPaid.setScale(2, RoundingMode.HALF_UP);
-            if (totalPaid.compareTo(totalAmount) > 0) {
-                throw new BusinessRuleException("Soma dos pagamentos (" + DisplayNumbers.money(totalPaid) + " MT) excede o total da venda (" + DisplayNumbers.money(totalAmount) + " MT).");
+            totalPaid = split.settled(); // a CREDIT line stays owed: it never counts as paid
+            if (split.declared().compareTo(totalAmount) > 0) {
+                throw new BusinessRuleException("Soma dos pagamentos (" + DisplayNumbers.money(split.declared()) + " MT) excede o total da venda (" + DisplayNumbers.money(totalAmount) + " MT).");
             }
         } else if (request.treasuryAccountId() != null) {
             totalPaid = totalAmount;
@@ -200,23 +200,13 @@ public class PosCheckoutAndPaymentService {
         deductStockForSale(invoice, warehouse, client, walkInLabel);
         invoice.setAmountPaid(totalPaid);
         invoice.setStatus(invoice.deriveStatusFromPayments());
-        final Invoice savedInvoice = invoiceRepository.save(invoice);
+        final Invoice savedInvoice = invoiceCommands.save(invoice);
 
-        if (request.quotationId() != null && quotationRepository != null) {
-            quotationRepository.findByIdAndCompanyId(request.quotationId(), request.companyId()).ifPresent(quotation -> {
-                if (quotation.getStatus().isOpen()) {
-                    quotation.setStatus(QuotationStatus.CONVERTED);
-                    quotation.setInvoiceId(savedInvoice.getId());
-                    quotation.setInvoiceNumber(savedInvoice.getInvoiceNumber());
-                    if (quotation.getDecidedAt() == null) {
-                        quotation.setDecidedAt(LocalDateTime.now());
-                        quotation.setDecidedBy(savedInvoice.getCreatedBy());
-                    }
-                    quotationRepository.save(quotation);
-                    auditLogService.logCurrent("QUOTATION_CONVERT_POS", "Cotação " + quotation.getQuotationNumber()
-                            + " convertida no POS através da fatura " + savedInvoice.getInvoiceNumber() + ". Total: " + savedInvoice.getTotalAmount() + " MT.");
-                }
-            });
+        if (request.quotationId() != null && orderCommands != null) {
+            orderCommands.markQuotationConvertedByPos(request.quotationId(), request.companyId(), savedInvoice)
+                    .ifPresent(quotation -> auditLogService.logCurrent("QUOTATION_CONVERT_POS", "Cotação "
+                            + quotation.getQuotationNumber() + " convertida no POS através da fatura "
+                            + savedInvoice.getInvoiceNumber() + ". Total: " + savedInvoice.getTotalAmount() + " MT."));
         }
 
         if (hasMultiPayments) {
@@ -225,19 +215,19 @@ public class PosCheckoutAndPaymentService {
             registerTillMovement(session, totalAmount, savedInvoice.getInvoiceNumber());
         }
 
-        boolean cashPayment = !hasMultiPayments || payments.stream().anyMatch(p -> "CASH".equalsIgnoreCase(p.method()));
+        BigDecimal moneyNow = split == null ? totalPaid : split.money(), cashNow = split == null ? totalPaid : split.cash();
         BigDecimal costOfGoods = savedInvoice.getLines().stream().map(InvoiceLine::lineCost).reduce(BigDecimal.ZERO, BigDecimal::add);
         eventPublisher.publishEvent(new SaleRegisteredEvent(
                 savedInvoice.getCompany().getId(), savedInvoice.getId(), savedInvoice.getInvoiceNumber(),
                 LocalDate.now(), savedInvoice.getTotalBeforeTax(), savedInvoice.getTaxAmount(),
-                savedInvoice.getTotalAmount(), costOfGoods, totalPaid, cashPayment));
+                savedInvoice.getTotalAmount(), costOfGoods, moneyNow, cashNow.signum() > 0, cashNow));
         return savedInvoice;
     }
 
     public Invoice registerLatePayment(Long invoiceId, PosPaymentRequest req) {
         PermissionGuard.requireSeller("registar pagamento posterior");
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
-        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(invoiceId, companyId)
+        Invoice invoice = invoiceCommands.lockForCompany(invoiceId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
         String key = req.idempotencyKey();
         String fingerprint = key == null ? null : paymentRequestFingerprint(req);
@@ -265,7 +255,7 @@ public class PosCheckoutAndPaymentService {
                 .add(req.amount()).setScale(2, RoundingMode.HALF_UP);
         invoice.setAmountPaid(newPaid);
         invoice.setStatus(invoice.deriveStatusFromPayments());
-        return invoiceRepository.save(invoice);
+        return invoiceCommands.save(invoice);
     }
 
     private void applyPayment(Invoice invoice, PosPaymentRequest req, TillSession session, Client client) {
@@ -307,10 +297,9 @@ public class PosCheckoutAndPaymentService {
     private void deductStockForSale(Invoice invoice, Warehouse warehouse, Client client, String walkInLabel) {
         String clientLabel = walkInLabel != null ? client.getName() + " — " + walkInLabel : client.getName();
         String desc = String.format("Venda POS %s - Cliente %s", invoice.getInvoiceNumber(), clientLabel);
-        for (InvoiceLine line : invoice.getLines()) {
-            inventoryService.registerMovement(line.getProduct(), warehouse, line.getQuantity().negate(),
-                    "SALE", line.getBatchNumber(), line.getSerialNumber(), desc);
-        }
+        if (saleStockIssuer != null) saleStockIssuer.issue(invoice, warehouse, desc);
+        else invoice.getLines().forEach(line -> inventoryService.registerMovement(line.getProduct(), warehouse,
+                line.getQuantity().negate(), "SALE", line.getBatchNumber(), line.getSerialNumber(), desc));
     }
 
     private void registerTillMovement(TillSession session, BigDecimal amount, String invoiceNumber) {

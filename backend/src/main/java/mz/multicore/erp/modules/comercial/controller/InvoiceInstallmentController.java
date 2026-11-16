@@ -16,9 +16,12 @@ import java.util.List;
 public class InvoiceInstallmentController {
 
     private final InvoiceInstallmentService installmentService;
+    private final mz.multicore.erp.modules.comercial.service.InvoiceSettlementService settlementService;
 
-    public InvoiceInstallmentController(InvoiceInstallmentService installmentService) {
+    public InvoiceInstallmentController(InvoiceInstallmentService installmentService,
+                                        mz.multicore.erp.modules.comercial.service.InvoiceSettlementService settlementService) {
         this.installmentService = installmentService;
+        this.settlementService = settlementService;
     }
 
     @PostMapping
@@ -46,8 +49,10 @@ public class InvoiceInstallmentController {
     @PostMapping("/pay")
     public ResponseEntity<List<InvoiceInstallmentDTO>> applyPayment(
             @PathVariable Long invoiceId,
-            @RequestParam BigDecimal amount) {
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        return ResponseEntity.ok(installmentService.applyPaymentToInvoiceInstallments(companyId, invoiceId, amount));
+            @RequestParam BigDecimal amount,
+            @RequestParam Long financeAccountId) {
+        // The money enters through a receipt; the plan follows it (InstallmentReceiptListener).
+        settlementService.settle(invoiceId, financeAccountId, amount);
+        return ResponseEntity.ok(installmentService.getInstallments(CurrentUserContext.getCurrentCompanyId(), invoiceId));
     }
 }

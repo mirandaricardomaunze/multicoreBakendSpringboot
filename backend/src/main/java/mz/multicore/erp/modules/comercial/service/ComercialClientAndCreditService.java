@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
@@ -29,17 +29,17 @@ import java.util.stream.Collectors;
 public class ComercialClientAndCreditService {
 
     private final ClientRepository clientRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final InvoiceRepository invoiceRepository;
     private final AuditLogService auditLogService;
 
     public ComercialClientAndCreditService(
             ClientRepository clientRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             InvoiceRepository invoiceRepository,
             AuditLogService auditLogService) {
         this.clientRepository = clientRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.invoiceRepository = invoiceRepository;
         this.auditLogService = auditLogService;
     }
@@ -53,7 +53,7 @@ public class ComercialClientAndCreditService {
         }
         Client sharedClient = clientRepository.findByTaxId(taxId).orElse(null);
         if (sharedClient != null) {
-            sharedClient.getCompanies().add(companyRepository.getReferenceById(companyId));
+            sharedClient.getCompanies().add(companyLookup.reference(companyId));
             sharedClient = clientRepository.save(sharedClient);
             return toDTO(sharedClient);
         }
@@ -65,7 +65,7 @@ public class ComercialClientAndCreditService {
         client.setPaymentTermsDays(request.effectivePaymentTermsDays());
         client.setCreditLimit(request.creditLimit());
         client.setCreatedBy("SYSTEM");
-        client.getCompanies().add(companyRepository.getReferenceById(companyId));
+        client.getCompanies().add(companyLookup.reference(companyId));
         return toDTO(clientRepository.save(client));
     }
 

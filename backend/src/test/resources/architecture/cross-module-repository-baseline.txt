@@ -1,0 +1,2 @@
+# CA-07 frozen baseline (generated from HEAD 0b47d51 on 2026-11-10). May only SHRINK.
+# Never add lines: new code must call the owning module's service. See docs/CLEAN_ARCHITECTURE_RULES_SPEC.md

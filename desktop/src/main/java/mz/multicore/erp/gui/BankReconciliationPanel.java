@@ -55,7 +55,7 @@ public class BankReconciliationPanel extends JPanel {
         JPanel mainContent = new JPanel();
         mainContent.setOpaque(false);
         mainContent.setLayout(new BoxLayout(mainContent, BoxLayout.Y_AXIS));
-        mainContent.setBorder(new EmptyBorder(10, 0, 15, 0));
+        mainContent.setBorder(new EmptyBorder(Spacing.SM, 0, Spacing.LG, 0));
 
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
         mainContent.add(feedback);
@@ -75,7 +75,7 @@ public class BankReconciliationPanel extends JPanel {
 
     private JPanel buildKpiCards() {
         JPanel grid = KpiCard.createGrid(4);
-        grid.setBorder(new EmptyBorder(0, 0, 4, 0));
+        grid.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
 
         JPanel cardBank = KpiCard.createInteractiveCard("Saldo no Extracto", kpiBankBalance, "Posição bancária oficial", "fas-university", UIHelper.ACCENT_BLUE,
                 "Mostrar todos os movimentos", () -> { if (statusFilter != null) statusFilter.setSelectedIndex(0); });
@@ -92,7 +92,7 @@ public class BankReconciliationPanel extends JPanel {
     private JPanel buildTableCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(12, 12, 12, 12));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
 
         String[] cols = {"Data", "Descrição do Movimento", "Referência", "Valor", "Estado", "Transacção Vinculada (ERP)"};
         itemsModel = new DefaultTableModel(cols, 0) {
@@ -119,16 +119,6 @@ public class BankReconciliationPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
         scroll.setPreferredSize(new Dimension(0, 480));
 
-        JPanel cardHeader = new JPanel(new BorderLayout(8, 0));
-        cardHeader.setOpaque(false);
-
-        JPanel selectors = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        selectors.setOpaque(false);
-        JLabel accLbl = new JLabel("Conta:");
-        accLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        accLbl.setForeground(UIHelper.TEXT_LIGHT);
-        selectors.add(accLbl);
-
         UIHelper.styleComboBox(accountCombo);
         accountCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
         accountCombo.setRenderer(new DefaultListCellRenderer() {
@@ -139,12 +129,6 @@ public class BankReconciliationPanel extends JPanel {
             }
         });
         accountCombo.addActionListener(e -> onAccountChanged());
-        selectors.add(accountCombo);
-
-        JLabel stLbl = new JLabel("Extracto:");
-        stLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        stLbl.setForeground(UIHelper.TEXT_LIGHT);
-        selectors.add(stLbl);
 
         UIHelper.styleComboBox(statementCombo);
         statementCombo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
@@ -156,9 +140,6 @@ public class BankReconciliationPanel extends JPanel {
             }
         });
         statementCombo.addActionListener(e -> onStatementChanged());
-        selectors.add(statementCombo);
-        selectors.add(UIHelper.createRefreshButton(this::refreshData));
-        cardHeader.add(selectors, BorderLayout.WEST);
 
         ModernButton importBtn = UIHelper.createPrimaryButton("Importar Extracto");
         importBtn.setIcon(UIHelper.icon("fas-file-import", 14));
@@ -188,11 +169,6 @@ public class BankReconciliationPanel extends JPanel {
         reportBtn = UIHelper.createSecondaryButton("Relatório");
         reportBtn.addActionListener(e -> emitPdfReport());
 
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        headerActions.setOpaque(false);
-        headerActions.add(importBtn);
-        headerActions.add(operationsMenu);
-        cardHeader.add(headerActions, BorderLayout.EAST);
 
         JTextField searchField = TableFilter.searchField("Filtrar descrição ou referência…");
         statusFilter = TableFilter.combo("Todos os estados", "APROVADO", "PENDENTE", "INACTIVO");
@@ -200,8 +176,8 @@ public class BankReconciliationPanel extends JPanel {
         TableFilter.install(itemsTable, searchField,
                 List.of(new TableFilter.ColumnFilter(statusFilter, 4)),
                 List.of(new TableFilter.PeriodFilter(periodFilter, 0)));
-        JPanel searchBar = TableFilter.bar(searchField, TableFilter.label("Estado:"), statusFilter, TableFilter.label("Data:", "fas-calendar-alt"), periodFilter);
-        searchBar.setBorder(new EmptyBorder(6, 0, 8, 0));
+        JPanel searchBar = TableFilter.bar(TableFilter.label("Conta:"), accountCombo, TableFilter.label("Extracto:"), statementCombo,
+                searchField, TableFilter.label("Estado:"), statusFilter, TableFilter.label("Data:", "fas-calendar-alt"), periodFilter);
 
         ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
         peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
@@ -209,22 +185,8 @@ public class BankReconciliationPanel extends JPanel {
         peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar detalhes da linha");
         peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        JPanel filterRightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        filterRightActions.setOpaque(false);
-        filterRightActions.add(closeBtn);
-        filterRightActions.add(peekToggleBtn);
-
-        JPanel searchRow = new JPanel(new BorderLayout(8, 0));
-        searchRow.setOpaque(false);
-        searchRow.add(searchBar, BorderLayout.WEST);
-        searchRow.add(filterRightActions, BorderLayout.EAST);
-
-        JPanel cardTop = new JPanel(new BorderLayout(0, 6));
-        cardTop.setOpaque(false);
-        cardTop.add(cardHeader, BorderLayout.NORTH);
-        cardTop.add(searchRow, BorderLayout.SOUTH);
-
-        card.add(cardTop, BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Reconciliação Bancária", searchBar,
+                UIHelper.createRefreshButton(this::refreshData), importBtn, operationsMenu, closeBtn, peekToggleBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         TableQuickPeekController reconPeek = TableQuickPeekController.install(itemsTable, card, (peek, modelRow) -> {

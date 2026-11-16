@@ -4,9 +4,9 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest.ReceiveLine;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
@@ -72,8 +72,8 @@ class StockTransferReceiptDiscrepancyHarnessTest {
         transitService = new StockTransferTransitService(
                 transferRepository, stockRepository, stockMovementRepository, productBatchService, audit);
         service = new StockTransferService(
-                transferRepository, mock(WarehouseRepository.class), mock(CompanyRepository.class),
-                mock(ProductRepository.class), stockRepository, stockMovementRepository, productBatchService,
+                transferRepository, mock(WarehouseRepository.class), mock(CompanyLookup.class),
+                mock(ProductLookup.class), stockRepository, stockMovementRepository, productBatchService,
                 mock(DocumentNumberService.class), audit,
                 mock(org.springframework.context.ApplicationEventPublisher.class), null, transitService);
 
@@ -120,6 +120,31 @@ class StockTransferReceiptDiscrepancyHarnessTest {
         assertEquals(0, new BigDecimal("3").compareTo(dto.lines().get(0).receivedQuantity()));
         assertTrue(dto.lines().get(0).hasDiscrepancy());
         verify(audit).logCurrent(eq("STOCK_TRANSFER_RECEIVE_DISCREPANCY"), anyString());
+    }
+
+    @Test
+    void perdidoNoTransporte_naoVoltaAOrigem_eAbateComoQuebra() {
+        StockTransfer t = inTransit(parcel("LOTE-A", 5));
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(t));
+        product.setPurchasePrice(new BigDecimal("40"));
+        var publisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        StockTransitLedger ledger = new StockTransitLedger(stockRepository, stockMovementRepository);
+        StockTransferTransitService withLedger = new StockTransferTransitService(transferRepository,
+                new StockTransferDispatchService(productBatchService, ledger, audit),
+                new StockTransferReceiptService(transferRepository, productBatchService, ledger, audit, publisher));
+
+        StockTransferDTO dto = withLedger.receive(1L, null,
+                List.of(new ReceiveLine(LINE_ID, new BigDecimal("3"), "Sacos rasgados no camiao", true)));
+
+        assertEquals("RECEIVED_WITH_DISCREPANCY", dto.status());
+        verify(productBatchService, never()).addToBatch(eq(product), eq(origin), anyString(), any(), any());
+        StockTransferLine line = t.getLines().get(0);
+        assertEquals(0, new BigDecimal("2").compareTo(line.getLostQuantity()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(line.getReturnedQuantity()));
+        ArgumentCaptor<mz.multicore.erp.architecture.events.InventoryValueChangedEvent> event =
+                ArgumentCaptor.forClass(mz.multicore.erp.architecture.events.InventoryValueChangedEvent.class);
+        verify(publisher).publishEvent(event.capture());
+        assertEquals(0, new BigDecimal("80").compareTo(event.getValue().valueOut()));
     }
 
     @Test

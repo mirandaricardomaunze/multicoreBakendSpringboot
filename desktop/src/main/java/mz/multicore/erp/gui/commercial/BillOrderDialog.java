@@ -69,7 +69,7 @@ public final class BillOrderDialog {
         JLabel client = value("—");
         JLabel date = value("—");
         JLabel total = value("0,00 MT");
-        total.setFont(new Font(UIHelper.FONT, Font.BOLD, 24));
+        total.setFont(Typography.METRIC);
         total.setForeground(UIHelper.APPROVED_GREEN);
         Runnable preview = () -> {
             lines.setRowCount(0);
@@ -101,7 +101,7 @@ public final class BillOrderDialog {
         JPanel selector = UIHelper.createDialogForm("Pesquisar (nº ou cliente):", search, "Encomenda a faturar:", combo);
         ModernPanel summary = new ModernPanel(16);
         summary.setLayout(new GridLayout(2, 4, 12, 4));
-        summary.setBorder(new EmptyBorder(14, 16, 14, 16));
+        summary.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         summary.add(label("Encomenda")); summary.add(label("Cliente")); summary.add(label("Data")); summary.add(label("Total"));
         summary.add(number); summary.add(client); summary.add(date); summary.add(total);
         JPanel content = new JPanel(new BorderLayout(0, 12));
@@ -109,9 +109,9 @@ public final class BillOrderDialog {
         content.add(selector, BorderLayout.NORTH);
         content.add(summary, BorderLayout.CENTER);
         content.add(scroll, BorderLayout.SOUTH);
-        int choice = JOptionPane.showConfirmDialog(owner, content, "Faturar Encomenda",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION || combo.getSelectedIndex() < 0) return;
+        boolean confirmed = ModernMessageDialog.confirmContent(owner, "Faturar Encomenda", "fas-file-invoice",
+                content, "Faturar");
+        if (!confirmed || combo.getSelectedIndex() < 0) return;
         OrderDTO selected = orders.get(combo.getSelectedIndex());
         UIHelper.runWithProgress(owner, "A faturar encomenda…", () -> apiClient.billOrder(selected.id()),
                 invoice -> success(selected, invoice), error -> showError("faturar encomenda", error));
@@ -145,7 +145,7 @@ public final class BillOrderDialog {
     }
     private static JLabel value(String text) {
         JLabel label = new JLabel(text); label.setForeground(UIHelper.TEXT_LIGHT);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); return label;
+        label.setFont(Typography.EMPHASIS_BOLD); return label;
     }
     private void showError(String action, Throwable error) {
         if (owner instanceof ComercialPanel panel) panel.showCommercialNotice(

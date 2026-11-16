@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.CreateTimeEntryRequest;
 import mz.multicore.erp.modules.hr.dto.TimeEntryDTO;
 import mz.multicore.erp.modules.hr.model.Employee;
@@ -27,18 +27,18 @@ public class TimeEntryRegistrationService {
 
     private final TimeEntryRepository timeEntryRepository;
     private final EmployeeRepository employeeRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
     private final TimeSheetPeriodCoordinator periodCoordinator;
 
     public TimeEntryRegistrationService(TimeEntryRepository timeEntryRepository,
                                         EmployeeRepository employeeRepository,
-                                        CompanyRepository companyRepository,
+                                        CompanyLookup companyLookup,
                                         AuditLogService auditLogService,
                                         TimeSheetPeriodCoordinator periodCoordinator) {
         this.timeEntryRepository = timeEntryRepository;
         this.employeeRepository = employeeRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
         this.periodCoordinator = periodCoordinator;
     }
@@ -120,8 +120,7 @@ public class TimeEntryRegistrationService {
     }
 
     private Company currentCompany() {
-        return companyRepository.findById(currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada."));
+        return companyLookup.requireActive(currentCompanyId());
     }
 
     private Long currentCompanyId() {

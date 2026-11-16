@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.printing;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Quotation;
-import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,22 +12,22 @@ import org.springframework.transaction.annotation.Transactional;
 /** Fachada tenant-scoped para emissão de cotações. */
 @Service
 public class QuotationPrintService {
-    private final QuotationRepository quotationRepository;
+    private final OrderLookup orderLookup;
     private final QuotationA4Renderer a4Renderer;
     private final QuotationThermalRenderer thermalRenderer;
 
     @Autowired
-    public QuotationPrintService(QuotationRepository quotationRepository, QuotationA4Renderer a4Renderer,
+    public QuotationPrintService(OrderLookup orderLookup, QuotationA4Renderer a4Renderer,
                                  QuotationThermalRenderer thermalRenderer) {
-        this.quotationRepository = quotationRepository;
+        this.orderLookup = orderLookup;
         this.a4Renderer = a4Renderer;
         this.thermalRenderer = thermalRenderer;
     }
 
     /** Preserva a construção usada antes da decomposição. */
-    public QuotationPrintService(QuotationRepository quotationRepository, LineRowMapper lineRowMapper,
+    public QuotationPrintService(OrderLookup orderLookup, LineRowMapper lineRowMapper,
                                  DocumentConfigService documentConfigService) {
-        this(quotationRepository, new QuotationA4Renderer(lineRowMapper, documentConfigService),
+        this(orderLookup, new QuotationA4Renderer(lineRowMapper, documentConfigService),
                 new QuotationThermalRenderer());
     }
 
@@ -42,8 +42,8 @@ public class QuotationPrintService {
     }
 
     private Quotation loadOwned(Long quotationId) {
-        Quotation quotation = quotationRepository
-                .findByIdWithLinesAndCompanyId(quotationId, CurrentUserContext.getCurrentCompanyId())
+        Quotation quotation = orderLookup
+                .findQuotationWithLines(quotationId, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Cotação não encontrada."));
         CurrentUserContext.requireCompany(quotation.getCompany().getId());
         return quotation;

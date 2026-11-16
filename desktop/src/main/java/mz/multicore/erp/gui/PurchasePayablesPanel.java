@@ -20,7 +20,7 @@ final class PurchasePayablesPanel {
     public JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.MD, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Pagamento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
@@ -30,7 +30,7 @@ final class PurchasePayablesPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         String[] cols = {"Nº Compra", "Negócio", "Fornecedor", "Total", "Pago", "Em Dívida", "Data"};
         owner.payablesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -67,7 +67,7 @@ final class PurchasePayablesPanel {
 
         JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
         filtersRow.setOpaque(false);
-        filtersRow.setBorder(new EmptyBorder(0, 0, 6, 0));
+        filtersRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filtersRow.add(payFilters, BorderLayout.WEST);
         filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 
@@ -76,7 +76,7 @@ final class PurchasePayablesPanel {
         card.add(scroll, BorderLayout.CENTER);
         payablesFooter = new JLabel(" ");
         payablesFooter.setForeground(UIHelper.TEXT_MUTED);
-        payablesFooter.setBorder(new EmptyBorder(8, 4, 0, 4));
+        payablesFooter.setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, 0, Spacing.XS));
         JPanel southPanel = new JPanel(new BorderLayout());
         southPanel.setOpaque(false);
         southPanel.add(ClientTablePagination.install(owner.payablesTable), BorderLayout.NORTH);

@@ -53,14 +53,13 @@ public class SidebarToggleButton extends JButton {
 
             int w = getWidth();
             int h = getHeight();
-            Color bg = hover ? (UIHelper.isLight() ? new Color(0, 0, 0, 22) : new Color(255, 255, 255, 28))
-                             : (UIHelper.isLight() ? new Color(0, 0, 0, 8) : new Color(255, 255, 255, 12));
+            Color bg = hover ? ThemeColors.hoverOverlay() : ThemeColors.restOverlay();
             g2.setColor(bg);
             g2.fillRoundRect(1, 1, w - 2, h - 2, 6, 6);
             g2.setColor(new Color(UIHelper.BORDER.getRed(), UIHelper.BORDER.getGreen(), UIHelper.BORDER.getBlue(), hover ? 140 : 60));
             g2.drawRoundRect(1, 1, w - 2, h - 2, 6, 6);
 
-            Color glyphColor = UIHelper.isLight() ? new Color(71, 85, 105) : new Color(226, 232, 240);
+            Color glyphColor = ThemeColors.control();
             g2.setColor(glyphColor);
             g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             int cx = w / 2;

@@ -9,7 +9,6 @@ import mz.multicore.erp.modules.comercial.dto.UpdateOrderRequest;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 
-import javax.swing.JOptionPane;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -65,6 +64,7 @@ final class CommercialOrderSubmission {
     }
 
     private static void announce(ComercialPanel owner, OrderDTO created, String estado) {
+        OrderEditorExtras.afterSave(owner, created);
         owner.lastCreatedOrder = created;
         owner.clearOrderEditorDirty();
         owner.showCommercialSuccess("Encomenda " + created.orderNumber() + " criada. " + estado);
@@ -73,6 +73,7 @@ final class CommercialOrderSubmission {
     }
 
     private static void announceUpdate(ComercialPanel owner, OrderDTO updated) {
+        OrderEditorExtras.afterSave(owner, updated);
         owner.lastCreatedOrder = updated;
         owner.editingOrder = updated;
         owner.clearOrderEditorDirty();
@@ -159,7 +160,7 @@ final class CommercialOrderSubmission {
                 ? owner.orderPaymentTermsCombo.getSelectedItem().toString().trim() : "Pronto Pagamento";
         return new CreateOrderRequest(clientId, walkInName, CurrentUserContext.getCurrentCompanyId(),
                 warehouse.id(), new ArrayList<>(owner.draftOrderLines), kind,
-                paymentTerms, null, null, null, createNotes);
+                paymentTerms, OrderEditorExtras.deliveryTerms(owner), OrderEditorExtras.deliveryDays(owner), null, createNotes);
     }
 
     /** A loja que recebe. Validado aqui só para o operador não ir ao servidor descobrir o óbvio. */

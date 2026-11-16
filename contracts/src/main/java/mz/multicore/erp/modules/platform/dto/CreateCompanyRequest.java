@@ -2,11 +2,15 @@ package mz.multicore.erp.modules.platform.dto;
 
 import mz.multicore.erp.architecture.validation.ValidNuit;
 import mz.multicore.erp.architecture.validation.ValidPhoneMZ;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** Onboarding de uma empresa nova pelo superadmin. */
+/**
+ * Registration of a new company by the superadmin. {@code address} is the street line; the rest of
+ * the address, the legal identity and the extra contacts live in the optional {@code profile}.
+ */
 public record CreateCompanyRequest(
         @NotBlank(message = "O nome da empresa é obrigatório.")
         @Size(max = 200, message = "O nome da empresa não pode exceder 200 caracteres.")
@@ -24,5 +28,14 @@ public record CreateCompanyRequest(
         String address,
 
         @ValidPhoneMZ
-        String phone
-) {}
+        String phone,
+
+        @Valid
+        CompanyProfile profile
+) {
+
+    /** Base data only, without a professional profile. */
+    public CreateCompanyRequest(String name, String taxId, String email, String address, String phone) {
+        this(name, taxId, email, address, phone, null);
+    }
+}

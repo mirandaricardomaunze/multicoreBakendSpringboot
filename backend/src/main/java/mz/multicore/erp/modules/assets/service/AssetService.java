@@ -5,7 +5,7 @@ import mz.multicore.erp.modules.assets.dto.CreateAssetRequest;
 import mz.multicore.erp.modules.assets.dto.DepreciationScheduleDTO;
 import mz.multicore.erp.modules.assets.repository.AssetDepreciationRecordRepository;
 import mz.multicore.erp.modules.assets.repository.AssetRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -31,22 +31,22 @@ public class AssetService {
     public AssetService(
             AssetRepository assetRepository,
             AssetDepreciationRecordRepository depreciationRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             AssetDepreciationEngine depreciationEngine
     ) {
-        this(assetRepository, depreciationRepository, companyRepository, depreciationEngine, null);
+        this(assetRepository, depreciationRepository, companyLookup, depreciationEngine, null);
     }
 
     public AssetService(
             AssetRepository assetRepository,
             AssetDepreciationRecordRepository depreciationRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             AssetDepreciationEngine depreciationEngine,
             ApplicationEventPublisher eventPublisher
     ) {
         this(
-                new AssetLifecycleService(assetRepository, companyRepository),
-                new AssetDepreciationBatchService(assetRepository, depreciationRepository, companyRepository, depreciationEngine, eventPublisher)
+                new AssetLifecycleService(assetRepository, companyLookup),
+                new AssetDepreciationBatchService(assetRepository, depreciationRepository, companyLookup, depreciationEngine, eventPublisher)
         );
     }
 

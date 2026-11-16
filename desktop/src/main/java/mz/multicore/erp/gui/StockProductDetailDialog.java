@@ -1,5 +1,9 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -33,25 +37,20 @@ public class StockProductDetailDialog {
         dialog.getContentPane().setBackground(UIHelper.BG_DARK);
         dialog.setIconImage(UIHelper.iconImage("fas-box-open", 24, UIHelper.MODULE_STOCK));
 
-        JPanel mainPanel = new JPanel(new BorderLayout(0, 12));
-        mainPanel.setBackground(UIHelper.BG_DARK);
-        mainPanel.setBorder(new EmptyBorder(14, 20, 14, 20));
-
-        // 1. Cabeçalho Executivo
-        mainPanel.add(buildHeader(), BorderLayout.NORTH);
-
-        // 2. Corpo: Hero com Imagem + KPIs + Abas de Detalhe
+        // Corpo: identificação (SKU, referência, estado) + Hero com Imagem + KPIs + Abas de Detalhe
         JPanel body = new JPanel(new BorderLayout(0, 10));
         body.setOpaque(false);
         BigDecimal totalQty = computeTotalStockQuantity();
-        body.add(StockProductDetailHeroBuilder.buildHeroSection(product, totalQty, dialog), BorderLayout.NORTH);
+        JPanel top = new JPanel(new BorderLayout(0, Spacing.MD));
+        top.setOpaque(false);
+        top.add(buildTags(), BorderLayout.NORTH);
+        top.add(StockProductDetailHeroBuilder.buildHeroSection(product, totalQty, dialog), BorderLayout.CENTER);
+        body.add(top, BorderLayout.NORTH);
         body.add(StockProductDetailTabsBuilder.buildTabsSection(owner, product), BorderLayout.CENTER);
-        mainPanel.add(body, BorderLayout.CENTER);
 
-        // 3. Rodapé com Ações
-        mainPanel.add(buildFooter(), BorderLayout.SOUTH);
-
-        dialog.setContentPane(mainPanel);
+        dialog.setContentPane(DialogChrome.frame("fas-box-open", product.name(),
+                product.categoryName() != null && !product.categoryName().isBlank() ? product.categoryName() : "Ficha do artigo",
+                body, buildFooter()));
         dialog.pack();
         dialog.setMinimumSize(new Dimension(800, 520));
         UIHelper.applyStandardModalBounds(dialog, 960, 610);
@@ -61,20 +60,10 @@ public class StockProductDetailDialog {
         dialog.setVisible(true);
     }
 
-    private JComponent buildHeader() {
+    /** SKU, referência, EAN e estado do stock, por baixo do cabeçalho comum. */
+    private JComponent buildTags() {
         JPanel header = new JPanel(new BorderLayout(14, 0));
         header.setOpaque(false);
-
-        JPanel left = new JPanel();
-        left.setOpaque(false);
-        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
-
-        JLabel titleLbl = new JLabel(product.name());
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
-        titleLbl.setForeground(UIHelper.TEXT_LIGHT);
-        left.add(titleLbl);
-
-        left.add(Box.createVerticalStrut(4));
 
         JPanel tagRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         tagRow.setOpaque(false);
@@ -82,8 +71,7 @@ public class StockProductDetailDialog {
         if (product.reference() != null && !product.reference().isBlank()) tagRow.add(createPill("Ref: " + product.reference(), UIHelper.ACCENT));
         if (product.barcode() != null && !product.barcode().isBlank()) tagRow.add(createPill("EAN: " + product.barcode(), UIHelper.TEXT_MUTED));
         if (product.categoryName() != null && !product.categoryName().isBlank()) tagRow.add(createPill(product.categoryName(), UIHelper.ACCENT_PINK));
-        left.add(tagRow);
-        header.add(left, BorderLayout.CENTER);
+        header.add(tagRow, BorderLayout.CENTER);
 
         BigDecimal totalQty = computeTotalStockQuantity();
         BigDecimal minStock = product.minStock() != null ? product.minStock() : BigDecimal.ZERO;
@@ -98,29 +86,22 @@ public class StockProductDetailDialog {
     }
 
     private JPanel buildFooter() {
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(10, 0, 0, 0));
-
         JPanel leftActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftActions.setOpaque(false);
 
-        ModernButton editBtn = UIHelper.createSecondaryButton("Editar Artigo");
+        ModernButton editBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Editar Artigo"));
         editBtn.setIcon(UIHelper.icon("fas-edit", 14, UIHelper.PENDING_YELLOW));
         editBtn.addActionListener(e -> { dialog.dispose(); owner.editProductDialog(product.id()); });
         leftActions.add(editBtn);
 
-        ModernButton labelBtn = UIHelper.createSecondaryButton("Gerar Etiqueta");
+        ModernButton labelBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Gerar Etiqueta"));
         labelBtn.setIcon(UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT));
         labelBtn.addActionListener(e -> { dialog.dispose(); owner.openLabelDialog(); });
         leftActions.add(labelBtn);
-        footer.add(leftActions, BorderLayout.WEST);
-
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.setIcon(UIHelper.icon("fas-times", 14));
         closeBtn.addActionListener(e -> dialog.dispose());
-        footer.add(closeBtn, BorderLayout.EAST);
-        return footer;
+        return DialogChrome.footerWithNote(leftActions, closeBtn);
     }
 
     private BigDecimal computeTotalStockQuantity() {
@@ -136,11 +117,11 @@ public class StockProductDetailDialog {
 
     private JComponent createPill(String text, Color color) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        l.setFont(Typography.CAPTION_BOLD);
         l.setForeground(color);
         l.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(color, 1, true),
-                new EmptyBorder(2, 8, 2, 8)
+                new EmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM)
         ));
         return l;
     }

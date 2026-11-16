@@ -2,8 +2,8 @@ package mz.multicore.erp.modules.performance.service;
 
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
-import mz.multicore.erp.modules.hr.repository.PayslipRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.hr.service.PayrollPeriodService;
 import mz.multicore.erp.modules.performance.dto.AdjustBonusRequest;
 import mz.multicore.erp.modules.performance.dto.ApproveBonusRequest;
@@ -39,8 +39,8 @@ public class SalesGoalBonusService {
 
     public SalesGoalBonusService(
             SalesGoalBonusRepository bonusRepository,
-            EmployeeRepository employeeRepository,
-            PayslipRepository payslipRepository,
+            EmployeeLookup employeeLookup,
+            EmployeeCommandService employeeCommandService,
             PayrollPeriodService payrollPeriodService,
             BonusCalculatorEngine bonusCalculatorEngine,
             AuditLogService auditLogService
@@ -48,7 +48,7 @@ public class SalesGoalBonusService {
         this(
                 new SalesGoalBonusApprovalService(bonusRepository, auditLogService),
                 new SalesGoalBonusPayrollService(
-                        bonusRepository, employeeRepository, payslipRepository,
+                        bonusRepository, employeeLookup, employeeCommandService,
                         payrollPeriodService, bonusCalculatorEngine, auditLogService)
         );
     }

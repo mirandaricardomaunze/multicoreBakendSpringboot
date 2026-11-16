@@ -11,6 +11,7 @@
     <dependency><groupId>com.github.librepdf</groupId><artifactId>openpdf</artifactId><version>${openpdf.version}</version><scope>test</scope></dependency>
     <!-- FlatLaf: Look and Feel moderno com cantos arredondados, HiDPI e foco elegante -->
     <dependency><groupId>com.formdev</groupId><artifactId>flatlaf</artifactId><version>3.7.2</version></dependency>
+    <dependency><groupId>com.fazecast</groupId><artifactId>jSerialComm</artifactId><version>2.11.2</version></dependency>
     <!-- Render e spool de PDF no cliente: pre-visualizacao e envio para a impressora seleccionada. -->
     <dependency><groupId>org.apache.pdfbox</groupId><artifactId>pdfbox</artifactId><version>${pdfbox.version}</version></dependency><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
   </dependencies>

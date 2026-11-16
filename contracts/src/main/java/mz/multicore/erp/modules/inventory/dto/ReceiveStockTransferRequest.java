@@ -44,6 +44,8 @@ public record ReceiveStockTransferRequest(
      * @param lineId             linha da guia de transferência
      * @param receivedQuantity   quantidade que chegou e entra no destino (0 até ao enviado)
      * @param discrepancyReason  motivo obrigatório quando recebido &lt; enviado
+     * @param lostInTransit      a diferença perdeu-se no transporte (partida, roubada): não volta à origem e é
+     *                           abatida como quebra. Nulo ou falso: a diferença volta à origem
      */
     public record ReceiveLine(
             @NotNull(message = "Linha da guia em falta.") Long lineId,
@@ -51,11 +53,17 @@ public record ReceiveStockTransferRequest(
             @PositiveOrZero(message = "A quantidade recebida não pode ser negativa.")
             BigDecimal receivedQuantity,
             @Size(max = 200, message = "O motivo da divergência não pode exceder 200 caracteres.")
-            String discrepancyReason
+            String discrepancyReason,
+            Boolean lostInTransit
     ) {
         public ReceiveLine {
             discrepancyReason = mz.multicore.erp.architecture.validation.InputSanitizer
                     .sanitizeNotes(discrepancyReason, 200);
+        }
+
+        /** Construtor retrocompatível: a diferença volta à origem. */
+        public ReceiveLine(Long lineId, BigDecimal receivedQuantity, String discrepancyReason) {
+            this(lineId, receivedQuantity, discrepancyReason, null);
         }
     }
 }

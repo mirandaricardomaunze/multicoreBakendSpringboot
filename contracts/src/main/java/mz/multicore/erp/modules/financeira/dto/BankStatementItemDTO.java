@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Movimento do extracto bancário já registado na base de dados com o respetivo estado de conciliação.
+ * Bank-statement transaction stored in the database with its reconciliation status.
  */
 public record BankStatementItemDTO(
         Long id,

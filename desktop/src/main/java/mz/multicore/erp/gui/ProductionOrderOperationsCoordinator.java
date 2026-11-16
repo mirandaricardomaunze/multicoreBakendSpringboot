@@ -93,15 +93,14 @@ public final class ProductionOrderOperationsCoordinator {
 
         dialog.setOnSave(() -> {
             BillOfMaterialsDTO selectedBom = (BillOfMaterialsDTO) bomCombo.getSelectedItem();
-            if (selectedBom == null) throw new IllegalArgumentException("Selecione a ficha técnica.");
+            if (selectedBom == null) throw FieldValidationException.of(bomCombo, "Selecione a ficha técnica.");
 
             BigDecimal qty;
             try {
                 qty = new BigDecimal(qtyField.getText().trim().replace(",", "."));
                 if (qty.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
             } catch (Exception ex) {
-                qtyField.requestFocus();
-                throw new IllegalArgumentException("A quantidade a produzir deve ser maior que zero.");
+                throw FieldValidationException.of(qtyField, "A quantidade a produzir deve ser maior que zero.");
             }
 
             WarehouseDTO srcWh = (WarehouseDTO) sourceWhCombo.getSelectedItem();
@@ -115,8 +114,7 @@ public final class ProductionOrderOperationsCoordinator {
                 try {
                     endDate = LocalDate.parse(endDateField.getText().trim());
                 } catch (Exception ex) {
-                    endDateField.requestFocus();
-                    throw new IllegalArgumentException("Data inválida. Use AAAA-MM-DD.");
+                    throw FieldValidationException.of(endDateField, "Data inválida. Use AAAA-MM-DD.");
                 }
             }
 
@@ -144,7 +142,7 @@ public final class ProductionOrderOperationsCoordinator {
                                            Runnable onSuccess) {
         JPanel panel = new JPanel(new GridLayout(4, 1, 10, 10));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         ModernButton startBtn = UIHelper.createPrimaryButton("Iniciar Produção (Passar a EM_PRODUÇÃO)");
         startBtn.setIcon(UIHelper.icon("fas-play", 14));

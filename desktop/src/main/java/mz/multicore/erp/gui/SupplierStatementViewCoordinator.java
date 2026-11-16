@@ -100,7 +100,7 @@ public final class SupplierStatementViewCoordinator {
                     SupplierStatementDTO dto = get();
                     if (onLoaded != null) onLoaded.accept(dto);
                 } catch (Exception ex) {
-                    ToastManager.show(parent, FeedbackType.ERROR, "Erro ao carregar extrato de fornecedor: " + ex.getMessage());
+                    UserErrors.toast(parent, "carregar extrato de fornecedor", ex);
                 }
             }
         }.execute();

@@ -44,7 +44,13 @@ public class UiDensityManager {
         PREFS.put("density", density.getId());
         applyDensityToSystem(density);
         notifyListeners();
-        restyleAllWindows();
+        if (UIHelper.onThemeChanged != null) {
+            // Fonts, field heights and spacing are read when a screen is built: rebuild it like a theme switch.
+            UIHelper.applyTheme(UIHelper.currentTheme());
+            UIHelper.onThemeChanged.run();
+        } else {
+            restyleAllWindows();
+        }
     }
 
     public synchronized UiDensity cycleDensity() {
@@ -66,6 +72,9 @@ public class UiDensityManager {
     public void applyDensityToSystem(UiDensity density) {
         if (density == null) return;
         UIManager.put("Table.rowHeight", density.getTableRowHeight());
+        Typography.applyScale(density.getFontScale());
+        UIHelper.FORM_CONTROL_HEIGHT = density.getFormControlHeight();
+        Spacing.applyScale(density.getFontScale());
     }
 
     public void addChangeListener(Runnable listener) {

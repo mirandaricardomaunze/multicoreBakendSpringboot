@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.POSApiClient;
@@ -21,10 +22,10 @@ public final class SellerDashboardPanel extends JPanel {
     private final POSApiClient posApiClient;
     private final Consumer<String> actionHandler;
     private final JLabel welcomeLabel = new JLabel("Olá, Vendedor.");
-    private final JLabel salesValue = KpiCard.valueLabel("0,00 MT", 19);
-    private final JLabel salesCount = KpiCard.valueLabel("0", 19);
-    private final JLabel ordersValue = KpiCard.valueLabel("0", 19);
-    private final JLabel quotationsValue = KpiCard.valueLabel("0", 19);
+    private final JLabel salesValue = KpiCard.valueLabel("0,00 MT");
+    private final JLabel salesCount = KpiCard.valueLabel("0");
+    private final JLabel ordersValue = KpiCard.valueLabel("0");
+    private final JLabel quotationsValue = KpiCard.valueLabel("0");
     private final JLabel cashStatus = new JLabel("A verificar sessão de caixa...");
     private int refreshVersion;
 
@@ -36,7 +37,7 @@ public final class SellerDashboardPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 14));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(20, 22, 20, 22));
+        setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
         add(SellerDashboardViewCoordinator.buildHeader(welcomeLabel, cashStatus), BorderLayout.NORTH);
 
         JPanel content = new JPanel();
@@ -51,7 +52,7 @@ public final class SellerDashboardPanel extends JPanel {
     private JPanel buildQuickActions() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(BorderFactory.createCompoundBorder(card.getBorder(), new EmptyBorder(16, 16, 16, 16)));
+        card.setBorder(BorderFactory.createCompoundBorder(card.getBorder(), new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG)));
         card.add(UIHelper.createSubheading("Acções rápidas do vendedor"), BorderLayout.NORTH);
 
         JPanel actions = new JPanel(new GridLayout(2, 3, 10, 10));

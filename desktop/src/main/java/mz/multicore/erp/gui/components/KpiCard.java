@@ -16,31 +16,37 @@ import java.awt.GridLayout;
 import java.math.BigDecimal;
 
 /**
- * Cartão de KPI profissional unificado, com paleta de cores sólida (sem gradientes)
- * e altura espaçosa (96px) para máxima legibilidade de dados em todo o sistema.
+ * Unified KPI card with a solid colour palette and a consistent 96-pixel height for legibility.
+ * {@link #createGrid} lays cards out as a compact strip for screens whose real content is the table below;
+ * {@link #createHeroGrid} keeps the full-height cards for dashboards, where the KPI is the content.
  */
 public final class KpiCard {
 
-    /** Altura padrão uniforme e espaçosa de todos os cards no sistema. */
+    /** Standard height shared by all KPI cards. */
     public static final int STANDARD_CARD_HEIGHT = 96;
     public static final int STANDARD_CARD_MIN_WIDTH = 140;
 
     private KpiCard() {}
 
-    /** Label de valor em destaque com o tamanho indicado. */
-    public static JLabel valueLabel(String text, int size) {
+    /** Creates a prominent value label in the {@link Typography#METRIC} role. */
+    public static JLabel valueLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, size));
+        l.setFont(Typography.METRIC);
         l.setForeground(UIHelper.isLight() ? UIHelper.TEXT_LIGHT : Color.WHITE);
         return l;
     }
 
-    /** Grelha padrão para cards de KPI com espaçamento e proporção uniformes. */
+    /** Compact KPI strip for operational screens: cards added to it shrink so the table keeps the space. */
     public static JPanel createGrid(int columns) {
         return createGrid(columns, 10, 10);
     }
 
     public static JPanel createGrid(int columns, int hgap, int vgap) {
+        return new KpiStrip(columns, hgap, vgap);
+    }
+
+    /** Full-height KPI grid for dashboards, where the indicators are the main content. */
+    public static JPanel createHeroGrid(int columns, int hgap, int vgap) {
         JPanel grid = new JPanel(new GridLayout(0, columns, hgap, vgap));
         grid.setOpaque(false);
         return grid;
@@ -59,18 +65,10 @@ public final class KpiCard {
         }
     }
 
-    public static KpiPalette bluePalette(boolean isLight) { return KpiCardPalette.bluePalette(isLight); }
-    public static KpiPalette emeraldPalette(boolean isLight) { return KpiCardPalette.emeraldPalette(isLight); }
-    public static KpiPalette purplePalette(boolean isLight) { return KpiCardPalette.purplePalette(isLight); }
-    public static KpiPalette cyanPalette(boolean isLight) { return KpiCardPalette.cyanPalette(isLight); }
-    public static KpiPalette amberPalette(boolean isLight) { return KpiCardPalette.amberPalette(isLight); }
-    public static KpiPalette orangePalette(boolean isLight) { return KpiCardPalette.orangePalette(isLight); }
     public static KpiPalette redPalette(boolean isLight) { return KpiCardPalette.redPalette(isLight); }
     public static KpiPalette slatePalette(boolean isLight) { return KpiCardPalette.slatePalette(isLight); }
     public static KpiPalette resolvePalette(Color accent) { return KpiCardPalette.resolvePalette(accent); }
     public static KpiPalette resolvePalette(Color accent, Color fallbackColor) { return KpiCardPalette.resolvePalette(accent, fallbackColor); }
-    public static Color[] resolveKpiGradient(Color accent) { return KpiCardPalette.resolveKpiGradient(accent); }
-    public static Color resolveKpiSoftColor(Color accent) { return KpiCardPalette.resolveKpiSoftColor(accent); }
 
     public static ModernPanel create(String title, String iconCode, Color titleColor,
                                      JLabel valueLabel, JLabel subLabel,
@@ -85,64 +83,55 @@ public final class KpiCard {
         Color secondaryAccent = gradientEnd != null ? gradientEnd : gradientStart;
         KpiPalette pal = resolvePalette(primaryAccent, secondaryAccent);
 
-        ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, pal.bg);
-        card.putClientProperty("card.border", pal.border);
-        card.setLayout(new BorderLayout(6, 4));
-        card.setBorder(new EmptyBorder(10, 14, 10, 14));
-        card.setPreferredSize(new Dimension(card.getPreferredSize().width, STANDARD_CARD_HEIGHT));
-        card.setMinimumSize(new Dimension(STANDARD_CARD_MIN_WIDTH, STANDARD_CARD_HEIGHT));
+        ModernPanel card = shell(pal, 6);
 
         JPanel titleRow = new JPanel(new BorderLayout(6, 0));
         titleRow.setOpaque(false);
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        titleLabel.setFont(Typography.CAPTION_BOLD);
         titleLabel.setForeground(pal.title);
         titleRow.add(titleLabel, BorderLayout.CENTER);
-        if (iconCode != null && !iconCode.isBlank()) {
-            titleRow.add(new JLabel(UIHelper.icon(iconCode, 18, pal.title)), BorderLayout.EAST);
-        }
+        JLabel iconLabel = iconCode == null || iconCode.isBlank() ? null : new JLabel(UIHelper.icon(iconCode, 18, pal.title));
+        if (iconLabel != null) titleRow.add(iconLabel, BorderLayout.EAST);
 
         card.add(titleRow, BorderLayout.NORTH);
 
         if (valueLabel != null) {
-            valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
+            valueLabel.setFont(Typography.METRIC);
             valueLabel.setForeground(pal.value);
         }
 
         if (trendBadge != null) {
-            JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0)); // sem recuo: valor alinhado com os cartões sem pílula
             centerPanel.setOpaque(false);
             if (valueLabel != null) centerPanel.add(valueLabel);
-            centerPanel.add(trendBadge);
+            centerPanel.add(Box.createHorizontalStrut(8)); centerPanel.add(trendBadge);
             card.add(centerPanel, BorderLayout.CENTER);
         } else if (valueLabel != null) {
             card.add(valueLabel, BorderLayout.CENTER);
         }
 
         if (subLabel != null) {
-            subLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+            subLabel.setFont(Typography.CAPTION);
             subLabel.setForeground(pal.subtitle);
             card.add(subLabel, BorderLayout.SOUTH);
         }
         KpiAccent.install(card, valueLabel, iconCode, pal);
+        KpiCompactLayout.remember(card, new KpiCompactLayout.Parts(titleLabel, iconCode, iconLabel, valueLabel, trendBadge, subLabel));
         return KpiTextFit.wire(card, null, valueLabel, trendBadge, subLabel, false);
     }
 
     public static ModernPanel createCard(String title, JLabel valueLabel, TrendBadge trendBadge, JLabel subLabel,
                                          String iconName, Color iconColor) {
         KpiPalette pal = resolvePalette(iconColor);
-        ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, pal.bg);
-        card.putClientProperty("card.border", pal.border);
-        card.setLayout(new BorderLayout(12, 4));
-        card.setBorder(new EmptyBorder(10, 14, 10, 14));
-        card.setPreferredSize(new Dimension(card.getPreferredSize().width, STANDARD_CARD_HEIGHT));
-        card.setMinimumSize(new Dimension(STANDARD_CARD_MIN_WIDTH, STANDARD_CARD_HEIGHT));
+        ModernPanel card = shell(pal, 12);
 
+        JLabel iconLabel = null;
         if (iconName != null && !iconName.isBlank()) {
             JPanel iconBox = new JPanel(new GridBagLayout());
             iconBox.setPreferredSize(new Dimension(40, 40));
             iconBox.setOpaque(false);
-            iconBox.add(new JLabel(UIHelper.icon(iconName, 22, pal.title)));
+            iconBox.add(iconLabel = new JLabel(UIHelper.icon(iconName, 22, pal.title)));
             card.add(iconBox, BorderLayout.WEST);
         }
 
@@ -151,26 +140,26 @@ public final class KpiCard {
         textPanel.setOpaque(false);
 
         JLabel titleLbl = new JLabel(title.toUpperCase());
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        titleLbl.setFont(Typography.CAPTION_BOLD);
         titleLbl.setForeground(pal.title);
         titleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         textPanel.add(titleLbl);
         textPanel.add(Box.createVerticalStrut(3));
 
         if (valueLabel != null) {
-            valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 19));
+            valueLabel.setFont(Typography.METRIC);
             valueLabel.setForeground(pal.value);
         }
 
-        JPanel valueRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel valueRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         valueRow.setOpaque(false);
         valueRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         if (valueLabel != null) valueRow.add(valueLabel);
-        if (trendBadge != null) valueRow.add(trendBadge);
+        if (trendBadge != null) { valueRow.add(Box.createHorizontalStrut(8)); valueRow.add(trendBadge); }
         textPanel.add(valueRow);
 
         if (subLabel != null) {
-            subLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+            subLabel.setFont(Typography.CAPTION);
             subLabel.setForeground(pal.subtitle);
             subLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
             textPanel.add(Box.createVerticalStrut(3));
@@ -179,7 +168,18 @@ public final class KpiCard {
 
         card.add(textPanel, BorderLayout.CENTER);
         KpiAccent.install(card, valueLabel, iconName, pal);
+        KpiCompactLayout.remember(card, new KpiCompactLayout.Parts(titleLbl, iconName, iconLabel, valueLabel, trendBadge, subLabel));
         return KpiTextFit.wire(card, titleLbl, valueLabel, trendBadge, subLabel, iconName != null && !iconName.isBlank());
+    }
+
+    private static ModernPanel shell(KpiPalette pal, int hgap) {
+        ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, pal.bg);
+        card.putClientProperty("card.border", pal.border);
+        card.setLayout(new BorderLayout(hgap, 4));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
+        card.setPreferredSize(new Dimension(card.getPreferredSize().width, STANDARD_CARD_HEIGHT));
+        card.setMinimumSize(new Dimension(STANDARD_CARD_MIN_WIDTH, STANDARD_CARD_HEIGHT));
+        return card;
     }
 
     public static ModernPanel createCard(String title, JLabel valueLabel, String subtitle, String iconName, Color iconColor) {

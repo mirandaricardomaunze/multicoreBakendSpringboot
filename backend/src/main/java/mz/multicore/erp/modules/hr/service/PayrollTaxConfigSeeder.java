@@ -1,6 +1,6 @@
 package mz.multicore.erp.modules.hr.service;
 
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.model.PayrollIrpsBracket;
 import mz.multicore.erp.modules.hr.model.PayrollTaxConfig;
 import mz.multicore.erp.modules.hr.repository.PayrollTaxConfigRepository;
@@ -14,17 +14,17 @@ import java.time.LocalDate;
 @Component
 @Order(2)
 public class PayrollTaxConfigSeeder implements CommandLineRunner {
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final PayrollTaxConfigRepository configRepository;
 
-    public PayrollTaxConfigSeeder(CompanyRepository companyRepository, PayrollTaxConfigRepository configRepository) {
-        this.companyRepository = companyRepository;
+    public PayrollTaxConfigSeeder(CompanyLookup companyLookup, PayrollTaxConfigRepository configRepository) {
+        this.companyLookup = companyLookup;
         this.configRepository = configRepository;
     }
 
     @Override
     public void run(String... args) {
-        companyRepository.findAll().forEach(company -> {
+        companyLookup.findAll().forEach(company -> {
             if (configRepository.existsByCompanyId(company.getId())) return;
             PayrollTaxConfig config = new PayrollTaxConfig();
             config.setCompany(company);

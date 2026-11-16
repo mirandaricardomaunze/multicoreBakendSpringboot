@@ -27,7 +27,7 @@ final class SingleRowFilterLayout extends FlowLayout {
             for (Component component : target.getComponents()) {
                 if (component.isVisible()) visible.add(component);
             }
-            int[] preferred = visible.stream().mapToInt(c -> c.getPreferredSize().width).toArray();
+            int[] preferred = visible.stream().mapToInt(SingleRowFilterLayout::naturalWidth).toArray();
             boolean[] flexible = new boolean[preferred.length];
             boolean[] redundant = new boolean[preferred.length];
             for (int i = 0; i < flexible.length; i++) {
@@ -45,6 +45,38 @@ final class SingleRowFilterLayout extends FlowLayout {
                 visible.get(i).setBounds(x, insets.top + Math.max(0, (rowHeight - size.height) / 2), widths[i], size.height);
                 if (widths[i] > 0) x += widths[i] + getHgap();
             }
+        }
+    }
+
+    /** Combo boxes are at least as wide as their longest option, capped so a long product list stays sane. */
+    static final int MAX_COMBO_WIDTH = 260;
+
+    /**
+     * Width a filter wants. Many screens fix a combo at 120–145 px, which cut "Todos os negócios";
+     * the combo's own UI knows the width of its longest option, so that wins up to {@link #MAX_COMBO_WIDTH}.
+     */
+    static int naturalWidth(Component component) {
+        int width = component.getPreferredSize().width;
+        if (component instanceof JComboBox<?> combo && combo.getUI() != null) {
+            int content = combo.getUI().getPreferredSize(combo).width;
+            width = Math.max(width, Math.min(content, MAX_COMBO_WIDTH));
+        }
+        return width;
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(Container target) {
+        synchronized (target.getTreeLock()) {
+            int width = 0, height = 0, count = 0;
+            for (Component component : target.getComponents()) {
+                if (!component.isVisible()) continue;
+                width += naturalWidth(component);
+                height = Math.max(height, component.getPreferredSize().height);
+                count++;
+            }
+            Insets insets = target.getInsets();
+            return new Dimension(width + Math.max(0, count - 1) * getHgap() + insets.left + insets.right,
+                    height + insets.top + insets.bottom);
         }
     }
 

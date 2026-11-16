@@ -73,4 +73,35 @@ public class InvoiceLine {
         BigDecimal qty = quantity == null ? BigDecimal.ZERO : quantity;
         return effectiveUnitCost().multiply(qty);
     }
+
+    /**
+     * Legal reason for not charging VAT, frozen at issue so a reprint keeps the text the customer
+     * received. Null on taxed lines and on lines issued before V135.
+     */
+    @Column(name = "exemption_reason", length = 300)
+    private String exemptionReason;
+
+    /** Every issuing path (POS, manual, order, guide, quotation) persists here, so the snapshot is taken once. */
+    @PrePersist
+    void snapshotExemptionReason() {
+        if (exemptionReason == null && isVatFree()) {
+            exemptionReason = currentProductLegalBasis();
+        }
+    }
+
+    /** Snapshot, else the product's current legal basis (lines before V135), else null. Only for VAT-free lines. */
+    public String effectiveExemptionReason() {
+        if (!isVatFree()) return null;
+        return exemptionReason != null && !exemptionReason.isBlank() ? exemptionReason : currentProductLegalBasis();
+    }
+
+    private boolean isVatFree() {
+        return taxRate != null && taxRate.signum() == 0;
+    }
+
+    private String currentProductLegalBasis() {
+        if (product == null || product.getTaxRate() == null) return null;
+        String basis = product.getTaxRate().getLegalBasis();
+        return basis == null || basis.isBlank() ? null : basis.trim();
+    }
 }

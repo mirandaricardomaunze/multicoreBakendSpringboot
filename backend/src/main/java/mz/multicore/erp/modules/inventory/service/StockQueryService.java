@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.inventory.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
 import mz.multicore.erp.modules.inventory.dto.StockAlertDTO;
 import mz.multicore.erp.modules.inventory.dto.StockDTO;
@@ -26,20 +26,20 @@ public class StockQueryService {
 
     private final StockRepository stockRepository;
     private final WarehouseRepository warehouseRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final ProductBatchService productBatchService;
     private final WarehouseService warehouseService;
 
     public StockQueryService(
             StockRepository stockRepository,
             WarehouseRepository warehouseRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             ProductBatchService productBatchService,
             WarehouseService warehouseService
     ) {
         this.stockRepository = stockRepository;
         this.warehouseRepository = warehouseRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.productBatchService = productBatchService;
         this.warehouseService = warehouseService;
     }
@@ -54,7 +54,7 @@ public class StockQueryService {
                     s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity(), BigDecimal::add);
         }
         List<StockAlertDTO> out = new ArrayList<>();
-        for (Product p : productRepository.findDistinctByCompaniesIdOrderByName(companyId)) {
+        for (Product p : productLookup.listForCompany(companyId)) {
             if (!p.isStockTracked()) continue;
             BigDecimal total = totals.getOrDefault(p.getId(), BigDecimal.ZERO);
             if (total.signum() <= 0) {

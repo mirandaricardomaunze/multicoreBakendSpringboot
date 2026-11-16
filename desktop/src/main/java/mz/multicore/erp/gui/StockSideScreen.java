@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 import mz.multicore.erp.gui.components.UIHelper;
 
@@ -20,7 +21,7 @@ public final class StockSideScreen extends JPanel {
         super(new BorderLayout(0, 8));
         this.onRefresh = onRefresh;
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(8, 12, 8, 12));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         add(feedback, BorderLayout.NORTH);
         add(content, BorderLayout.CENTER);
     }

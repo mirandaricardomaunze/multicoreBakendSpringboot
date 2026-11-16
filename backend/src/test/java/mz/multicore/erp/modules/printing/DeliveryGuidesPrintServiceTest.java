@@ -6,6 +6,10 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.documents.model.DocumentType;
@@ -45,13 +49,14 @@ class DeliveryGuidesPrintServiceTest {
     void deliveryGuide_geraQuatroViasNominais() throws Exception {
         DeliveryGuideRepository repo = mock(DeliveryGuideRepository.class);
         DocumentConfigService config = mock(DocumentConfigService.class);
-        LineRowMapper mapper = new LineRowMapper(mock(ProductBatchRepository.class));
+        LineRowMapper mapper = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class)));
 
         DeliveryGuide guide = sampleDeliveryGuide();
         when(repo.findByIdWithLinesAndCompanyId(500L, 1L)).thenReturn(Optional.of(guide));
         when(config.getColumns(eq(1L), any(DocumentType.class))).thenReturn(DocumentColumnsDTO.all());
 
-        DeliveryGuidePrintService service = new DeliveryGuidePrintService(repo, mapper, config);
+        DeliveryGuidePrintService service = new DeliveryGuidePrintService(
+                new OrderLookup(mock(OrderRepository.class), mock(QuotationRepository.class), repo), mapper, config);
         byte[] pdf = service.render(500L);
 
         PdfReader reader = new PdfReader(pdf);
@@ -73,13 +78,13 @@ class DeliveryGuidesPrintServiceTest {
     void guideRemittance_geraQuatroViasNominais() throws Exception {
         InvoiceRepository invoiceRepo = mock(InvoiceRepository.class);
         DocumentConfigService config = mock(DocumentConfigService.class);
-        LineRowMapper mapper = new LineRowMapper(mock(ProductBatchRepository.class));
+        LineRowMapper mapper = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class)));
 
         Invoice invoice = sampleInvoice();
         when(invoiceRepo.findById(10L)).thenReturn(Optional.of(invoice));
         when(config.getColumns(eq(1L), any(DocumentType.class))).thenReturn(DocumentColumnsDTO.all());
 
-        GuideRemittancePrintService service = new GuideRemittancePrintService(invoiceRepo, mapper, config);
+        GuideRemittancePrintService service = new GuideRemittancePrintService(new InvoiceLookup(invoiceRepo), mapper, config);
         byte[] pdf = service.render(10L);
 
         PdfReader reader = new PdfReader(pdf);

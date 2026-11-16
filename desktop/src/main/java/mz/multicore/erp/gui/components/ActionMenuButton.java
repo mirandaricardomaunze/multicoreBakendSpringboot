@@ -22,7 +22,7 @@ public class ActionMenuButton extends ModernButton {
         setIcon(UIHelper.icon("fas-chevron-down", 12));
         popup.setBorder(javax.swing.BorderFactory.createCompoundBorder(
                 javax.swing.BorderFactory.createLineBorder(UIHelper.BORDER),
-                new EmptyBorder(6, 6, 6, 6)));
+                new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS)));
         addActionListener(e -> popup.show(this, 0, getHeight()));
     }
 
@@ -35,8 +35,8 @@ public class ActionMenuButton extends ModernButton {
             throw new IllegalStateException("O menu de acções não pode ter mais de cinco opções.");
         }
         JMenuItem item = new JMenuItem(cleanLabel, icon);
-        item.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
-        item.setBorder(new EmptyBorder(8, 10, 8, 14));
+        item.setFont(Typography.EMPHASIS);
+        item.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.LG));
         item.getAccessibleContext().setAccessibleName(cleanLabel);
         item.addActionListener(e -> {
             if (action != null) action.run();

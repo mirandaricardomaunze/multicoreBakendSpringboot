@@ -67,20 +67,20 @@ public class SendStatementEmailDialog {
 
         JLabel lblEmail = new JLabel("Email do Destinatário *");
         lblEmail.setForeground(UIHelper.TEXT_LIGHT);
-        lblEmail.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        lblEmail.setFont(Typography.CAPTION_BOLD);
         emailField = new JTextField(defaultEmail);
         UIHelper.styleTextField(emailField);
 
         JLabel lblSubject = new JLabel("Assunto da Mensagem");
         lblSubject.setForeground(UIHelper.TEXT_LIGHT);
-        lblSubject.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        lblSubject.setFont(Typography.CAPTION_BOLD);
         String defaultSubj = "Extrato de Conta Corrente - " + (clientName != null ? clientName : "MULTICORE ERP");
         subjectField = new JTextField(defaultSubj);
         UIHelper.styleTextField(subjectField);
 
         JLabel lblMsg = new JLabel("Mensagem / Nota de Acompanhamento");
         lblMsg.setForeground(UIHelper.TEXT_LIGHT);
-        lblMsg.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        lblMsg.setFont(Typography.CAPTION_BOLD);
         messageArea = new JTextArea(4, 30);
         messageArea.setLineWrap(true);
         messageArea.setWrapStyleWord(true);
@@ -90,7 +90,7 @@ public class SendStatementEmailDialog {
         messageArea.setCaretColor(UIHelper.TEXT_LIGHT);
         messageArea.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+                BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)));
         JScrollPane scrollMsg = new JScrollPane(messageArea);
         scrollMsg.setPreferredSize(new Dimension(380, 80));
 
@@ -114,7 +114,7 @@ public class SendStatementEmailDialog {
         dlg.setOnSaveAsync(() -> () -> {
             String email = emailField.getText() != null ? emailField.getText().trim() : "";
             if (email.isBlank() || !email.contains("@")) {
-                throw new IllegalArgumentException("Por favor, introduza um endereço de correio eletrónico válido.");
+                throw FieldValidationException.of(emailField, "Por favor, introduza um endereço de correio eletrónico válido.");
             }
             SendStatementEmailRequest req = new SendStatementEmailRequest(
                     clientId,

@@ -82,22 +82,8 @@ public class SmartAlertsDialog extends JDialog {
     }
 
     private void initComponents() {
-        JPanel root = new JPanel(new BorderLayout(0, 14));
-        root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(18, 20, 18, 20));
-
-        // Topo
-        JPanel header = new JPanel(new BorderLayout(0, 8));
-        header.setOpaque(false);
-        JLabel title = UIHelper.createHeading("Alertas Inteligentes & Acções Proativas");
-        title.setIcon(UIHelper.icon("fas-bell", 18));
-        JLabel subtitle = new JLabel("Situações operacionais que exigem atenção com ações diretas.");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-
-        header.add(title, BorderLayout.NORTH);
-        header.add(subtitle, BorderLayout.SOUTH);
-        root.add(header, BorderLayout.NORTH);
+        JPanel root = DialogChrome.frame("fas-bell", "Alertas Inteligentes & Acções Proativas",
+                "Situações operacionais que exigem atenção com ações diretas.", null, null);
 
         // Barra de Filtros
         JPanel filterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -135,12 +121,9 @@ public class SmartAlertsDialog extends JDialog {
         root.add(centerPanel, BorderLayout.CENTER);
 
         // Rodapé
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        footer.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
-        footer.add(closeBtn);
-        root.add(footer, BorderLayout.SOUTH);
+        root.add(DialogChrome.footer(closeBtn), BorderLayout.SOUTH);
 
         setContentPane(root);
     }
@@ -153,9 +136,9 @@ public class SmartAlertsDialog extends JDialog {
 
         if (filtered.isEmpty()) {
             JLabel empty = new JLabel("Nenhum alerta para a categoria selecionada.");
-            empty.setFont(new Font(UIHelper.FONT, Font.ITALIC, 13));
+            empty.setFont(Typography.EMPHASIS.deriveFont(Font.ITALIC));
             empty.setForeground(UIHelper.TEXT_MUTED);
-            empty.setBorder(new EmptyBorder(30, 10, 10, 10));
+            empty.setBorder(new EmptyBorder(Spacing.XXL, Spacing.SM, Spacing.SM, Spacing.SM));
             listContainer.add(empty);
         } else {
             for (SmartAlert alert : filtered) {
@@ -173,7 +156,7 @@ public class SmartAlertsDialog extends JDialog {
         card.setLayout(new BorderLayout(12, 0));
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 4, 0, 0, alert.urgency().getColor()),
-                BorderFactory.createEmptyBorder(10, 14, 10, 14)
+                BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG)
         ));
 
         // Lado Esquerdo / Centro: Textos
@@ -185,24 +168,24 @@ public class SmartAlertsDialog extends JDialog {
         tagLine.setOpaque(false);
 
         JLabel catTag = new JLabel("[" + alert.category() + "]");
-        catTag.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        catTag.setFont(Typography.CAPTION_BOLD);
         catTag.setForeground(UIHelper.ACCENT_BLUE);
 
         JLabel urgTag = new JLabel(alert.urgency().getLabel());
         urgTag.setIcon(UIHelper.icon(alert.urgency().getIcon(), 11, alert.urgency().getColor()));
-        urgTag.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        urgTag.setFont(Typography.CAPTION_BOLD);
         urgTag.setForeground(alert.urgency().getColor());
 
         tagLine.add(catTag);
         tagLine.add(urgTag);
 
         JLabel titleLbl = new JLabel(alert.title());
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        titleLbl.setFont(Typography.EMPHASIS_BOLD);
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
-        titleLbl.setBorder(new EmptyBorder(3, 0, 2, 0));
+        titleLbl.setBorder(new EmptyBorder(Spacing.XXS, 0, Spacing.XXS, 0));
 
         JLabel detailLbl = new JLabel(alert.detail());
-        detailLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        detailLbl.setFont(Typography.BODY);
         detailLbl.setForeground(UIHelper.TEXT_MUTED);
 
         textPanel.add(tagLine);
@@ -213,8 +196,8 @@ public class SmartAlertsDialog extends JDialog {
         // Lado Direito: Botão de Ação
         JPanel actionBox = new JPanel(new GridBagLayout());
         actionBox.setOpaque(false);
-        ModernButton actionBtn = UIHelper.createPrimaryButton(alert.actionLabel());
-        actionBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        ModernButton actionBtn = ButtonStyles.secondary(UIHelper.createPrimaryButton(alert.actionLabel()));
+        actionBtn.setFont(Typography.CAPTION_BOLD);
         actionBtn.setIcon(UIHelper.icon("fas-arrow-right", 11));
         actionBtn.addActionListener(e -> {
             dispose();

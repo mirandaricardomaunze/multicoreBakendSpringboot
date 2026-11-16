@@ -5,22 +5,22 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import java.util.function.Supplier;
 
 /**
- * Contexto do operador e da empresa activa, propagado por {@link ThreadLocal} e populado pelo
- * {@link SecurityInterceptor} a cada pedido HTTP.
+ * Operator and active-company context propagated through {@link ThreadLocal} and populated by
+ * {@link SecurityInterceptor} for each HTTP request.
  *
- * <p><b>Fail-closed.</b> Sem contexto não há papel e não há empresa: {@link #getRole()} devolve vazio
- * (o {@code PermissionGuard} do backend recusa) e {@link #getCurrentCompanyId()} lança. Versões anteriores
- * inventavam {@code ("SYSTEM", "ADMIN")} e a empresa {@code 1} — qualquer caminho sem contexto corria
- * com privilégios máximos contra o tenant errado, em silêncio. Quem precisa mesmo de correr sem
- * utilizador (cron, arranque) declara-o em {@link #runAsSystem(Runnable)}.
+ * <p><b>Fail-closed.</b> Without context there is no role or company: {@link #getRole()} returns empty,
+ * causing the backend {@code PermissionGuard} to reject access, and {@link #getCurrentCompanyId()}
+ * throws. Earlier versions invented {@code ("SYSTEM", "ADMIN")} and company {@code 1}, silently
+ * granting maximum privileges against the wrong tenant. Work that must run without a user, such as
+ * scheduled jobs or startup tasks, declares this through {@link #runAsSystem(Runnable)}.
  *
- * <p>As variantes {@link #findCurrentUser()} e {@link #findCurrentCompanyId()} devolvem {@code null}
- * sem lançar, para infra que legitimamente corre sem tenant — propagação de contexto para threads de
- * fundo e o superadmin, que não tem empresa.
+ * <p>{@link #findCurrentUser()} and {@link #findCurrentCompanyId()} return {@code null} without
+ * throwing for infrastructure that legitimately runs without a tenant, such as background-thread
+ * context propagation and the super administrator, who has no company.
  */
 public final class CurrentUserContext {
 
-    /** Etiqueta de auditoria usada quando não há sessão. Não traz papel associado. */
+    /** Audit label used when no session exists. It has no associated role. */
     private static final String SYSTEM_USERNAME = "SYSTEM";
 
     private static final ThreadLocal<UserSession> userSessionThreadLocal = new ThreadLocal<>();
@@ -35,14 +35,14 @@ public final class CurrentUserContext {
         userSessionThreadLocal.set(new UserSession(username, role));
     }
 
-    /** Sessão activa, ou {@code null} se não houver. Não lança — para infra que propaga contexto. */
+    /** Active session, or {@code null} when absent. Does not throw, allowing context propagation. */
     public static UserSession findCurrentUser() {
         return userSessionThreadLocal.get();
     }
 
     /**
-     * Sessão activa. Sem contexto devolve o utilizador {@code SYSTEM} <b>sem papel</b> — o nome é só
-     * etiqueta de auditoria; o papel vazio faz o {@code PermissionGuard} do backend recusar.
+     * Returns the active session. Without context, returns user {@code SYSTEM} <b>without a role</b>.
+     * The name is only an audit label; the empty role causes the backend {@code PermissionGuard} to reject access.
      */
     public static UserSession getCurrentUser() {
         UserSession session = userSessionThreadLocal.get();
@@ -53,7 +53,7 @@ public final class CurrentUserContext {
         return getCurrentUser().username();
     }
 
-    /** Papel do operador, ou vazio se não houver sessão. <b>Nunca</b> devolve um papel privilegiado. */
+    /** Operator role, or empty when no session exists. <b>Never</b> returns a privileged role. */
     public static String getRole() {
         return getCurrentUser().role();
     }
@@ -62,14 +62,14 @@ public final class CurrentUserContext {
         companyIdThreadLocal.set(companyId);
     }
 
-    /** Empresa activa, ou {@code null} se não houver. Não lança — para infra que propaga contexto. */
+    /** Active company, or {@code null} when absent. Does not throw, allowing context propagation. */
     public static Long findCurrentCompanyId() {
         return companyIdThreadLocal.get();
     }
 
     /**
-     * Empresa activa. Lança se não houver — nunca assume uma empresa por omissão, senão uma thread sem
-     * contexto lê e escreve no tenant errado sem dar erro.
+     * Returns the active company. Throws when absent and never assumes a default company, preventing
+     * a context-free thread from silently reading or writing the wrong tenant.
      */
     public static Long getCompanyId() {
         return getCurrentCompanyId();
@@ -94,32 +94,32 @@ public final class CurrentUserContext {
     }
 
     /**
-     * Corre trabalho automático da aplicação (cron, arranque) com o utilizador {@code SYSTEM} e papel
-     * {@code ADMIN}, repondo o contexto anterior no fim — mesmo que a tarefa lance.
+     * Runs automated application work, such as scheduled or startup tasks, as user {@code SYSTEM}
+     * with role {@code ADMIN}, restoring the previous context afterward even if the task throws.
      *
-     * <p>A elevação é deliberadamente explícita: antes acontecia sozinha em qualquer thread sem
-     * contexto. <b>Não usar para servir pedidos HTTP</b> — aí o contexto vem do
-     * {@link SecurityInterceptor} e representa um utilizador real.
+     * <p>Elevation is deliberately explicit; it previously occurred automatically on any thread
+     * without context. <b>Do not use for HTTP requests</b>, where {@link SecurityInterceptor}
+     * supplies context representing a real user.
      */
     public static void runAsSystem(Runnable task) {
         runAsSystem(toSupplier(task));
     }
 
-    /** Versão de {@link #runAsSystem(Runnable)} que devolve valor. */
+    /** Value-returning variant of {@link #runAsSystem(Runnable)}. */
     public static <T> T runAsSystem(Supplier<T> task) {
         return runAsSystem(null, task);
     }
 
     /**
-     * Como {@link #runAsSystem(Runnable)}, mas ligado a uma <b>empresa explícita</b> — para trabalho
-     * automático que escreve num tenant concreto (ex.: povoamento de dados de demonstração). A empresa
-     * é um argumento precisamente para não voltar a ser adivinhada.
+     * Like {@link #runAsSystem(Runnable)}, but bound to an <b>explicit company</b> for automated work
+     * that writes to a specific tenant, such as seeding demonstration data. Requiring the company
+     * argument prevents it from being inferred.
      */
     public static void runAsSystem(Long companyId, Runnable task) {
         runAsSystem(companyId, toSupplier(task));
     }
 
-    /** Versão de {@link #runAsSystem(Long, Runnable)} que devolve valor. */
+    /** Value-returning variant of {@link #runAsSystem(Long, Runnable)}. */
     public static <T> T runAsSystem(Long companyId, Supplier<T> task) {
         UserSession previousUser = userSessionThreadLocal.get();
         Long previousCompanyId = companyIdThreadLocal.get();

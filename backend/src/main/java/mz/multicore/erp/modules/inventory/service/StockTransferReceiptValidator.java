@@ -40,6 +40,7 @@ public final class StockTransferReceiptValidator {
                         appendFingerprintPart(canonical, line.receivedQuantity() == null ? null
                                 : line.receivedQuantity().stripTrailingZeros().toPlainString());
                         appendFingerprintPart(canonical, line.discrepancyReason());
+                        if (Boolean.TRUE.equals(line.lostInTransit())) appendFingerprintPart(canonical, "lost");
                     });
         }
         try {

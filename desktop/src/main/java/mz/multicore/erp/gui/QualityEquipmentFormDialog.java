@@ -1,5 +1,10 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.QualityApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -47,12 +52,10 @@ public class QualityEquipmentFormDialog extends JDialog {
     }
 
     private void initComponents() {
-        setLayout(new BorderLayout());
         getContentPane().setBackground(UIHelper.BG_DARK);
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
         content.setOpaque(false);
 
         // Estilos
@@ -62,11 +65,11 @@ public class QualityEquipmentFormDialog extends JDialog {
         UIHelper.styleComboBox(periodUnitCombo);
         activeCheck.setOpaque(false);
         activeCheck.setForeground(UIHelper.TEXT_LIGHT);
-        activeCheck.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        activeCheck.setFont(Typography.EMPHASIS);
 
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
-        descriptionArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        descriptionArea.setFont(Typography.EMPHASIS);
         JScrollPane descScroll = new JScrollPane(descriptionArea);
         descScroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER));
 
@@ -95,7 +98,7 @@ public class QualityEquipmentFormDialog extends JDialog {
         // Formulário em grid
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new GridBagLayout());
-        card.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         GridBagConstraints g = new GridBagConstraints();
         g.insets = new Insets(6, 6, 6, 6);
         g.fill = GridBagConstraints.HORIZONTAL;
@@ -128,21 +131,14 @@ public class QualityEquipmentFormDialog extends JDialog {
         addFormRow(card, g, row++, "Instruções / Descrição:", descScroll);
 
         content.add(card);
-        add(content, BorderLayout.CENTER);
 
-        // Rodapé de botões
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        footer.setBackground(UIHelper.BG_DARK);
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER));
-
-        ModernButton cancelBtn = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
-        ModernButton saveBtn = UIHelper.createPrimaryButton(editingEquipment == null ? "Gravar Equipamento" : "Actualizar");
+        ModernButton saveBtn = ButtonStyles.main(UIHelper.createPrimaryButton(editingEquipment == null ? "Gravar Equipamento" : "Actualizar"));
         saveBtn.addActionListener(e -> save());
 
-        footer.add(cancelBtn);
-        footer.add(saveBtn);
-        add(footer, BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-toolbox", getTitle(),
+                "Equipamento ou EPI e o seu prazo de renovação.", content, DialogChrome.footer(cancelBtn, saveBtn)));
 
         pack();
         UIHelper.applyStandardModalBounds(this, 560, 520);
@@ -153,7 +149,7 @@ public class QualityEquipmentFormDialog extends JDialog {
         g.gridy = row;
         g.weightx = 0.3;
         JLabel lbl = new JLabel(labelText);
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lbl.setFont(Typography.BODY_BOLD);
         lbl.setForeground(UIHelper.TEXT_LIGHT);
         p.add(lbl, g);
 
@@ -217,7 +213,7 @@ public class QualityEquipmentFormDialog extends JDialog {
             dispose();
             if (onSuccess != null) onSuccess.run();
         }, err -> {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao gravar: " + err.getMessage());
+            UserErrors.toast(this, "gravar", err);
         });
     }
 }

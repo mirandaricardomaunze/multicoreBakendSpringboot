@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui.pos.scale;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -45,21 +47,21 @@ public class PosScaleLiveWidget extends ModernPanel {
         weightDisplayLabel = new JLabel("0.000 kg");
         weightDisplayLabel.setIcon(UIHelper.icon("fas-balance-scale", 13, UIHelper.ACCENT_BLUE));
         weightDisplayLabel.setIconTextGap(5);
-        weightDisplayLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        weightDisplayLabel.setFont(Typography.EMPHASIS_BOLD);
         weightDisplayLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         captureButton = UIHelper.createButton("Capturar", UIHelper.icon("fas-balance-scale", 11, Color.WHITE), UIHelper.ACCENT_BLUE, e -> captureWeight());
         captureButton.setForeground(Color.WHITE);
         captureButton.setToolTipText("Capturar peso activo da balança para o artigo seleccionado");
-        captureButton.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        captureButton.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        captureButton.setFont(Typography.BODY_BOLD);
+        captureButton.setBorder(BorderFactory.createEmptyBorder(0, Spacing.SM, 0, Spacing.SM));
         captureButton.setPreferredSize(new Dimension(80, UIHelper.FORM_CONTROL_HEIGHT));
 
         tareButton = new ModernButton("Tara", UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         tareButton.setIcon(UIHelper.icon("fas-sync", 11, Color.WHITE));
         tareButton.setForeground(Color.WHITE);
-        tareButton.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        tareButton.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        tareButton.setFont(Typography.BODY_BOLD);
+        tareButton.setBorder(BorderFactory.createEmptyBorder(0, Spacing.SM, 0, Spacing.SM));
         tareButton.addActionListener(e -> handleTare());
         tareButton.setToolTipText("Zerar / Aplicar Tara no prato da balança");
         tareButton.setPreferredSize(new Dimension(60, UIHelper.FORM_CONTROL_HEIGHT));
@@ -67,8 +69,8 @@ public class PosScaleLiveWidget extends ModernPanel {
         simulateButton = new ModernButton("Simular", UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         simulateButton.setIcon(UIHelper.icon("fas-edit", 11, Color.WHITE));
         simulateButton.setForeground(Color.WHITE);
-        simulateButton.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        simulateButton.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        simulateButton.setFont(Typography.BODY_BOLD);
+        simulateButton.setBorder(BorderFactory.createEmptyBorder(0, Spacing.SM, 0, Spacing.SM));
         simulateButton.addActionListener(e -> openSimulationDialog());
         simulateButton.setToolTipText("Inserir peso simulado para testes sem balança física");
         simulateButton.setPreferredSize(new Dimension(70, UIHelper.FORM_CONTROL_HEIGHT));

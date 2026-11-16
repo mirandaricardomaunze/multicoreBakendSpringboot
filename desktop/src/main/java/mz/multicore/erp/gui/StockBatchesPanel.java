@@ -20,7 +20,7 @@ final class StockBatchesPanel {
     public JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
+        tab.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         ModernButton addBatchBtn = UIHelper.createSuccessButton("Adicionar Lote/Validade");
         addBatchBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -70,17 +70,17 @@ final class StockBatchesPanel {
         );
 
         owner.batchesSummary = new JLabel(" ");
-        owner.batchesSummary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        owner.batchesSummary.setFont(Typography.EMPHASIS_BOLD);
         owner.batchesSummary.setForeground(UIHelper.TEXT_MUTED);
-        owner.batchesSummary.setBorder(new EmptyBorder(6, 2, 0, 0));
+        owner.batchesSummary.setBorder(new EmptyBorder(Spacing.XS, Spacing.XXS, 0, 0));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         JPanel filterCardHeader = new JPanel(new BorderLayout(0, 6));
         filterCardHeader.setOpaque(false);
-        filterCardHeader.setBorder(new EmptyBorder(0, 0, 4, 0));
+        filterCardHeader.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filterCardHeader.add(filters, BorderLayout.CENTER);
         filterCardHeader.add(owner.batchesSummary, BorderLayout.SOUTH);
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);

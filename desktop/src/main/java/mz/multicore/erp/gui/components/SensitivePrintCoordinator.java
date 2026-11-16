@@ -127,8 +127,7 @@ public final class SensitivePrintCoordinator {
     }
 
     private static void fail(JComponent field, String message) {
-        field.requestFocusInWindow();
-        throw new IllegalArgumentException(message);
+        throw FieldValidationException.of(field, message);
     }
 
     private static void render(JComponent owner, String progress, Callable<byte[]> task,

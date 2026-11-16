@@ -55,7 +55,7 @@ public class TableQuickFilterBar extends JPanel {
         searchBox.setOpaque(false);
 
         JLabel searchIcon = new JLabel(UIHelper.icon("fas-search", 13));
-        searchIcon.setBorder(new EmptyBorder(0, 4, 0, 0));
+        searchIcon.setBorder(new EmptyBorder(0, Spacing.XS, 0, 0));
         searchBox.add(searchIcon, BorderLayout.WEST);
 
         this.filterField = new JTextField();
@@ -78,9 +78,9 @@ public class TableQuickFilterBar extends JPanel {
 
         // 4. Painel com Contador de Registos
         this.countLabel = new JLabel();
-        this.countLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        this.countLabel.setFont(Typography.BODY_BOLD);
         this.countLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        this.countLabel.setBorder(new EmptyBorder(0, 4, 0, 4));
+        this.countLabel.setBorder(new EmptyBorder(0, Spacing.XS, 0, Spacing.XS));
         add(this.countLabel, BorderLayout.EAST);
 
         // 5. Ouvinte de digitação no campo de pesquisa
@@ -135,7 +135,7 @@ public class TableQuickFilterBar extends JPanel {
             setBorder(new LineBorder(Color.WHITE, 1));
         } else {
             setBackground(UIHelper.BG_CARD);
-            setBorder(new EmptyBorder(4, 6, 4, 6));
+            setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         }
     }
 

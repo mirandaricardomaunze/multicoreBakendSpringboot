@@ -113,7 +113,7 @@ public class DebtCollectionNoticeService {
                 bankAccounts,
                 company.getName(),
                 company.getTaxId(),
-                company.getAddress(),
+                company.formattedAddress(),
                 company.getPhone(),
                 company.getEmail(),
                 customMessage

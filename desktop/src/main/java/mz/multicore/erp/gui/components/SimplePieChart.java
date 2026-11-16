@@ -16,15 +16,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Gráfico de pizza clássico / donut desenhado em Java 2D vetorial anti-aliased.
- * Exibe fatias coloridas, percentagens desenhadas diretamente no interior das fatias,
- * linhas divisórias nítidas e legenda lateral com totais.
+ * Anti-aliased Java 2D pie or doughnut chart with coloured slices, in-slice percentages, clear
+ * dividers, and a side legend containing totals.
  */
 public class SimplePieChart extends JPanel {
 
     private String emptyHint;
 
-    /** Segunda linha do estado vazio: diz o que fazer a seguir. */
+    /** Sets the second empty-state line, which guides the user's next action. */
     public void setEmptyHint(String emptyHint) {
         this.emptyHint = emptyHint;
     }
@@ -58,7 +57,7 @@ public class SimplePieChart extends JPanel {
         this.title = title;
         this.donut = donut;
         setOpaque(false);
-        setBorder(new EmptyBorder(14, 16, 14, 16));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         setPreferredSize(new Dimension(340, 220));
         setMinimumSize(new Dimension(280, 180));
 
@@ -114,6 +113,8 @@ public class SimplePieChart extends JPanel {
 
     public int getSliceIndexAt(java.awt.Point point) {
         if (point == null || values.length == 0) return -1;
+        int single = PieSingleShareView.singlePositiveIndex(values);
+        if (single >= 0) return single;
         int width = getWidth();
         int height = getHeight();
         int topMargin = 40;
@@ -173,12 +174,12 @@ public class SimplePieChart extends JPanel {
         int width = getWidth();
         int height = getHeight();
 
-        // 1. Título do gráfico
-        g.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        // Chart title.
+        g.setFont(Typography.TITLE);
         g.setColor(UIHelper.TEXT_LIGHT);
         g.drawString(title, 16, 26);
 
-        // 2. Cálculo do total
+        // Aggregate total.
         BigDecimal total = BigDecimal.ZERO;
         for (BigDecimal val : values) {
             if (val != null && val.compareTo(BigDecimal.ZERO) > 0) {
@@ -192,7 +193,16 @@ public class SimplePieChart extends JPanel {
             return;
         }
 
-        // 3. Layout: Disco à esquerda / Legenda à direita
+        int single = PieSingleShareView.singlePositiveIndex(values);
+        if (single >= 0) {
+            Color[] resolved = new Color[values.length];
+            for (int i = 0; i < values.length; i++) resolved[i] = sliceColor(i);
+            PieSingleShareView.paint(g, labels, values, resolved, single, width, height);
+            g.dispose();
+            return;
+        }
+
+        // Place the chart on the left and the legend on the right.
         int topMargin = 40;
         int availableHeight = height - topMargin - 16;
         int pieSize = Math.max(80, Math.min(availableHeight, (width / 2) - 10));
@@ -201,11 +211,11 @@ public class SimplePieChart extends JPanel {
         double centerX = pieX + (pieSize / 2.0);
         double centerY = pieY + (pieSize / 2.0);
 
-        // Linha divisória entre fatias
+        // Slice divider.
         Color dividerColor = UIHelper.isLight() ? Color.WHITE : UIHelper.BG_CARD;
         BasicStroke sliceStroke = new BasicStroke(1.5f);
 
-        // 3.1 Desenho das fatias (arcos preenchidos e contornos)
+        // Render filled slice arcs and their outlines.
         double currentAngle = 90.0;
         for (int i = 0; i < values.length; i++) {
             BigDecimal val = values[i] == null ? BigDecimal.ZERO : values[i];
@@ -218,12 +228,12 @@ public class SimplePieChart extends JPanel {
                     ? colors[i]
                     : DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
 
-            // Preenchimento da fatia
+            // Slice fill.
             Arc2D.Double sliceArc = new Arc2D.Double(pieX, pieY, pieSize, pieSize, currentAngle, -arcAngle, Arc2D.PIE);
             g.setColor(sliceColor);
             g.fill(sliceArc);
 
-            // Borda divisória da fatia (com destaque dinâmico quando sob o cursor)
+            // Highlight the slice divider while the pointer is over the slice.
             if (i == hoveredSliceIndex) {
                 g.setColor(Color.WHITE);
                 g.setStroke(new BasicStroke(2.5f));
@@ -236,18 +246,18 @@ public class SimplePieChart extends JPanel {
             currentAngle -= arcAngle;
         }
 
-        // 3.2 Se for estilo Donut, desenha o orifício central
+        // Cut out the centre when rendering the doughnut style.
         if (donut) {
             int holeSize = (int) (pieSize * 0.54);
             int holeX = pieX + (pieSize - holeSize) / 2;
             int holeY = pieY + (pieSize - holeSize) / 2;
 
-            Color holeBg = UIHelper.isLight() ? new Color(255, 255, 255) : UIHelper.BG_CARD;
+            Color holeBg = UIHelper.BG_CARD;
             g.setColor(holeBg);
             g.fill(new Ellipse2D.Double(holeX, holeY, holeSize, holeSize));
 
-            // Total no centro do donut
-            g.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            // Doughnut total.
+            g.setFont(Typography.CAPTION_BOLD);
             g.setColor(UIHelper.TEXT_LIGHT);
             String compactTotal = formatCompact(total);
             FontMetrics fm = g.getFontMetrics();
@@ -255,7 +265,7 @@ public class SimplePieChart extends JPanel {
             g.drawString(compactTotal, holeX + (holeSize - strW) / 2, holeY + (holeSize / 2) + 4);
         }
 
-        // 3.3 Percentagens impressas diretamente dentro de cada fatia
+        // Render percentages directly inside each slice.
         currentAngle = 90.0;
         for (int i = 0; i < values.length; i++) {
             BigDecimal val = values[i] == null ? BigDecimal.ZERO : values[i];
@@ -265,12 +275,12 @@ public class SimplePieChart extends JPanel {
             double arcAngle = sliceRatio * 360.0;
             double pct = sliceRatio * 100.0;
 
-            // Só desenha o texto dentro da fatia se houver espaço angular suficiente (> 4%)
+            // Render in-slice text only when the angular area exceeds 4%.
             if (pct >= 4.0) {
                 double midAngleDeg = currentAngle - (arcAngle / 2.0);
                 double midAngleRad = Math.toRadians(midAngleDeg);
 
-                // Distância do centro para o texto (~62% do raio em pizza sólida, ~78% em donut)
+                // Position text at about 62% of a pie radius or 78% of a doughnut radius.
                 double textRadius = (pieSize / 2.0) * (donut ? 0.78 : 0.62);
                 double textCenterX = centerX + textRadius * Math.cos(midAngleRad);
                 double textCenterY = centerY - textRadius * Math.sin(midAngleRad);
@@ -283,10 +293,10 @@ public class SimplePieChart extends JPanel {
                         ? colors[i]
                         : DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
 
-                // Contraste automático: texto escuro para cores claras, texto branco para escuras
+                // Choose dark text for light colours and white text for dark colours.
                 Color textContrastColor = getContrastingTextColor(sliceColor);
 
-                g.setFont(new Font(UIHelper.FONT, Font.BOLD, (pct >= 15.0 && !donut) ? 12 : 10));
+                g.setFont((pct >= 15.0 && !donut) ? Typography.BODY_BOLD : Typography.CAPTION_BOLD);
                 g.setColor(textContrastColor);
                 FontMetrics fm = g.getFontMetrics();
                 int textW = fm.stringWidth(pctText);
@@ -298,7 +308,7 @@ public class SimplePieChart extends JPanel {
             currentAngle -= arcAngle;
         }
 
-        // 4. Legenda à direita
+        // Right-side legend.
         int legendX = pieX + pieSize + 22;
         int legendY = topMargin + 12;
         int maxLegendWidth = width - legendX - 10;
@@ -316,19 +326,19 @@ public class SimplePieChart extends JPanel {
                         ? colors[i]
                         : DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
 
-                // Ponto / Quadrado de cor
+                // Legend colour marker.
                 g.setColor(sliceColor);
                 g.fillRoundRect(legendX, legendY - 8, 10, 10, 3, 3);
 
-                // Texto do rótulo e percentagem
+                // Legend label and percentage.
                 String labelText = (i < labels.length && labels[i] != null) ? labels[i] : "Item " + (i + 1);
                 String pctText = String.format("%.1f%%", sliceRatio);
 
-                g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+                g.setFont(Typography.CAPTION);
                 g.setColor(UIHelper.TEXT_LIGHT);
                 g.drawString(labelText, legendX + 16, legendY);
 
-                g.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+                g.setFont(Typography.CAPTION_BOLD);
                 g.setColor(UIHelper.TEXT_MUTED);
                 g.drawString(pctText, legendX + 16, legendY + 12);
 
@@ -339,9 +349,13 @@ public class SimplePieChart extends JPanel {
         g.dispose();
     }
 
+    private Color sliceColor(int i) {
+        return i < colors.length && colors[i] != null ? colors[i] : DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+    }
+
     /**
-     * Calcula se o fundo é claro ou escuro usando luminosidade ponderada (W3C),
-     * devolvendo texto escuro para fundos claros e branco para fundos escuros.
+     * Uses W3C weighted luminance to return dark text for light backgrounds and white text for
+     * dark backgrounds.
      */
     private static Color getContrastingTextColor(Color bg) {
         if (bg == null) return Color.WHITE;

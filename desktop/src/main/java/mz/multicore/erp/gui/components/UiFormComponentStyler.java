@@ -56,21 +56,7 @@ final class UiFormComponentStyler {
     }
 
     static JPanel tableCardTop(String title, JComponent filters, JComponent... actions) {
-        JPanel top = new JPanel(new BorderLayout(0, 8));
-        top.setOpaque(false);
-        top.setBorder(new EmptyBorder(0, 0, filters != null ? 6 : 4, 0));
-
-        JPanel header = new JPanel(new BorderLayout(8, 0));
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading(title), BorderLayout.CENTER);
-        if (actions != null && actions.length > 0) {
-            header.add(UIHelper.actionsBar(actions), BorderLayout.EAST);
-        }
-        top.add(header, BorderLayout.NORTH);
-        if (filters != null) {
-            top.add(filters, BorderLayout.CENTER);
-        }
-        return top;
+        return TableCardTop.build(title, filters, actions);
     }
 
     static ModernButton createIconButton(String accessibleName, String iconCode) {
@@ -122,7 +108,7 @@ final class UiFormComponentStyler {
         JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         group.setOpaque(false);
         JLabel label = new JLabel(labelText);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        label.setFont(Typography.BODY_BOLD);
         label.setForeground(UIHelper.TEXT_LIGHT);
         group.add(label);
         group.add(component);
@@ -148,7 +134,7 @@ final class UiFormComponentStyler {
         field.setBackground(UIHelper.FIELD_BG);
         field.setForeground(UIHelper.TEXT_LIGHT);
         field.setCaretColor(UIHelper.TEXT_LIGHT);
-        field.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        field.setFont(Typography.EMPHASIS);
         field.putClientProperty("JTextField.showClearButton", Boolean.TRUE);
         field.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(field);
@@ -261,7 +247,7 @@ final class UiFormComponentStyler {
         field.setBackground(UIHelper.FIELD_BG);
         field.setForeground(UIHelper.TEXT_LIGHT);
         field.setCaretColor(UIHelper.TEXT_LIGHT);
-        field.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        field.setFont(Typography.EMPHASIS);
         field.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(field);
         applyFormControlHeight(field);
@@ -271,7 +257,7 @@ final class UiFormComponentStyler {
         area.setBackground(UIHelper.FIELD_BG);
         area.setForeground(UIHelper.TEXT_LIGHT);
         area.setCaretColor(UIHelper.TEXT_LIGHT);
-        area.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        area.setFont(Typography.EMPHASIS);
         area.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(area);
     }
@@ -279,7 +265,7 @@ final class UiFormComponentStyler {
     static <T> ListCellRenderer<T> labelRenderer(Function<T, String> label) {
         return (list, value, index, selected, focus) -> {
             JLabel rendered = new JLabel(value == null ? "" : label.apply(value));
-            rendered.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+            rendered.setFont(Typography.EMPHASIS);
             rendered.setOpaque(true);
             return rendered;
         };
@@ -289,7 +275,7 @@ final class UiFormComponentStyler {
         ListCellRenderer<?> originalRenderer = combo.getRenderer();
         combo.setBackground(UIHelper.FIELD_BG);
         combo.setForeground(UIHelper.TEXT_LIGHT);
-        combo.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        combo.setFont(Typography.EMPHASIS);
         combo.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(combo);
         flattenComboArrow(combo);
@@ -304,7 +290,7 @@ final class UiFormComponentStyler {
                 rendered.setBackground(isSelected ? UIHelper.SELECTION_BG : UIHelper.FIELD_BG);
                 rendered.setForeground(UIHelper.TEXT_LIGHT);
                 if (rendered instanceof JComponent component) {
-                    component.setBorder(new EmptyBorder(5, 8, 5, 8));
+                    component.setBorder(new EmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM));
                     component.setOpaque(index >= 0);
                 }
                 return rendered;
@@ -323,7 +309,7 @@ final class UiFormComponentStyler {
     static void styleSpinner(JSpinner spinner) {
         spinner.setBackground(UIHelper.FIELD_BG);
         spinner.setForeground(UIHelper.TEXT_LIGHT);
-        spinner.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        spinner.setFont(Typography.EMPHASIS);
         spinner.putClientProperty("Component.arc", UIHelper.CONTROL_ARC);
         installFocusBorder(spinner);
         if (spinner.getEditor() instanceof JSpinner.DefaultEditor de) {
@@ -331,8 +317,8 @@ final class UiFormComponentStyler {
             tf.setBackground(UIHelper.FIELD_BG);
             tf.setForeground(UIHelper.TEXT_LIGHT);
             tf.setCaretColor(UIHelper.TEXT_LIGHT);
-            tf.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
-            tf.setBorder(new EmptyBorder(0, 4, 0, 4));
+            tf.setFont(Typography.EMPHASIS);
+            tf.setBorder(new EmptyBorder(0, Spacing.XS, 0, Spacing.XS));
             tf.setOpaque(false);
         }
         applyFormControlHeight(spinner);
@@ -343,8 +329,8 @@ final class UiFormComponentStyler {
         banner.setOpaque(true);
         banner.setBackground(UIHelper.PENDING_YELLOW);
         banner.setForeground(UIHelper.BG_DARK);
-        banner.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
-        banner.setBorder(new EmptyBorder(10, 14, 10, 14));
+        banner.setFont(Typography.EMPHASIS_BOLD);
+        banner.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         banner.setVisible(false);
         return banner;
     }
@@ -439,7 +425,7 @@ final class UiFormComponentStyler {
     private static void flattenComboArrow(JComboBox<?> combo) {
         for (Component child : combo.getComponents()) {
             if (child instanceof AbstractButton arrow) {
-                arrow.setBorder(new EmptyBorder(0, 6, 0, 6));
+                arrow.setBorder(new EmptyBorder(0, Spacing.XS, 0, Spacing.XS));
                 arrow.setBorderPainted(false);
                 arrow.setContentAreaFilled(false);
                 arrow.setFocusable(false);
@@ -458,7 +444,7 @@ final class UiFormComponentStyler {
     static JPanel createDialogForm(int columns, Object... labelsAndComponents) {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(10, 14, 10, 14));
+        panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.NORTHWEST;

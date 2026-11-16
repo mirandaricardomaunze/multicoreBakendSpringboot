@@ -21,7 +21,7 @@ final class StockCategoriesPanel {
     public JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
+        tab.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Categoria");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -41,11 +41,11 @@ final class StockCategoriesPanel {
         owner.categorySearchField = TableFilter.searchField("Pesquisar categoria por código ou nome…");
         UIHelper.onTextChange(owner.categorySearchField, () -> StockCategoriesViewCoordinator.filterCategories(owner, owner.categorySearchField.getText()));
         JPanel searchRow = TableFilter.bar(owner.categorySearchField);
-        searchRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+        searchRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         card.add(UIHelper.tableCardTop("Categorias de Produto", searchRow,
                 refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
 

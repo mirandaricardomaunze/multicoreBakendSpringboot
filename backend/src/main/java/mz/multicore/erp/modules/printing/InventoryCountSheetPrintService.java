@@ -5,8 +5,8 @@ import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,30 +21,30 @@ import java.util.List;
 @Service
 public class InventoryCountSheetPrintService {
 
-    private final StockRepository stockRepository;
-    private final WarehouseRepository warehouseRepository;
+    private final StockLookup stockLookup;
+    private final WarehouseLookup warehouseLookup;
     private final CompanyService companyService;
     private final InventoryCountSheetDocumentRenderer documentRenderer;
 
     @Autowired
     public InventoryCountSheetPrintService(
-            StockRepository stockRepository,
-            WarehouseRepository warehouseRepository,
+            StockLookup stockLookup,
+            WarehouseLookup warehouseLookup,
             CompanyService companyService,
             InventoryCountSheetDocumentRenderer documentRenderer
     ) {
-        this.stockRepository = stockRepository;
-        this.warehouseRepository = warehouseRepository;
+        this.stockLookup = stockLookup;
+        this.warehouseLookup = warehouseLookup;
         this.companyService = companyService;
         this.documentRenderer = documentRenderer;
     }
 
     public InventoryCountSheetPrintService(
-            StockRepository stockRepository,
-            WarehouseRepository warehouseRepository,
+            StockLookup stockLookup,
+            WarehouseLookup warehouseLookup,
             CompanyService companyService
     ) {
-        this(stockRepository, warehouseRepository, companyService, new InventoryCountSheetDocumentRenderer());
+        this(stockLookup, warehouseLookup, companyService, new InventoryCountSheetDocumentRenderer());
     }
 
     @Transactional(readOnly = true)
@@ -57,11 +57,10 @@ public class InventoryCountSheetPrintService {
         Warehouse warehouseFilter = null;
         List<Stock> stocks;
         if (warehouseId != null) {
-            warehouseFilter = warehouseRepository.findById(warehouseId)
-                    .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
-            stocks = stockRepository.findByWarehouseId(warehouseId);
+            warehouseFilter = warehouseLookup.require(warehouseId);
+            stocks = stockLookup.listForWarehouse(warehouseId);
         } else {
-            stocks = stockRepository.findByWarehouseCompanyId(companyId);
+            stocks = stockLookup.listForCompany(companyId);
         }
 
         stocks.sort(Comparator

@@ -11,7 +11,7 @@ import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,23 +33,26 @@ public class CreditNoteCreationService {
 
     private final CreditNoteRepository creditNoteRepository;
     private final InvoiceRepository invoiceRepository;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final DocumentNumberService documentNumberService;
     private final CreditNoteQueryService queryService;
+    private final List<CreditNoteLineGuard> lineGuards;
 
     @Autowired
     public CreditNoteCreationService(
             CreditNoteRepository creditNoteRepository,
             InvoiceRepository invoiceRepository,
-            WarehouseRepository warehouseRepository,
+            WarehouseLookup warehouseLookup,
             DocumentNumberService documentNumberService,
-            CreditNoteQueryService queryService
+            CreditNoteQueryService queryService,
+            List<CreditNoteLineGuard> lineGuards
     ) {
         this.creditNoteRepository = creditNoteRepository;
         this.invoiceRepository = invoiceRepository;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.documentNumberService = documentNumberService;
         this.queryService = queryService;
+        this.lineGuards = lineGuards == null ? List.of() : lineGuards;
     }
 
     @Transactional
@@ -70,8 +74,7 @@ public class CreditNoteCreationService {
             if (request.warehouseId() == null) {
                 warehouse = invoice.getWarehouse();
             } else {
-                warehouse = warehouseRepository.findById(request.warehouseId())
-                        .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+                warehouse = warehouseLookup.require(request.warehouseId());
             }
             if (warehouse == null) {
                 throw new BusinessRuleException("Notas de crédito de devolução requerem um armazém de destino.");
@@ -118,6 +121,7 @@ public class CreditNoteCreationService {
                         DisplayNumbers.qty(requested), sourceLine.getProduct().getName(), DisplayNumbers.qty(qtySold),
                         DisplayNumbers.qty(alreadyReturned), DisplayNumbers.qty(remaining)));
             }
+            for (CreditNoteLineGuard guard : lineGuards) guard.check(invoice, sourceLine, requested, remaining);
 
             BigDecimal price = sourceLine.getUnitPrice();
             BigDecimal taxRate = sourceLine.getTaxRate() == null ? BigDecimal.ZERO : sourceLine.getTaxRate();

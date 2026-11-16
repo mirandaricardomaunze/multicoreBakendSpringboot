@@ -18,14 +18,15 @@ import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import mz.multicore.erp.modules.pricing.service.PriceResolutionService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -44,27 +45,30 @@ public class QuotationLifecycleService {
     private final QuotationRepository quotationRepository;
     private final ClientRepository clientRepository;
     private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
-    private final WarehouseRepository warehouseRepository;
+    private final CompanyLookup companyLookup;
+    private final WarehouseLookup warehouseLookup;
     private final WalkInClientProvider walkInClientProvider;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
     private final QuotationQueryService queryService;
+    private final PriceResolutionService priceResolver;
 
     public QuotationLifecycleService(QuotationRepository quotationRepository,
                                      ClientRepository clientRepository,
                                      ProductRepository productRepository,
-                                     CompanyRepository companyRepository,
-                                     WarehouseRepository warehouseRepository,
+                                     CompanyLookup companyLookup,
+                                     WarehouseLookup warehouseLookup,
                                      WalkInClientProvider walkInClientProvider,
                                      DocumentNumberService documentNumberService,
                                      AuditLogService auditLogService,
-                                     QuotationQueryService queryService) {
+                                     QuotationQueryService queryService,
+                                     PriceResolutionService priceResolver) {
+        this.priceResolver = priceResolver;
         this.quotationRepository = quotationRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
-        this.warehouseRepository = warehouseRepository;
+        this.companyLookup = companyLookup;
+        this.warehouseLookup = warehouseLookup;
         this.walkInClientProvider = walkInClientProvider;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
@@ -79,10 +83,8 @@ public class QuotationLifecycleService {
                 ? clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."))
                 : walkInClientProvider.getOrCreate();
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Company company = companyLookup.require(request.companyId());
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
@@ -131,8 +133,7 @@ public class QuotationLifecycleService {
                 ? walkInClientProvider.getOrCreate()
                 : clientRepository.findByIdAndCompaniesId(request.clientId(), companyId)
                     .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (warehouse.getCompany() == null || !companyId.equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
@@ -234,6 +235,7 @@ public class QuotationLifecycleService {
                                Long companyId, boolean isUpdate) {
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
+        var pricing = PriceResolutionService.selectionFor(priceResolver, companyId, quotation.getClient());
         for (CreateQuotationLineRequest lineReq : lineRequests) {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), companyId)
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
@@ -246,7 +248,7 @@ public class QuotationLifecycleService {
             } else if (discount.compareTo(BigDecimal.valueOf(100)) > 0) {
                 throw new BusinessRuleException("O desconto de linha não pode exceder 100%.");
             }
-            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+            BigDecimal unitPrice = PriceResolutionService.unitPrice(priceResolver, pricing, product, lineReq.quantity());
             BigDecimal taxRate = product.effectiveTaxRate();
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
                     unitPrice, lineReq.quantity(), discount, taxRate);

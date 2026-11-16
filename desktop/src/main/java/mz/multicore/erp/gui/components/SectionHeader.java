@@ -23,7 +23,7 @@ public class SectionHeader extends JPanel {
     public SectionHeader(String title, String iconCode) {
         setLayout(new FlowLayout(FlowLayout.LEFT, 6, 0));
         setOpaque(false);
-        setBorder(new EmptyBorder(0, 0, 6, 0));
+        setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
 
         if (iconCode != null && !iconCode.isBlank()) {
             JLabel icon = new JLabel(UIHelper.icon(iconCode, 14, UIHelper.ACCENT));
@@ -31,7 +31,7 @@ public class SectionHeader extends JPanel {
         }
 
         JLabel label = new JLabel(title);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        label.setFont(Typography.EMPHASIS_BOLD);
         label.setForeground(UIHelper.TEXT_LIGHT);
         add(label);
     }

@@ -52,11 +52,11 @@ class OperationalPulseServiceTest {
     @BeforeEach
     void setUp() {
         operationalPulseService = new OperationalPulseService(
-                productionOrderRepository,
-                vehicleRepository,
-                fuelLogRepository,
-                recurringContractRepository,
-                assetRepository
+                new mz.multicore.erp.modules.manufacturing.service.ProductionOrderLookup(productionOrderRepository),
+                new mz.multicore.erp.modules.fleet.service.VehicleLookup(vehicleRepository, fuelLogRepository,
+                        org.mockito.Mockito.mock(mz.multicore.erp.modules.fleet.repository.FleetManifestRepository.class)),
+                new mz.multicore.erp.modules.recurring.service.RecurringContractLookup(recurringContractRepository),
+                new mz.multicore.erp.modules.assets.service.AssetLookup(assetRepository)
         );
         CurrentUserContext.setCurrentUser("admin", "ADMIN");
         CurrentUserContext.setCurrentCompanyId(10L);

@@ -39,7 +39,7 @@ public class SalesReturnDialog {
         headerCard.setBackground(UIHelper.BG_CARD);
         headerCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(10, 12, 10, 12)
+                new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD)
         ));
 
         headerCard.add(createHeaderItem("Fatura Original:", invoice.invoiceNumber()));
@@ -54,7 +54,7 @@ public class SalesReturnDialog {
         // 2. Grelha de linhas devolvíveis
         ModernPanel tableCard = new ModernPanel(16);
         tableCard.setLayout(new BorderLayout(0, 8));
-        tableCard.setBorder(new EmptyBorder(10, 12, 10, 12));
+        tableCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cols = {"ID", "Produto", "SKU", "Preço Unit.", "Faturado", "Já Devolvido", "Disponível", "Cx.", "Qtd a Devolver", "Reintegrar Stock?"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
@@ -85,7 +85,7 @@ public class SalesReturnDialog {
         UIHelper.styleScrollPane(scroll);
 
         JLabel totalCreditLbl = new JLabel("Total a Creditar: 0,00 MT (incl. IVA)");
-        totalCreditLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        totalCreditLbl.setFont(Typography.EMPHASIS_BOLD);
         totalCreditLbl.setForeground(UIHelper.APPROVED_GREEN);
 
         List<ReturnableInvoiceLineDTO> linesData = new ArrayList<>();
@@ -184,7 +184,7 @@ public class SalesReturnDialog {
                             });
                         }
                     },
-                    err -> ToastManager.show(tableCard, FeedbackType.ERROR, "Erro ao carregar linhas: " + err.getMessage())
+                    err -> UserErrors.toast(tableCard, "carregar linhas", err)
             );
         };
 
@@ -239,11 +239,11 @@ public class SalesReturnDialog {
         JPanel p = new JPanel(new BorderLayout(0, 2));
         p.setOpaque(false);
         JLabel l = new JLabel(label);
-        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        l.setFont(Typography.CAPTION);
         l.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel v = new JLabel(value != null ? value : "-");
-        v.setFont(v.getFont().deriveFont(Font.BOLD, 12f));
+        v.setFont(Typography.BODY_BOLD);
         v.setForeground(UIHelper.TEXT_LIGHT);
 
         p.add(l, BorderLayout.NORTH);

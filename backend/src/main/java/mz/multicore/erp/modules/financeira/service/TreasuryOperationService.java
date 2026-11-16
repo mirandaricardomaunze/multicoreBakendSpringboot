@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
 import mz.multicore.erp.modules.financeira.model.TransactionType;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
+import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 import mz.multicore.erp.modules.financeira.model.TreasuryTransaction;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
@@ -63,13 +64,15 @@ public class TreasuryOperationService {
         registerAutoPayout(amount, "Pagamento Despesa: " + description);
     }
 
-    public void registerAutoPayout(BigDecimal amount, String description) {
+    public TreasuryTransactionDTO registerAutoPayout(BigDecimal amount, String description) {
         List<TreasuryAccount> accounts = accountRepository.findByCompanyIdOrderByName(
                 CurrentUserContext.getCurrentCompanyId());
         if (accounts.isEmpty()) {
-            return;
+            return null;
         }
-        TreasuryAccount defaultAccount = accounts.get(0);
+        // The ledger posts automatic payouts (salaries, expenses, taxes) to Caixa: take them from the cash account.
+        TreasuryAccount defaultAccount = accounts.stream()
+                .filter(a -> a.getAccountType() == TreasuryAccountType.CASH).findFirst().orElse(accounts.get(0));
 
         defaultAccount.setBalance(defaultAccount.getBalance().subtract(amount));
         accountRepository.save(defaultAccount);
@@ -80,7 +83,7 @@ public class TreasuryOperationService {
         tx.setAmount(amount);
         tx.setDescription(description);
         tx.setTransactionDate(LocalDateTime.now());
-        transactionRepository.save(tx);
+        return toDTO(transactionRepository.save(tx));
     }
 
     public TreasuryTransactionDTO toDTO(TreasuryTransaction tx) {

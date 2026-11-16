@@ -31,7 +31,8 @@ class QualityEquipmentPrintServiceTest {
     @BeforeEach
     void setup() {
         assignmentRepository = mock(WorkerEquipmentAssignmentRepository.class);
-        service = new QualityEquipmentPrintService(assignmentRepository);
+        service = new QualityEquipmentPrintService(
+                new mz.multicore.erp.modules.quality.service.WorkerEquipmentAssignmentLookup(assignmentRepository));
         CurrentUserContext.setCurrentCompanyId(1L);
         CurrentUserContext.setCurrentUser("admin", "ADMIN");
     }

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
 import mz.multicore.erp.desktop.client.RecurringContractApiClient;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -62,42 +63,36 @@ public final class RecurringContractFormDialog {
         dialog.setOnSave(() -> {
             String number = numberField.getText().trim();
             if (number.isEmpty()) {
-                numberField.requestFocus();
-                throw new IllegalArgumentException("O número do contrato é obrigatório.");
+                throw FieldValidationException.of(numberField, "O número do contrato é obrigatório.");
             }
 
             Long customerId;
             try {
                 customerId = Long.parseLong(customerIdField.getText().trim());
             } catch (NumberFormatException e) {
-                customerIdField.requestFocus();
-                throw new IllegalArgumentException("O ID do cliente deve ser um número válido.");
+                throw FieldValidationException.of(customerIdField, "O ID do cliente deve ser um número válido.");
             }
 
             String desc = descField.getText().trim();
             if (desc.isEmpty()) {
-                descField.requestFocus();
-                throw new IllegalArgumentException("A descrição do serviço/avença é obrigatória.");
+                throw FieldValidationException.of(descField, "A descrição do serviço/avença é obrigatória.");
             }
 
             BigDecimal amount;
             try {
                 amount = new BigDecimal(amountField.getText().trim().replace(",", "."));
                 if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                    amountField.requestFocus();
-                    throw new IllegalArgumentException("O valor fixo deve ser positivo.");
+                    throw FieldValidationException.of(amountField, "O valor fixo deve ser positivo.");
                 }
             } catch (Exception e) {
-                amountField.requestFocus();
-                throw new IllegalArgumentException("Valor fixo inválido.");
+                throw FieldValidationException.of(amountField, "Valor fixo inválido.");
             }
 
             LocalDate startDate;
             try {
                 startDate = LocalDate.parse(startDateField.getText().trim(), DATE_FMT);
             } catch (Exception e) {
-                startDateField.requestFocus();
-                throw new IllegalArgumentException("Data de início inválida. Use DD/MM/AAAA.");
+                throw FieldValidationException.of(startDateField, "Data de início inválida. Use DD/MM/AAAA.");
             }
 
             LocalDate endDate = null;
@@ -106,12 +101,10 @@ public final class RecurringContractFormDialog {
                 try {
                     endDate = LocalDate.parse(endStr, DATE_FMT);
                     if (endDate.isBefore(startDate)) {
-                        endDateField.requestFocus();
-                        throw new IllegalArgumentException("A data de término não pode ser anterior à data de início.");
+                        throw FieldValidationException.of(endDateField, "A data de término não pode ser anterior à data de início.");
                     }
                 } catch (Exception e) {
-                    endDateField.requestFocus();
-                    throw new IllegalArgumentException("Data de término inválida. Use DD/MM/AAAA.");
+                    throw FieldValidationException.of(endDateField, "Data de término inválida. Use DD/MM/AAAA.");
                 }
             }
 

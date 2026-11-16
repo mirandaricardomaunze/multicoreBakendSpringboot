@@ -4,11 +4,10 @@ import mz.multicore.erp.modules.dashboard.dto.OperationalPulseDTO;
 import mz.multicore.erp.modules.fleet.model.FuelLog;
 import mz.multicore.erp.modules.fleet.model.Vehicle;
 import mz.multicore.erp.modules.fleet.model.VehicleStatus;
-import mz.multicore.erp.modules.fleet.repository.FuelLogRepository;
-import mz.multicore.erp.modules.fleet.repository.VehicleRepository;
+import mz.multicore.erp.modules.fleet.service.VehicleLookup;
 import mz.multicore.erp.modules.manufacturing.model.ProductionOrder;
 import mz.multicore.erp.modules.manufacturing.model.ProductionOrderStatus;
-import mz.multicore.erp.modules.manufacturing.repository.ProductionOrderRepository;
+import mz.multicore.erp.modules.manufacturing.service.ProductionOrderLookup;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -19,20 +18,17 @@ import java.util.List;
 @Component
 public class IndustrialAndFleetPulseCalculator {
 
-    private final ProductionOrderRepository productionOrderRepository;
-    private final VehicleRepository vehicleRepository;
-    private final FuelLogRepository fuelLogRepository;
+    private final ProductionOrderLookup productionOrderLookup;
+    private final VehicleLookup vehicleLookup;
 
-    public IndustrialAndFleetPulseCalculator(ProductionOrderRepository productionOrderRepository,
-                                             VehicleRepository vehicleRepository,
-                                             FuelLogRepository fuelLogRepository) {
-        this.productionOrderRepository = productionOrderRepository;
-        this.vehicleRepository = vehicleRepository;
-        this.fuelLogRepository = fuelLogRepository;
+    public IndustrialAndFleetPulseCalculator(ProductionOrderLookup productionOrderLookup,
+                                             VehicleLookup vehicleLookup) {
+        this.productionOrderLookup = productionOrderLookup;
+        this.vehicleLookup = vehicleLookup;
     }
 
     public OperationalPulseDTO.ManufacturingPulse calculateManufacturingPulse(Long companyId) {
-        List<ProductionOrder> orders = productionOrderRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        List<ProductionOrder> orders = productionOrderLookup.listForCompany(companyId);
         long planned = 0;
         long inProgress = 0;
         long completed = 0;
@@ -55,7 +51,7 @@ public class IndustrialAndFleetPulseCalculator {
     }
 
     public OperationalPulseDTO.FleetPulse calculateFleetPulse(Long companyId) {
-        List<Vehicle> vehicles = vehicleRepository.findByCompanyIdOrderByLicensePlateAsc(companyId);
+        List<Vehicle> vehicles = vehicleLookup.listForCompany(companyId);
         long active = vehicles.stream().filter(v -> v.getStatus() == VehicleStatus.OPERATIONAL).count();
         long alerts = vehicles.stream().filter(v -> v.getStatus() == VehicleStatus.MAINTENANCE || v.getStatus() == VehicleStatus.OUT_OF_SERVICE).count();
 
@@ -66,7 +62,7 @@ public class IndustrialAndFleetPulseCalculator {
         int efficiencyCount = 0;
 
         for (Vehicle v : vehicles) {
-            List<FuelLog> logs = fuelLogRepository.findByVehicleIdOrderByLogTimestampDesc(v.getId());
+            List<FuelLog> logs = vehicleLookup.listFuelLogsForVehicle(v.getId());
             for (FuelLog log : logs) {
                 if (log.getLogTimestamp() != null && log.getLogTimestamp().isAfter(thirtyDaysAgo)) {
                     if (log.getLitersFilled() != null) totalLiters = totalLiters.add(log.getLitersFilled());

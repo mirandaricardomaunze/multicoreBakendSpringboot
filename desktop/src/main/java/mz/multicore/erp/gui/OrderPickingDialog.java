@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -58,7 +60,7 @@ public class OrderPickingDialog {
         infoCard.setBackground(UIHelper.BG_CARD);
         infoCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(8, 12, 8, 12)
+                new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD)
         ));
 
         infoCard.add(createMetaChip("ENCOMENDA", details.orderNumber(), UIHelper.ACCENT_BLUE));
@@ -70,7 +72,7 @@ public class OrderPickingDialog {
         // 2. Barra de Leitura Óptica
         JPanel scanBar = new JPanel(new BorderLayout(10, 0));
         scanBar.setOpaque(false);
-        scanBar.setBorder(new EmptyBorder(4, 0, 4, 0));
+        scanBar.setBorder(new EmptyBorder(Spacing.XS, 0, Spacing.XS, 0));
 
         JPanel scanInputPanel = new JPanel(new BorderLayout(6, 0));
         scanInputPanel.setOpaque(false);
@@ -86,7 +88,7 @@ public class OrderPickingDialog {
         JCheckBox boxModeCheck = new JCheckBox("Bipar Caixa Inteira");
         boxModeCheck.setOpaque(false);
         boxModeCheck.setForeground(UIHelper.TEXT_LIGHT);
-        boxModeCheck.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        boxModeCheck.setFont(Typography.BODY);
 
         ModernButton btnCheckAll = new ModernButton("Conferir Tudo");
         btnCheckAll.setIcon(UIHelper.icon("fas-check-double", 14));
@@ -181,10 +183,10 @@ public class OrderPickingDialog {
         // 4. Rodapé e Resumo
         JPanel bottomPanel = new JPanel(new BorderLayout(12, 0));
         bottomPanel.setOpaque(false);
-        bottomPanel.setBorder(new EmptyBorder(6, 0, 0, 0));
+        bottomPanel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         JLabel progressLabel = new JLabel();
-        progressLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        progressLabel.setFont(Typography.EMPHASIS_BOLD);
 
         JTextField notesField = new JTextField();
         UIHelper.styleTextField(notesField);
@@ -355,10 +357,10 @@ public class OrderPickingDialog {
         JPanel chip = new JPanel(new GridLayout(2, 1, 0, 2));
         chip.setOpaque(false);
         JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        lbl.setFont(Typography.CAPTION);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         JLabel val = new JLabel(value);
-        val.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        val.setFont(Typography.BODY_BOLD);
         val.setForeground(valueColor);
         chip.add(lbl);
         chip.add(val);

@@ -14,6 +14,7 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Order;
+import mz.multicore.erp.modules.comercial.model.OrderStatus;
 import mz.multicore.erp.modules.comercial.model.SalesChannel;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
@@ -86,7 +87,7 @@ public class DeliveryGuideBillingService {
         guide.setInvoiceNumber(invoice.getInvoiceNumber());
         guideRepository.save(guide);
         if (order != null) {
-            order.setStatus("BILLED");
+            order.setStatus(OrderStatus.BILLED.name());
             order.setInvoiceId(invoice.getId());
             orderRepository.save(order);
         }
@@ -109,7 +110,7 @@ public class DeliveryGuideBillingService {
             guideRepository.save(guide);
         }
         orderRepository.findFirstByCompanyIdAndInvoiceId(event.companyId(), event.invoiceId()).ifPresent(order -> {
-            order.setStatus(guide == null ? "PENDING" : "GUIDED");
+            order.setStatus((guide == null ? OrderStatus.PENDING : OrderStatus.GUIDED).name());
             order.setInvoiceId(null);
             orderRepository.save(order);
         });

@@ -128,7 +128,7 @@ class PayrollBonusServiceTest {
         assertEquals(1, paid.lines().size());
         assertEquals("EMP-2", paid.lines().get(0).employeeNumber());
         verify(bonusRepository, times(1)).save(any(PayrollBonus.class));
-        verify(financeService, times(1)).registerAutoPayout(any(), any());
+        verify(financeService, times(1)).registerAutoPayout(any(), any(), any());
     }
 
     @Test
@@ -143,7 +143,7 @@ class PayrollBonusServiceTest {
         when(bonusRepository.existsByBonusTypeAndReferenceId(eq("VACATION_ALLOWANCE"), eq(50L))).thenReturn(true);
 
         assertThrows(BusinessRuleException.class, () -> service.payVacationAllowance(50L));
-        verify(financeService, never()).registerAutoPayout(any(), any());
+        verify(financeService, never()).registerAutoPayout(any(), any(), any());
     }
 
     private static Employee employee(Long id, String number, String name, BigDecimal base,

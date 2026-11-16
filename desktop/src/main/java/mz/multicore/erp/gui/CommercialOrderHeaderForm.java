@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
@@ -25,13 +27,13 @@ final class CommercialOrderHeaderForm {
     static ModernPanel createHeaderCard(ComercialPanel owner) {
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new GridBagLayout());
-        formCard.setBorder(new EmptyBorder(12, 16, 10, 16));
+        formCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.SM, Spacing.LG));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Coluna 0: Cliente
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 1; gbc.weightx = 1.2;
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 1; gbc.weightx = 2.2;
         gbc.insets = new Insets(2, 6, 2, 6);
         JLabel clientLbl = new JLabel("Cliente:");
         clientLbl.setForeground(UIHelper.TEXT_MUTED);
@@ -41,10 +43,11 @@ final class CommercialOrderHeaderForm {
         gbc.insets = new Insets(2, 6, 4, 6);
         owner.orderClientCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.orderClientCombo);
+        owner.orderClientCombo.setPrototypeDisplayValue("Consumidor Final — nome comprido");
         formCard.add(owner.orderClientCombo, gbc);
 
         // Coluna 1: Nome do Comprador (Walk-in se 'Consumidor Final')
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0;
+        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 0.7;
         gbc.insets = new Insets(2, 6, 2, 6);
         JLabel walkInLbl = new JLabel("Comprador (se Consumidor Final):");
         walkInLbl.setForeground(UIHelper.TEXT_MUTED);
@@ -58,7 +61,7 @@ final class CommercialOrderHeaderForm {
         formCard.add(owner.orderClientWalkInField, gbc);
 
         // Coluna 2: Modalidade de Pagamento
-        gbc.gridx = 2; gbc.gridy = 0; gbc.weightx = 1.0;
+        gbc.gridx = 2; gbc.gridy = 0; gbc.weightx = 0.8;
         gbc.insets = new Insets(2, 6, 2, 6);
         JLabel termsLbl = new JLabel("Modalidade de pagamento:");
         termsLbl.setForeground(UIHelper.TEXT_MUTED);
@@ -74,7 +77,7 @@ final class CommercialOrderHeaderForm {
         formCard.add(owner.orderPaymentTermsCombo, gbc);
 
         // Coluna 3: Armazém Origem
-        gbc.gridx = 3; gbc.gridy = 0; gbc.weightx = 0.8;
+        gbc.gridx = 3; gbc.gridy = 0; gbc.weightx = 1.4;
         gbc.insets = new Insets(2, 6, 2, 6);
         JLabel warehouseLbl = new JLabel("Armazém:");
         warehouseLbl.setForeground(UIHelper.TEXT_MUTED);
@@ -84,6 +87,7 @@ final class CommercialOrderHeaderForm {
         gbc.insets = new Insets(2, 6, 4, 6);
         owner.orderWarehouseCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.orderWarehouseCombo);
+        owner.orderWarehouseCombo.setPrototypeDisplayValue("Armazém Lisboa Central");
         formCard.add(owner.orderWarehouseCombo, gbc);
 
         // Coluna 4: Tipo de Encomenda
@@ -124,12 +128,12 @@ final class CommercialOrderHeaderForm {
 
         JLabel kindHint = new JLabel();
         kindHint.setForeground(UIHelper.TEXT_MUTED);
-        kindHint.setFont(kindHint.getFont().deriveFont(11f));
+        kindHint.setFont(Typography.CAPTION);
         kindHint.setIcon(UIHelper.semanticIcon("fas-info-circle", 12));
         hintsPanel.add(kindHint, BorderLayout.WEST);
 
         owner.orderClientCreditWarningLabel = new JLabel();
-        owner.orderClientCreditWarningLabel.setFont(owner.orderClientCreditWarningLabel.getFont().deriveFont(Font.BOLD, 11f));
+        owner.orderClientCreditWarningLabel.setFont(Typography.CAPTION_BOLD);
         owner.orderClientCreditWarningLabel.setForeground(UIHelper.REJECTED_RED);
         owner.orderClientCreditWarningLabel.setIcon(UIHelper.semanticIcon("fas-exclamation-triangle", 12));
         owner.orderClientCreditWarningLabel.setVisible(false);
@@ -153,7 +157,7 @@ final class CommercialOrderHeaderForm {
         syncKind.run();
 
         // Linha 3: Nota no pé da página / Observações
-        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 6; gbc.gridheight = 1; gbc.weightx = 1.0;
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 6; gbc.gridheight = 1; gbc.weightx = 1.0;
         gbc.insets = new Insets(3, 6, 4, 6);
         JPanel notesPanel = new JPanel(new BorderLayout(0, 2));
         notesPanel.setOpaque(false);
@@ -165,6 +169,9 @@ final class CommercialOrderHeaderForm {
         notesPanel.add(notesLbl, BorderLayout.NORTH);
         notesPanel.add(owner.orderNotesField, BorderLayout.CENTER);
         formCard.add(notesPanel, gbc);
+        // Row 3 (before the notes): delivery promise, client project and the price list that applies.
+        gbc.gridy = 3; gbc.insets = new Insets(8, 6, 4, 6);
+        formCard.add(OrderEditorExtras.build(owner), gbc);
 
         // Instalar listeners de alteração para controlo de dirty state
         owner.orderClientCombo.addActionListener(e -> {

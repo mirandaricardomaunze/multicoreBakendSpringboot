@@ -16,11 +16,11 @@ final class CommercialInvoicesView {
     static JPanel create(ComercialPanel owner) {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new FlowLayout(FlowLayout.LEFT, 16, 6));
-        formCard.setBorder(new EmptyBorder(10, 14, 10, 14));
+        formCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
 
         owner.clientCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.clientCombo);
@@ -98,17 +98,17 @@ final class CommercialInvoicesView {
 
         // Row 7: Total summary (a emissão é feita pelo botão Gravar do modal)
         owner.totalLabel = new JLabel("Total Rascunho: 0,00 MT (incl. IVA)");
-        owner.totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        owner.totalLabel.setFont(Typography.EMPHASIS_BOLD);
         owner.totalLabel.setForeground(Color.WHITE);
 
         JPanel totalRow = new JPanel(new BorderLayout());
         totalRow.setOpaque(false);
-        totalRow.setBorder(new EmptyBorder(12, 0, 0, 0));
+        totalRow.setBorder(new EmptyBorder(Spacing.MD, 0, 0, 0));
         totalRow.add(owner.totalLabel, BorderLayout.EAST);
 
         ModernPanel draftCard = new ModernPanel(16);
         draftCard.setLayout(new BorderLayout(0, 10));
-        draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        draftCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         draftCard.setPreferredSize(new Dimension(0, 280));
         JLabel lineHint = new JLabel("Preparação tabular: edite na grelha ou bipe o código de barras (F2).");
         lineHint.setForeground(UIHelper.TEXT_MUTED);
@@ -142,7 +142,7 @@ final class CommercialInvoicesView {
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 6));
-        listCard.setBorder(new EmptyBorder(8, 12, 8, 12));
+        listCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] invoicesCols = {"ID", "Nº Fatura", "Cliente", "Data", "Negócio", "Estado", "Total", "Em Dívida", "Impressão"};
         owner.invoicesTableModel = new DefaultTableModel(invoicesCols, 0) {
@@ -198,25 +198,14 @@ final class CommercialInvoicesView {
         issueBtn.setColors(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER);
         issueBtn.setToolTipText("Emitir uma nova fatura ou faturar uma encomenda pendente.");
 
-        JPanel cardHeader = new JPanel(new BorderLayout(8, 0));
-        cardHeader.setOpaque(false);
-        cardHeader.add(UIHelper.createSubheading("Faturas Recentes"), BorderLayout.WEST);
         if (!mz.multicore.erp.desktop.session.SignedInUser.isManagerOrAdmin()) {
             issueBtn.setVisible(false);
         }
-        cardHeader.add(UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn), BorderLayout.EAST);
-
-        JPanel invFilters = UIHelper.filterBar(
-                new JComponent[]{invSearch,
-                        TableFilter.label("Negócio:"), owner.invBusinessUnitCombo,
-                        TableFilter.label("Estado:"), invEstado,
-                        TableFilter.label("Período:", "fas-calendar-alt"), invPeriodo},
-                null);
-        JPanel cardTop = new JPanel(new BorderLayout(0, 10));
-        cardTop.setOpaque(false);
-        cardTop.add(cardHeader, BorderLayout.NORTH);
-        cardTop.add(invFilters, BorderLayout.CENTER);
-        listCard.add(cardTop, BorderLayout.NORTH);
+        JPanel invFilters = TableFilter.bar(invSearch,
+                TableFilter.label("Negócio:"), owner.invBusinessUnitCombo,
+                TableFilter.label("Estado:"), invEstado,
+                TableFilter.label("Período:", "fas-calendar-alt"), invPeriodo);
+        listCard.add(UIHelper.tableCardTop("Faturas Recentes", invFilters, refreshBtn, moreBtn, issueBtn), BorderLayout.NORTH);
 
         // A tabela vem paginada do servidor; o rodapé fica reservado exclusivamente à paginação.
         owner.invoicesPager = new TablePager(owner::loadInvoicesPage);
@@ -250,7 +239,7 @@ final class CommercialInvoicesView {
         JPanel group = new JPanel(new BorderLayout(0, 4));
         group.setOpaque(false);
         JLabel lbl = new JLabel(labelText);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lbl.setFont(Typography.BODY);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         group.add(lbl, BorderLayout.NORTH);
         if (width > 0) {

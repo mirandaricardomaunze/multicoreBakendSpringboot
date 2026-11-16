@@ -74,7 +74,7 @@ class CreditRiskHarnessTest {
         creditRiskService = new CreditRiskService(
                 invoiceRepository,
                 clientRepository,
-                approvalRequestRepository,
+                new mz.multicore.erp.modules.approvals.service.ApprovalRequestLookup(approvalRequestRepository),
                 approvalService,
                 companyService
         );

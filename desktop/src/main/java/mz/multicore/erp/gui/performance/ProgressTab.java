@@ -28,7 +28,7 @@ public class ProgressTab extends JPanel {
 
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
 
         buildUI();
     }
@@ -83,7 +83,7 @@ public class ProgressTab extends JPanel {
             JPanel emptyPanel = new ModernPanel();
             emptyPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 40));
             JLabel lblEmpty = new JLabel("Nenhuma meta comercial ativa no momento.");
-            lblEmpty.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+            lblEmpty.setFont(Typography.EMPHASIS_BOLD);
             lblEmpty.setForeground(UIHelper.TEXT_MUTED);
             emptyPanel.add(lblEmpty);
             cardsContainer.add(emptyPanel);
@@ -103,7 +103,7 @@ public class ProgressTab extends JPanel {
         card.setLayout(new BorderLayout(15, 12));
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1),
-                BorderFactory.createEmptyBorder(16, 20, 16, 20)
+                BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL)
         ));
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
 
@@ -112,7 +112,7 @@ public class ProgressTab extends JPanel {
         headerRow.setOpaque(false);
 
         JLabel title = new JLabel(p.goalName() + " (" + (p.scopeLabel() != null ? p.scopeLabel() : p.scope().name()) + ")");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         headerRow.add(title, BorderLayout.WEST);
 
@@ -121,11 +121,11 @@ public class ProgressTab extends JPanel {
 
         // On Track badge
         JLabel lblTrack = new JLabel(p.isOnTrack() ? "No Ritmo" : "Atrasado");
-        lblTrack.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        lblTrack.setFont(Typography.CAPTION_BOLD);
         lblTrack.setForeground(Color.WHITE);
         lblTrack.setOpaque(true);
         lblTrack.setBackground(p.isOnTrack() ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
-        lblTrack.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+        lblTrack.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM));
         badgeRow.add(lblTrack);
 
         // Alert Level badge
@@ -168,11 +168,11 @@ public class ProgressTab extends JPanel {
         JPanel p = new JPanel(new GridLayout(2, 1, 0, 2));
         p.setOpaque(false);
         JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        lbl.setFont(Typography.CAPTION);
         lbl.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel val = new JLabel(value);
-        val.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        val.setFont(Typography.EMPHASIS_BOLD);
         val.setForeground(UIHelper.TEXT_LIGHT);
 
         p.add(lbl);
@@ -190,11 +190,11 @@ public class ProgressTab extends JPanel {
         Color bg = getColorForAlert(level);
 
         JLabel lbl = new JLabel(text);
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        lbl.setFont(Typography.CAPTION_BOLD);
         lbl.setForeground(Color.WHITE);
         lbl.setOpaque(true);
         lbl.setBackground(bg);
-        lbl.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+        lbl.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM));
         return lbl;
     }
 

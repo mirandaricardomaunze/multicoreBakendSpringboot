@@ -44,10 +44,10 @@ public class ModernButton extends JButton {
         setContentAreaFilled(false);
         setFocusPainted(false);
         setBorderPainted(false);
-        setBorder(BorderFactory.createEmptyBorder(0, 14, 0, 14));
+        setBorder(BorderFactory.createEmptyBorder(0, Spacing.LG, 0, Spacing.LG));
         setBackground(normalColor);
         setForeground(textColor);
-        setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        setFont(Typography.EMPHASIS_BOLD);
         setCursor(new Cursor(Cursor.HAND_CURSOR));
         setUI(ModernButtonPainter.createButtonUI());
 
@@ -117,6 +117,9 @@ public class ModernButton extends JButton {
         super.setBackground(UIHelper.blendColors(normalColor, hoverColor, hoverProgress));
         repaint();
     }
+
+    /** Colour the button was given (green = main action, red = destructive). See {@link ButtonStyles}. */
+    public Color getBaseColor() { return normalColor; }
 
     public void setColors(Color base, Color hover) {
         if (hoverTimer != null && hoverTimer.isRunning()) hoverTimer.stop();

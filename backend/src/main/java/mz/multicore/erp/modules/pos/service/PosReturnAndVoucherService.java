@@ -12,9 +12,10 @@ import mz.multicore.erp.modules.comercial.model.CreditNote;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.SalesChannel;
-import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
+import mz.multicore.erp.modules.comercial.service.InvoiceCommandService;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteCommandService;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.pos.dto.POSReturnRequest;
 import mz.multicore.erp.modules.pos.dto.POSReturnResultDTO;
@@ -44,25 +45,31 @@ import java.util.Optional;
 @Component
 public class PosReturnAndVoucherService {
 
-    private final InvoiceRepository invoiceRepository;
-    private final CreditNoteRepository creditNoteRepository;
+    private final InvoiceCommandService invoiceCommands;
+    private final InvoiceNoteLookup noteLookup;
+    private final InvoiceNoteCommandService noteCommands;
     private final CreditNoteService creditNoteService;
     private final StoreVoucherRepository storeVoucherRepository;
     private final TillMovementRepository tillMovementRepository;
     private final FinanceService financeService;
     private final AuditLogService auditLogService;
     private final PosSessionAndShiftService sessionAndShiftService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
-    public PosReturnAndVoucherService(InvoiceRepository invoiceRepository,
-                                      CreditNoteRepository creditNoteRepository,
+    public PosReturnAndVoucherService(InvoiceCommandService invoiceCommands,
+                                      InvoiceNoteLookup noteLookup,
+                                      InvoiceNoteCommandService noteCommands,
                                       CreditNoteService creditNoteService,
                                       StoreVoucherRepository storeVoucherRepository,
                                       TillMovementRepository tillMovementRepository,
                                       FinanceService financeService,
                                       AuditLogService auditLogService,
-                                      PosSessionAndShiftService sessionAndShiftService) {
-        this.invoiceRepository = invoiceRepository;
-        this.creditNoteRepository = creditNoteRepository;
+                                      PosSessionAndShiftService sessionAndShiftService,
+                                      org.springframework.context.ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+        this.invoiceCommands = invoiceCommands;
+        this.noteLookup = noteLookup;
+        this.noteCommands = noteCommands;
         this.creditNoteService = creditNoteService;
         this.storeVoucherRepository = storeVoucherRepository;
         this.tillMovementRepository = tillMovementRepository;
@@ -75,13 +82,13 @@ public class PosReturnAndVoucherService {
         PermissionGuard.requireManagerOrAdmin("registar devolução no POS");
         CurrentUserContext.requireCompany(request.companyId());
 
-        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(request.invoiceId(), request.companyId())
+        Invoice invoice = invoiceCommands.lockForCompany(request.invoiceId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
         String key = request.idempotencyKey();
         String fingerprint = key == null ? null : posReturnRequestFingerprint(request);
         if (key != null) {
             Optional<CreditNote> previous =
-                    creditNoteRepository.findByInvoiceIdAndPosReturnIdempotencyKey(request.invoiceId(), key);
+                    noteLookup.findCreditNoteByPosReturnKey(request.invoiceId(), key);
             if (previous.isPresent()) {
                 CreditNote note = previous.get();
                 if (!fingerprint.equals(note.getPosReturnRequestFingerprint())) {
@@ -104,11 +111,7 @@ public class PosReturnAndVoucherService {
                 invoice.getId(), "RETURN", request.warehouseId(), request.reason(), request.lines()
         ));
         if (key != null) {
-            CreditNote createdEntity = creditNoteRepository.findById(created.id())
-                    .orElseThrow(() -> new IllegalStateException("Nota de crédito criada não foi encontrada."));
-            createdEntity.setPosReturnIdempotencyKey(key);
-            createdEntity.setPosReturnRequestFingerprint(fingerprint);
-            creditNoteRepository.save(createdEntity);
+            noteCommands.markCreditNotePosReturn(created.id(), key, fingerprint);
         }
         CreditNoteDTO approved = creditNoteService.approve(created.id());
         StoreVoucher voucher = applyRefund(request, approved, invoice);
@@ -126,18 +129,24 @@ public class PosReturnAndVoucherService {
         String description = "Reembolso POS " + note.noteNumber() + " (Fatura " + invoice.getInvoiceNumber() + ")";
 
         switch (method) {
-            case CASH -> { refundCash(request.operator(), request.companyId(), amount, description); return null; }
+            case CASH -> { refundCash(request.operator(), request.companyId(), amount, description); publishRefund(request, note, amount, true); return null; }
             case CARD, BANK_TRANSFER, MPESA, EMOLA -> {
                 if (request.treasuryAccountId() == null) {
                     throw new BusinessRuleException("Conta de tesouraria é obrigatória para reembolso por " + method + ".");
                 }
                 financeService.registerTransaction(request.treasuryAccountId(), "CREDIT", amount, description);
+                publishRefund(request, note, amount, false);
                 return null;
             }
             case CREDIT -> { return null; }
             case STORE_CREDIT -> { return createStoreVoucherForReturn(invoice, note, amount, request.operator()); }
         }
         return null;
+    }
+
+    private void publishRefund(POSReturnRequest request, CreditNoteDTO note, BigDecimal amount, boolean cash) {
+        if (eventPublisher != null) eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.CustomerRefundedEvent(
+                request.companyId(), note.id(), note.noteNumber(), LocalDate.now(), amount, cash));
     }
 
     private StoreVoucher createStoreVoucherForReturn(Invoice invoice, CreditNoteDTO note, BigDecimal amount, String operator) {
@@ -153,7 +162,7 @@ public class PosReturnAndVoucherService {
             clientName = invoice.getClient() != null ? invoice.getClient().getName() : "Cliente Geral";
         }
         voucher.setClientName(clientName);
-        voucher.setCreditNote(creditNoteRepository.findById(note.id()).orElse(null));
+        voucher.setCreditNote(noteLookup.findCreditNote(note.id()).orElse(null));
         voucher.setIssuedAt(LocalDateTime.now());
         voucher.setExpiresAt(LocalDate.now().plusDays(90));
         voucher.setStatus(StoreVoucherStatus.ACTIVE);

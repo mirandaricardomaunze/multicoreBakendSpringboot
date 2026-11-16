@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.users.service;
 import mz.multicore.erp.architecture.security.AuthSessionService;
 import mz.multicore.erp.architecture.security.ManagerPinRateLimiter;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs.VerifyManagerPinResponse;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
@@ -40,32 +40,32 @@ public class AppUserService {
     }
 
     public AppUserService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
-                          CompanyRepository companyRepository,
+                          CompanyLookup companyLookup,
                           AppUserCompanyAccessRepository companyAccessRepository) {
-        this(appUserRepository, passwordEncoder, companyRepository, companyAccessRepository,
+        this(appUserRepository, passwordEncoder, companyLookup, companyAccessRepository,
                 new ManagerPinRateLimiter(3, 5), null);
     }
 
     public AppUserService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
-                          CompanyRepository companyRepository,
+                          CompanyLookup companyLookup,
                           AppUserCompanyAccessRepository companyAccessRepository,
                           ManagerPinRateLimiter managerPinRateLimiter) {
-        this(appUserRepository, passwordEncoder, companyRepository, companyAccessRepository,
+        this(appUserRepository, passwordEncoder, companyLookup, companyAccessRepository,
                 managerPinRateLimiter, null);
     }
 
     public AppUserService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
-                          CompanyRepository companyRepository,
+                          CompanyLookup companyLookup,
                           AppUserCompanyAccessRepository companyAccessRepository,
                           ManagerPinRateLimiter managerPinRateLimiter,
                           AuditLogService auditLogService) {
-        this(appUserRepository, passwordEncoder, companyRepository, companyAccessRepository,
+        this(appUserRepository, passwordEncoder, companyLookup, companyAccessRepository,
                 managerPinRateLimiter, auditLogService, null);
     }
 
     /** Construtor retrocompatível completo (testes de segurança e auditoria). */
     public AppUserService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
-                          CompanyRepository companyRepository,
+                          CompanyLookup companyLookup,
                           AppUserCompanyAccessRepository companyAccessRepository,
                           ManagerPinRateLimiter managerPinRateLimiter,
                           AuditLogService auditLogService,
@@ -73,7 +73,7 @@ public class AppUserService {
         this(appUserRepository,
                 new UserAuthenticationService(appUserRepository, passwordEncoder),
                 new ManagerPinService(appUserRepository, passwordEncoder, managerPinRateLimiter, auditLogService),
-                new UserAccountAdministrationService(appUserRepository, passwordEncoder, companyRepository,
+                new UserAccountAdministrationService(appUserRepository, passwordEncoder, companyLookup,
                         companyAccessRepository, auditLogService, authSessionService));
     }
 

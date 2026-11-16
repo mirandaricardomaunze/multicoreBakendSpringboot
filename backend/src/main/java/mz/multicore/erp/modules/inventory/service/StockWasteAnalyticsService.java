@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.inventory.service;
 
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.inventory.dto.ExpiringBatchAlertDTO;
 import mz.multicore.erp.modules.inventory.dto.WasteSummaryDTO;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
@@ -32,16 +32,16 @@ public class StockWasteAnalyticsService {
 
     private final ProductBatchRepository batchRepository;
     private final StockWasteRepository wasteRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
 
     public StockWasteAnalyticsService(
             ProductBatchRepository batchRepository,
             StockWasteRepository wasteRepository,
-            InvoiceRepository invoiceRepository
+            InvoiceLookup invoiceLookup
     ) {
         this.batchRepository = batchRepository;
         this.wasteRepository = wasteRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
     }
 
     @Transactional(readOnly = true)
@@ -120,7 +120,7 @@ public class StockWasteAnalyticsService {
             }
         }
 
-        List<Invoice> invoices = invoiceRepository.findByCompanyIdAndCreatedAtBetween(companyId, startDt, endDt);
+        List<Invoice> invoices = invoiceLookup.listCreatedBetween(companyId, startDt, endDt);
         BigDecimal totalRevenue = invoices.stream()
                 .filter(i -> i.getStatus() != InvoiceStatus.CANCELLED)
                 .map(Invoice::getTotalAmount)

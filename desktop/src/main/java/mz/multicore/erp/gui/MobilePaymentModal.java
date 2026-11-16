@@ -1,5 +1,8 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ToastManager;
@@ -42,13 +45,11 @@ public final class MobilePaymentModal extends JDialog implements MobilePaymentWo
 
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setResizable(false);
-        setSize(460, 480);
+        setSize(480, 540);
         setLocationRelativeTo(owner);
 
-        JPanel content = new JPanel(new BorderLayout(0, 16));
-        content.setBackground(UIHelper.BG_DARK);
-        content.setBorder(new EmptyBorder(20, 24, 20, 24));
-        content.add(buildHeader(), BorderLayout.NORTH);
+        JPanel content = DialogChrome.frame("fas-mobile-alt", "Pagamento por Telemóvel (Push USSD)",
+                "O cliente receberá uma solicitação no visor para digitar o PIN.", null, null);
 
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
@@ -62,25 +63,6 @@ public final class MobilePaymentModal extends JDialog implements MobilePaymentWo
         centerPanel.add(waitingPanel);
         content.add(centerPanel, BorderLayout.CENTER);
         setContentPane(content);
-    }
-
-    private JPanel buildHeader() {
-        JPanel headerPanel = new JPanel(new BorderLayout(12, 4));
-        headerPanel.setOpaque(false);
-        headerPanel.add(new JLabel(UIHelper.icon("fas-mobile-alt", 26, UIHelper.ACCENT_BLUE)), BorderLayout.WEST);
-
-        JPanel headerText = new JPanel(new GridLayout(2, 1, 0, 2));
-        headerText.setOpaque(false);
-        JLabel titleLabel = new JLabel("Pagamento por Telemóvel (Push USSD)");
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
-        titleLabel.setForeground(UIHelper.TEXT_LIGHT);
-        JLabel subtitleLabel = new JLabel("O cliente receberá uma solicitação no visor para digitar o PIN.");
-        subtitleLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        subtitleLabel.setForeground(UIHelper.TEXT_MUTED);
-
-        headerText.add(titleLabel); headerText.add(subtitleLabel);
-        headerPanel.add(headerText, BorderLayout.CENTER);
-        return headerPanel;
     }
 
     private void startPaymentFlow() {

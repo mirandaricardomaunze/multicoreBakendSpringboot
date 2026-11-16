@@ -9,16 +9,23 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 /**
- * Motor determinístico de cálculo de tendências, períodos comparativos e métricas
- * analíticas executivas para o Dashboard Comercial e de Gestão.
+ * Deterministic calculator for trends, comparison periods, and executive analytics used by the
+ * commercial and management dashboards.
  */
 public final class DashboardTrendCalculator {
+
+    /** Label used for the entire history, where no preceding period exists for comparison. */
+    public static final String NO_COMPARISON_LABEL = "histórico";
+
+    public static boolean hasComparison(String comparisonLabel) {
+        return comparisonLabel != null && !NO_COMPARISON_LABEL.equals(comparisonLabel);
+    }
 
     private DashboardTrendCalculator() {
     }
 
     /**
-     * Intervalo de datas fechado [from, to]. Valores nulos indicam limites abertos.
+     * Closed date range [from, to]. Null values represent open boundaries.
      */
     public record DateRange(LocalDate from, LocalDate to) {
         public boolean contains(LocalDate date) {
@@ -30,13 +37,13 @@ public final class DashboardTrendCalculator {
     }
 
     /**
-     * Par de períodos temporalmente alinhados (atual vs anterior) com rótulo descritivo.
+     * Pair of time-aligned current and previous periods with a descriptive label.
      */
     public record ComparisonPeriod(DateRange current, DateRange previous, String comparisonLabel) {
     }
 
     /**
-     * Resolve os intervalos de datas atual e anterior com base no filtro selecionado e na data âncora.
+     * Resolves current and previous date ranges from the selected filter and anchor date.
      */
     public static ComparisonPeriod resolvePeriods(DashboardPanel.PeriodFilter filter, LocalDate anchorDate) {
         LocalDate today = anchorDate != null ? anchorDate : LocalDate.now();
@@ -71,14 +78,14 @@ public final class DashboardTrendCalculator {
             }
             case TODOS -> {
                 DateRange current = new DateRange(null, null);
-                yield new ComparisonPeriod(current, null, "histórico");
+                yield new ComparisonPeriod(current, null, NO_COMPARISON_LABEL);
             }
         };
     }
 
     /**
-     * Calcula a variação percentual: ((V_atual - V_anterior) / V_anterior) * 100.
-     * Trata casos de borda com divisão por zero de forma segura e elegante.
+     * Calculates percentage change as ((current - previous) / previous) * 100.
+     * Handles zero denominators without producing invalid numeric results.
      */
     public static BigDecimal calculatePercentageChange(BigDecimal current, BigDecimal previous) {
         BigDecimal cur = current != null ? current : BigDecimal.ZERO;
@@ -103,7 +110,7 @@ public final class DashboardTrendCalculator {
     }
 
     /**
-     * Calcula o Ticket Médio Comercial: Receita Total / Total de Transações.
+     * Calculates the average commercial ticket as total revenue divided by transaction count.
      */
     public static BigDecimal calculateAverageTicket(BigDecimal totalRevenue, long transactionCount) {
         if (totalRevenue == null || transactionCount <= 0 || totalRevenue.compareTo(BigDecimal.ZERO) <= 0) {
@@ -113,7 +120,7 @@ public final class DashboardTrendCalculator {
     }
 
     /**
-     * Calcula a Margem Bruta Estimada (%): (Lucro Bruto / Receita Total) * 100.
+     * Calculates estimated gross margin as gross profit divided by total revenue.
      */
     public static BigDecimal calculateGrossMarginPercentage(BigDecimal grossProfit, BigDecimal totalRevenue) {
         if (grossProfit == null || totalRevenue == null || totalRevenue.compareTo(BigDecimal.ZERO) <= 0) {
@@ -124,7 +131,7 @@ public final class DashboardTrendCalculator {
     }
 
     /**
-     * Formata o percentual de variação de forma limpa, com sinal explícito (+/-).
+     * Formats a percentage change with an explicit positive or negative sign.
      */
     public static String formatPercentage(BigDecimal percent) {
         if (percent == null || percent.compareTo(BigDecimal.ZERO) == 0) {
@@ -137,7 +144,7 @@ public final class DashboardTrendCalculator {
     }
 
     /**
-     * Sem movimento no período, o cartão mostra o valor do período anterior em vez de só zeros.
+     * When the period is idle, the card shows the previous value instead of an uninformative zero.
      */
     public static String activityHint(BigDecimal current, BigDecimal previous, String comparisonLabel, String activeText) {
         boolean idle = current == null || current.signum() <= 0;
@@ -148,7 +155,7 @@ public final class DashboardTrendCalculator {
     }
 
     /**
-     * Formata o valor do Ticket Médio para exibição em Meticais.
+     * Formats the average ticket for display in Mozambican meticais.
      */
     public static String formatAverageTicket(BigDecimal avgTicket) {
         BigDecimal val = avgTicket != null ? avgTicket : BigDecimal.ZERO;

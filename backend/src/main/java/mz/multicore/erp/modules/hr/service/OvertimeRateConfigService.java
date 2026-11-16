@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.OvertimeRateConfigDTO;
 import mz.multicore.erp.modules.hr.dto.SaveOvertimeRateConfigRequest;
 import mz.multicore.erp.modules.hr.model.OvertimeRateConfig;
@@ -27,14 +27,14 @@ import java.util.List;
 public class OvertimeRateConfigService {
 
     private final OvertimeRateConfigRepository repository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
 
     public OvertimeRateConfigService(OvertimeRateConfigRepository repository,
-                                     CompanyRepository companyRepository,
+                                     CompanyLookup companyLookup,
                                      AuditLogService auditLogService) {
         this.repository = repository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -51,8 +51,7 @@ public class OvertimeRateConfigService {
             throw new BusinessRuleException("O fim da vigência não pode ser anterior ao início.");
         }
         OvertimeRateConfig config = new OvertimeRateConfig();
-        config.setCompany(companyRepository.findById(currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada.")));
+        config.setCompany(companyLookup.requireActive(currentCompanyId()));
         config.setName(request.name().trim());
         config.setEffectiveFrom(request.effectiveFrom());
         config.setEffectiveTo(request.effectiveTo());

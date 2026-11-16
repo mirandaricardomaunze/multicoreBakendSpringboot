@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.SimpleBarChart;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -14,7 +16,7 @@ final class HROverviewUi {
 
     static JLabel subtitle(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        label.setFont(Typography.CAPTION);
         label.setForeground(UIHelper.TEXT_MUTED);
         return label;
     }
@@ -22,7 +24,7 @@ final class HROverviewUi {
     static ModernPanel chartCard(SimpleBarChart chart) {
         ModernPanel card = new ModernPanel(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         card.add(chart, BorderLayout.CENTER);
         return card;
     }

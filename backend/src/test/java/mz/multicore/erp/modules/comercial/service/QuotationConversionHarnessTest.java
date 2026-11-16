@@ -15,11 +15,13 @@ import mz.multicore.erp.modules.comercial.model.QuotationStatus;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -73,7 +75,6 @@ class QuotationConversionHarnessTest {
     private TillSessionRepository tillSessionRepository;
     private TillMovementRepository tillMovementRepository;
     private InvoiceRepository invoiceRepository;
-    private TreasuryAccountRepository treasuryAccountRepository;
     private InventoryService inventoryService;
     private FinanceService financeService;
     private PaymentEntryRepository paymentEntryRepository;
@@ -108,13 +109,12 @@ class QuotationConversionHarnessTest {
         comercialService = mock(ComercialService.class);
 
         quotationService = new QuotationService(quotationRepository, clientRepository, productRepository,
-                companyRepository, warehouseRepository, walkInClientProvider, documentNumberService,
+                new CompanyLookup(companyRepository), new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), walkInClientProvider, documentNumberService,
                 auditLogService, comercialService);
 
         tillSessionRepository = mock(TillSessionRepository.class);
         tillMovementRepository = mock(TillMovementRepository.class);
         invoiceRepository = mock(InvoiceRepository.class);
-        treasuryAccountRepository = mock(TreasuryAccountRepository.class);
         inventoryService = mock(InventoryService.class);
         financeService = mock(FinanceService.class);
         paymentEntryRepository = mock(PaymentEntryRepository.class);
@@ -125,11 +125,18 @@ class QuotationConversionHarnessTest {
         creditNoteRepository = mock(CreditNoteRepository.class);
 
         posService = new POSService(
-                tillSessionRepository, tillMovementRepository, invoiceRepository, clientRepository,
-                productRepository, warehouseRepository, companyRepository, treasuryAccountRepository,
+                tillSessionRepository, tillMovementRepository,
+                new InvoiceLookup(invoiceRepository), new InvoiceCommandService(invoiceRepository),
+                new ClientLookup(clientRepository),
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), new CompanyLookup(companyRepository),
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
-                eventPublisher, storeVoucherRepository, creditNoteRepository, quotationRepository
+                eventPublisher, storeVoucherRepository,
+                new InvoiceNoteLookup(creditNoteRepository,
+                        mock(mz.multicore.erp.modules.comercial.repository.DebitNoteRepository.class)),
+                new InvoiceNoteCommandService(creditNoteRepository),
+                new OrderCommandService(mock(OrderRepository.class), quotationRepository)
         );
 
         company = new Company();

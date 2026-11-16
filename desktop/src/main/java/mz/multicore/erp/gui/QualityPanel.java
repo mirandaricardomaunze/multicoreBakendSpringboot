@@ -45,7 +45,7 @@ public class QualityPanel extends JPanel {
         this.printApiClient = printApiClient;
 
         setOpaque(false);
-        setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         initComponents();
     }

@@ -35,7 +35,7 @@ public class CreditRiskPanel extends JPanel {
         this.creditRiskApiClient = creditRiskApiClient;
         setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(10, 12, 10, 12));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         busyBar = UIHelper.createBusyBar();
         busyBar.setVisible(false);
         busyBar.setPreferredSize(new Dimension(140, 6));
@@ -52,7 +52,7 @@ public class CreditRiskPanel extends JPanel {
     private JPanel buildMainCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         dateField = new JTextField(LocalDate.now().toString());
         dateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
@@ -87,7 +87,7 @@ public class CreditRiskPanel extends JPanel {
         JPanel filterInputs = TableFilter.bar(TableFilter.label("Data Ref:"), dateField, TableFilter.label("Risco:"), riskFilterCombo, searchField);
         JPanel filterBar = new JPanel(new BorderLayout(8, 0));
         filterBar.setOpaque(false);
-        filterBar.setBorder(new EmptyBorder(0, 0, 4, 0));
+        filterBar.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filterBar.add(filterInputs, BorderLayout.WEST);
         filterBar.add(peekToggleBtn, BorderLayout.EAST);
 

@@ -36,14 +36,14 @@ public class TopProductsWidget extends ModernPanel {
     public TopProductsWidget() {
         super(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
         setLayout(new BorderLayout(0, 10));
-        setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // Header
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
 
         JLabel titleLabel = new JLabel("Top 5 Produtos Mais Vendidos");
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel iconLabel = new JLabel(UIHelper.icon("fas-award", 14, UIHelper.PENDING_YELLOW));
@@ -81,9 +81,9 @@ public class TopProductsWidget extends ModernPanel {
         listContainer.removeAll();
         if (products.isEmpty()) {
             JLabel empty = new JLabel("Sem dados de vendas registados.");
-            empty.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            empty.setFont(Typography.BODY);
             empty.setForeground(UIHelper.TEXT_MUTED);
-            empty.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
+            empty.setBorder(BorderFactory.createEmptyBorder(Spacing.XL, Spacing.SM, Spacing.XL, Spacing.SM));
             listContainer.add(empty);
         } else {
             for (int i = 0; i < products.size(); i++) {
@@ -107,12 +107,12 @@ public class TopProductsWidget extends ModernPanel {
         textRow.setOpaque(false);
 
         JLabel nameLbl = new JLabel(rank + ". " + p.name());
-        nameLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        nameLbl.setFont(Typography.BODY_BOLD);
         nameLbl.setForeground(UIHelper.TEXT_LIGHT);
 
         String revStr = String.format("%,.2f MT (%d un)", p.revenue() != null ? p.revenue() : BigDecimal.ZERO, p.quantity());
         JLabel revLbl = new JLabel(revStr);
-        revLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        revLbl.setFont(Typography.CAPTION);
         revLbl.setForeground(UIHelper.APPROVED_GREEN);
 
         textRow.add(nameLbl, BorderLayout.WEST);
@@ -128,7 +128,7 @@ public class TopProductsWidget extends ModernPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 int w = getWidth();
                 int h = getHeight();
-                g2.setColor(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85));
+                g2.setColor(ThemeColors.hairline());
                 g2.fillRoundRect(0, 0, w, h, 4, 4);
 
                 int filledW = (int) Math.round((p.percentage() / 100.0) * w);

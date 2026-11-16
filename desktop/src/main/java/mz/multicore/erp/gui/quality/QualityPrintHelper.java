@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.quality;
 
+import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.desktop.client.QualityApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
@@ -18,6 +19,6 @@ public final class QualityPrintHelper {
             return client.getDeliverySheetPdf(assignmentId, companyId);
         }, pdf -> {
             PrintPreviewDialog.show(parent, pdf, "termo-entrega-" + assignmentId, "Termo de Entrega de Equipamento / EPI");
-        }, err -> ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gerar Termo de Entrega: " + err.getMessage()));
+        }, err -> UserErrors.toast(parent, "gerar Termo de Entrega", err));
     }
 }

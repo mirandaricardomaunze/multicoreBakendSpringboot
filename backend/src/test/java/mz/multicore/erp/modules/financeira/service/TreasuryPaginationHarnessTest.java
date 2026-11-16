@@ -2,7 +2,6 @@ package mz.multicore.erp.modules.financeira.service;
 
 import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
 import mz.multicore.erp.modules.financeira.model.TreasuryTransaction;
@@ -35,7 +34,7 @@ class TreasuryPaginationHarnessTest {
     void transactionsPage_isTenantScopedAndCappedAtServer() {
         var accounts = mock(TreasuryAccountRepository.class);
         var transactions = mock(TreasuryTransactionRepository.class);
-        var service = new FinanceService(accounts, transactions, mock(InvoiceRepository.class));
+        var service = new FinanceService(accounts, transactions);
         CurrentUserContext.setCurrentCompanyId(7L);
         CurrentUserContext.setCurrentUser("gestor", "MANAGER");
 

@@ -59,11 +59,11 @@ public final class ProductLookupRemoteDialog {
 
         JLabel statusLeft = new JLabel("A carregar catálogo do servidor…");
         statusLeft.setForeground(UIHelper.TEXT_MUTED);
-        statusLeft.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        statusLeft.setFont(Typography.BODY);
 
         JLabel pageLabel = new JLabel("Página 1 de 1", SwingConstants.CENTER);
         pageLabel.setForeground(UIHelper.TEXT_LIGHT);
-        pageLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        pageLabel.setFont(Typography.BODY_BOLD);
 
         var firstBtn = ClientTablePagination.ghostBtn("fas-angle-double-left", "Primeira página");
         var prevBtn = ClientTablePagination.ghostBtn("fas-angle-left", "Página anterior");
@@ -75,13 +75,13 @@ public final class ProductLookupRemoteDialog {
         paginationPanel.setOpaque(false);
         paginationPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
-                new EmptyBorder(6, 8, 6, 8)));
+                new EmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)));
 
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         leftPanel.setOpaque(false);
         JLabel perPageLabel = new JLabel("Por página:");
         perPageLabel.setForeground(UIHelper.TEXT_MUTED);
-        perPageLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        perPageLabel.setFont(Typography.BODY);
         leftPanel.add(perPageLabel);
         leftPanel.add(pageSizeCombo);
         leftPanel.add(statusLeft);
@@ -95,7 +95,7 @@ public final class ProductLookupRemoteDialog {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(10, 12, 10, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         card.add(TableFilter.bar(searchField, categoryCombo), BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(table);

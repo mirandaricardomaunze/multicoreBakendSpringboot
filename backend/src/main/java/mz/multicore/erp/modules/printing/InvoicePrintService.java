@@ -1,9 +1,8 @@
 package mz.multicore.erp.modules.printing;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Invoice;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,22 +20,22 @@ public class InvoicePrintService {
             "4.ª VIA — QUADRUPLICADO (Arquivo Geral)"
     );
 
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final InvoiceA4Renderer a4Renderer;
     private final InvoiceThermalRenderer thermalRenderer;
 
     @Autowired
-    public InvoicePrintService(InvoiceRepository invoiceRepository, InvoiceA4Renderer a4Renderer,
+    public InvoicePrintService(InvoiceLookup invoiceLookup, InvoiceA4Renderer a4Renderer,
                                InvoiceThermalRenderer thermalRenderer) {
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.a4Renderer = a4Renderer;
         this.thermalRenderer = thermalRenderer;
     }
 
     /** Preserva a construção usada pelos testes e integrações anteriores à decomposição. */
-    public InvoicePrintService(InvoiceRepository invoiceRepository, LineRowMapper lineRowMapper,
+    public InvoicePrintService(InvoiceLookup invoiceLookup, LineRowMapper lineRowMapper,
                                DocumentConfigService ignoredDocumentConfigService) {
-        this(invoiceRepository, new InvoiceA4Renderer(lineRowMapper), new InvoiceThermalRenderer());
+        this(invoiceLookup, new InvoiceA4Renderer(lineRowMapper), new InvoiceThermalRenderer());
     }
 
     @Transactional(readOnly = true)
@@ -50,8 +49,7 @@ public class InvoicePrintService {
     }
 
     private Invoice loadOwned(Long invoiceId) {
-        Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
+        Invoice invoice = invoiceLookup.require(invoiceId);
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
         return invoice;
     }

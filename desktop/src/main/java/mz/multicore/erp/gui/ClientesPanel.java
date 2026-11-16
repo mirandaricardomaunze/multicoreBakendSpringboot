@@ -94,7 +94,7 @@ public class ClientesPanel extends JPanel {
     private JPanel buildDirectoryTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(10, 12, 10, 12));
+        panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         ModernButton viewBtn = UIHelper.createSecondaryButton("Ver Ficha");
         viewBtn.setIcon(UIHelper.icon("fas-id-card", 14, UIHelper.ACCENT_CYAN));
@@ -128,7 +128,7 @@ public class ClientesPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         searchField = TableFilter.searchField("Filtrar por nome, NUIT, email ou endereço…");
 
@@ -139,7 +139,7 @@ public class ClientesPanel extends JPanel {
         peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
         JPanel searchRow = TableFilter.bar(searchField, peekToggleBtn);
-        searchRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+        searchRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         card.add(UIHelper.tableCardTop("Gestão de Clientes", searchRow, refreshBtn, moreBtn, newBtn), BorderLayout.NORTH);
 
         String[] cols = {"ID", "Nome", "NUIT / NIF", "Email", "Endereço", "Prazo (dias)", "Limite de Crédito"};

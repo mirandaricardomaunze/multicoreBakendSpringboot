@@ -91,9 +91,9 @@ public final class HrTerminationFormDialog {
 
         JPanel card = new ModernPanel(12);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         JLabel detailLabel = new JLabel(detail.toString());
-        detailLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        detailLabel.setFont(Typography.EMPHASIS);
         detailLabel.setForeground(UIHelper.TEXT_LIGHT);
         card.add(detailLabel, BorderLayout.CENTER);
 

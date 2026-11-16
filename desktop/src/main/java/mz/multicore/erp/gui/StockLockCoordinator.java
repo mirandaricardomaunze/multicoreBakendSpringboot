@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.gui.components.ActionMenuButton;
@@ -31,8 +33,8 @@ public class StockLockCoordinator {
         this.levelsMoreBtn = levelsMoreBtn;
         this.stockLockBanner = stockLockBanner;
         if (this.stockLockBanner != null) {
-            this.stockLockBanner.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-            this.stockLockBanner.setBorder(new EmptyBorder(8, 2, 0, 0));
+            this.stockLockBanner.setFont(Typography.BODY_BOLD);
+            this.stockLockBanner.setBorder(new EmptyBorder(Spacing.SM, Spacing.XXS, 0, 0));
             this.stockLockBanner.setVisible(false);
         }
     }

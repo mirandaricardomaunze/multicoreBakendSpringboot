@@ -125,6 +125,8 @@ public class CustomerStatementCollector {
             if (rc.getInvoice().getId() != null) {
                 receiptsPerInvoice.merge(rc.getInvoice().getId(), amount, BigDecimal::add);
             }
+            // An advance offset moves money already credited by the advance credit note; it is not a payment.
+            if (mz.multicore.erp.modules.advances.AdvancePayments.isOffsetPayment(rc.getPaymentMethod())) continue;
             String method = rc.getPaymentMethod() != null ? rc.getPaymentMethod() : "Liquidada";
             String ref = rc.getInvoice().getInvoiceNumber() != null ? rc.getInvoice().getInvoiceNumber() : "-";
             Long buId = rc.getInvoice().getBusinessUnit() != null ? rc.getInvoice().getBusinessUnit().getId() : null;

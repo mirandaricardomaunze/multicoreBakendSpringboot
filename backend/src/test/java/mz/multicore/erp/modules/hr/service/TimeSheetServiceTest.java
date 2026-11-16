@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.CreateTimeEntryRequest;
 import mz.multicore.erp.modules.hr.dto.TimeSheetDTO;
 import mz.multicore.erp.modules.hr.model.Employee;
@@ -72,7 +73,7 @@ class TimeSheetServiceTest {
         absenceRepository = mock(AbsenceRepository.class);
         auditLogService = mock(AuditLogService.class);
         service = new TimeSheetService(timeEntryRepository, timeSheetRepository, workScheduleRepository,
-                employeeRepository, companyRepository, contractService, absenceRepository, auditLogService);
+                employeeRepository, new CompanyLookup(companyRepository), contractService, absenceRepository, auditLogService);
 
         Company company = new Company();
         company.setId(COMPANY);

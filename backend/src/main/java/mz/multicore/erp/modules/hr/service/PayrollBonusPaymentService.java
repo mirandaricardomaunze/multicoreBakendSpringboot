@@ -88,6 +88,6 @@ public class PayrollBonusPaymentService {
         bonus.setStatus("PAID");
         bonus.setPaymentDate(LocalDate.now());
         bonusRepository.save(bonus);
-        financeService.registerAutoPayout(amount, description);
+        financeService.registerAutoPayout(amount, description, mz.multicore.erp.architecture.events.PayoutPurpose.STAFF_COST);
     }
 }

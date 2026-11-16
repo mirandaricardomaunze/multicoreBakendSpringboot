@@ -39,24 +39,22 @@ class EnterpriseModulesUiUniformityHarnessTest {
     }
 
     @Test
-    @DisplayName("Cabeçalho canónico tableCardTop mantém título e acções na primeira fila")
+    @DisplayName("Cabeçalho canónico tableCardTop: título, filtros e acções numa só fila")
     void tableCardTopMustPlaceTitleInCenter() {
         JPanel filters = new JPanel();
         JButton action = new JButton("Actualizar");
 
         JPanel cardTop = UIHelper.tableCardTop("Activos Fixos Patrimoniais", filters, action);
         BorderLayout layout = (BorderLayout) cardTop.getLayout();
-        Container header = (Container) layout.getLayoutComponent(BorderLayout.NORTH);
 
-        assertThat(header).isNotNull();
-        assertThat(((BorderLayout) header.getLayout()).getLayoutComponent(BorderLayout.CENTER))
-                .as("O título deve ocupar o CENTER para proteção estrutural contra colisão por botões")
+        assertThat(layout.getLayoutComponent(BorderLayout.WEST))
+                .as("O título fica à esquerda, na mesma fila dos filtros")
                 .isInstanceOf(JLabel.class);
-
-        assertThat(((BorderLayout) header.getLayout()).getLayoutComponent(BorderLayout.EAST))
-                .as("As acções devem ocupar a área direita da primeira fila")
-                .isInstanceOf(JPanel.class);
         assertThat(layout.getLayoutComponent(BorderLayout.CENTER)).isSameAs(filters);
+        assertThat(layout.getLayoutComponent(BorderLayout.EAST))
+                .as("As acções ocupam a área direita da mesma fila")
+                .isInstanceOf(JPanel.class);
+        assertThat(layout.getLayoutComponent(BorderLayout.NORTH)).as("sem segunda fila").isNull();
     }
 
     @Test

@@ -1,5 +1,9 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -61,28 +65,9 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
 
         volumesSpinner.addChangeListener(e -> updatePreview());
 
-        // Cabeçalho do modal
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.setBorder(new EmptyBorder(16, 20, 4, 20));
-
-        JLabel title = new JLabel("Emissão de Etiquetas de Volume");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
-        title.setForeground(Color.WHITE);
-        title.setIcon(UIHelper.icon("fas-tags", 18, UIHelper.ACCENT_BLUE));
-
-        JLabel subtitle = new JLabel("Identificação de caixas e paletes para conferência de trânsito e carga.");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-
-        header.add(title, BorderLayout.NORTH);
-        header.add(subtitle, BorderLayout.SOUTH);
-        add(header, BorderLayout.NORTH);
-
         // Centro: Parâmetros e Pré-visualização
         JPanel centerPanel = new JPanel(new BorderLayout(0, 12));
         centerPanel.setOpaque(false);
-        centerPanel.setBorder(new EmptyBorder(0, 20, 0, 20));
 
         ModernPanel paramsCard = new ModernPanel(16);
         paramsCard.setLayout(new GridLayout(1, 2, 16, 0));
@@ -111,23 +96,20 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
         updatePreview();
         centerPanel.add(previewCardContainer, BorderLayout.CENTER);
 
-        add(centerPanel, BorderLayout.CENTER);
+
 
         // Rodapé: Botões
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 14));
-        footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(0, 20, 8, 20));
 
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
 
-        ModernButton printBtn = UIHelper.createPrimaryButton("Imprimir Etiquetas");
+        ModernButton printBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Imprimir Etiquetas"));
         printBtn.setIcon(UIHelper.icon("fas-print", 14));
         printBtn.addActionListener(e -> printLabels());
 
-        footer.add(closeBtn);
-        footer.add(printBtn);
-        add(footer, BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-tags", "Emissão de Etiquetas de Volume",
+                "Identificação de caixas e paletes para conferência de trânsito e carga.",
+                centerPanel, DialogChrome.footer(closeBtn, printBtn)));
     }
 
     public static void show(Window owner, StockTransferDTO transfer) {
@@ -263,7 +245,7 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
                 ToastManager.show(this, FeedbackType.SUCCESS, "Etiquetas de volume enviadas para a impressora.");
                 dispose();
             } catch (PrinterException ex) {
-                ToastManager.show(this, FeedbackType.ERROR, "Erro ao imprimir etiquetas: " + ex.getMessage());
+                UserErrors.toast(this, "imprimir etiquetas", ex);
             }
         }
     }

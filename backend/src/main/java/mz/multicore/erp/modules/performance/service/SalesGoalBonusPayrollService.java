@@ -5,8 +5,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.model.Payslip;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
-import mz.multicore.erp.modules.hr.repository.PayslipRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.hr.service.PayrollPeriodService;
 import mz.multicore.erp.modules.performance.dto.SalesGoalProgressDTO;
 import mz.multicore.erp.modules.performance.model.BonusStatus;
@@ -25,23 +25,23 @@ import java.util.List;
 public class SalesGoalBonusPayrollService {
 
     private final SalesGoalBonusRepository bonusRepository;
-    private final EmployeeRepository employeeRepository;
-    private final PayslipRepository payslipRepository;
+    private final EmployeeLookup employeeLookup;
+    private final EmployeeCommandService employeeCommandService;
     private final PayrollPeriodService payrollPeriodService;
     private final BonusCalculatorEngine bonusCalculatorEngine;
     private final AuditLogService auditLogService;
 
     public SalesGoalBonusPayrollService(
             SalesGoalBonusRepository bonusRepository,
-            EmployeeRepository employeeRepository,
-            PayslipRepository payslipRepository,
+            EmployeeLookup employeeLookup,
+            EmployeeCommandService employeeCommandService,
             PayrollPeriodService payrollPeriodService,
             BonusCalculatorEngine bonusCalculatorEngine,
             AuditLogService auditLogService
     ) {
         this.bonusRepository = bonusRepository;
-        this.employeeRepository = employeeRepository;
-        this.payslipRepository = payslipRepository;
+        this.employeeLookup = employeeLookup;
+        this.employeeCommandService = employeeCommandService;
         this.payrollPeriodService = payrollPeriodService;
         this.bonusCalculatorEngine = bonusCalculatorEngine;
         this.auditLogService = auditLogService;
@@ -63,7 +63,7 @@ public class SalesGoalBonusPayrollService {
                     "O período de folha %02d/%d está fechado. Reabra o período ou integre num mês aberto.", month, year));
         }
 
-        Payslip payslip = payslipRepository.findByEmployeeIdAndYearAndMonth(bonus.getEmployee().getId(), year, month)
+        Payslip payslip = employeeLookup.findPayslip(bonus.getEmployee().getId(), year, month)
                 .orElseThrow(() -> new BusinessRuleException(String.format(
                         "Não existe recibo de vencimento emitido para %s em %02d/%d.", bonus.getEmployee().getName(), month, year)));
         if ("PAID".equals(payslip.getStatus())) {
@@ -73,7 +73,7 @@ public class SalesGoalBonusPayrollService {
         BigDecimal currentBonus = payslip.getSalesBonus() != null ? payslip.getSalesBonus() : BigDecimal.ZERO;
         payslip.setSalesBonus(currentBonus.add(bonus.getApprovedAmount()));
         payslip.setNetPay(payslip.getNetPay().add(bonus.getApprovedAmount()));
-        payslipRepository.save(payslip);
+        employeeCommandService.savePayslip(payslip);
 
         bonus.setPayslip(payslip);
         bonus.setStatus(BonusStatus.PAID);
@@ -92,12 +92,12 @@ public class SalesGoalBonusPayrollService {
         if (calculatedBonus.compareTo(BigDecimal.ZERO) <= 0) return;
 
         if (goal.getScope() == GoalScope.EMPLOYEE && goal.getScopeRefId() != null) {
-            Employee employee = employeeRepository.findById(goal.getScopeRefId()).orElse(null);
+            Employee employee = employeeLookup.find(goal.getScopeRefId()).orElse(null);
             if (employee != null && bonusRepository.findByGoalIdAndEmployeeId(goal.getId(), employee.getId()).isEmpty()) {
                 createBonusRecord(goal, employee, calculatedBonus);
             }
         } else {
-            List<Employee> activeEmployees = employeeRepository.findByCompanyIdAndStatus(goal.getCompany().getId(), "ACTIVE");
+            List<Employee> activeEmployees = employeeLookup.listByStatusForCompany(goal.getCompany().getId(), "ACTIVE");
             if (!activeEmployees.isEmpty()) {
                 BigDecimal share = calculatedBonus.divide(BigDecimal.valueOf(activeEmployees.size()), 2, RoundingMode.HALF_UP);
                 for (Employee emp : activeEmployees) {

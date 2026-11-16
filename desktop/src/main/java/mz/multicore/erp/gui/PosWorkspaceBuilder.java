@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -129,11 +131,11 @@ final class PosWorkspaceBuilder {
         topBar.add(sessionActions, topGbc);
 
         owner.statusLabel = new JLabel("Caixa Fechada. Abra uma sessão para vender.");
-        owner.statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        owner.statusLabel.setFont(Typography.BODY_BOLD);
         owner.statusLabel.setForeground(UIHelper.PENDING_YELLOW);
         owner.sessionBanner = PosLayout.createSessionBanner(owner.statusLabel, null);
         owner.sessionBanner.setBackground(UIHelper.ROW_ALT);
-        owner.sessionBanner.setBorder(new EmptyBorder(2, 10, 2, 10));
+        owner.sessionBanner.setBorder(new EmptyBorder(Spacing.XXS, Spacing.SM, Spacing.XXS, Spacing.SM));
 
         JPanel sessionBar = new JPanel(new BorderLayout(0, 2));
         sessionBar.setOpaque(false);
@@ -154,7 +156,7 @@ final class PosWorkspaceBuilder {
     static JPanel buildTopSelectsBar(POSPanel owner, JPanel barcodeBox) {
         owner.topSelectsBar = new JPanel(new GridBagLayout());
         owner.topSelectsBar.setOpaque(false);
-        owner.topSelectsBar.setBorder(new EmptyBorder(4, 0, 4, 0));
+        owner.topSelectsBar.setBorder(new EmptyBorder(Spacing.XS, 0, Spacing.XS, 0));
         GridBagConstraints tg = new GridBagConstraints();
         tg.fill = GridBagConstraints.HORIZONTAL;
         tg.anchor = GridBagConstraints.NORTH;
@@ -200,7 +202,7 @@ final class PosWorkspaceBuilder {
         JPanel catalogHeader = new JPanel(new BorderLayout(0, PosLayout.SECTION_VERTICAL_GAP));
         catalogHeader.setOpaque(false);
         JLabel prodTitle = new JLabel("Catálogo de Produtos", UIHelper.icon("fas-boxes", 15, UIHelper.ACCENT_BLUE), SwingConstants.LEFT);
-        prodTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        prodTitle.setFont(Typography.EMPHASIS_BOLD);
         prodTitle.setForeground(UIHelper.TEXT_LIGHT);
         catalogHeader.add(prodTitle, BorderLayout.NORTH);
 
@@ -240,7 +242,7 @@ final class PosWorkspaceBuilder {
 
         ModernPanel catalogCard = new ModernPanel(16);
         catalogCard.setLayout(new BorderLayout());
-        catalogCard.setBorder(new EmptyBorder(8, 8, 8, 8));
+        catalogCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
         catalogCard.add(owner.productGridScroll, BorderLayout.CENTER);
         catalogCard.add(owner.catalogController.buildPaginationBar(), BorderLayout.SOUTH);
         leftPanel.add(catalogCard, BorderLayout.CENTER);
@@ -255,20 +257,20 @@ final class PosWorkspaceBuilder {
         JPanel cartTitleBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         cartTitleBox.setOpaque(false);
         JLabel cartTitle = new JLabel("Carrinho de Vendas (POS)", UIHelper.icon("fas-shopping-cart", 15, UIHelper.ACCENT_BLUE), SwingConstants.LEFT);
-        cartTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        cartTitle.setFont(Typography.EMPHASIS_BOLD);
         cartTitle.setForeground(UIHelper.TEXT_LIGHT);
         cartTitleBox.add(cartTitle);
 
         owner.cartItemCountLabel = new JLabel("• 0 artigos");
         owner.cartItemCountLabel.setForeground(UIHelper.TEXT_MUTED);
-        owner.cartItemCountLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        owner.cartItemCountLabel.setFont(Typography.BODY_BOLD);
         cartTitleBox.add(owner.cartItemCountLabel);
         cartHeader.add(cartTitleBox, BorderLayout.WEST);
 
         owner.quotationBannerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         owner.quotationBannerPanel.setOpaque(false);
         owner.quotationBannerLabel = new JLabel("", UIHelper.icon("fas-file-invoice-dollar", 13, UIHelper.APPROVED_GREEN), SwingConstants.LEFT);
-        owner.quotationBannerLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        owner.quotationBannerLabel.setFont(Typography.BODY_BOLD);
         owner.quotationBannerLabel.setForeground(UIHelper.APPROVED_GREEN);
         JButton clearQuotBtn = new JButton(UIHelper.icon("fas-times", 11, UIHelper.TEXT_MUTED));
         clearQuotBtn.setBorderPainted(false);
@@ -284,7 +286,7 @@ final class PosWorkspaceBuilder {
 
         ModernPanel cartCard = new ModernPanel(16);
         cartCard.setLayout(new BorderLayout(0, PosLayout.CARD_VERTICAL_GAP));
-        cartCard.setBorder(new EmptyBorder(10, 12, 10, 12));
+        cartCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cartCols = {"Artigo", "Qtd", "Preço", "Desc.", "IVA", "Total"};
         owner.cartModel = new DefaultTableModel(cartCols, 0) {
@@ -347,7 +349,7 @@ final class PosWorkspaceBuilder {
         owner.creditCheck.setToolTipText("Registar a venda a crédito na conta corrente do cliente");
         owner.creditCheck.setForeground(UIHelper.TEXT_LIGHT);
         owner.creditCheck.setOpaque(false);
-        owner.creditCheck.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        owner.creditCheck.setFont(Typography.BODY_BOLD);
 
         JPanel creditRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
         creditRow.setOpaque(false);
@@ -364,7 +366,7 @@ final class PosWorkspaceBuilder {
         decreaseBtn.setColors(UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         decreaseBtn.setIcon(null);
         decreaseBtn.setForeground(Color.WHITE);
-        decreaseBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        decreaseBtn.setFont(Typography.TITLE);
         decreaseBtn.setPreferredSize(new Dimension(38, 36));
         decreaseBtn.setToolTipText("Diminuir quantidade");
 
@@ -379,7 +381,7 @@ final class PosWorkspaceBuilder {
         increaseBtn.setColors(UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         increaseBtn.setIcon(null);
         increaseBtn.setForeground(Color.WHITE);
-        increaseBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        increaseBtn.setFont(Typography.TITLE);
         increaseBtn.setPreferredSize(new Dimension(38, 36));
         increaseBtn.setToolTipText("Aumentar quantidade");
 
@@ -426,7 +428,7 @@ final class PosWorkspaceBuilder {
         JPanel p = new JPanel(new BorderLayout(0, 4));
         p.setOpaque(false);
         JLabel l = new JLabel(label);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        l.setFont(Typography.BODY_BOLD);
         l.setForeground(UIHelper.TEXT_MUTED);
         p.add(l, BorderLayout.NORTH);
         p.add(field, BorderLayout.CENTER);

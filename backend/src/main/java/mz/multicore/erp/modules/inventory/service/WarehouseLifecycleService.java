@@ -1,9 +1,9 @@
 package mz.multicore.erp.modules.inventory.service;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.inventory.dto.CreateWarehouseRequest;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
@@ -17,16 +17,19 @@ import java.math.BigDecimal;
 public class WarehouseLifecycleService {
 
     private final WarehouseRepository warehouseRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
+    private final CompanyService companyService;
     private final AuditLogService auditLogService;
     private final WarehouseQueryService queryService;
 
     public WarehouseLifecycleService(WarehouseRepository warehouseRepository,
-                                     CompanyRepository companyRepository,
+                                     CompanyLookup companyLookup,
+                                     CompanyService companyService,
                                      AuditLogService auditLogService,
                                      WarehouseQueryService queryService) {
         this.warehouseRepository = warehouseRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
+        this.companyService = companyService;
         this.auditLogService = auditLogService;
         this.queryService = queryService;
     }
@@ -58,10 +61,9 @@ public class WarehouseLifecycleService {
     }
 
     public void setStockCountLocked(Long companyId, boolean locked) {
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(companyId);
         company.setStockCountLocked(locked);
-        companyRepository.save(company);
+        companyService.saveCompany(company);
         auditLogService.logCurrent("STOCK_LOCK",
                 locked ? "Stock trancado (quantidades visíveis só para administradores)."
                         : "Stock destrancado (quantidades visíveis para todos).");
@@ -86,8 +88,7 @@ public class WarehouseLifecycleService {
     }
 
     public WarehouseDTO createWarehouse(CreateWarehouseRequest request) {
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
         Warehouse warehouse = createWarehouse(
                 request.name(),
                 request.warehouseNumber(),

@@ -33,34 +33,10 @@ public class OrderFulfillmentLifecycleService {
     @Transactional
     public OrderDTO completeSeparationWithConfirmation(CompleteOrderPickingRequest request) {
         PermissionGuard.requireManagerOrAdmin("concluir separacao com conferencia");
-        Order order = pickingCoordinator.requireOrder(request.orderId());
-        if (!OrderFulfillmentStatus.IN_SEPARATION.name().equals(order.getStatus())
-                && !OrderFulfillmentStatus.AWAITING_SEPARATION.name().equals(order.getStatus())
-                && !"PENDING".equalsIgnoreCase(order.getStatus())) {
-            throw new BusinessRuleException("Apenas encomendas pendentes ou em separação podem ser conferidas.");
-        }
-
-        if (request.lines() != null && !request.lines().isEmpty()) {
-            for (OrderPickingConfirmationLineRequest cl : request.lines()) {
-                order.getLines().stream()
-                        .filter(l -> l.getId().equals(cl.lineId()))
-                        .findFirst()
-                        .ifPresent(l -> {
-                            if (cl.confirmedQuantity() != null && cl.confirmedQuantity().compareTo(l.getQuantity()) > 0) {
-                                throw new BusinessRuleException("A quantidade separada de " + l.getProduct().getName()
-                                        + " não pode exceder a encomendada.");
-                            }
-                            l.setSeparatedQuantity(cl.confirmedQuantity() != null ? cl.confirmedQuantity() : l.getQuantity());
-                            if (cl.batchNumber() != null && !cl.batchNumber().isBlank()) {
-                                l.setBatchNumber(cl.batchNumber().trim());
-                            }
-                        });
-            }
-        } else {
-            order.getLines().forEach(line -> line.setSeparatedQuantity(line.getQuantity()));
-        }
-
+        Order order = pickingCoordinator.requireSeparationCircuit(request.orderId(), "conferir a separação");
+        OrderPickingConfirmation.requireConfirmable(order);
         String previous = order.getStatus();
+        OrderPickingConfirmation.apply(order, request.lines());
         order.setStatus(OrderFulfillmentStatus.SEPARATED.name());
         orderRepository.save(order);
         String details = "Conferência óptica de separação concluída."
@@ -88,7 +64,7 @@ public class OrderFulfillmentLifecycleService {
         if (!OrderFulfillmentStatus.SEPARATED.name().equals(order.getStatus()) || order.getInvoiceId() != null) {
             throw new BusinessRuleException("Apenas um pedido separado e ainda nao facturado pode ser facturado.");
         }
-        InvoiceDTO invoice = comercialService.billOrder(id);
+        InvoiceDTO invoice = comercialService.billSeparatedOrder(id);
         order = pickingCoordinator.requireOrder(id);
         order.setReservationActive(false);
         order.setStatus(OrderFulfillmentStatus.INVOICED.name());

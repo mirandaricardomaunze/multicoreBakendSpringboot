@@ -1,5 +1,9 @@
 package mz.multicore.erp.gui.pos.contingency;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -37,23 +41,12 @@ public class PosContingencyDialog extends JDialog {
         setSize(800, 520);
         setLocationRelativeTo(owner);
 
-        JPanel root = new JPanel(new BorderLayout(0, 14));
-        root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(16, 18, 16, 18));
-
-        // Header
-        JPanel headerPanel = new JPanel(new BorderLayout(0, 6));
-        headerPanel.setOpaque(false);
-        JLabel titleLabel = UIHelper.createHeading("Fila Local de Vendas em Contingência");
-        titleLabel.setIcon(UIHelper.icon("fas-exclamation-triangle", UIHelper.ICON_LG));
+        JPanel root = DialogChrome.frame("fas-exclamation-triangle", "Fila Local de Vendas em Contingência",
+                "Vendas feitas sem ligação ao servidor, à espera de sincronização.", null, null);
 
         summaryLabel = new JLabel();
-        summaryLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        summaryLabel.setFont(Typography.BODY);
         summaryLabel.setForeground(UIHelper.TEXT_MUTED);
-
-        headerPanel.add(titleLabel, BorderLayout.NORTH);
-        headerPanel.add(summaryLabel, BorderLayout.SOUTH);
-        root.add(headerPanel, BorderLayout.NORTH);
 
         // Table
         String[] cols = {"Referência", "Data/Hora", "Operador", "Valor (MT)", "Estado", "Documento Oficial"};
@@ -102,13 +95,11 @@ public class PosContingencyDialog extends JDialog {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         root.add(scrollPane, BorderLayout.CENTER);
 
-        // Bottom Actions
-        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        actionsPanel.setOpaque(false);
+        ModernButton reprintBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Reimprimir Talão"));
+        reprintBtn.setIcon(UIHelper.icon("fas-print", UIHelper.ICON_SM));
+        reprintBtn.addActionListener(e -> reprintSelected());
 
-        ModernButton reprintBtn = UIHelper.createButton("Reimprimir Talão", UIHelper.icon("fas-print", UIHelper.ICON_SM, Color.WHITE), UIHelper.ACCENT_CYAN, e -> reprintSelected());
-
-        ModernButton syncBtn = UIHelper.createPrimaryButton("Sincronizar Agora");
+        ModernButton syncBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Sincronizar Agora"));
         syncBtn.setIcon(UIHelper.icon("fas-sync-alt", UIHelper.ICON_SM));
         syncBtn.addActionListener(e -> {
             if (syncService != null) {
@@ -116,13 +107,10 @@ public class PosContingencyDialog extends JDialog {
             }
         });
 
-        ModernButton closeBtn = UIHelper.createDangerButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createDangerButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
 
-        actionsPanel.add(reprintBtn);
-        actionsPanel.add(syncBtn);
-        actionsPanel.add(closeBtn);
-        root.add(actionsPanel, BorderLayout.SOUTH);
+        root.add(DialogChrome.footerWithNote(summaryLabel, closeBtn, reprintBtn, syncBtn), BorderLayout.SOUTH);
 
         setContentPane(root);
         loadData();

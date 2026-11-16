@@ -21,6 +21,7 @@ import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
@@ -77,7 +78,7 @@ class QuotationServiceTest {
         comercialService = mock(ComercialService.class);
 
         service = new QuotationService(quotationRepository, clientRepository, productRepository,
-                companyRepository, warehouseRepository, walkInClientProvider, documentNumberService,
+                new CompanyLookup(companyRepository), new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), walkInClientProvider, documentNumberService,
                 auditLogService, comercialService);
 
         company = company(1L);

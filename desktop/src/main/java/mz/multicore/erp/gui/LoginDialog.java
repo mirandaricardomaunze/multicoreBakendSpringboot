@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.AuthApiClient;
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.gui.components.AboutDialog;
@@ -17,8 +19,8 @@ import java.util.function.Consumer;
 
 /**
  * Janela em ecrã inteiro de autenticação do Multicore ERP.
- * Apresenta imagem de fundo corporativa de acolhimento e cartão centralizado
- * com botões harmonizados de "Entrar" e "Cancelar".
+ * Apresenta imagem de fundo corporativa escurecida e cartão centralizado
+ * com uma única acção primária ("Entrar"); sair faz-se por Esc ou pelo link discreto.
  * Autentica contra a API do backend fora do EDT via SwingWorker.
  */
 public class LoginDialog extends JFrame {
@@ -56,15 +58,12 @@ public class LoginDialog extends JFrame {
             public void windowOpened(java.awt.event.WindowEvent e) {
                 toFront();
                 requestFocus();
-                if (credentialsCard.getUsernameField() != null) {
-                    credentialsCard.getUsernameField().requestFocusInWindow();
-                }
+                credentialsCard.initialFocusTarget().requestFocusInWindow();
             }
         });
 
         LoginBackgroundPanel backgroundPanel = new LoginBackgroundPanel();
         backgroundPanel.setLayout(new BorderLayout());
-        backgroundPanel.add(buildTopBar(), BorderLayout.NORTH);
 
         JScrollPane scrollPane = new JScrollPane(buildContent());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -97,35 +96,14 @@ public class LoginDialog extends JFrame {
     public ModernPanel getCard() { return credentialsCard.getCard(); }
     void fillCredentials(String username, String password) { credentialsCard.fillCredentials(username, password); }
 
-    private JPanel buildTopBar() {
-        JPanel bar = new JPanel(new BorderLayout());
-        bar.setOpaque(false);
-        bar.setBorder(new EmptyBorder(16, 24, 8, 24));
-
-        JPanel brandBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        brandBox.setOpaque(false);
-        brandBox.add(new JLabel(new ImageIcon(UIHelper.getAppIcon(28))));
-        JLabel brandName = new JLabel("MULTICORE ERP");
-        brandName.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
-        brandName.setForeground(new Color(15, 23, 42));
-        brandBox.add(brandName);
-        bar.add(brandBox, BorderLayout.WEST);
-
-        JLabel escHint = new JLabel("Pressione ESC para cancelar", UIHelper.icon("fas-info-circle", 12, new Color(100, 116, 139)), SwingConstants.RIGHT);
-        escHint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        escHint.setForeground(new Color(71, 85, 105));
-        bar.add(escHint, BorderLayout.EAST);
-        return bar;
-    }
-
     private JPanel buildFooter() {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER));
         footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(8, 20, 16, 20));
+        footer.setBorder(new EmptyBorder(Spacing.SM, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JLabel info = new JLabel("Multicore ERP v1.0.0 • Sistema Integrado de Gestão Empresarial • Moçambique");
-        info.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        info.setForeground(new Color(71, 85, 105));
+        info.setFont(Typography.CAPTION);
+        info.setForeground(UIHelper.withAlpha(Color.WHITE, 190));
         info.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         info.setToolTipText("Multicore ERP • Clique para ver detalhes e licença do sistema");
         info.addMouseListener(new MouseAdapter() {
@@ -138,11 +116,11 @@ public class LoginDialog extends JFrame {
     private JPanel buildContent() {
         JPanel wrapper = new JPanel(new GridBagLayout());
         wrapper.setOpaque(false);
-        wrapper.setBorder(new EmptyBorder(20, 24, 20, 24));
+        wrapper.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
         GridBagConstraints g = new GridBagConstraints();
         g.gridx = 0; g.gridy = 0; g.anchor = GridBagConstraints.CENTER;
         wrapper.add(credentialsCard.getCard(), g);
-        SwingUtilities.invokeLater(() -> credentialsCard.getUsernameField().requestFocusInWindow());
+        SwingUtilities.invokeLater(() -> credentialsCard.initialFocusTarget().requestFocusInWindow());
         return wrapper;
     }
 
@@ -174,6 +152,7 @@ public class LoginDialog extends JFrame {
             protected void done() {
                 try {
                     authenticatedSession = get();
+                    credentialsCard.rememberSuccessfulLogin();
                     if (onAuthenticated != null) {
                         onAuthenticated.accept(authenticatedSession);
                     }

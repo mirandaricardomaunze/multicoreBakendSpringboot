@@ -5,7 +5,7 @@ import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.inventory.dto.WasteSummaryDTO;
 import mz.multicore.erp.modules.inventory.model.StockWaste;
-import mz.multicore.erp.modules.inventory.repository.StockWasteRepository;
+import mz.multicore.erp.modules.inventory.service.StockWasteLookup;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,27 +19,27 @@ import java.util.List;
 @Service
 public class WasteReportPrintService {
 
-    private final StockWasteRepository wasteRepository;
+    private final StockWasteLookup wasteLookup;
     private final StockWasteService wasteService;
     private final CompanyService companyService;
     private final WasteReportDocumentRenderer documentRenderer;
 
     @Autowired
-    public WasteReportPrintService(StockWasteRepository wasteRepository,
+    public WasteReportPrintService(StockWasteLookup wasteLookup,
                                    StockWasteService wasteService,
                                    CompanyService companyService,
                                    WasteReportDocumentRenderer documentRenderer) {
-        this.wasteRepository = wasteRepository;
+        this.wasteLookup = wasteLookup;
         this.wasteService = wasteService;
         this.companyService = companyService;
         this.documentRenderer = documentRenderer;
     }
 
     /** Construtor retrocompatível preservado para testes e integrações existentes. */
-    public WasteReportPrintService(StockWasteRepository wasteRepository,
+    public WasteReportPrintService(StockWasteLookup wasteLookup,
                                    StockWasteService wasteService,
                                    CompanyService companyService) {
-        this(wasteRepository, wasteService, companyService, new WasteReportDocumentRenderer());
+        this(wasteLookup, wasteService, companyService, new WasteReportDocumentRenderer());
     }
 
     @Transactional(readOnly = true)
@@ -54,7 +54,7 @@ public class WasteReportPrintService {
         LocalDateTime startDt = effectiveStart.atStartOfDay();
         LocalDateTime endDt = effectiveEnd.atTime(23, 59, 59);
 
-        List<StockWaste> records = wasteRepository.findByCompanyIdAndPeriod(companyId, startDt, endDt);
+        List<StockWaste> records = wasteLookup.listForCompanyInPeriod(companyId, startDt, endDt);
         WasteSummaryDTO summary = wasteService.getSummary(companyId, effectiveStart, effectiveEnd);
         return documentRenderer.render(company, effectiveStart, effectiveEnd, records, summary);
     }

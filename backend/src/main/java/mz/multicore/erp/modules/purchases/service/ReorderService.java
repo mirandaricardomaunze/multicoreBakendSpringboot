@@ -1,9 +1,9 @@
 package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.purchases.dto.ReorderSuggestionDTO;
 import mz.multicore.erp.modules.purchases.repository.PurchaseLineRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,27 +21,27 @@ import java.util.List;
 @Service
 public class ReorderService {
 
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final ReorderDataCollector dataCollector;
     private final ReorderSuggestionCalculator suggestionCalculator;
 
     @Autowired
-    public ReorderService(ProductRepository productRepository,
+    public ReorderService(ProductLookup productLookup,
                           ReorderDataCollector dataCollector,
                           ReorderSuggestionCalculator suggestionCalculator) {
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.dataCollector = dataCollector;
         this.suggestionCalculator = suggestionCalculator;
     }
 
     public ReorderService(
-            StockRepository stockRepository,
-            ProductRepository productRepository,
-            InvoiceRepository invoiceRepository,
+            StockLookup stockLookup,
+            ProductLookup productLookup,
+            InvoiceLookup invoiceLookup,
             PurchaseLineRepository purchaseLineRepository
     ) {
-        this(productRepository,
-             new ReorderDataCollector(stockRepository, invoiceRepository, purchaseLineRepository),
+        this(productLookup,
+             new ReorderDataCollector(stockLookup, invoiceLookup, purchaseLineRepository),
              new ReorderSuggestionCalculator());
     }
 
@@ -49,7 +49,7 @@ public class ReorderService {
     public List<ReorderSuggestionDTO> suggestions(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
         return suggestionCalculator.computeSuggestions(
-                productRepository.findDistinctByCompaniesIdOrderByName(companyId),
+                productLookup.listForCompany(companyId),
                 dataCollector.collectStockByProduct(companyId),
                 dataCollector.collectSalesLast30Days(companyId),
                 dataCollector.collectRecentPurchases(companyId)

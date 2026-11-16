@@ -4,7 +4,9 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.purchases.dto.ReorderSuggestionDTO;
@@ -45,7 +47,9 @@ class ReorderServiceSmartHarnessTest {
         productRepository = mock(ProductRepository.class);
         invoiceRepository = mock(InvoiceRepository.class);
         purchaseLineRepository = mock(PurchaseLineRepository.class);
-        service = new ReorderService(stockRepository, productRepository, invoiceRepository, purchaseLineRepository);
+        service = new ReorderService(new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository),
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), purchaseLineRepository);
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
     }

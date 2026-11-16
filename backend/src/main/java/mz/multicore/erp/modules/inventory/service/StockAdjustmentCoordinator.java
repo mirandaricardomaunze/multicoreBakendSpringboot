@@ -5,9 +5,9 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.CreateStockAdjustmentRequest;
 import mz.multicore.erp.modules.inventory.dto.StockMovementDTO;
 import mz.multicore.erp.modules.inventory.model.Stock;
@@ -37,8 +37,8 @@ public class StockAdjustmentCoordinator {
     private final StockAdjustmentOperationRepository stockAdjustmentOperationRepository;
     private final StockRepository stockRepository;
     private final WarehouseRepository warehouseRepository;
-    private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
+    private final ProductLookup productLookup;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
     private final StockMovementRegistrationService registrationService;
     private final StockMovementQueryService queryService;
@@ -48,8 +48,8 @@ public class StockAdjustmentCoordinator {
             StockAdjustmentOperationRepository stockAdjustmentOperationRepository,
             StockRepository stockRepository,
             WarehouseRepository warehouseRepository,
-            ProductRepository productRepository,
-            CompanyRepository companyRepository,
+            ProductLookup productLookup,
+            CompanyLookup companyLookup,
             AuditLogService auditLogService,
             StockMovementRegistrationService registrationService,
             StockMovementQueryService queryService
@@ -57,8 +57,8 @@ public class StockAdjustmentCoordinator {
         this.stockAdjustmentOperationRepository = stockAdjustmentOperationRepository;
         this.stockRepository = stockRepository;
         this.warehouseRepository = warehouseRepository;
-        this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
+        this.productLookup = productLookup;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
         this.registrationService = registrationService;
         this.queryService = queryService;
@@ -82,8 +82,7 @@ public class StockAdjustmentCoordinator {
                 return queryService.toDTO(previous.get().getStockMovement());
             }
         }
-        Product product = productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        Product product = productLookup.requireForCompany(request.productId(), request.companyId());
         if (!product.isStockTracked()) {
             throw new BusinessRuleException("Este produto não controla stock físico.");
         }
@@ -95,8 +94,7 @@ public class StockAdjustmentCoordinator {
 
         StockAdjustmentOperation operation = null;
         if (key != null) {
-            Company company = companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+            Company company = companyLookup.require(request.companyId());
             operation = new StockAdjustmentOperation();
             operation.setCompany(company);
             operation.setProduct(product);

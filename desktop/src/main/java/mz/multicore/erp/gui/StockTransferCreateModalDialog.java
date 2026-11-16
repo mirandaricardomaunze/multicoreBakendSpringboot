@@ -92,7 +92,7 @@ final class StockTransferCreateModalDialog {
 
         JLabel loadInfoLabel = new JLabel("Carga: a calcular…");
         loadInfoLabel.setIcon(UIHelper.icon("fas-truck", 16, UIHelper.ACCENT_BLUE));
-        loadInfoLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        loadInfoLabel.setFont(Typography.BODY_BOLD);
         loadInfoLabel.setForeground(UIHelper.TEXT_LIGHT);
         ModernPanel loadInfoPanel = new ModernPanel(8);
         loadInfoPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 6));
@@ -234,12 +234,10 @@ final class StockTransferCreateModalDialog {
                 throw new IllegalArgumentException("O armazém de origem e o de destino devem ser diferentes.");
             }
             if (driverField.getText().trim().isEmpty()) {
-                driverField.requestFocusInWindow();
-                throw new IllegalArgumentException("O nome do motorista é obrigatório para emitir a guia de transferência.");
+                throw FieldValidationException.of(driverField, "O nome do motorista é obrigatório para emitir a guia de transferência.");
             }
             if (vehiclePlateField.getText().trim().isEmpty()) {
-                vehiclePlateField.requestFocusInWindow();
-                throw new IllegalArgumentException("A matrícula do veículo é obrigatória para emitir a guia de transferência.");
+                throw FieldValidationException.of(vehiclePlateField, "A matrícula do veículo é obrigatória para emitir a guia de transferência.");
             }
             if (linesTable.isEditing()) linesTable.getCellEditor().stopCellEditing();
             if (linesModel.getRowCount() == 0) {

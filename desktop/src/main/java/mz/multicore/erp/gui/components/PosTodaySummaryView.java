@@ -41,11 +41,11 @@ public class PosTodaySummaryView {
     }
 
     private JPanel buildBar() {
-        todaySalesCountValue = KpiCard.valueLabel("0", 22);
+        todaySalesCountValue = KpiCard.valueLabel("0");
         todaySalesCountSub = kpiSubLabel("Ontem: 0 vendas");
-        todaySalesTotalValue = KpiCard.valueLabel("0,00 MT", 22);
+        todaySalesTotalValue = KpiCard.valueLabel("0,00 MT");
         todaySalesTotalSub = kpiSubLabel("Ontem: 0,00 MT");
-        todaySalesVariationValue = KpiCard.valueLabel("—", 22);
+        todaySalesVariationValue = KpiCard.valueLabel("—");
         todaySalesVariationSub = kpiSubLabel("Receita vs ontem");
 
         JPanel bar = new JPanel(new GridLayout(1, 3, 10, 0));
@@ -61,7 +61,7 @@ public class PosTodaySummaryView {
 
     private JLabel kpiSubLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        label.setFont(Typography.CAPTION);
         label.setForeground(UIHelper.TEXT_MUTED);
         return label;
     }

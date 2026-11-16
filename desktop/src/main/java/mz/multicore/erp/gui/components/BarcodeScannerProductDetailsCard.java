@@ -29,10 +29,10 @@ public class BarcodeScannerProductDetailsCard {
 
     public BarcodeScannerProductDetailsCard(CollectorMode mode, ActionListener actionListener) {
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JLabel cardTitle = new JLabel("Artigo Identificado");
-        cardTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        cardTitle.setFont(Typography.EMPHASIS_BOLD);
         cardTitle.setForeground(UIHelper.TEXT_LIGHT);
         card.add(cardTitle, BorderLayout.NORTH);
 
@@ -40,15 +40,15 @@ public class BarcodeScannerProductDetailsCard {
         details.setOpaque(false);
         details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
 
-        lblProductName.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        lblProductName.setFont(Typography.TITLE);
         lblProductName.setForeground(UIHelper.TEXT_LIGHT);
-        lblProductSku.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblProductSku.setFont(Typography.BODY);
         lblProductSku.setForeground(UIHelper.TEXT_MUTED);
-        lblProductBarcode.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblProductBarcode.setFont(Typography.BODY);
         lblProductBarcode.setForeground(UIHelper.TEXT_MUTED);
-        lblProductDetails.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblProductDetails.setFont(Typography.BODY);
         lblProductDetails.setForeground(UIHelper.TEXT_MUTED);
-        lblBomStatus.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        lblBomStatus.setFont(Typography.BODY_BOLD);
 
         details.add(lblProductName);
         details.add(Box.createVerticalStrut(4));
@@ -60,7 +60,7 @@ public class BarcodeScannerProductDetailsCard {
 
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         actionRow.setOpaque(false);
-        actionRow.setBorder(new EmptyBorder(8, 0, 0, 0));
+        actionRow.setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         spinQuantity.setPreferredSize(new Dimension(80, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleSpinner(spinQuantity);

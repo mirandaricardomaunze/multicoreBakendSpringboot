@@ -28,7 +28,7 @@ final class ApprovalDocumentDetailsView {
             PrintApiClient printApiClient
     ) {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
-        panel.setOpaque(false); panel.setBorder(new EmptyBorder(10, 0, 0, 0));
+        panel.setOpaque(false); panel.setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
 
         String docType = request.documentType() != null ? request.documentType().toUpperCase(java.util.Locale.ROOT) : "";
         if (("STOCK_TRANSFER".equals(docType) || "TRANSFER".equals(docType)) && stockTransferApiClient != null) {
@@ -48,7 +48,7 @@ final class ApprovalDocumentDetailsView {
             PrintApiClient printApiClient
     ) {
         JPanel summaryBox = new ModernPanel(12); summaryBox.setLayout(new GridLayout(2, 3, 14, 6));
-        summaryBox.setBorder(new EmptyBorder(12, 14, 12, 14));
+        summaryBox.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         JLabel origVal = loadingLabel(), destVal = loadingLabel(), transpVal = loadingLabel();
 
         summaryBox.add(metaLabel("Armazém Origem")); summaryBox.add(metaLabel("Armazém Destino"));
@@ -65,7 +65,7 @@ final class ApprovalDocumentDetailsView {
         JScrollPane scroll = new JScrollPane(table); UIHelper.styleScrollPane(scroll);
 
         ModernPanel tableCard = new ModernPanel(14); tableCard.setLayout(new BorderLayout(0, 8));
-        tableCard.setBorder(new EmptyBorder(10, 12, 10, 12));
+        tableCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         ModernButton pdfBtn = UIHelper.createSecondaryButton("Ver Guia em PDF");
         pdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 14, UIHelper.ACCENT_BLUE));
@@ -102,13 +102,13 @@ final class ApprovalDocumentDetailsView {
                     () -> stockTransferApiClient.renderTransfer(transfer.id()), null));
         }, err -> {
             origVal.setText("Erro ao carregar"); destVal.setText("Erro ao carregar");
-            ToastManager.show(container, FeedbackType.ERROR, "Erro ao obter detalhes da transferência: " + err.getMessage());
+            UserErrors.toast(container, "obter detalhes da transferência", err);
         });
     }
 
     private static void populateOrderDetails(JPanel container, ApprovalRequestDTO request, ComercialApiClient comercialApiClient) {
         JPanel summaryBox = new ModernPanel(12); summaryBox.setLayout(new GridLayout(2, 3, 14, 6));
-        summaryBox.setBorder(new EmptyBorder(12, 14, 12, 14));
+        summaryBox.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         JLabel clientVal = loadingLabel(), numVal = loadingLabel(), termsVal = loadingLabel();
 
         summaryBox.add(metaLabel("Cliente")); summaryBox.add(metaLabel("Número Encomenda"));
@@ -127,7 +127,7 @@ final class ApprovalDocumentDetailsView {
         JScrollPane scroll = new JScrollPane(table); UIHelper.styleScrollPane(scroll);
 
         ModernPanel tableCard = new ModernPanel(14); tableCard.setLayout(new BorderLayout(0, 8));
-        tableCard.setBorder(new EmptyBorder(10, 12, 10, 12));
+        tableCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         tableCard.add(UIHelper.tableCardTop("Itens da Encomenda", null), BorderLayout.NORTH);
         tableCard.add(scroll, BorderLayout.CENTER);
         container.add(summaryBox, BorderLayout.NORTH); container.add(tableCard, BorderLayout.CENTER);
@@ -150,13 +150,13 @@ final class ApprovalDocumentDetailsView {
             }
         }, err -> {
             clientVal.setText("Erro ao carregar");
-            ToastManager.show(container, FeedbackType.ERROR, "Erro ao obter detalhes da encomenda: " + err.getMessage());
+            UserErrors.toast(container, "obter detalhes da encomenda", err);
         });
     }
 
     private static void populateGenericDetails(JPanel container, ApprovalRequestDTO request) {
         ModernPanel card = new ModernPanel(14); card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(16, 18, 16, 18));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         JTextArea area = new JTextArea(request.description() != null ? request.description() : "Sem detalhes adicionais.");
         area.setEditable(false); area.setLineWrap(true); area.setWrapStyleWord(true);
         UIHelper.styleTextArea(area);
@@ -170,7 +170,7 @@ final class ApprovalDocumentDetailsView {
     }
 
     private static JLabel metaLabel(String text) {
-        JLabel l = new JLabel(text); l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        JLabel l = new JLabel(text); l.setFont(Typography.CAPTION_BOLD);
         l.setForeground(UIHelper.TEXT_MUTED); return l;
     }
 }

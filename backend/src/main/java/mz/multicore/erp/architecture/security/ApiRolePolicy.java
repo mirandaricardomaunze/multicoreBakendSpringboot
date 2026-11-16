@@ -32,7 +32,14 @@ public final class ApiRolePolicy {
             "/api/assets", "/api/manufacturing", "/api/fleet", "/api/performance",
             "/api/movimentos", "/api/credit-notes", "/api/debit-notes",
             "/api/recurring-contracts", "/api/recurring/contracts", "/api/intelligence",
-            "/api/hr", "/api/quality");
+            "/api/hr", "/api/quality", "/api/activity", "/api/units", "/api/pricing", "/api/pickups", "/api/bulk-stock", "/api/projects",
+            "/api/advances", "/api/butchery", "/api/expiry", "/api/production-plans",
+            "/api/custom-orders", "/api/consignments",
+            "/api/returnables", "/api/variants", "/api/weighbridge", "/api/exceptions");
+
+    /** Business-sector areas (SA-C01..C03): every role may read, only management may change. */
+    private static final Set<String> READ_SELLER_WRITE_MANAGER_AREAS = Set.of(
+            "/api/activity", "/api/units", "/api/pricing");
 
     private ApiRolePolicy() {
     }
@@ -69,6 +76,53 @@ public final class ApiRolePolicy {
         }
         if (matches(uri, "/api/support/tickets")) {
             return seller;
+        }
+        if (READ_SELLER_WRITE_MANAGER_AREAS.stream().anyMatch(area -> matches(uri, area))) {
+            return "GET".equalsIgnoreCase(method) ? seller : manager;
+        }
+        if (matches(uri, "/api/exceptions")) {
+            return manager;
+        }
+        if (matches(uri, "/api/weighbridge")) {
+            return seller;
+        }
+        if (matches(uri, "/api/variants")) {
+            return "GET".equalsIgnoreCase(method) ? seller : manager;
+        }
+        if (matches(uri, "/api/returnables")) {
+            boolean managerOnly = "PUT".equalsIgnoreCase(method) || uri.endsWith("/charges");
+            return managerOnly ? manager : seller;
+        }
+        if (matches(uri, "/api/consignments")) {
+            return uri.endsWith("/settle") ? manager : seller;
+        }
+        if (matches(uri, "/api/custom-orders")) {
+            return seller;
+        }
+        if (matches(uri, "/api/production-plans")) {
+            return seller;
+        }
+        if (matches(uri, "/api/expiry")) {
+            boolean managerOnly = "PUT".equalsIgnoreCase(method) || uri.contains("/markdowns");
+            return managerOnly ? manager : seller;
+        }
+        if (matches(uri, "/api/butchery")) {
+            boolean managerOnly = "PUT".equalsIgnoreCase(method) || uri.endsWith("/cancel");
+            return managerOnly ? manager : seller;
+        }
+        if (matches(uri, "/api/advances")) {
+            return "GET".equalsIgnoreCase(method) ? seller : manager;
+        }
+        if (matches(uri, "/api/projects")) {
+            return "DELETE".equalsIgnoreCase(method) ? manager : seller;
+        }
+        if (matches(uri, "/api/bulk-stock")) {
+            boolean managerOnly = ("PUT".equalsIgnoreCase(method) && uri.endsWith("/settings"))
+                    || uri.endsWith("/approve") || uri.endsWith("/reject");
+            return managerOnly ? manager : seller;
+        }
+        if (matches(uri, "/api/pickups")) {
+            return uri.endsWith("/cancel") ? manager : seller;
         }
         if (matches(uri, "/api/promotions")) {
             return "GET".equalsIgnoreCase(method) ? seller : manager;

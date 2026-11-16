@@ -4,6 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.users.dto.AppUserDTO;
 import mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs;
 import mz.multicore.erp.modules.users.model.AppUser;
@@ -40,7 +41,8 @@ class UserManagementHarnessTest {
         companyRepository = Mockito.mock(CompanyRepository.class);
         companyAccessRepository = Mockito.mock(AppUserCompanyAccessRepository.class);
 
-        appUserService = new AppUserService(appUserRepository, passwordEncoder, companyRepository, companyAccessRepository);
+        appUserService = new AppUserService(appUserRepository, passwordEncoder,
+                new CompanyLookup(companyRepository), companyAccessRepository);
 
         CurrentUserContext.clear();
         CurrentUserContext.setCurrentUser("admin", "ADMIN");

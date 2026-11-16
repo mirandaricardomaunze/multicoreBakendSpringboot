@@ -47,12 +47,12 @@ final class PosPaymentDialog {
 
         JTextField totalField = new JTextField(String.format("%,.2f MT", safeTotal));
         UIHelper.styleTextField(totalField);
-        totalField.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        totalField.setFont(Typography.EMPHASIS_BOLD);
         totalField.setEditable(false);
 
         JTextField tenderedField = new JTextField(safeTotal.toPlainString());
         UIHelper.styleTextField(tenderedField);
-        tenderedField.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        tenderedField.setFont(Typography.TITLE);
 
         JTextField refField = new JTextField();
         UIHelper.styleTextField(refField);
@@ -62,14 +62,14 @@ final class PosPaymentDialog {
         ModernButton pushUssdBtn = new ModernButton("Simular", UIHelper.ACCENT_ORANGE, UIHelper.ACCENT_ORANGE.darker());
         pushUssdBtn.setIcon(UIHelper.icon("fas-mobile-alt", 12, Color.WHITE));
         pushUssdBtn.setForeground(Color.WHITE);
-        pushUssdBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        pushUssdBtn.setFont(Typography.CAPTION_BOLD);
         pushUssdBtn.setPreferredSize(new Dimension(115, 32));
         pushUssdBtn.setVisible(false);
 
         ModernButton checkVoucherBtn = new ModernButton("Verificar Vale", UIHelper.ACCENT_CYAN, UIHelper.ACCENT_CYAN.darker());
         checkVoucherBtn.setIcon(UIHelper.icon("fas-check-circle", 12, Color.WHITE));
         checkVoucherBtn.setForeground(Color.WHITE);
-        checkVoucherBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        checkVoucherBtn.setFont(Typography.CAPTION_BOLD);
         checkVoucherBtn.setPreferredSize(new Dimension(125, 32));
         checkVoucherBtn.setVisible(false);
 
@@ -86,15 +86,15 @@ final class PosPaymentDialog {
         // Visor de Troco / Saldo em Destaque Executivo
         ModernPanel changeDisplay = new ModernPanel(12);
         changeDisplay.setBackground(UIHelper.ROW_ALT);
-        changeDisplay.setBorder(new EmptyBorder(10, 16, 10, 16));
+        changeDisplay.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         changeDisplay.setLayout(new BorderLayout(8, 2));
 
         JLabel changeTitleLabel = new JLabel("TROCO A DEVOLVER");
-        changeTitleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        changeTitleLabel.setFont(Typography.CAPTION_BOLD);
         changeTitleLabel.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel changeValueLabel = new JLabel("0,00 MT");
-        changeValueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 22));
+        changeValueLabel.setFont(Typography.METRIC);
         changeValueLabel.setForeground(UIHelper.APPROVED_GREEN);
         changeValueLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
@@ -156,8 +156,8 @@ final class PosPaymentDialog {
 
         JLabel quickLabel = new JLabel("Cédulas rápidas (Meticais):");
         quickLabel.setForeground(UIHelper.TEXT_MUTED);
-        quickLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        quickLabel.setBorder(new EmptyBorder(6, 4, 2, 4));
+        quickLabel.setFont(Typography.CAPTION_BOLD);
+        quickLabel.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XXS, Spacing.XS));
 
         JPanel quickCashSection = new JPanel();
         quickCashSection.setLayout(new BoxLayout(quickCashSection, BoxLayout.Y_AXIS));
@@ -175,7 +175,7 @@ final class PosPaymentDialog {
             final int idx = i;
             ModernButton btn = new ModernButton(methodNames[i], UIHelper.ACCENT, UIHelper.ACCENT_HOVER);
             btn.setIcon(UIHelper.icon(methodIcons[i], 12, Color.WHITE));
-            btn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            btn.setFont(Typography.CAPTION_BOLD);
             btn.setForeground(Color.WHITE);
             btn.setPreferredSize(new Dimension(0, 36));
             btn.addActionListener(e -> methodCombo.setSelectedIndex(idx));
@@ -297,7 +297,7 @@ final class PosPaymentDialog {
                             throw new IllegalArgumentException("Valor entregue inválido.");
                         }
                         if (tendered.compareTo(safeTotal) < 0) {
-                            throw new IllegalArgumentException("O valor entregue é inferior ao total a pagar.");
+                            throw FieldValidationException.of(tenderedField, "O valor entregue é inferior ao total a pagar.");
                         }
                         BigDecimal capturedTendered = tendered;
                         return () -> {
@@ -310,7 +310,7 @@ final class PosPaymentDialog {
                         String ref = refField.getText().trim();
                         if ("STORE_CREDIT".equals(method)) {
                             if (ref.isEmpty()) {
-                                throw new IllegalArgumentException("Indique o código do vale de compras.");
+                                throw FieldValidationException.of(refField, "Indique o código do vale de compras.");
                             }
                             Long companyId = CurrentUserContext.getCurrentCompanyId();
                             return () -> {
@@ -343,7 +343,7 @@ final class PosPaymentDialog {
         ModernButton button = new ModernButton(label, base, hover);
         button.setForeground(Color.WHITE);
         button.setPreferredSize(new Dimension(isExact ? 80 : 66, 32));
-        button.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        button.setFont(Typography.CAPTION_BOLD);
         button.addActionListener(e -> target.setText(value.stripTrailingZeros().toPlainString()));
         parent.add(button);
     }

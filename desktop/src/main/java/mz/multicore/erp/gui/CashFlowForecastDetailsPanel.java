@@ -25,7 +25,7 @@ public class CashFlowForecastDetailsPanel extends ModernPanel {
     public CashFlowForecastDetailsPanel() {
         super(16);
         setLayout(new BorderLayout(0, 6));
-        setBorder(new EmptyBorder(12, 14, 12, 14));
+        setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);

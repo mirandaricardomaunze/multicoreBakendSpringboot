@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.support.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.support.dto.SupportMessageDTO;
 import mz.multicore.erp.modules.support.dto.SupportTicketDTO;
 import mz.multicore.erp.modules.support.model.SupportMessage;
@@ -21,14 +21,14 @@ public class PlatformSupportAdminService {
 
     private final PlatformSupportTicketRepository ticketRepository;
     private final SupportMessageRepository messageRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
 
     public PlatformSupportAdminService(PlatformSupportTicketRepository ticketRepository,
                                        SupportMessageRepository messageRepository,
-                                       CompanyRepository companyRepository) {
+                                       CompanyLookup companyLookup) {
         this.ticketRepository = ticketRepository;
         this.messageRepository = messageRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
     }
 
     public List<SupportTicketDTO> listAllTickets() {
@@ -94,7 +94,7 @@ public class PlatformSupportAdminService {
 
     public SupportTicketDTO toDto(SupportTicket t, boolean includeCompanyName) {
         String companyName = includeCompanyName
-                ? companyRepository.findById(t.getCompanyId()).map(Company::getName).orElse("—")
+                ? companyLookup.find(t.getCompanyId()).map(Company::getName).orElse("—")
                 : null;
         return new SupportTicketDTO(t.getId(), t.getCompanyId(), companyName, t.getSubject(),
                 t.getDescription(), t.getStatus().name(), t.getStatus().label(),

@@ -37,7 +37,7 @@ public class PhysicalInventoryPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 6));
         setOpaque(false);
-        setBorder(new EmptyBorder(6, 4, 4, 4));
+        setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
 
         initTable();
         initActions();
@@ -90,7 +90,7 @@ public class PhysicalInventoryPanel extends JPanel {
     private ModernPanel buildTableCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         card.add(UIHelper.tableCardTop("Inventário Físico & Reconciliação", buildCardToolbar(),
                 refreshBtn, printPdfBtn, sessionActionsMenu, newSessionBtn), BorderLayout.NORTH);
 
@@ -113,11 +113,11 @@ public class PhysicalInventoryPanel extends JPanel {
         sessionCombo.addActionListener(e -> onSessionSelected());
 
         statusLabel = new JLabel(" [-] ");
-        statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        statusLabel.setFont(Typography.BODY_BOLD);
         statusLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         countModeLabel = new JLabel("");
-        countModeLabel.setFont(new Font(UIHelper.FONT, Font.ITALIC, 11));
+        countModeLabel.setFont(Typography.CAPTION.deriveFont(Font.ITALIC));
         countModeLabel.setForeground(UIHelper.ACCENT_BLUE);
 
         searchField = TableFilter.searchField("Pesquisar na contagem…");

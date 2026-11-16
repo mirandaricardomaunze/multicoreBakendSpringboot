@@ -18,7 +18,7 @@ final class ConfigSupportPanel {
     public JPanel buildPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 12));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Pedido");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -30,7 +30,7 @@ final class ConfigSupportPanel {
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
-        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        listCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"#", "Assunto", "Prioridade", "Estado", "Mensagens"};
         owner.supportModel = new DefaultTableModel(cols, 0) {
@@ -51,7 +51,7 @@ final class ConfigSupportPanel {
         JTextField supSearch = TableFilter.searchField("Assunto, prioridade ou estado…");
         TableFilter.install(owner.supportTable, supSearch);
         JPanel supBar = TableFilter.bar(supSearch);
-        supBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        supBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         listCard.add(UIHelper.tableCardTop("Pedidos de Assistência à Plataforma", supBar, refreshBtn, viewBtn, newBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         TableQuickPeekController.install(owner.supportTable, listCard, (peek, row) -> {

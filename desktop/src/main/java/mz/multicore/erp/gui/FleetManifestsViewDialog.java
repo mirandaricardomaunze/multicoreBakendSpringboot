@@ -86,7 +86,7 @@ public class FleetManifestsViewDialog {
                         UIHelper.humanStatus(m.status())
                 });
             }
-        }, error -> ToastManager.show(parent, FeedbackType.ERROR, "Erro ao carregar manifestos: " + error.getMessage()));
+        }, error -> UserErrors.toast(parent, "carregar manifestos", error));
 
         reload.run();
 
@@ -111,7 +111,7 @@ public class FleetManifestsViewDialog {
             String number = String.valueOf(model.getValueAt(row, 1));
             UIHelper.runWithProgress(dialog.getDialog(), "A gerar PDF do manifesto…", () -> fleetApi.printManifest(id),
                     pdf -> PrintPreviewDialog.show(dialog.getDialog(), pdf, "manifesto-" + number),
-                    error -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao imprimir: " + error.getMessage())
+                    error -> UserErrors.toast(dialog.getDialog(), "imprimir", error)
             );
         });
 
@@ -129,7 +129,7 @@ public class FleetManifestsViewDialog {
                         ToastManager.show(dialog.getDialog(), FeedbackType.SUCCESS, "Rota concluída com sucesso.");
                         reload.run();
                     },
-                    error -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao concluir: " + error.getMessage())
+                    error -> UserErrors.toast(dialog.getDialog(), "concluir", error)
             );
         });
 
@@ -145,9 +145,9 @@ public class FleetManifestsViewDialog {
                     reload.run();
                     UIHelper.runWithProgress(dialog.getDialog(), "A gerar PDF do manifesto…", () -> fleetApi.printManifest(created.id()),
                             pdf -> PrintPreviewDialog.show(dialog.getDialog(), pdf, "manifesto-" + created.manifestNumber()),
-                            err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao abrir PDF: " + err.getMessage()));
+                            err -> UserErrors.toast(dialog.getDialog(), "abrir PDF", err));
                 });
-            }, err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao carregar guias: " + err.getMessage()));
+            }, err -> UserErrors.toast(dialog.getDialog(), "carregar guias", err));
         });
 
         dialog.addActionButton(refreshBtn);

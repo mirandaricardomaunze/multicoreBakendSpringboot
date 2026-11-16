@@ -14,9 +14,10 @@ public final class InvoicePdfProbe {
         this.mapper = mapper;
         org.mockito.Mockito.when(mapper.map(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenAnswer(call -> new LineItemsTableRenderer.Row(null, null, "Arroz", null, call.getArgument(2),
-                        1, 1, call.getArgument(3), call.getArgument(4), call.getArgument(5), (BigDecimal) call.getArgument(6)));
+                        1, 1, call.getArgument(3), call.getArgument(4), call.getArgument(5), (BigDecimal) call.getArgument(6),
+                        call.getArgument(7)));
     }
 
     public byte[] render(Invoice invoice) {

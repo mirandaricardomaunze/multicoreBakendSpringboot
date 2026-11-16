@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -134,15 +136,11 @@ public final class PosKeyboardShortcutsHandler {
             return;
         }
 
-        int answer = JOptionPane.showConfirmDialog(
-                panel,
-                "Deseja cancelar o atendimento actual e limpar o carrinho de compras?",
+        boolean clear = ModernMessageDialog.confirm(panel, FeedbackType.WARNING,
                 "Cancelar Venda / Limpar Carrinho",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-        );
+                "Deseja cancelar o atendimento actual e limpar o carrinho de compras?", "Limpar carrinho");
 
-        if (answer == JOptionPane.YES_OPTION) {
+        if (clear) {
             panel.clearCart();
             ToastManager.show(panel, FeedbackType.INFO, "Carrinho limpo com sucesso.");
         }
@@ -184,9 +182,14 @@ public final class PosKeyboardShortcutsHandler {
                 "fas-percent", "Introduza a percentagem de desconto a aplicar ao artigo", form)
                 .setConfirmButton("Aplicar Desconto", "fas-check")
                 .setOnSave(() -> {
-                    BigDecimal percent = parseDiscountPercent(discountPercentField.getText());
+                    BigDecimal percent;
+                    try {
+                        percent = parseDiscountPercent(discountPercentField.getText());
+                    } catch (IllegalArgumentException invalid) {
+                        throw FieldValidationException.of(discountPercentField, invalid.getMessage());
+                    }
                     if (needsManagerPin(percent, CurrentUserContext.getRole()) && !authorizeDiscount(panel, percent)) {
-                        throw new IllegalArgumentException("Um desconto acima de 10% exige o PIN de um gerente.");
+                        throw FieldValidationException.of(discountPercentField, "Um desconto acima de 10% exige o PIN de um gerente.");
                     }
                     item.discount = percent;
                 })

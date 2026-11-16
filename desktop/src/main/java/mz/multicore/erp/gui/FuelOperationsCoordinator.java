@@ -78,7 +78,7 @@ public final class FuelOperationsCoordinator {
 
         dialog.setOnSave(() -> {
             VehicleDTO v = (VehicleDTO) vehicleCombo.getSelectedItem();
-            if (v == null) throw new IllegalArgumentException("Selecione a viatura.");
+            if (v == null) throw FieldValidationException.of(vehicleCombo, "Selecione a viatura.");
 
             BigDecimal odo;
             try {
@@ -90,8 +90,7 @@ public final class FuelOperationsCoordinator {
                 odoField.requestFocus();
                 throw iae;
             } catch (Exception ex) {
-                odoField.requestFocus();
-                throw new IllegalArgumentException("Odómetro inválido.");
+                throw FieldValidationException.of(odoField, "Odómetro inválido.");
             }
 
             BigDecimal liters;
@@ -99,8 +98,7 @@ public final class FuelOperationsCoordinator {
                 liters = new BigDecimal(litersField.getText().trim().replace(",", "."));
                 if (liters.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
             } catch (Exception ex) {
-                litersField.requestFocus();
-                throw new IllegalArgumentException("Quantidade de litros deve ser maior que zero.");
+                throw FieldValidationException.of(litersField, "Quantidade de litros deve ser maior que zero.");
             }
 
             BigDecimal price;
@@ -108,8 +106,7 @@ public final class FuelOperationsCoordinator {
                 price = new BigDecimal(priceField.getText().trim().replace(",", "."));
                 if (price.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
             } catch (Exception ex) {
-                priceField.requestFocus();
-                throw new IllegalArgumentException("Preço por litro deve ser positivo.");
+                throw FieldValidationException.of(priceField, "Preço por litro deve ser positivo.");
             }
 
             RecordFuelLogRequest req = new RecordFuelLogRequest(

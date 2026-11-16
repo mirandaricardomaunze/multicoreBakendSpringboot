@@ -94,6 +94,8 @@ public class HRApiClient {
     public PayslipDTO createPayslip(CreatePayslipRequest req) { return payrollApiClient.createPayslip(req); }
     public PayrollRunDTO processMonthlyPayroll(int year, int month) { return payrollApiClient.processMonthlyPayroll(year, month); }
     public PayslipDTO markPayslipPaid(Long id) { return payrollApiClient.markPayslipPaid(id); }
+    public PayslipDTO markPayslipPaid(Long id, Long financeAccountId) { return payrollApiClient.markPayslipPaid(id, financeAccountId); }
+    public java.util.List<mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO> treasuryAccounts() { return payrollApiClient.treasuryAccounts(); }
     public PayslipDTO approvePayslip(Long id) { return payrollApiClient.approvePayslip(id); }
     public byte[] renderPayslip(Long payslipId) { return payrollApiClient.renderPayslip(payslipId); }
     public List<PayrollPeriodDTO> getPayrollPeriods() { return payrollApiClient.getPayrollPeriods(); }

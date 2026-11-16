@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -38,7 +39,7 @@ final class HRLiabilitiesPanel {
     JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(() -> load());
 
@@ -52,7 +53,7 @@ final class HRLiabilitiesPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] cols = {"ID", "Período", "Retenção", "Valor (MT)", "Prazo", "Estado", "Entregue Por", "Referência"};
         model = new DefaultTableModel(cols, 0) {
@@ -75,7 +76,7 @@ final class HRLiabilitiesPanel {
         JComboBox<String> estado = TableFilter.combo("Todos os estados", "Por entregar", "Entregue");
         TableFilter.install(table, search, List.of(new TableFilter.ColumnFilter(estado, 5)), List.of());
         JPanel bar = TableFilter.bar(search, TableFilter.label("Estado:"), estado);
-        bar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        bar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         card.add(UIHelper.tableCardTop("Retenções por Entregar", bar,
                 refreshBtn, actionsBtn, deliverBtn), BorderLayout.NORTH);
@@ -88,7 +89,7 @@ final class HRLiabilitiesPanel {
     private JPanel buildCostBar() {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bar.setOpaque(false);
-        bar.setBorder(new EmptyBorder(12, 0, 0, 0));
+        bar.setBorder(new EmptyBorder(Spacing.MD, 0, 0, 0));
 
         LocalDate today = LocalDate.now();
         yearSpinner = new JSpinner(new SpinnerNumberModel(today.getYear(), 2000, 2100, 1));

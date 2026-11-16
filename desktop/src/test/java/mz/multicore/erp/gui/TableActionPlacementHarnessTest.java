@@ -57,11 +57,10 @@ class TableActionPlacementHarnessTest {
 
             assertThat(top.getLayout()).isInstanceOf(BorderLayout.class);
             BorderLayout layout = (BorderLayout) top.getLayout();
-            assertThat(layout.getLayoutComponent(BorderLayout.NORTH)).isInstanceOf(JPanel.class);
+            // Uma só fila (docs/ECRA_CAMINHO_E_MENU_SPEC.md): título, filtros ao centro, acções à direita.
+            assertThat(layout.getLayoutComponent(BorderLayout.NORTH)).isNull();
             assertThat(layout.getLayoutComponent(BorderLayout.CENTER)).isSameAs(filters);
-            JPanel header = (JPanel) layout.getLayoutComponent(BorderLayout.NORTH);
-            assertThat(((BorderLayout) header.getLayout()).getLayoutComponent(BorderLayout.EAST))
-                    .isInstanceOf(JPanel.class);
+            assertThat(layout.getLayoutComponent(BorderLayout.EAST)).isInstanceOf(JPanel.class);
             assertControlHeight(search);
             assertControlHeight(refresh);
             assertControlHeight(create);
@@ -126,10 +125,8 @@ class TableActionPlacementHarnessTest {
                 "CommercialInvoicesView.java");
         String source = Files.readString(sourcePath);
 
-        assertThat(source).contains("cardHeader.add(UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn)");
-        assertThat(source).contains("cardTop.add(cardHeader, BorderLayout.NORTH)");
-        assertThat(source).contains("cardTop.add(invFilters, BorderLayout.CENTER)");
-        assertThat(source).contains("listCard.add(cardTop, BorderLayout.NORTH)");
+        // Cabeçalho comum (docs/ECRA_CAMINHO_E_MENU_SPEC.md): título, filtros e acções no topo do mesmo card.
+        assertThat(source).contains("listCard.add(UIHelper.tableCardTop(\"Faturas Recentes\", invFilters, refreshBtn, moreBtn, issueBtn), BorderLayout.NORTH)");
         assertThat(source).doesNotContain("panel.add(headerBar, BorderLayout.NORTH)");
         assertThat(source).doesNotContain("new JComponent[]{moreBtn, cancelInvoiceBtn, payInvoiceBtn}");
     }

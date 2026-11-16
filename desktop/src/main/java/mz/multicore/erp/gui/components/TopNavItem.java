@@ -25,7 +25,7 @@ public class TopNavItem extends JComponent {
     private static final int CORNER = 10;
     // Overlay de hover: clareia sobre barra escura, escurece sobre barra clara.
     private static Color hoverOverlay() {
-        return UIHelper.isLight() ? new Color(0, 0, 0, 18) : new Color(255, 255, 255, 18);
+        return ThemeColors.hoverOverlay();
     }
 
     private final Icon icon;

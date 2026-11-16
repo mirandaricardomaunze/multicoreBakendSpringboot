@@ -61,7 +61,7 @@ public class StrategicPulseWidget extends ModernPanel {
         this.navigationHandler = navigationHandler;
 
         setLayout(new BorderLayout(0, 12));
-        setBorder(new EmptyBorder(16, 18, 16, 18));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         add(StrategicPulseCardFactory.buildHeader(this::loadData), BorderLayout.NORTH);
         buildCards();
@@ -69,7 +69,7 @@ public class StrategicPulseWidget extends ModernPanel {
     }
 
     private void buildCards() {
-        JPanel grid = KpiCard.createGrid(4, 12, 12);
+        JPanel grid = KpiCard.createHeroGrid(4, 12, 12);
         grid.add(StrategicPulseCardFactory.createPillarCard(
                 "COMPLIANCE & FRAUDE", "fas-shield-alt", UIHelper.REJECTED_RED,
                 forensicScoreLabel, forensicSubLabel, forensicNavBtn, "fas-file-alt"));

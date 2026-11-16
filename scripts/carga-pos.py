@@ -22,19 +22,29 @@ COMPANY, WAREHOUSE, PRODUCT = 1, 1, 1
 OPENING_STOCK = 10_000_000
 METHODS = ["CASH", "CARD", "BANK_TRANSFER", "MPESA", "EMOLA"]
 MAX_P95_MS = 2000
+IDLE_RECONNECT_SECONDS = 15
 
 
 class Client:
     def __init__(self, token=None):
         self.token = token
         self.connection = http.client.HTTPConnection("127.0.0.1", PORT, timeout=60)
+        self.last_used = time.time()
 
     def call(self, path, method="GET", body=None):
         headers = {"Content-Type": "application/json", "X-Client-Version": "1.0.0"}
         if self.token:
             headers |= {"Authorization": "Bearer " + self.token, "X-Company-Id": str(COMPANY)}
-        self.connection.request(method, path, json.dumps(body) if body is not None else None, headers)
+        payload = json.dumps(body) if body is not None else None
+        if time.time() - self.last_used > IDLE_RECONNECT_SECONDS:
+            # Em prod o servidor fecha ligações paradas ao fim de 20 s (server.tomcat.connection-timeout),
+            # e a do administrador fica parada durante cada ronda. Reutilizá-la no Windows dá o erro
+            # 10053 a meio do pedido, sem se saber se o servidor o recebeu; religar antes evita a dúvida.
+            self.connection.close()
+            self.connection = http.client.HTTPConnection("127.0.0.1", PORT, timeout=60)
+        self.connection.request(method, path, payload, headers)
         response = self.connection.getresponse()
+        self.last_used = time.time()
         raw = response.read().decode("utf-8", "replace")
         try:
             return response.status, json.loads(raw) if raw.strip() else None

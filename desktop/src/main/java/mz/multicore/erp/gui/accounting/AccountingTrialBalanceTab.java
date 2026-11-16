@@ -41,14 +41,28 @@ public final class AccountingTrialBalanceTab extends JPanel {
         ModernButton load = UIHelper.createPrimaryButton("Calcular");
         load.setIcon(UIHelper.icon("fas-balance-scale", 14));
         load.addActionListener(e -> loadTrialBalance());
+        ModernButton adjust = UIHelper.createSecondaryButton("Acertar existências");
+        adjust.setIcon(UIHelper.icon("fas-boxes", 14));
+        adjust.setToolTipText("Acerta Mercadorias (3201) e Produtos acabados (3401) ao stock físico ao custo.");
+        adjust.addActionListener(e -> adjustInventory());
 
         JPanel filters = TableFilter.bar(TableFilter.label("De:", "fas-calendar-alt"), balanceFrom,
-                TableFilter.label("A:", "fas-calendar-alt"), balanceTo, load);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(filters, BorderLayout.NORTH);
+                TableFilter.label("A:", "fas-calendar-alt"), balanceTo);
+        card.add(UIHelper.tableCardTop("Balancete", filters, load, adjust), BorderLayout.NORTH);
         card.add(balanceSummary, BorderLayout.SOUTH);
 
         add(AccountingUiHelper.wrapTabCard(card), BorderLayout.CENTER);
+    }
+
+    private void adjustInventory() {
+        UIHelper.runWithProgress(this, "A acertar existências…", accountingApiClient::adjustInventory, result -> {
+            String detail = String.format("Mercadorias: stock %,.2f MT, contabilidade %,.2f MT. Produtos acabados: stock %,.2f MT, "
+                            + "contabilidade %,.2f MT.", result.goodsStockValue(), result.goodsBookValue(),
+                    result.finishedStockValue(), result.finishedBookValue());
+            feedback.show(FeedbackType.SUCCESS, result.posted() ? "Existências acertadas" : "Existências já estavam certas",
+                    detail, null, null);
+            loadTrialBalance();
+        }, error -> feedback.show(FeedbackType.ERROR, "Não foi possível acertar as existências", error.getMessage(), null, null));
     }
 
     public void loadTrialBalance() {

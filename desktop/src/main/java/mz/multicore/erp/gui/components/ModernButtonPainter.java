@@ -10,6 +10,9 @@ import java.awt.*;
 
 final class ModernButtonPainter {
 
+    static final String OUTLINE = "button.outline";
+    static final String DANGER = "button.danger";
+
     private ModernButtonPainter() {}
 
     static String stripEllipsis(String text) {
@@ -35,7 +38,7 @@ final class ModernButtonPainter {
                 if (b.isEnabled()) {
                     g.setColor(b.getForeground());
                 } else {
-                    g.setColor(UIHelper.isLight() ? new Color(148, 163, 184) : new Color(100, 116, 139));
+                    g.setColor(ThemeColors.controlSubtle());
                 }
                 String drawText = text;
                 if (drawText != null && (drawText.endsWith("...") || drawText.endsWith("…"))) {
@@ -62,13 +65,13 @@ final class ModernButtonPainter {
 
     static int calculateShortcutBadgeWidth(ModernButton btn, String shortcutText) {
         if (shortcutText == null || shortcutText.isEmpty()) return 0;
-        Font bf = new Font(Font.MONOSPACED, Font.BOLD, 10);
+        Font bf = Typography.KEYCAP;
         FontMetrics fm = btn.getFontMetrics(bf);
         return (fm != null ? fm.stringWidth(shortcutText) : 24) + 12;
     }
 
     static Dimension computePreferredSize(ModernButton btn, Dimension superPref) {
-        Font font = btn.getFont() != null ? btn.getFont() : new Font(UIHelper.FONT, Font.BOLD, 13);
+        Font font = btn.getFont() != null ? btn.getFont() : Typography.EMPHASIS_BOLD;
         FontMetrics fm = btn.getFontMetrics(font);
         int textW = (btn.getText() != null && fm != null) ? fm.stringWidth(btn.getText()) : 0;
         int iconW = (btn.getIcon() != null) ? (btn.getIcon().getIconWidth() + Math.max(btn.getIconTextGap(), 8)) : 0;
@@ -100,7 +103,7 @@ final class ModernButtonPainter {
         Color bg = btn.getBackground() != null ? btn.getBackground() : new Color(59, 130, 246);
 
         if (!btn.isEnabled()) {
-            Color disabledBg = UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85);
+            Color disabledBg = ThemeColors.hairline();
             g2.setColor(disabledBg);
             g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
             g2.setColor(UIHelper.BORDER);
@@ -116,6 +119,10 @@ final class ModernButtonPainter {
         } else {
             g2.setColor(bg);
             g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
+            if (Boolean.TRUE.equals(btn.getClientProperty(OUTLINE))) {
+                g2.setColor(UIHelper.BORDER);
+                g2.drawRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);
+            }
         }
         g2.dispose();
     }
@@ -125,7 +132,7 @@ final class ModernButtonPainter {
         Color currentFg = btn.getForeground();
         if (!btn.isEnabled()) {
             if (btn.getIcon() instanceof FontIcon fi) {
-                fi.setIconColor(UIHelper.isLight() ? new Color(148, 163, 184) : new Color(100, 116, 139));
+                fi.setIconColor(ThemeColors.controlSubtle());
             }
         } else if (currentFg == null || UIHelper.contrastRatio(bg, currentFg) < 3.0) {
             Color safeFg = UIHelper.readableTextOn(bg);
@@ -141,7 +148,7 @@ final class ModernButtonPainter {
         try {
             g3.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g3.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            Font badgeFont = new Font(Font.MONOSPACED, Font.BOLD, 10);
+            Font badgeFont = Typography.KEYCAP;
             g3.setFont(badgeFont);
             FontMetrics fm = g3.getFontMetrics();
             int bw = btn.calculateShortcutBadgeWidth();

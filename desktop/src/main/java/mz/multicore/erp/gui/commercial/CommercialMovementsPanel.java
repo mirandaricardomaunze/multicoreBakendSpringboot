@@ -45,14 +45,14 @@ public final class CommercialMovementsPanel extends JPanel {
         this.inventoryApiClient = inventoryApiClient;
         setLayout(new BorderLayout(0, 12));
         setOpaque(false);
-        setBorder(new EmptyBorder(15, 5, 5, 5));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton refresh = UIHelper.createRefreshButton(() -> refresh());
         add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         model = new DefaultTableModel(new String[]{"Tipo", "Nº", "Cliente / Destino", "Artigos", "Qtd", "Armazém", "Data", "Estado", "Total"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -109,7 +109,7 @@ public final class CommercialMovementsPanel extends JPanel {
                 TableFilter.label("De:"), fromField,
                 TableFilter.label("Até:"), toField
         );
-        filterBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filterBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         TableQuickPeekController.install(table, card, (peek, mr) ->
                 CommercialMovementsOperationsCoordinator.populatePeek(peek, table, model, mr));
@@ -125,7 +125,7 @@ public final class CommercialMovementsPanel extends JPanel {
 
         footer = new JLabel(" ");
         footer.setForeground(UIHelper.TEXT_MUTED);
-        footer.setBorder(new EmptyBorder(8, 4, 0, 4));
+        footer.setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, 0, Spacing.XS));
         JPanel southPanel = new JPanel(new BorderLayout());
         southPanel.setOpaque(false);
         southPanel.add(ClientTablePagination.install(table), BorderLayout.NORTH);

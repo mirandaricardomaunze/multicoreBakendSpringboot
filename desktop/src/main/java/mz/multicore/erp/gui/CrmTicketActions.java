@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.desktop.client.CRMApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -88,9 +90,9 @@ final class CrmTicketActions {
         dlg.setOnSaveAsync(() -> {
             ClientDTO client = clients.get(Math.max(0, clientCombo.getSelectedIndex()));
             String subject = subjectField.getText().trim();
-            if (subject.isEmpty()) throw new IllegalArgumentException("O assunto é obrigatório.");
+            if (subject.isEmpty()) throw FieldValidationException.of(subjectField, "O assunto é obrigatório.");
             String description = descArea.getText().trim();
-            if (description.isEmpty()) throw new IllegalArgumentException("A descrição é obrigatória.");
+            if (description.isEmpty()) throw FieldValidationException.of(descArea, "A descrição é obrigatória.");
 
             CreateTicketRequest request = new CreateTicketRequest(
                     client.id(), subject, description,
@@ -191,8 +193,8 @@ final class CrmTicketActions {
                         "Motivo da anulação:");
                 if (note == null) return;
             } else if ("RESOLVED".equals(targetStatus)) {
-                note = JOptionPane.showInputDialog(UIHelper.mainWindow,
-                        "Nota de fecho (opcional):", label, JOptionPane.QUESTION_MESSAGE);
+                note = ModernMessageDialog.prompt(UIHelper.mainWindow, FeedbackType.INFO, label,
+                        "Nota de fecho (opcional):", "", false);
                 if (note == null) return;                       // cancelou
             }
 

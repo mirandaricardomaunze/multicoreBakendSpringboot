@@ -33,7 +33,7 @@ public class FormDraftBanner extends JPanel {
         setBackground(new Color(40, 35, 20)); // Fundo âmbar suave compatível com tema escuro
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, UIHelper.PENDING_YELLOW),
-                new EmptyBorder(6, 12, 6, 12)
+                new EmptyBorder(Spacing.XS, Spacing.MD, Spacing.XS, Spacing.MD)
         ));
 
         if (currentDraft == null || currentDraft.payload().isEmpty()) {
@@ -54,7 +54,7 @@ public class FormDraftBanner extends JPanel {
         JLabel icon = new JLabel(UIHelper.icon("fas-history", 16, UIHelper.PENDING_YELLOW));
         JLabel msg = new JLabel("Existe um rascunho recuperável guardado "
                 + currentDraft.formattedTimeAgo() + " (" + currentDraft.payload().size() + " campos).");
-        msg.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        msg.setFont(Typography.BODY);
         msg.setForeground(UIHelper.TEXT_LIGHT);
 
         left.add(icon);
@@ -67,7 +67,7 @@ public class FormDraftBanner extends JPanel {
 
         ModernButton restoreBtn = new ModernButton("Restaurar Rascunho", UIHelper.PENDING_YELLOW, UIHelper.PENDING_YELLOW.darker());
         restoreBtn.setForeground(Color.BLACK);
-        restoreBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        restoreBtn.setFont(Typography.CAPTION_BOLD);
         restoreBtn.setPreferredSize(new Dimension(140, 28));
         restoreBtn.setIcon(UIHelper.icon("fas-undo", 12, Color.BLACK));
         restoreBtn.addActionListener(e -> {
@@ -78,7 +78,7 @@ public class FormDraftBanner extends JPanel {
         });
 
         ModernButton discardBtn = UIHelper.createSecondaryButton("Descartar");
-        discardBtn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        discardBtn.setFont(Typography.CAPTION);
         discardBtn.setPreferredSize(new Dimension(85, 28));
         discardBtn.setIcon(UIHelper.icon("fas-trash-alt", 11, UIHelper.REJECTED_RED));
         discardBtn.addActionListener(e -> {

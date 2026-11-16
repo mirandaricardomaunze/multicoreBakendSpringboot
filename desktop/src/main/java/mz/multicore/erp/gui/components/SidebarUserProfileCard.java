@@ -32,15 +32,15 @@ public class SidebarUserProfileCard extends JPanel {
             }
         });
 
-        Color headColor = UIHelper.isLight() ? new Color(31, 41, 55) : new Color(243, 244, 246);
-        Color subColor = UIHelper.isLight() ? new Color(100, 116, 139) : new Color(203, 213, 225);
+        Color headColor = UIHelper.TEXT_LIGHT;
+        Color subColor = ThemeColors.textSoft();
 
         nameLabel = new JLabel("Multicore");
-        nameLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        nameLabel.setFont(Typography.BODY_BOLD);
         nameLabel.setForeground(headColor);
 
         roleLabel = new JLabel("Sistema");
-        roleLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        roleLabel.setFont(Typography.CAPTION);
         roleLabel.setForeground(subColor);
 
         textStack = new JPanel();
@@ -54,7 +54,7 @@ public class SidebarUserProfileCard extends JPanel {
         logoutBtn.setToolTipText("Terminar Sessão (Logout)");
         logoutBtn.setFocusPainted(false);
         logoutBtn.setContentAreaFilled(false);
-        logoutBtn.setBorder(new EmptyBorder(4, 4, 4, 4));
+        logoutBtn.setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         logoutBtn.addActionListener(e -> UIHelper.requestLogout(SidebarUserProfileCard.this));
 
@@ -86,7 +86,7 @@ public class SidebarUserProfileCard extends JPanel {
         JPopupMenu popup = new JPopupMenu();
         popup.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                new EmptyBorder(4, 6, 4, 6)));
+                new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS)));
         JMenuItem header = new JMenuItem(displayName + " (" + role + ")");
         header.setEnabled(false);
         popup.add(header);
@@ -141,7 +141,7 @@ public class SidebarUserProfileCard extends JPanel {
                 g2.drawOval(0, 0, w - 1, h - 1);
 
                 g2.setColor(Color.WHITE);
-                g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+                g2.setFont(Typography.CAPTION_BOLD);
                 FontMetrics fm = g2.getFontMetrics();
                 int tw = fm.stringWidth(initials);
                 int tx = (w - tw) / 2;
@@ -151,7 +151,7 @@ public class SidebarUserProfileCard extends JPanel {
                 int dotSize = 8;
                 int dotX = w - dotSize;
                 int dotY = h - dotSize;
-                Color sideBg = UIHelper.isLight() ? new Color(255, 255, 255) : new Color(24, 32, 47);
+                Color sideBg = ThemeColors.chromeBg();
                 g2.setColor(sideBg);
                 g2.fillOval(dotX - 1, dotY - 1, dotSize + 2, dotSize + 2);
                 g2.setColor(new Color(16, 185, 129));

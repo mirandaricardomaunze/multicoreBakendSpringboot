@@ -3,9 +3,9 @@ package mz.multicore.erp.modules.documents.dto;
 import jakarta.validation.constraints.Size;
 
 /**
- * Valor de fronteira: que colunas aparecem na tabela de linhas dos documentos comerciais.
- * Ordem canónica: código de barras, referência, descrição, validade, quantidade, embalagens,
- * caixas, percentagem da caixa, preço unitário, IVA e subtotal.
+ * Boundary value defining which columns appear in commercial document line tables.
+ * Canonical order: barcode, reference, description, expiry, quantity, packages, cases, case
+ * percentage, unit price, VAT, and subtotal.
  */
 public record DocumentColumnsDTO(
         boolean barcode,
@@ -23,7 +23,7 @@ public record DocumentColumnsDTO(
         String footer
 ) {
 
-    /** Construtor retrocompatível sem boxPercentage (assume false). */
+    /** Backward-compatible constructor without boxPercentage, which defaults to false. */
     public DocumentColumnsDTO(
             boolean barcode,
             boolean reference,
@@ -40,12 +40,12 @@ public record DocumentColumnsDTO(
         this(barcode, reference, description, expiry, quantity, packages, boxes, false, unitPrice, tax, subtotal, footer);
     }
 
-    /** Todas as colunas visíveis, sem comentário (default quando não há configuração guardada). */
+    /** All columns visible without comments, used when no configuration is stored. */
     public static DocumentColumnsDTO all() {
         return new DocumentColumnsDTO(true, true, true, true, true, true, true, true, true, true, true, null);
     }
 
-    /** True se pelo menos uma coluna estiver visível. */
+    /** Returns true when at least one column is visible. */
     public boolean anyVisible() {
         return barcode || reference || description || expiry || quantity || packages || boxes || boxPercentage
                 || unitPrice || tax || subtotal;

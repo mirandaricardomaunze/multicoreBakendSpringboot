@@ -91,7 +91,7 @@ public class PrintPreviewPaperCanvas extends JPanel {
 
         if (pageImage == null) {
             g.setColor(UIHelper.PAPER_INK);
-            g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+            g.setFont(Typography.EMPHASIS);
             String message = "A preparar pré-visualização…";
             int width = g.getFontMetrics().stringWidth(message);
             g.drawString(message, paper.x + (paper.width - width) / 2, paper.y + paper.height / 2);

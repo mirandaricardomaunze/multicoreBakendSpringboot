@@ -108,7 +108,7 @@ public class StockPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(8, 12, 8, 12));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setOpaque(false);
@@ -164,7 +164,7 @@ public class StockPanel extends JPanel {
     private JPanel buildLevelsTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
+        tab.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         ActionMenuButton printMenu = UIHelper.createActionMenuButton("Imprimir")
                 .addAction("Inventário de Stock", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), this::printInventoryReport)
@@ -211,13 +211,13 @@ public class StockPanel extends JPanel {
                 TableFilter.label("Armazém:"), warehouseFilterCombo, TableFilter.label("Estado:"), stockStatusCombo, TableFilter.label("Categoria:"), stockCategoryCombo);
         JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
         filtersRow.setOpaque(false);
-        filtersRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+        filtersRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filtersRow.add(filtersLeft, BorderLayout.CENTER);
         filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         card.add(UIHelper.tableCardTop("Níveis de Stock", filtersRow, refreshLevelsBtn, printMenu, levelsMoreBtn, cardNewProductBtn), BorderLayout.NORTH);
 
         String[] stockCols = {"Código de Barras", "Referência", "Nome do Produto", "Negócio", "Qtd Unidades", "Qtd Caixas", "Preço", "Estado", "Validade"};
@@ -262,7 +262,7 @@ public class StockPanel extends JPanel {
     private JPanel buildMovementsTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernButton adjustmentBtn = UIHelper.createPrimaryButton("Ajuste / Inventário");
         adjustmentBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
@@ -270,7 +270,7 @@ public class StockPanel extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         String[] movCols = {"Data", "Artigo", "Armazém", "Qtd Movimentada", "Tipo Mov.", "Nº Lote", "Nº Série", "Descrição", "Negócio"};
         movementsModel = new DefaultTableModel(movCols, 0) {
@@ -303,7 +303,7 @@ public class StockPanel extends JPanel {
 
         JPanel mvFilters = TableFilter.bar(mvSearch, TableFilter.label("Negócio:"), movementBusinessUnitFilter,
                 TableFilter.label("Artigo:"), movementProductFilter, TableFilter.label("Tipo:"), mvTipo, TableFilter.label("De:"), movementFrom, TableFilter.label("Até:"), movementTo);
-        mvFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        mvFilters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
         ModernButton refreshMovBtn = UIHelper.createRefreshButton(movementsCoordinator::loadMovements);
         ModernButton printMovBtn = UIHelper.createSecondaryButton("Imprimir movimentos");
@@ -321,7 +321,7 @@ public class StockPanel extends JPanel {
     private JPanel buildTransfersTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
+        tab.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         ModernButton transferBtn = UIHelper.createSuccessButton("Nova Transferência");
         transferBtn.setIcon(UIHelper.icon("fas-truck", 14));
@@ -344,7 +344,7 @@ public class StockPanel extends JPanel {
         ModernButton refreshTransfersBtn = UIHelper.createRefreshButton(this::loadTransfers);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] transferCols = {"Nº Guia", "Data", "Origem", "Destino", "Motorista", "Matrícula", "Linhas", "Estado", "Negócio"};
         transferModel = new DefaultTableModel(transferCols, 0) {
@@ -371,7 +371,7 @@ public class StockPanel extends JPanel {
                 List.of(new TableFilter.PeriodFilter(trPeriodo, 1)));
 
         JPanel trFilters = TableFilter.bar(trSearch, TableFilter.label("Negócio:"), transferBusinessUnitCombo, TableFilter.label("Estado:"), trEstado, TableFilter.label("Período:"), trPeriodo);
-        trFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
+        trFilters.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         card.add(UIHelper.tableCardTop("Transferências entre Armazéns", trFilters, refreshTransfersBtn, transferDocuments, transferMenu, transferBtn), BorderLayout.NORTH);
         card.add(transferScroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(transferTable), BorderLayout.SOUTH);

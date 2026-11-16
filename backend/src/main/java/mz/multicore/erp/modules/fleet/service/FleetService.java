@@ -1,6 +1,6 @@
 package mz.multicore.erp.modules.fleet.service;
 
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fleet.dto.CreateVehicleRequest;
 import mz.multicore.erp.modules.fleet.dto.FuelLogDTO;
 import mz.multicore.erp.modules.fleet.dto.RecordFuelLogRequest;
@@ -30,15 +30,15 @@ public class FleetService {
 
     public FleetService(VehicleRepository vehicleRepository,
                         FuelLogRepository fuelLogRepository,
-                        CompanyRepository companyRepository) {
-        this(vehicleRepository, fuelLogRepository, companyRepository, null);
+                        CompanyLookup companyLookup) {
+        this(vehicleRepository, fuelLogRepository, companyLookup, null);
     }
 
     public FleetService(VehicleRepository vehicleRepository,
                         FuelLogRepository fuelLogRepository,
-                        CompanyRepository companyRepository,
+                        CompanyLookup companyLookup,
                         ApplicationEventPublisher eventPublisher) {
-        this(new FleetVehicleManagementService(vehicleRepository, companyRepository),
+        this(new FleetVehicleManagementService(vehicleRepository, companyLookup),
              new FleetFuelLogService(vehicleRepository, fuelLogRepository, eventPublisher));
     }
 

@@ -87,7 +87,7 @@ final class PromotionFormDialog {
         ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Nova Promoção",
                 "fas-percent", "Campanha de desconto na loja", form);
         dialog.setOnSaveAsync(() -> {
-            if (!nameForm.validateRequired()) throw new IllegalArgumentException("Indique o nome da promoção.");
+            if (!nameForm.validateRequired()) throw FieldValidationException.of(nameField, "Indique o nome da promoção.");
             boolean percent = typeCombo.getSelectedIndex() == 0;
             boolean byProduct = scopeCombo.getSelectedIndex() == 0;
             ProductDTO selectedProduct = productCombo.selectedProduct();

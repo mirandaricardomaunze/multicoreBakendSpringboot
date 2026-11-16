@@ -59,7 +59,7 @@ public class ModernFormDialog {
 
         JPanel main = new JPanel(new BorderLayout(0, 16));
         main.setBackground(UIHelper.BG_DARK);
-        main.setBorder(new EmptyBorder(22, 26, 20, 26));
+        main.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         // Header premium — badge com ícone + título + subtítulo + divisória
         main.add(UIHelper.buildPremiumHeader(code, title, subtitle), BorderLayout.NORTH);
@@ -81,12 +81,11 @@ public class ModernFormDialog {
         main.add(contentPanel, BorderLayout.CENTER);
 
         // Buttons
-        cancelBtn = UIHelper.createSecondaryButton("Cancelar");
-        cancelBtn.setIcon(UIHelper.icon("fas-times", 14));
+        cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.setPreferredSize(new Dimension(110, 38));
         cancelBtn.addActionListener(e -> dialog.dispose());
 
-        saveBtn = UIHelper.createSuccessButton("Gravar");
+        saveBtn = ButtonStyles.main(UIHelper.createSuccessButton("Gravar"));
         saveBtn.setIcon(UIHelper.icon("fas-save", 14));
         saveBtn.setPreferredSize(new Dimension(150, 38));
         saveBtn.addActionListener(e -> attemptSave());
@@ -95,7 +94,7 @@ public class ModernFormDialog {
         buttonRow.setOpaque(false);
         buttonRow.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
-                new EmptyBorder(14, 0, 0, 0)));
+                new EmptyBorder(Spacing.LG, 0, 0, 0)));
         buttonRow.add(cancelBtn);
         buttonRow.add(saveBtn);
         main.add(buttonRow, BorderLayout.SOUTH);
@@ -114,7 +113,7 @@ public class ModernFormDialog {
         dialog.setMinimumSize(new Dimension(Math.min(MIN_WIDTH, maxW), Math.min(MIN_HEIGHT, maxH)));
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.getRootPane().registerKeyboardAction(e -> {
-                    if (saveBtn.getParent() != null && saveBtn.isEnabled()) attemptSave();
+                    if (saveBtn.getParent() != null && saveBtn.isVisible() && saveBtn.isEnabled()) attemptSave();
                 }, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S,
                         java.awt.event.InputEvent.CTRL_DOWN_MASK), JComponent.WHEN_IN_FOCUSED_WINDOW);
         dialog.getRootPane().registerKeyboardAction(e -> dialog.dispose(),
@@ -160,8 +159,23 @@ public class ModernFormDialog {
      * decisão de aprovações.
      */
     public ModernFormDialog addActionButton(ModernButton btn) {
+        ButtonStyles.dialogExtra(btn);
         btn.setPreferredSize(new Dimension(130, 38));
         buttonRow.add(btn, 0);
+        buttonRow.revalidate();
+        buttonRow.repaint();
+        return this;
+    }
+
+    /**
+     * Adds a footer button right before the confirm button (after "Cancelar"), for actions that
+     * move the form forward, like "Anterior"/"Seguinte" in a multi-step form.
+     */
+    public ModernFormDialog addActionButtonBeforeConfirm(ModernButton btn) {
+        ButtonStyles.dialogExtra(btn);
+        btn.setPreferredSize(new Dimension(130, 38));
+        int index = java.util.Arrays.asList(buttonRow.getComponents()).indexOf(saveBtn);
+        buttonRow.add(btn, index < 0 ? buttonRow.getComponentCount() : index);
         buttonRow.revalidate();
         buttonRow.repaint();
         return this;
@@ -178,6 +192,17 @@ public class ModernFormDialog {
         if (iconCode != null) {
             saveBtn.setIcon(UIHelper.icon(iconCode, 14));
         }
+        return this;
+    }
+
+    /**
+     * Shows or hides the confirm button. A multi-step form hides it until the last step; while
+     * hidden, Ctrl+S and {@link #submit()} do nothing.
+     */
+    public ModernFormDialog setConfirmVisible(boolean visible) {
+        saveBtn.setVisible(visible);
+        buttonRow.revalidate();
+        buttonRow.repaint();
         return this;
     }
 
@@ -272,7 +297,7 @@ public class ModernFormDialog {
 
     /** Executa a confirmação do modal programaticamente (ex.: duplo clique ou Enter na tabela). */
     public void submit() {
-        if (saveBtn != null && saveBtn.isEnabled() && saveBtn.getParent() != null) {
+        if (saveBtn != null && saveBtn.isVisible() && saveBtn.isEnabled() && saveBtn.getParent() != null) {
             attemptSave();
         }
     }
@@ -313,7 +338,9 @@ public class ModernFormDialog {
         String message = error == null || error.getMessage() == null || error.getMessage().isBlank()
                 ? "Não foi possível concluir a operação. Tente novamente."
                 : error.getMessage();
-        feedbackPanel.show(FeedbackType.ERROR, "Não foi possível gravar", message, null, null);
+        // A field error is shown on the field itself; the banner only points at it.
+        String title = FieldErrors.showIfField(error) ? "Corrija o campo assinalado" : "Não foi possível gravar";
+        feedbackPanel.show(FeedbackType.ERROR, title, message, null, null);
         dialog.revalidate();
         dialog.repaint();
     }

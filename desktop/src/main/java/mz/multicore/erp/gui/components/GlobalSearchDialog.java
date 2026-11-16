@@ -87,17 +87,17 @@ public class GlobalSearchDialog extends JDialog {
         JPanel root = new JPanel(new BorderLayout(0, 0));
         root.setBackground(UIHelper.BG_DARK);
         root.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(51, 65, 85), 1),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)
+                BorderFactory.createLineBorder(ThemeColors.hairline(), 1),
+                BorderFactory.createEmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG)
         ));
 
         // Top Search Bar
         JPanel searchBar = new JPanel(new BorderLayout(10, 0));
         searchBar.setOpaque(false);
-        searchBar.setBorder(UIHelper.fieldBorder(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85), 1));
+        searchBar.setBorder(UIHelper.fieldBorder(ThemeColors.hairline(), 1));
 
         JLabel searchIcon = new JLabel(UIHelper.icon("fas-search", 18, UIHelper.ACCENT_BLUE));
-        searchField.setFont(new Font(UIHelper.FONT, Font.PLAIN, 15));
+        searchField.setFont(Typography.TITLE_REGULAR);
         searchField.setForeground(UIHelper.TEXT_LIGHT);
         searchField.setCaretColor(UIHelper.TEXT_LIGHT);
         searchField.setOpaque(false);
@@ -107,7 +107,7 @@ public class GlobalSearchDialog extends JDialog {
         JPanel escPill = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 2));
         escPill.setOpaque(false);
         JLabel escLabel = new JLabel("ESC");
-        escLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        escLabel.setFont(Typography.CAPTION_BOLD);
         escLabel.setForeground(UIHelper.TEXT_MUTED);
         escPill.add(escLabel);
 
@@ -126,20 +126,20 @@ public class GlobalSearchDialog extends JDialog {
         JScrollPane scrollPane = new JScrollPane(resultList);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, 0, Spacing.SM, 0));
         scrollPane.getVerticalScrollBar().setUnitIncrement(14);
         root.add(scrollPane, BorderLayout.CENTER);
 
         // Footer Bar
         JPanel footerBar = new JPanel(new BorderLayout());
         footerBar.setOpaque(false);
-        footerBar.setBorder(BorderFactory.createEmptyBorder(6, 4, 0, 4));
+        footerBar.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, 0, Spacing.XS));
 
-        countLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        countLabel.setFont(Typography.CAPTION);
         countLabel.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel navHelp = new JLabel("Cima/Baixo: Navegar   Enter: Abrir   ESC: Fechar");
-        navHelp.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        navHelp.setFont(Typography.CAPTION);
         navHelp.setForeground(UIHelper.TEXT_MUTED);
 
         footerBar.add(countLabel, BorderLayout.WEST);
@@ -279,7 +279,7 @@ public class GlobalSearchDialog extends JDialog {
                     if (isSelected) {
                         Graphics2D g2 = (Graphics2D) g.create();
                         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                        g2.setColor(UIHelper.isLight() ? new Color(237, 242, 247) : new Color(30, 41, 59));
+                        g2.setColor(ThemeColors.subtleFill());
                         g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
                         g2.setColor(item.accentColor() != null ? item.accentColor() : UIHelper.ACCENT_BLUE);
                         g2.fillRoundRect(2, 6, 4, getHeight() - 12, 4, 4);
@@ -288,7 +288,7 @@ public class GlobalSearchDialog extends JDialog {
                 }
             };
             itemPanel.setOpaque(false);
-            itemPanel.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+            itemPanel.setBorder(BorderFactory.createEmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
             // Left icon
             JLabel iconLabel = new JLabel(item.icon());
@@ -299,11 +299,11 @@ public class GlobalSearchDialog extends JDialog {
             textStack.setOpaque(false);
 
             JLabel titleLabel = new JLabel(item.title());
-            titleLabel.setFont(new Font(UIHelper.FONT, isSelected ? Font.BOLD : Font.PLAIN, 13));
+            titleLabel.setFont(isSelected ? Typography.EMPHASIS_BOLD : Typography.EMPHASIS);
             titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
             JLabel catLabel = new JLabel(item.category() != null ? item.category() : "");
-            catLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+            catLabel.setFont(Typography.CAPTION);
             catLabel.setForeground(UIHelper.TEXT_MUTED);
 
             textStack.add(titleLabel, BorderLayout.WEST);
@@ -315,11 +315,11 @@ public class GlobalSearchDialog extends JDialog {
                 JPanel hintPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
                 hintPanel.setOpaque(false);
                 JLabel hintLabel = new JLabel(item.shortcutHint());
-                hintLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+                hintLabel.setFont(Typography.CAPTION_BOLD);
                 hintLabel.setForeground(isSelected ? UIHelper.ACCENT_BLUE : UIHelper.TEXT_MUTED);
                 hintLabel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(71, 85, 105), 1),
-                        BorderFactory.createEmptyBorder(2, 6, 2, 6)
+                        BorderFactory.createLineBorder(ThemeColors.outline(), 1),
+                        BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS)
                 ));
                 hintPanel.add(hintLabel);
                 itemPanel.add(hintPanel, BorderLayout.EAST);

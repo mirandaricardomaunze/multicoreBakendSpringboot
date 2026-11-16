@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.commercial;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.BarcodeScanField;
 import mz.multicore.erp.gui.components.ClientTablePagination;
@@ -138,7 +139,7 @@ final class QuotationEditorForm {
     private JComponent buildLinesSection() {
         ModernPanel section = new ModernPanel(16);
         section.setLayout(new BorderLayout(0, 10));
-        section.setBorder(new EmptyBorder(14, 16, 14, 16));
+        section.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         productCombo = new ProductSearchComboBox();
         quantityField = new QuantityField("1", true);

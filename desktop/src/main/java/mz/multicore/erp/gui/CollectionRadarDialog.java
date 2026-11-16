@@ -38,7 +38,7 @@ public class CollectionRadarDialog {
         root.setOpaque(false);
         root.setPreferredSize(new Dimension(980, 580));
 
-        // 1. Grid de 5 KPIs corporativos canónicos (STANDARD_CARD_HEIGHT = 96px)
+        // 1. Faixa compacta de 5 KPIs por cima da tabela
         JLabel critVal = new JLabel("0,00 MT");
         JLabel critSub = new JLabel("0 faturas");
         ModernPanel critCard = KpiCard.createCard("Crítico (>15d)", critVal, null, critSub, "fas-exclamation-triangle", UIHelper.REJECTED_RED);
@@ -70,7 +70,7 @@ public class CollectionRadarDialog {
         // 2. Card com tabela e filtros
         ModernPanel tableCard = new ModernPanel(16);
         tableCard.setLayout(new BorderLayout(0, 8));
-        tableCard.setBorder(new EmptyBorder(10, 12, 10, 12));
+        tableCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] cols = {"ID", "Nº Fatura", "Cliente", "NUIT", "Emissão", "Vencimento", "Saldo em Dívida", "Dias", "Horizonte"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
@@ -158,7 +158,7 @@ public class CollectionRadarDialog {
                             item.bucket() != null ? item.bucket().label() : "-"
                     });
                 }
-            }, err -> ToastManager.show(tableCard, FeedbackType.ERROR, "Erro ao carregar radar: " + err.getMessage()));
+            }, err -> UserErrors.toast(tableCard, "carregar radar", err));
         };
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadData.run());
@@ -208,14 +208,14 @@ public class CollectionRadarDialog {
         subjectField.setEditable(false);
 
         JTextArea messageArea = new JTextArea(10, 45);
-        messageArea.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        messageArea.setFont(Typography.BODY);
         messageArea.setLineWrap(true);
         messageArea.setWrapStyleWord(true);
         messageArea.setBackground(UIHelper.FIELD_BG);
         messageArea.setForeground(UIHelper.TEXT_LIGHT);
         messageArea.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                new EmptyBorder(8, 8, 8, 8)
+                new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
         ));
 
         JScrollPane msgScroll = new JScrollPane(messageArea);
@@ -231,7 +231,7 @@ public class CollectionRadarDialog {
                         messageArea.setText(dto.message() != null ? dto.message() : "");
                         messageArea.setCaretPosition(0);
                     },
-                    err -> ToastManager.show(parent, FeedbackType.ERROR, "Erro ao carregar modelo: " + err.getMessage())
+                    err -> UserErrors.toast(parent, "carregar modelo", err)
             );
         };
 

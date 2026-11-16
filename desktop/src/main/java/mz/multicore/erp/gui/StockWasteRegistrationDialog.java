@@ -70,11 +70,11 @@ public final class StockWasteRegistrationDialog {
         notesField.setPreferredSize(new Dimension(320, UIHelper.FORM_CONTROL_HEIGHT));
 
         JLabel costPreviewLabel = new JLabel("Custo Estimado: 0,00 MT");
-        costPreviewLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        costPreviewLabel.setFont(Typography.BODY_BOLD);
         costPreviewLabel.setForeground(UIHelper.ACCENT_BLUE);
 
         JLabel thresholdWarning = new JLabel("Perdas > 2.500,00 MT requerem aprovação formal da gerência.");
-        thresholdWarning.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        thresholdWarning.setFont(Typography.CAPTION);
         thresholdWarning.setForeground(UIHelper.PENDING_YELLOW);
 
         Runnable updateCostPreview = () -> {
@@ -156,6 +156,6 @@ public final class StockWasteRegistrationDialog {
                 ToastManager.show(parent, FeedbackType.INFO, "Registo guardado com estado 'Pendente Aprovação' por exceder a alçada.");
             }
             if (onSuccess != null) onSuccess.run();
-        }, err -> ToastManager.show(parent, FeedbackType.ERROR, "Erro ao registar: " + err.getMessage()));
+        }, err -> UserErrors.toast(parent, "registar", err));
     }
 }

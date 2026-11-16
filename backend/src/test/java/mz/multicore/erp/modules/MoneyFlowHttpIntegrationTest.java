@@ -12,6 +12,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.math.BigDecimal;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -45,6 +50,8 @@ class MoneyFlowHttpIntegrationTest {
     private record SalesContext(String token, String companyId, long productId,
                                 long warehouseId, long clientId, String taxRate, BigDecimal stockBaseline) {}
 
+    private record ConcurrentSaleResult(int status, String responseBody) {}
+
     // ─── Fatura: desconta stock e recusa venda a descoberto ──────────────────────
     @Test
     void invoiceEmissionDecrementsStockAndRejectsOversell() throws Exception {
@@ -70,6 +77,42 @@ class MoneyFlowHttpIntegrationTest {
 
         // O stock não mudou com a tentativa recusada.
         assertThat(stockQuantity(c)).isEqualByComparingTo(after);
+    }
+
+    @Test
+    void concurrentInvoiceEmission_lastAvailableStock_acceptsOnlyOneSale() throws Exception {
+        SalesContext c = prepareSalesContext(BigDecimal.ONE);
+        BigDecimal lastAvailableQuantity = c.stockBaseline();
+        int invoicesBefore = invoiceCount(c);
+        BigDecimal issuedQuantityBefore = issuedStockQuantity(c);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        // Both workers wait at the same gate so they compete for the same final stock balance.
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<ConcurrentSaleResult> first = executor.submit(
+                    () -> submitConcurrentInvoice(c, lastAvailableQuantity, ready, start));
+            Future<ConcurrentSaleResult> second = executor.submit(
+                    () -> submitConcurrentInvoice(c, lastAvailableQuantity, ready, start));
+
+            assertThat(ready.await(10, TimeUnit.SECONDS))
+                    .as("both sales must be ready before the concurrency gate opens")
+                    .isTrue();
+            start.countDown();
+
+            ConcurrentSaleResult firstResult = first.get(20, TimeUnit.SECONDS);
+            ConcurrentSaleResult secondResult = second.get(20, TimeUnit.SECONDS);
+
+            assertThat(new int[]{firstResult.status(), secondResult.status()})
+                    .containsExactlyInAnyOrder(200, 400);
+            ConcurrentSaleResult rejected = firstResult.status() == 400 ? firstResult : secondResult;
+            assertThat(rejected.responseBody()).containsIgnoringCase("stock");
+        }
+
+        assertThat(stockQuantity(c)).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(invoiceCount(c)).isEqualTo(invoicesBefore + 1);
+        assertThat(issuedStockQuantity(c).subtract(issuedQuantityBefore))
+                .isEqualByComparingTo(lastAvailableQuantity);
     }
 
     // ─── POS: checkout devolve InvoiceDTO e desconta stock ───────────────────────
@@ -186,6 +229,43 @@ class MoneyFlowHttpIntegrationTest {
         JsonNode accounts = getJson("/api/finance/accounts", c.token(), c.companyId());
         assertThat(accounts.isEmpty()).as("é preciso pelo menos uma conta de tesouraria").isFalse();
         return accounts.get(0).get("id").asLong();
+    }
+
+    private ConcurrentSaleResult submitConcurrentInvoice(
+            SalesContext c,
+            BigDecimal quantity,
+            CountDownLatch ready,
+            CountDownLatch start
+    ) throws Exception {
+        ready.countDown();
+        if (!start.await(10, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("Concurrency gate did not open in time.");
+        }
+        String request = """
+                {"clientId":%d,"companyId":%s,"warehouseId":%d,
+                 "lines":[{"productId":%d,"quantity":%s,"taxRate":%s,"discountPercentage":0}]}"""
+                .formatted(c.clientId(), c.companyId(), c.warehouseId(), c.productId(),
+                        quantity.toPlainString(), c.taxRate());
+        var response = postJson("/api/comercial/invoices", c.token(), c.companyId(), request)
+                .andReturn().getResponse();
+        return new ConcurrentSaleResult(response.getStatus(), response.getContentAsString());
+    }
+
+    private int invoiceCount(SalesContext c) throws Exception {
+        return getJson("/api/comercial/invoices?companyId=" + c.companyId(), c.token(), c.companyId()).size();
+    }
+
+    private BigDecimal issuedStockQuantity(SalesContext c) throws Exception {
+        BigDecimal total = BigDecimal.ZERO;
+        JsonNode movements = getJson(
+                "/api/inventory/movements?companyId=" + c.companyId(), c.token(), c.companyId());
+        for (JsonNode movement : movements) {
+            if (movement.get("productId").asLong() == c.productId()
+                    && "SALE".equals(movement.get("movementType").asText())) {
+                total = total.add(new BigDecimal(movement.get("quantity").asText()).abs());
+            }
+        }
+        return total;
     }
 
     private JsonNode getJson(String path, String token, String companyId) throws Exception {

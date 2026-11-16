@@ -127,7 +127,7 @@ public final class AccountingJournalTab extends JPanel {
                 throw new IllegalArgumentException("Corrija os campos assinalados.");
             }
             BigDecimal value = amount.value();
-            if (value.signum() <= 0) throw new IllegalArgumentException("O valor deve ser maior que zero.");
+            if (value.signum() <= 0) throw FieldValidationException.of(amount, "O valor deve ser maior que zero.");
             CreateJournalEntryRequest request = new CreateJournalEntryRequest(
                     AccountingUiHelper.parseDate(date.getText()),
                     description.getText().trim(),

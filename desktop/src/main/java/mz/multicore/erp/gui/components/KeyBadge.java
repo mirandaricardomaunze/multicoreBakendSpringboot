@@ -18,8 +18,8 @@ public class KeyBadge extends JComponent {
     public KeyBadge(String keyText) {
         this.keyText = keyText == null ? "" : keyText.trim();
         setOpaque(false);
-        setBorder(new EmptyBorder(2, 6, 2, 6));
-        setFont(new Font(Font.MONOSPACED, Font.BOLD, 10));
+        setBorder(new EmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS));
+        setFont(Typography.KEYCAP);
     }
 
     public static KeyBadge of(String key) {

@@ -6,6 +6,7 @@ import mz.multicore.erp.modules.approvals.service.ApprovalService;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.CreateAbsenceRequest;
 import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
@@ -44,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -109,7 +111,7 @@ class HRServiceTest {
                 vacationRepository,
                 // Guarda REAL sobre os mocks: as regras de "quem pode agir sobre quem" continuam a
                 // ser exercitadas por estes testes. Um mock da guarda esvaziava-os em silêncio.
-                new HrAccessGuard(employeeRepository, companyRepository),
+                new HrAccessGuard(employeeRepository, new CompanyLookup(companyRepository)),
                 payrollTaxService,
                 mock(ApprovalService.class),
                 documentNumberService,
@@ -695,6 +697,23 @@ class HRServiceTest {
         assertEquals(0, new BigDecimal("31000").compareTo(event.grossPay())); // base + subsídios + extra
         assertEquals(0, new BigDecimal("900").compareTo(event.employerInss()));
         assertEquals(0, new BigDecimal("26100").compareTo(event.netPay()));
+    }
+
+    @Test
+    void markPayslipPaid_byBankTransfer_leavesTheBankAndPostsToBank() {
+        // Paid by transfer: the net leaves the chosen bank account, and the ledger credits Banco, not Caixa.
+        when(payslipRepository.findByIdWithEmployeeAndCompanyId(4L, 7L))
+                .thenReturn(Optional.of(approvedPayslipToPay()));
+        when(payslipRepository.save(any(Payslip.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(financeService.accountType(55L)).thenReturn(mz.multicore.erp.modules.financeira.model.TreasuryAccountType.BANK);
+
+        service.markPayslipPaid(4L, 55L);
+
+        verify(financeService).registerTransaction(eq(55L), eq("CREDIT"), eq(new BigDecimal("26100")), anyString());
+        verify(financeService, never()).registerAutoPayout(any(), anyString());
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(false, ((mz.multicore.erp.architecture.events.PayslipPaidEvent) captor.getValue()).cashPayment());
     }
 
     // ─── B6: adiantamentos e prestações entram no recibo ──────────────────────

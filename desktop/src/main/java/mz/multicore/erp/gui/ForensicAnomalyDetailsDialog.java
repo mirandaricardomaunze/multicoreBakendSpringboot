@@ -1,5 +1,9 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.audit.dto.ForensicAnomalyDTO;
@@ -19,19 +23,15 @@ public final class ForensicAnomalyDetailsDialog {
         Window owner = SwingUtilities.getWindowAncestor(parent);
         JDialog dialog = new JDialog(owner, "Dossiê de Anomalia Forense", Dialog.ModalityType.APPLICATION_MODAL);
 
-        JPanel p = new JPanel(new BorderLayout(0, 14));
-        p.setBackground(UIHelper.BG_CARD);
-        p.setBorder(new EmptyBorder(16, 20, 16, 20));
-        p.add(UIHelper.createHeading("Ocorrência: " + (a.documentOrReference() != null ? a.documentOrReference() : "—")), BorderLayout.NORTH);
 
         JTextArea area = new JTextArea();
         area.setEditable(false);
         area.setLineWrap(true);
         area.setWrapStyleWord(true);
-        area.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        area.setFont(Typography.BODY);
         area.setBackground(UIHelper.BG_DARK);
         area.setForeground(UIHelper.TEXT_LIGHT);
-        area.setBorder(new EmptyBorder(12, 12, 12, 12));
+        area.setBorder(new EmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
 
         String time = a.timestamp() != null ? a.timestamp().format(UIHelper.DATETIME_FMT) : "—";
         String impact = UIHelper.formatMzn(a.financialImpact() != null ? a.financialImpact() : BigDecimal.ZERO);
@@ -44,16 +44,11 @@ public final class ForensicAnomalyDetailsDialog {
                 + "DETALHES ANALÍTICOS:\n" + (a.details() != null ? a.details() : "—") + "\n\n"
                 + "RECOMENDAÇÃO PREVENTIVA DA AUDITORIA:\n" + (a.recommendation() != null ? a.recommendation() : "—"));
 
-        p.add(new JScrollPane(area), BorderLayout.CENTER);
-
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btnRow.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dialog.dispose());
-        btnRow.add(closeBtn);
-        p.add(btnRow, BorderLayout.SOUTH);
-
-        dialog.setContentPane(p);
+        dialog.setContentPane(DialogChrome.frame("fas-user-secret",
+                "Ocorrência: " + (a.documentOrReference() != null ? a.documentOrReference() : "—"),
+                "Dossiê de anomalia forense", new JScrollPane(area), DialogChrome.footer(closeBtn)));
         dialog.setSize(580, 420);
         UIHelper.applyStandardModalBounds(dialog, 580, 420);
         dialog.setLocationRelativeTo(owner);

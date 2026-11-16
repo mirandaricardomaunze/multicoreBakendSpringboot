@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.desktop.client.CreditRiskApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
@@ -41,7 +42,7 @@ public final class CreditRiskOperationsCoordinator {
                     RiskFetchResult res = get();
                     if (onSuccess != null) onSuccess.accept(res);
                 } catch (Exception ex) {
-                    ToastManager.show(parent, FeedbackType.ERROR, "Erro ao carregar risco de crédito: " + ex.getMessage());
+                    UserErrors.toast(parent, "carregar risco de crédito", ex);
                 }
             }
         }.execute();
@@ -80,7 +81,7 @@ public final class CreditRiskOperationsCoordinator {
                         ToastManager.show(parent, FeedbackType.ERROR, "Não foi possível gerar a carta de cobrança.");
                     }
                 } catch (Exception ex) {
-                    ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gerar carta de cobrança: " + ex.getMessage());
+                    UserErrors.toast(parent, "gerar carta de cobrança", ex);
                 }
             }
         }.execute();

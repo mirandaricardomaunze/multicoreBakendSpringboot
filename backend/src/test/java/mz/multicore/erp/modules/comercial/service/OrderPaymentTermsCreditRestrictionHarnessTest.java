@@ -15,11 +15,11 @@ import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import org.junit.jupiter.api.AfterEach;
@@ -53,18 +53,18 @@ class OrderPaymentTermsCreditRestrictionHarnessTest {
                 mock(ProductCategoryRepository.class),
                 invoiceRepository,
                 mock(ApprovalService.class),
-                mock(CompanyRepository.class),
-                mock(WarehouseRepository.class),
+                mock(CompanyLookup.class),
+                mock(WarehouseLookup.class),
                 mock(InventoryService.class),
                 mock(ReceiptRepository.class),
                 mock(FinanceService.class),
-                mock(TreasuryAccountRepository.class),
+                mock(TreasuryAccountLookup.class),
                 mock(OrderRepository.class),
                 mock(OrderLineRepository.class),
                 mock(WalkInClientProvider.class),
                 mock(DocumentNumberService.class),
                 mock(AuditLogService.class),
-                mock(TaxRateRepository.class),
+                mock(TaxRateLookup.class),
                 mock(ReceivablesService.class),
                 mock(ApplicationEventPublisher.class)
         );

@@ -2,7 +2,6 @@ package mz.multicore.erp.gui.components;
 
 import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.Scrollable;
@@ -48,13 +47,13 @@ public class DocumentEditorHost extends JPanel {
         this.onBack = onBack;
         setLayout(new BorderLayout(0, 12));
         setOpaque(false);
-        setBorder(new EmptyBorder(4, 4, 4, 4));
+        setBorder(new EmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
 
         add(buildToolbar(title, onSave), BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(16, 16, 16, 16));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         card.add(verticalScroll(content), BorderLayout.CENTER);
         add(card, BorderLayout.CENTER);
 
@@ -124,10 +123,8 @@ public class DocumentEditorHost extends JPanel {
     /** Voltar à lista, confirmando o descarte se houver alterações por gravar. */
     public void requestBack() {
         if (shouldConfirmDiscard(dirty != null && dirty.getAsBoolean())) {
-            int opt = JOptionPane.showConfirmDialog(this,
-                    "Há alterações por gravar. Sair e descartar?",
-                    "Descartar alterações", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-            if (opt != JOptionPane.YES_OPTION) return;
+            if (!ModernMessageDialog.confirm(this, FeedbackType.WARNING, "Descartar alterações",
+                    "Há alterações por gravar. Sair e descartar?", "Descartar")) return;
         }
         if (onBack != null) onBack.run();
     }

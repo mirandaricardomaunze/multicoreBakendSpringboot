@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui.performance;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.PerformanceApiClient;
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.gui.components.*;
@@ -38,7 +40,7 @@ public class BonusTab extends JPanel {
 
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
 
         buildUI();
     }
@@ -49,7 +51,7 @@ public class BonusTab extends JPanel {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         // Toolbar inside card
         JPanel filterBar = new JPanel(new BorderLayout(10, 0));
@@ -196,13 +198,11 @@ public class BonusTab extends JPanel {
 
         Window window = SwingUtilities.getWindowAncestor(this);
         JDialog dialog = new JDialog(window, "Ajustar Prémio Comercial", Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setLayout(new BorderLayout());
-        dialog.setSize(420, 260);
+        dialog.setSize(460, 400);
         dialog.setLocationRelativeTo(window);
 
         JPanel form = new JPanel(new GridBagLayout());
-        form.setBackground(UIHelper.BG_CARD);
-        form.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+        form.setOpaque(false);
 
         GridBagConstraints gc = new GridBagConstraints();
         gc.insets = new Insets(6, 6, 6, 6);
@@ -218,15 +218,10 @@ public class BonusTab extends JPanel {
         JTextField txtJustification = PerformanceControls.createTextInput("", "Justificação do ajuste", 0);
         form.add(new FormField("Justificação do Ajuste", txtJustification, true, null), gc);
 
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        footer.setBackground(UIHelper.BG_DARK);
-
-        ModernButton btnCancel = UIHelper.createDangerButton("Cancelar");
-        btnCancel.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
+        ModernButton btnCancel = ButtonStyles.cancelButton();
         btnCancel.addActionListener(e -> dialog.dispose());
-        footer.add(btnCancel);
 
-        ModernButton btnSave = UIHelper.createPrimaryButton("Guardar Ajuste");
+        ModernButton btnSave = ButtonStyles.main(UIHelper.createPrimaryButton("Guardar Ajuste"));
         btnSave.setIcon(UIHelper.icon("fas-check", 14));
         btnSave.addActionListener(e -> {
             try {
@@ -247,10 +242,8 @@ public class BonusTab extends JPanel {
                 ModernMessageDialog.show(dialog, FeedbackType.ERROR, "Validação", "Indique um valor numérico válido e uma justificação.");
             }
         });
-        footer.add(btnSave);
-
-        dialog.add(form, BorderLayout.CENTER);
-        dialog.add(footer, BorderLayout.SOUTH);
+        dialog.setContentPane(DialogChrome.frame("fas-award", "Ajustar Prémio Comercial",
+                "O novo valor substitui o aprovado, com justificação.", form, DialogChrome.footer(btnCancel, btnSave)));
         dialog.setVisible(true);
     }
 
@@ -269,7 +262,7 @@ public class BonusTab extends JPanel {
         form.setOpaque(false);
         JLabel lbl = new JLabel("Indique o ano e mês da folha salarial (formato AAAA/MM):");
         lbl.setForeground(UIHelper.TEXT_LIGHT);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        lbl.setFont(Typography.EMPHASIS);
         form.add(lbl, BorderLayout.NORTH);
 
         JTextField inputField = new JTextField(now.getYear() + "/" + String.format("%02d", now.getMonthValue()));

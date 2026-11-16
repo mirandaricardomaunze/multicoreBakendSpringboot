@@ -81,7 +81,7 @@ public class ExecutiveDetailDialog {
 
         JPanel root = new JPanel(new BorderLayout(0, 14));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(18, 20, 16, 20));
+        root.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         // 1. Top Section: Header + KPIs
         JPanel topContainer = new JPanel(new BorderLayout(0, 14));
@@ -120,11 +120,11 @@ public class ExecutiveDetailDialog {
         titleBlock.setOpaque(false);
 
         titleLabel = new JLabel("—");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(Typography.TITLE);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         subtitleLabel = new JLabel("—");
-        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subtitleLabel.setFont(Typography.BODY);
         subtitleLabel.setForeground(UIHelper.TEXT_MUTED);
 
         titleBlock.add(titleLabel);
@@ -133,10 +133,10 @@ public class ExecutiveDetailDialog {
 
         statusBadgeLabel = new JLabel("—", SwingConstants.CENTER);
         statusBadgeLabel.setOpaque(true);
-        statusBadgeLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        statusBadgeLabel.setFont(Typography.BODY_BOLD);
         statusBadgeLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1),
-                new EmptyBorder(6, 16, 6, 16)
+                new EmptyBorder(Spacing.XS, Spacing.LG, Spacing.XS, Spacing.LG)
         ));
 
         header.add(left, BorderLayout.WEST);
@@ -192,7 +192,7 @@ public class ExecutiveDetailDialog {
                 g2.setColor(bgColor != null ? bgColor : UIHelper.ACCENT);
                 g2.fillOval(x, y, d, d);
                 g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                g2.setFont(Typography.TITLE);
                 FontMetrics fm = g2.getFontMetrics();
                 String text = initials != null ? initials.toUpperCase() : "—";
                 int tx = x + (d - fm.stringWidth(text)) / 2;
@@ -222,7 +222,7 @@ public class ExecutiveDetailDialog {
     public ExecutiveDetailDialog addKpi(String label, String value, String subtext, Color accentColor, String iconName) {
         ModernPanel card = new ModernPanel(12);
         card.setLayout(new BorderLayout(8, 4));
-        card.setBorder(new EmptyBorder(10, 14, 10, 14));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.LG));
         card.setPreferredSize(new Dimension(190, 68));
 
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
@@ -231,16 +231,16 @@ public class ExecutiveDetailDialog {
             header.add(new JLabel(UIHelper.icon(iconName, 13, accentColor != null ? accentColor : UIHelper.ACCENT)));
         }
         JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lbl.setFont(Typography.CAPTION_BOLD);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         header.add(lbl);
 
         JLabel val = new JLabel(value != null ? value : "—");
-        val.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        val.setFont(Typography.TITLE);
         val.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel sub = new JLabel(subtext != null ? subtext : " ");
-        sub.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        sub.setFont(Typography.CAPTION);
         sub.setForeground(accentColor != null ? accentColor : UIHelper.TEXT_MUTED);
 
         JPanel body = new JPanel(new GridLayout(2, 1, 0, 1));

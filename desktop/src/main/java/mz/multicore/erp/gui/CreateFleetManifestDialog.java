@@ -42,7 +42,7 @@ public class CreateFleetManifestDialog {
         formCard.setBackground(UIHelper.BG_CARD);
         formCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(12, 14, 12, 14)
+                new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG)
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -79,7 +79,7 @@ public class CreateFleetManifestDialog {
             for (VehicleDTO v : vehicles) {
                 vehicleCombo.addItem(v);
             }
-        }, error -> ToastManager.show(parent, FeedbackType.ERROR, "Erro ao carregar viaturas: " + error.getMessage()));
+        }, error -> UserErrors.toast(parent, "carregar viaturas", error));
 
         vehicleCombo.addActionListener(e -> {
             VehicleDTO v = (VehicleDTO) vehicleCombo.getSelectedItem();
@@ -201,7 +201,7 @@ public class CreateFleetManifestDialog {
                             onSuccess.accept(created);
                         }
                     },
-                    error -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao emitir manifesto: " + error.getMessage())
+                    error -> UserErrors.toast(dialog.getDialog(), "emitir manifesto", error)
             );
         });
 

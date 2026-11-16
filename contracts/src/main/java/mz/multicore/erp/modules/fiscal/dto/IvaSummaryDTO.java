@@ -4,14 +4,14 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Apuramento periódico de IVA (Modelo A - Moçambique).
- * outputTax      = IVA liquidado em vendas (faturado e cobrado ao cliente)
- * inputTax       = IVA deduzido das compras (suportado a fornecedores)
- * previousCredit = Crédito fiscal reportado do período anterior
+ * Periodic VAT assessment (Mozambican Model A).
+ * outputTax      = VAT assessed on sales and charged to customers
+ * inputTax       = VAT deducted on purchases and paid to suppliers
+ * previousCredit = Tax credit carried forward from the previous period
  * netDue         = outputTax - inputTax - previousCredit
- * payableAmount  = Montante a pagar ao Estado (se netDue > 0)
- * creditToCarry  = Crédito a transportar para o período seguinte (se netDue < 0)
- * fiscalStatus   = A_PAGAR ou CREDITO_A_TRANSPORTAR
+ * payableAmount  = Amount payable to the State when netDue > 0
+ * creditToCarry  = Credit carried forward to the next period when netDue < 0
+ * fiscalStatus   = A_PAGAR or CREDITO_A_TRANSPORTAR
  */
 public record IvaSummaryDTO(
         int year,

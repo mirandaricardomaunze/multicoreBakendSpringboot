@@ -11,6 +11,8 @@ import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.ApproveWasteRequest;
 import mz.multicore.erp.modules.inventory.dto.CreateStockWasteRequest;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
@@ -98,7 +100,10 @@ class AuditTrailCriticalEventsHarnessTest {
         });
 
         StockWasteService wasteService = new StockWasteService(
-                wasteRepo, prodRepo, warehouseRepo, batchRepo, invService, invRepo, compRepo, auditLogService
+                wasteRepo, new mz.multicore.erp.modules.comercial.service.ProductLookup(prodRepo,
+                        mock(mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository.class)),
+                warehouseRepo, batchRepo, invService, new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invRepo),
+                new CompanyLookup(compRepo), auditLogService
         );
 
         CreateStockWasteRequest req = new CreateStockWasteRequest(
@@ -139,10 +144,10 @@ class AuditTrailCriticalEventsHarnessTest {
         when(wasteRepo.save(any(StockWaste.class))).thenAnswer(i -> i.getArgument(0));
 
         StockWasteService wasteService = new StockWasteService(
-                wasteRepo, mock(mz.multicore.erp.modules.comercial.repository.ProductRepository.class),
+                wasteRepo, mock(mz.multicore.erp.modules.comercial.service.ProductLookup.class),
                 mock(WarehouseRepository.class), mock(ProductBatchRepository.class),
-                mock(InventoryService.class), mock(mz.multicore.erp.modules.comercial.repository.InvoiceRepository.class),
-                mock(CompanyRepository.class), auditLogService
+                mock(InventoryService.class), mock(mz.multicore.erp.modules.comercial.service.InvoiceLookup.class),
+                mock(CompanyLookup.class), auditLogService
         );
 
         // Aprovação
@@ -187,18 +192,18 @@ class AuditTrailCriticalEventsHarnessTest {
                 mock(mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository.class),
                 mock(mz.multicore.erp.modules.comercial.repository.InvoiceRepository.class),
                 null,
-                mock(CompanyRepository.class),
-                mock(WarehouseRepository.class),
+                mock(CompanyLookup.class),
+                mock(mz.multicore.erp.modules.inventory.service.WarehouseLookup.class),
                 null,
                 mock(mz.multicore.erp.modules.comercial.repository.ReceiptRepository.class),
                 null,
-                mock(mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository.class),
+                mock(mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup.class),
                 mock(mz.multicore.erp.modules.comercial.repository.OrderRepository.class),
                 mock(mz.multicore.erp.modules.comercial.repository.OrderLineRepository.class),
                 mock(mz.multicore.erp.modules.comercial.service.WalkInClientProvider.class),
                 mock(mz.multicore.erp.modules.numbering.service.DocumentNumberService.class),
                 auditLogService,
-                mock(mz.multicore.erp.modules.fiscal.repository.TaxRateRepository.class),
+                mock(mz.multicore.erp.modules.fiscal.service.TaxRateLookup.class),
                 mock(mz.multicore.erp.modules.comercial.service.ReceivablesService.class),
                 mock(org.springframework.context.ApplicationEventPublisher.class)
         );
@@ -250,7 +255,7 @@ class AuditTrailCriticalEventsHarnessTest {
         when(userRepo.save(any(AppUser.class))).thenAnswer(i -> i.getArgument(0));
 
         AppUserService userService = new AppUserService(
-                userRepo, encoder, compRepo, accessRepo,
+                userRepo, encoder, new CompanyLookup(compRepo), accessRepo,
                 new ManagerPinRateLimiter(3, 5), auditLogService
         );
 
@@ -307,18 +312,18 @@ class AuditTrailCriticalEventsHarnessTest {
                 mock(mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository.class),
                 invRepo,
                 null,
-                mock(CompanyRepository.class),
-                mock(WarehouseRepository.class),
+                mock(CompanyLookup.class),
+                mock(mz.multicore.erp.modules.inventory.service.WarehouseLookup.class),
                 null,
                 mock(mz.multicore.erp.modules.comercial.repository.ReceiptRepository.class),
                 null,
-                mock(mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository.class),
+                mock(mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup.class),
                 mock(mz.multicore.erp.modules.comercial.repository.OrderRepository.class),
                 mock(mz.multicore.erp.modules.comercial.repository.OrderLineRepository.class),
                 mock(mz.multicore.erp.modules.comercial.service.WalkInClientProvider.class),
                 mock(mz.multicore.erp.modules.numbering.service.DocumentNumberService.class),
                 auditLogService,
-                mock(mz.multicore.erp.modules.fiscal.repository.TaxRateRepository.class),
+                mock(mz.multicore.erp.modules.fiscal.service.TaxRateLookup.class),
                 mock(mz.multicore.erp.modules.comercial.service.ReceivablesService.class),
                 mock(org.springframework.context.ApplicationEventPublisher.class)
         );

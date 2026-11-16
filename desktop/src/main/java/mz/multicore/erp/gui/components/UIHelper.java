@@ -98,7 +98,7 @@ public class UIHelper {
     public static final int RADIUS_MD = 12;
     public static final int RADIUS_LG = 16;
 
-    public static final int FORM_CONTROL_HEIGHT = 38;
+    public static int FORM_CONTROL_HEIGHT = 38; // follows the density (docs/DENSIDADE_ESPACAMENTO_SPEC.md)
     public static final int DIALOG_FORM_MIN_WIDTH = 560;
     public static final int CONTROL_ARC = 10;
 
@@ -143,7 +143,7 @@ public class UIHelper {
     public static Theme currentTheme() { return UiThemeAndWindowSupport.currentTheme(); }
     public static boolean isLight() { return UiThemeAndWindowSupport.isLight(); }
     public static boolean isHighContrast() { return UiThemeAndWindowSupport.isHighContrast(); }
-    public static void loadAndApplySavedTheme() { UiThemeAndWindowSupport.loadAndApplySavedTheme(); }
+    public static void loadAndApplySavedTheme() { UiDensityManager.getInstance(); UiThemeAndWindowSupport.loadAndApplySavedTheme(); } // density first
     public static void applyTheme(Theme theme) { UiThemeAndWindowSupport.applyTheme(theme); }
     public static void setTheme(Theme theme) { UiThemeAndWindowSupport.setTheme(theme); }
     public static Theme cycleTheme() { return UiThemeAndWindowSupport.cycleTheme(); }
@@ -205,14 +205,14 @@ public class UIHelper {
 
     public static JLabel createHeading(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(FONT, Font.BOLD, 22));
+        label.setFont(Typography.METRIC);
         label.setForeground(TEXT_LIGHT);
         return label;
     }
 
     public static JLabel createSubheading(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(FONT, Font.BOLD, 15));
+        label.setFont(Typography.TITLE);
         label.setForeground(ACCENT);
         return label;
     }

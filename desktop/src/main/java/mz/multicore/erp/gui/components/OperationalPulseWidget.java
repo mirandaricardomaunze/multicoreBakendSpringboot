@@ -65,7 +65,7 @@ public class OperationalPulseWidget extends ModernPanel {
         this.currencyFormatter = new DecimalFormat("#,##0.00 MT", symbols);
 
         setLayout(new BorderLayout(0, 12));
-        setBorder(new EmptyBorder(16, 18, 16, 18));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         buildHeader();
         buildCards();
@@ -84,22 +84,22 @@ public class OperationalPulseWidget extends ModernPanel {
         titleRow.setOpaque(false);
         JLabel icon = new JLabel(UIHelper.icon("fas-cogs", 18, UIHelper.ACCENT_BLUE));
         JLabel title = new JLabel("COCKPIT OPERACIONAL & INDUSTRIAL (GESTÃO 360°)");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        title.setFont(Typography.EMPHASIS_BOLD);
         title.setForeground(UIHelper.TEXT_LIGHT);
         titleRow.add(icon);
         titleRow.add(title);
         titleBox.add(titleRow);
 
         JLabel sub = new JLabel("Produção fabril, logística de viaturas, carteira de contratos e imobilizado corporativo.");
-        sub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        sub.setFont(Typography.CAPTION);
         sub.setForeground(UIHelper.TEXT_MUTED);
-        sub.setBorder(new EmptyBorder(3, 26, 0, 0));
+        sub.setBorder(new EmptyBorder(Spacing.XXS, Spacing.XL, 0, 0));
         titleBox.add(sub);
 
         header.add(titleBox, BorderLayout.WEST);
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadData);
-        refreshBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        refreshBtn.setFont(Typography.BODY_BOLD);
         refreshBtn.setPreferredSize(new Dimension(135, 28));
         header.add(refreshBtn, BorderLayout.EAST);
 
@@ -107,7 +107,7 @@ public class OperationalPulseWidget extends ModernPanel {
     }
 
     private void buildCards() {
-        JPanel grid = KpiCard.createGrid(4, 12, 12);
+        JPanel grid = KpiCard.createHeroGrid(4, 12, 12);
 
         grid.add(createPillarCard(
                 "MANUFATURA & PRODUÇÃO",
@@ -167,14 +167,14 @@ public class OperationalPulseWidget extends ModernPanel {
         card.putClientProperty("card.border", pal.border);
         card.putClientProperty("kpi.accent", pal.accent);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         card.setPreferredSize(new Dimension(card.getPreferredSize().width, KpiCard.STANDARD_CARD_HEIGHT));
         card.setMinimumSize(new Dimension(KpiCard.STANDARD_CARD_MIN_WIDTH, KpiCard.STANDARD_CARD_HEIGHT));
 
         JPanel cardHeader = new JPanel(new BorderLayout(6, 0));
         cardHeader.setOpaque(false);
         JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        titleLbl.setFont(Typography.CAPTION_BOLD);
         titleLbl.setForeground(pal.title);
 
         JLabel iconLbl = new JLabel(UIHelper.icon(iconCode, 14, pal.accent));
@@ -186,11 +186,11 @@ public class OperationalPulseWidget extends ModernPanel {
         content.setOpaque(false);
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
 
-        valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
+        valueLabel.setFont(Typography.TITLE);
         valueLabel.setForeground(pal.value);
         valueLabel.setAlignmentX(0.0f);
 
-        subLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        subLabel.setFont(Typography.CAPTION);
         subLabel.setForeground(pal.subtitle);
         subLabel.setAlignmentX(0.0f);
 
@@ -201,7 +201,7 @@ public class OperationalPulseWidget extends ModernPanel {
 
         actionBtn.setIcon(UIHelper.icon(actionIcon, 11));
         actionBtn.setPreferredSize(new Dimension(0, 26));
-        actionBtn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        actionBtn.setFont(Typography.CAPTION);
         card.add(actionBtn, BorderLayout.SOUTH);
 
         return card;

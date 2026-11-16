@@ -237,7 +237,7 @@ public class ComercialPanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(mz.multicore.erp.gui.components.Spacing.SM, mz.multicore.erp.gui.components.Spacing.SM, mz.multicore.erp.gui.components.Spacing.SM, mz.multicore.erp.gui.components.Spacing.SM));
 
         commercialTabs = new JTabbedPane();
         JTabbedPane tabbedPane = commercialTabs;

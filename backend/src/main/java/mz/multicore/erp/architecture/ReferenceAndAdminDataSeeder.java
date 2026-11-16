@@ -1,14 +1,17 @@
 package mz.multicore.erp.architecture;
 
 import mz.multicore.erp.modules.comercial.model.ProductCategory;
-import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.model.TaxRate;
 import mz.multicore.erp.modules.fiscal.model.TaxType;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateCommandService;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.users.model.AppUser;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserCommandService;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -18,24 +21,33 @@ import java.math.BigDecimal;
 @Component
 public class ReferenceAndAdminDataSeeder {
 
-    private final CompanyRepository companyRepository;
-    private final AppUserRepository appUserRepository;
-    private final TaxRateRepository taxRateRepository;
-    private final ProductCategoryRepository productCategoryRepository;
+    private final CompanyLookup companyLookup;
+    private final AppUserLookup userLookup;
+    private final AppUserCommandService userCommands;
+    private final TaxRateLookup taxRateLookup;
+    private final TaxRateCommandService taxRateCommands;
+    private final ProductLookup productLookup;
+    private final ProductCommandService productCommandService;
     private final String superAdminPassword;
     private final PasswordEncoder passwordEncoder;
 
     public ReferenceAndAdminDataSeeder(
-            CompanyRepository companyRepository,
-            AppUserRepository appUserRepository,
-            TaxRateRepository taxRateRepository,
-            ProductCategoryRepository productCategoryRepository,
+            CompanyLookup companyLookup,
+            AppUserLookup userLookup,
+            AppUserCommandService userCommands,
+            TaxRateLookup taxRateLookup,
+            TaxRateCommandService taxRateCommands,
+            ProductLookup productLookup,
+            ProductCommandService productCommandService,
             @Value("${app.superadmin.password:}") String superAdminPassword,
             PasswordEncoder passwordEncoder) {
-        this.companyRepository = companyRepository;
-        this.appUserRepository = appUserRepository;
-        this.taxRateRepository = taxRateRepository;
-        this.productCategoryRepository = productCategoryRepository;
+        this.companyLookup = companyLookup;
+        this.userLookup = userLookup;
+        this.userCommands = userCommands;
+        this.taxRateLookup = taxRateLookup;
+        this.taxRateCommands = taxRateCommands;
+        this.productLookup = productLookup;
+        this.productCommandService = productCommandService;
         this.superAdminPassword = superAdminPassword;
         this.passwordEncoder = passwordEncoder;
     }
@@ -47,7 +59,7 @@ public class ReferenceAndAdminDataSeeder {
     }
 
     public void seedSuperAdmin() {
-        if (appUserRepository.findByUsername("superadmin").isPresent()) return;
+        if (userLookup.findByUsername("superadmin").isPresent()) return;
         if (superAdminPassword == null || superAdminPassword.isBlank()) return;
         AppUser superAdmin = new AppUser();
         superAdmin.setUsername("superadmin");
@@ -57,11 +69,11 @@ public class ReferenceAndAdminDataSeeder {
         superAdmin.setActive(true);
         superAdmin.setPlatformAdmin(true);
         superAdmin.setCreatedBy("SYSTEM");
-        appUserRepository.save(superAdmin);
+        userCommands.saveUser(superAdmin);
     }
 
     public void seedDefaultAdmin(Company... companies) {
-        AppUser admin = appUserRepository.findByUsername("admin").orElseGet(() -> {
+        AppUser admin = userLookup.findByUsername("admin").orElseGet(() -> {
             AppUser u = new AppUser();
             u.setUsername("admin");
             u.setName("Administrador Geral");
@@ -69,7 +81,7 @@ public class ReferenceAndAdminDataSeeder {
             u.setRole("ADMIN");
             u.setActive(true);
             u.setCreatedBy("SYSTEM");
-            return appUserRepository.save(u);
+            return userCommands.saveUser(u);
         });
         if (companies != null && companies.length > 0) {
             for (Company c : companies) {
@@ -78,17 +90,17 @@ public class ReferenceAndAdminDataSeeder {
                 }
             }
         } else {
-            companyRepository.findAll().forEach(c -> {
+            companyLookup.findAll().forEach(c -> {
                 if (admin.findCompanyAccess(c.getId()).isEmpty()) {
                     admin.grantCompany(c, "ADMIN");
                 }
             });
         }
-        appUserRepository.save(admin);
+        userCommands.saveUser(admin);
     }
 
     public void seedProductCategories() {
-        if (productCategoryRepository.count() > 0) return;
+        if (productLookup.countCategories() > 0) return;
         seedCategory("ALIMENT", "Alimentação", "#F59E0B");
         seedCategory("BEBIDAS", "Bebidas", "#3B82F6");
         seedCategory("HIGIENE", "Higiene Pessoal", "#10B981");
@@ -105,11 +117,11 @@ public class ReferenceAndAdminDataSeeder {
         c.setColorHex(colorHex);
         c.setActive(true);
         c.setCreatedBy("SYSTEM");
-        productCategoryRepository.save(c);
+        productCommandService.saveCategory(c);
     }
 
     public void seedMozambicanTaxRates() {
-        if (taxRateRepository.count() > 0) return;
+        if (taxRateLookup.countAll() > 0) return;
         seedTaxRate("IVA16", "IVA Normal (16%)", TaxType.IVA_STANDARD, "0.16", "Lei do IVA — DL 8/2024");
         seedTaxRate("IVA5", "IVA Reduzido (5%)", TaxType.IVA_REDUCED, "0.05", "Lei do IVA — alimentos, livros, transportes");
         seedTaxRate("IVA0", "IVA Zero (0%)", TaxType.IVA_ZERO, "0.00", "Lei do IVA — exportações");
@@ -131,6 +143,6 @@ public class ReferenceAndAdminDataSeeder {
         t.setLegalBasis(legalBasis);
         t.setActive(true);
         t.setCreatedBy("SYSTEM");
-        taxRateRepository.save(t);
+        taxRateCommands.saveTaxRate(t);
     }
 }

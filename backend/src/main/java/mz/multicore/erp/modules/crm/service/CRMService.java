@@ -1,9 +1,10 @@
 package mz.multicore.erp.modules.crm.service;
 
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.crm.dto.ChangeTicketStatusRequest;
 import mz.multicore.erp.modules.crm.dto.CreateTicketRequest;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
@@ -16,7 +17,7 @@ import mz.multicore.erp.modules.crm.dto.VoidWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.WorkSheetDTO;
 import mz.multicore.erp.modules.crm.repository.SupportTicketRepository;
 import mz.multicore.erp.modules.crm.repository.WorkSheetRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,19 +52,20 @@ public class CRMService {
     public CRMService(
             SupportTicketRepository ticketRepository,
             WorkSheetRepository workSheetRepository,
-            ClientRepository clientRepository,
-            ProductRepository productRepository,
+            ClientLookup clientLookup,
+            ProductLookup productLookup,
+            ProductCommandService productCommandService,
             ComercialService comercialService,
-            CompanyRepository companyRepository,
-            WarehouseRepository warehouseRepository
+            CompanyLookup companyLookup,
+            WarehouseLookup warehouseLookup
     ) {
         this.ticketLifecycleService = new SupportTicketLifecycleService(
-                ticketRepository, clientRepository, companyRepository, workSheetRepository);
+                ticketRepository, clientLookup, companyLookup, workSheetRepository);
         this.workSheetService = new WorkSheetService(
-                workSheetRepository, ticketRepository, productRepository, comercialService,
-                companyRepository, warehouseRepository);
+                workSheetRepository, ticketRepository, productLookup, productCommandService, comercialService,
+                companyLookup, warehouseLookup);
         this.queryService = new CRMQueryService(
-                ticketRepository, workSheetRepository, productRepository,
+                ticketRepository, workSheetRepository, productCommandService,
                 this.ticketLifecycleService, this.workSheetService);
     }
 

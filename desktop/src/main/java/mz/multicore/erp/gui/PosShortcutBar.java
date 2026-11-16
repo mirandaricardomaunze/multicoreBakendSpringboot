@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
 
@@ -27,7 +29,7 @@ public class PosShortcutBar extends ModernPanel {
     private void initLayout() {
         setLayout(new FlowLayout(FlowLayout.CENTER, 6, 4));
         setBackground(UIHelper.ROW_ALT);
-        setBorder(new EmptyBorder(2, 6, 2, 6));
+        setBorder(new EmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS));
 
         add(createChip("F1", "Ajuda", "fas-keyboard", UIHelper.ACCENT_CYAN, () -> PosKeyboardShortcutsHandler.showHelp(posPanel)));
         add(createChip("F2", "Artigo", "fas-search", UIHelper.ACCENT_BLUE, () -> PosKeyboardShortcutsHandler.focusProductSearch(posPanel)));
@@ -54,21 +56,21 @@ public class PosShortcutBar extends ModernPanel {
         chip.setBackground(highlight ? UIHelper.APPROVED_GREEN : UIHelper.BG_CARD);
         chip.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(highlight ? UIHelper.APPROVED_GREEN_HOVER : UIHelper.BORDER, 1),
-                new EmptyBorder(1, 4, 1, 6)
+                new EmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS)
         ));
         chip.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         JLabel keyLabel = new JLabel(key, SwingConstants.CENTER);
-        keyLabel.setFont(new Font(Font.MONOSPACED, Font.BOLD, 10));
+        keyLabel.setFont(Typography.KEYCAP);
         keyLabel.setForeground(highlight ? UIHelper.APPROVED_GREEN : Color.WHITE);
         keyLabel.setBackground(highlight ? Color.WHITE : accent);
         keyLabel.setOpaque(true);
         keyLabel.setPreferredSize(new Dimension(32, 18));
-        keyLabel.setBorder(BorderFactory.createEmptyBorder(1, 2, 1, 2));
+        keyLabel.setBorder(BorderFactory.createEmptyBorder(Spacing.XXS, Spacing.XXS, Spacing.XXS, Spacing.XXS));
 
         JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 11, highlight ? Color.WHITE : accent));
         JLabel textLabel = new JLabel(label);
-        textLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        textLabel.setFont(Typography.CAPTION_BOLD);
         textLabel.setForeground(highlight ? Color.WHITE : UIHelper.TEXT_LIGHT);
 
         chip.add(keyLabel);

@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.CreditRiskApiClient;
 import mz.multicore.erp.gui.components.*;
@@ -19,9 +21,7 @@ public final class CreditExceptionDialog {
     public static void show(Component parent, CreditRiskApiClient client, ClientCreditRiskDTO selected, Runnable onSuccess) {
         Window ancestor = SwingUtilities.getWindowAncestor(parent);
         JDialog dialog = new JDialog((Frame) (ancestor instanceof Frame ? ancestor : null), "Pedido de Excepção de Crédito", true);
-        dialog.setLayout(new BorderLayout(0, 16));
         dialog.getContentPane().setBackground(UIHelper.BG_DARK);
-        ((JComponent) dialog.getContentPane()).setBorder(new EmptyBorder(20, 24, 20, 24));
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
@@ -54,23 +54,18 @@ public final class CreditExceptionDialog {
         reasonArea.setCaretColor(UIHelper.TEXT_LIGHT);
         reasonArea.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)
+                BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)
         ));
         JScrollPane reasonScroll = new JScrollPane(reasonArea);
         UIHelper.styleScrollPane(reasonScroll);
         content.add(reasonScroll);
 
-        dialog.add(content, BorderLayout.CENTER);
 
-        // Botões do diálogo
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        buttons.setOpaque(false);
-
-        ModernButton cancelBtn = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.setPreferredSize(new Dimension(100, UIHelper.FORM_CONTROL_HEIGHT));
         cancelBtn.addActionListener(e -> dialog.dispose());
 
-        ModernButton submitBtn = UIHelper.createSuccessButton("Submeter à Gerência");
+        ModernButton submitBtn = ButtonStyles.main(UIHelper.createSuccessButton("Submeter à Gerência"));
         submitBtn.setIcon(UIHelper.icon("fas-paper-plane", 14));
         submitBtn.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
 
@@ -116,16 +111,14 @@ public final class CreditExceptionDialog {
                                 "Pedido de excepção submetido com sucesso. ID: #" + approval.id() + " (Perfil: " + approval.requiredRole() + ")");
                         if (onSuccess != null) onSuccess.run();
                     } catch (Exception ex) {
-                        ToastManager.show(parent, FeedbackType.ERROR,
-                                "Erro ao submeter excepção: " + ex.getMessage());
+                        UserErrors.toast(parent, "submeter excepção", ex);
                     }
                 }
             }.execute();
         });
 
-        buttons.add(cancelBtn);
-        buttons.add(submitBtn);
-        dialog.add(buttons, BorderLayout.SOUTH);
+        dialog.setContentPane(DialogChrome.frame("fas-hand-holding-usd", "Pedido de Excepção de Crédito",
+                "O pedido segue para aprovação da gerência.", content, DialogChrome.footer(cancelBtn, submitBtn)));
 
         dialog.pack();
         UIHelper.applyStandardModalBounds(dialog, 480, 420);
@@ -135,9 +128,9 @@ public final class CreditExceptionDialog {
 
     private static JLabel createFormLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        label.setFont(Typography.CAPTION_BOLD);
         label.setForeground(UIHelper.TEXT_MUTED);
-        label.setBorder(new EmptyBorder(0, 0, 4, 0));
+        label.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         return label;
     }
 }

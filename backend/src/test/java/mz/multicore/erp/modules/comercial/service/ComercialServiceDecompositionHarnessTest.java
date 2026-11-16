@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ class ComercialServiceDecompositionHarnessTest {
     void comercialServiceDelegatesToCohesiveCollaboratorsAndRespectsLineLimits() throws Exception {
         InvoiceRepository invoiceRepository = mock(InvoiceRepository.class);
         ReceiptRepository receiptRepository = mock(ReceiptRepository.class);
-        TreasuryAccountRepository treasuryAccountRepository = mock(TreasuryAccountRepository.class);
+        TreasuryAccountLookup treasuryAccountLookup = mock(TreasuryAccountLookup.class);
         OrderRepository orderRepository = mock(OrderRepository.class);
         DocumentNumberService documentNumberService = mock(DocumentNumberService.class);
         FinanceService financeService = mock(FinanceService.class);
@@ -42,7 +42,7 @@ class ComercialServiceDecompositionHarnessTest {
         ComercialOrderLifecycleService orderService = mock(ComercialOrderLifecycleService.class);
 
         ComercialService service = new ComercialService(
-                invoiceRepository, receiptRepository, treasuryAccountRepository, orderRepository,
+                invoiceRepository, receiptRepository, treasuryAccountLookup, orderRepository,
                 documentNumberService, financeService, auditLogService, eventPublisher,
                 clientService, productService, invoiceService, orderService);
 

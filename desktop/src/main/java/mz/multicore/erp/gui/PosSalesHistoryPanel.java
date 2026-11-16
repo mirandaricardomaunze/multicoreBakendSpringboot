@@ -97,7 +97,7 @@ final class PosSalesHistoryPanel {
         // Como em Pedidos: título e acções no cabeçalho do card, filtros numa linha por baixo.
         ModernPanel tableCard = new ModernPanel(16);
         tableCard.setLayout(new BorderLayout(0, 6));
-        tableCard.setBorder(new EmptyBorder(8, 12, 8, 12));
+        tableCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         tableCard.add(UIHelper.tableCardTop("Vendas Registadas", shBar,
                 UIHelper.createRefreshButton(this::refresh), returnBtn, reprintBtn), BorderLayout.NORTH);
         tableCard.add(scroll, BorderLayout.CENTER);
@@ -106,7 +106,7 @@ final class PosSalesHistoryPanel {
 
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
-        content.setBorder(new EmptyBorder(15, 15, 15, 15));
+        content.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         content.add(viewCoordinator.buildKpiBar(), BorderLayout.NORTH);
         content.add(tableCard, BorderLayout.CENTER);
         return content;

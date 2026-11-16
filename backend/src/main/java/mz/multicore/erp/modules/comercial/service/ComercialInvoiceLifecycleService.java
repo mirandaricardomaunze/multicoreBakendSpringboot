@@ -16,20 +16,22 @@ import mz.multicore.erp.modules.comercial.dto.*;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import mz.multicore.erp.modules.purchases.model.BusinessUnit;
-import mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository;
+import mz.multicore.erp.modules.purchases.service.BusinessUnitLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
+import mz.multicore.erp.modules.pricing.service.PriceResolutionService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -46,8 +48,8 @@ public class ComercialInvoiceLifecycleService {
     private final InvoiceRepository invoiceRepository;
     private final ClientRepository clientRepository;
     private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
-    private final WarehouseRepository warehouseRepository;
+    private final CompanyLookup companyLookup;
+    private final WarehouseLookup warehouseLookup;
     private final InventoryService inventoryService;
     private final ReceiptRepository receiptRepository;
     private final FinanceService financeService;
@@ -57,14 +59,16 @@ public class ComercialInvoiceLifecycleService {
     private final AuditLogService auditLogService;
     private final ReceivablesService receivablesService;
     private final ApplicationEventPublisher eventPublisher;
-    private final BusinessUnitRepository businessUnitRepository;
+    private final BusinessUnitLookup businessUnitLookup;
+    private final SaleStockIssuer saleStockIssuer;
+    private final PriceResolutionService priceResolver;
 
     public ComercialInvoiceLifecycleService(
             InvoiceRepository invoiceRepository,
             ClientRepository clientRepository,
             ProductRepository productRepository,
-            CompanyRepository companyRepository,
-            WarehouseRepository warehouseRepository,
+            CompanyLookup companyLookup,
+            WarehouseLookup warehouseLookup,
             @Lazy InventoryService inventoryService,
             ReceiptRepository receiptRepository,
             @Lazy FinanceService financeService,
@@ -74,12 +78,13 @@ public class ComercialInvoiceLifecycleService {
             AuditLogService auditLogService,
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher,
-            @Autowired(required = false) BusinessUnitRepository businessUnitRepository) {
+            @Nullable BusinessUnitLookup businessUnitLookup, SaleStockIssuer saleStockIssuer,
+            @Autowired(required = false) PriceResolutionService priceResolver) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
-        this.warehouseRepository = warehouseRepository;
+        this.companyLookup = companyLookup;
+        this.warehouseLookup = warehouseLookup;
         this.inventoryService = inventoryService;
         this.receiptRepository = receiptRepository;
         this.financeService = financeService;
@@ -89,7 +94,9 @@ public class ComercialInvoiceLifecycleService {
         this.auditLogService = auditLogService;
         this.receivablesService = receivablesService;
         this.eventPublisher = eventPublisher;
-        this.businessUnitRepository = businessUnitRepository;
+        this.businessUnitLookup = businessUnitLookup;
+        this.saleStockIssuer = saleStockIssuer;
+        this.priceResolver = priceResolver;
     }
 
     public void publishSale(Invoice invoice, BigDecimal amountPaidNow, boolean cashPayment) {
@@ -108,16 +115,14 @@ public class ComercialInvoiceLifecycleService {
                 ? clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
                         .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."))
                 : walkInClientProvider.getOrCreate();
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Company company = companyLookup.require(request.companyId());
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
         BusinessUnit restrictedBu = null;
-        if (request.businessUnitId() != null && businessUnitRepository != null) {
-            restrictedBu = businessUnitRepository.findByIdAndCompanyId(request.businessUnitId(), request.companyId())
+        if (request.businessUnitId() != null && businessUnitLookup != null) {
+            restrictedBu = businessUnitLookup.findForCompany(request.businessUnitId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Linha de negócio restrita não encontrada."));
         }
 
@@ -134,6 +139,7 @@ public class ComercialInvoiceLifecycleService {
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
         boolean hasHighDiscount = false;
+        var pricing = PriceResolutionService.selectionFor(priceResolver, request.companyId(), client);
 
         for (CreateInvoiceLineRequest lineReq : request.lines()) {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
@@ -147,7 +153,7 @@ public class ComercialInvoiceLifecycleService {
                             + "' (pertencente a: " + prodBuName + "). Desmarque o filtro de negócio para emitir produtos mistos.");
                 }
             }
-            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+            BigDecimal unitPrice = PriceResolutionService.unitPrice(priceResolver, pricing, product, lineReq.quantity(), lineReq.unitPrice());
             BigDecimal taxRate = product.effectiveTaxRate();
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
@@ -175,7 +181,7 @@ public class ComercialInvoiceLifecycleService {
         invoice.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         invoice.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
 
-        receivablesService.assertCreditAvailable(client, invoice.getTotalAmount());
+        receivablesService.assertCreditAvailable(client, invoice.creditExposure());
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
         invoice.setCreatedBy(CurrentUserContext.getUsername());
 
@@ -196,12 +202,10 @@ public class ComercialInvoiceLifecycleService {
         return toDTO(invoice);
     }
 
-    private void deductStockForInvoice(Invoice invoice) {
-        invoice.getLines().forEach(line -> {
-            String desc = String.format("Saída Fatura %s - Cliente %s", invoice.getInvoiceNumber(), invoice.getClient().getName());
-            inventoryService.registerMovement(line.getProduct(), invoice.getWarehouse(), line.getQuantity().negate(),
-                    "SALE", line.getBatchNumber(), line.getSerialNumber(), desc);
-        });
+    /** Também usado pela aprovação de desconto especial: a mesma saída, com a mesma verificação de reservas. */
+    void deductStockForInvoice(Invoice invoice) {
+        saleStockIssuer.issue(invoice, invoice.getWarehouse(),
+                String.format("Saída Fatura %s - Cliente %s", invoice.getInvoiceNumber(), invoice.getClient().getName()));
     }
 
     public void cancelInvoice(Long invoiceId, String reason) {
@@ -283,12 +287,9 @@ public class ComercialInvoiceLifecycleService {
             invoiceLine.setLineTotal(quotedLine.getLineTotal());
             invoiceLine.setUnitCost(quotedLine.getProduct().getPurchasePrice());
             invoice.addLine(invoiceLine);
-
-            String desc = String.format("Saída Fatura %s (Cotação %s) - Cliente %s",
-                    invoice.getInvoiceNumber(), quotation.getQuotationNumber(), quotation.clientLabel());
-            inventoryService.registerMovement(quotedLine.getProduct(), quotation.getWarehouse(),
-                    quotedLine.getQuantity().negate(), "SALE", null, null, desc);
         }
+        saleStockIssuer.issue(invoice, quotation.getWarehouse(), String.format("Saída Fatura %s (Cotação %s) - Cliente %s",
+                invoice.getInvoiceNumber(), quotation.getQuotationNumber(), quotation.clientLabel()));
         invoice = invoiceRepository.save(invoice);
         publishSale(invoice, BigDecimal.ZERO, false);
         return toDTO(invoice);

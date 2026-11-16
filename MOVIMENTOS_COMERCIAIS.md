@@ -4,7 +4,7 @@
 > e **o que ainda falta**. Lê este ficheiro antes de mexer em faturação, POS, notas ou stock.
 > Detalhe de camadas em [ARCHITECTURE.md](ARCHITECTURE.md); convenções em [CONVENTIONS.md](CONVENTIONS.md).
 
-**Última actualização:** 2026-11-01
+**Última actualização:** 2026-11-10 (documentos sectoriais §8, existências na contabilidade §3)
 
 ---
 
@@ -52,7 +52,7 @@ independentes, cada um na sua fronteira. Um mesmo documento pode tocar vários.
 
 | Ledger                | Entidade / Enum                              | Módulo        | O que regista                                  |
 |-----------------------|----------------------------------------------|---------------|------------------------------------------------|
-| **Stock**             | `StockMovement` / `StockMovementType`        | `inventory`   | `PURCHASE, ENTRY, SALE, TRANSFER, ADJUSTMENT, RETURN, REVERSAL` |
+| **Stock**             | `StockMovement` / `StockMovementType`        | `inventory`   | `PURCHASE, ENTRY, SALE, TRANSFER, ADJUSTMENT, RETURN, REVERSAL, WASTE, PRODUCTION` |
 | **Caixa (gaveta)**    | `TillMovement` / `TillMovementType`          | `pos`         | `SALE, SUPRIMENTO, SANGRIA`                    |
 | **Tesouraria**        | `TreasuryTransaction` / `TransactionType`    | `financeira`  | `DEBIT` (entrada) / `CREDIT` (saída)           |
 | **Contabilidade**     | `JournalEntry` + `JournalLine` / `JournalSource` | `accounting` | Partidas dobradas (PGC-NIRF), série `LC`   |
@@ -61,6 +61,14 @@ O ledger contabilístico (desde 2026-08-15) **não substitui** os outros três: 
 contabilística dos mesmos factos. Alimenta-se por **eventos** (`SaleRegisteredEvent`,
 `PaymentReceivedEvent`), pelo que o módulo `comercial` não conhece o `accounting`. Ver
 [docs/CONTABILIDADE_SPEC.md](docs/CONTABILIDADE_SPEC.md).
+
+**Existências na contabilidade (desde 2026-11-10):** o que muda o stock sem ser venda nem compra também é
+lançado, para a conta **Mercadorias (3201)** acompanhar o stock físico (`InventoryValueChangedEvent` →
+`InventoryPostingService`): quebras (`WASTE`) e acertos de inventário (`ADJUSTMENT`, incluindo contagens e granel)
+ao custo do artigo; desmancha (carcaça ao valor contabilístico, cortes ao custo pago); lote do plano de produção
+(ingredientes ao custo, produto ao custo total contra Variação da produção 7301); consumo de matéria-prima da ordem
+de produção. Saídas: D CMVMC 6101 / C 3201; entradas: D 3201 / C contrapartida. Cada documento só se lança uma vez.
+As entradas manuais (`ENTRY`) continuam sem lançamento: são saldo inicial e lançam-se à mão pelo contabilista.
 
 Princípio em vigor (ver [POSService](src/main/java/mz/multicore/erp/modules/pos/service/POSService.java)):
 numerário de venda entra **só na gaveta** durante a sessão; só chega à **tesouraria** no fecho
@@ -132,6 +140,12 @@ Decisão de 2026-06-20: emitir fatura é operação directa de quem tem perfil a
 admin), não passa pela Engine de Aprovações — só o desconto sensível continua a exigir gerente.
 
 ---
+
+## 4.1 Ordem de produção (desde 2026-11-10)
+
+A conclusão de uma ordem de produção move o stock **pelo serviço central** (`PRODUCTION`, FEFO, lotes, auditoria):
+verifica primeiro todas as matérias-primas e **recusa** se faltar alguma (antes punha o stock a zero em silêncio).
+O produto acabado entra com o número da ordem como lote. Ver `ProductionOrderLifecycleService` e `ProductionServiceTest`.
 
 ## 5. Guia de Transferência (entre armazéns) — o "guia" do negócio
 
@@ -224,3 +238,33 @@ Documenta o **preço proposto a um cliente** e por quanto tempo é garantido.
    e `OperationsPostingHandler` lançam compras, pagamentos a fornecedores e salários por evento.
 6. ~~**Notas de crédito/débito não geram estorno contabilístico**~~ — **resolvido**:
    `CommercialPostingHandler` lança as fontes `CREDIT_NOTE` e `DEBIT_NOTE` na aprovação.
+7. ~~**Quebras e acertos não chegam à contabilidade**~~ — **resolvido (2026-11-10)**, ver §3.
+8. ~~**Ordem de produção altera o stock por fora do serviço central**~~ — **resolvido (2026-11-10)**, ver §4.1.
+9. ~~**Produtos fabricados entre 3401 e 3201**~~ — **resolvido (2026-11-10)**: o que tem ficha técnica activa
+   (BOM) vive em **3401 Produtos acabados** nos dois motores de produção, e a venda, a devolução, a quebra e o acerto
+   desse artigo mexem em 3401 (`GoodsAccounts`, `BomFinishedGoodsLookup`). O que se compra fica em 3201.
+   *A confirmar pelo contabilista;* saldos antigos na 3401/3201 corrigem-se com um lançamento manual.
+10. ~~**Recibos ao balcão fora da gaveta**~~ — **resolvido (2026-11-10)**: um recibo em numerário emitido por quem
+    tem sessão POS aberta entra na gaveta (`COUNTER_RECEIPT`, `CounterReceiptTillListener`) e aparece no fecho Z como
+    "Recebimentos ao balcão"; anular o recibo com a sessão aberta tira-o da gaveta. O recibo continua a lançar na
+    conta de tesouraria; o depósito do fecho deixa esses valores de fora para não contar duas vezes. No diálogo do
+    recibo, numerário escolhe a conta Caixa e os outros meios a conta Banco.
+
+## 8. Documentos e movimentos sectoriais (2026-11)
+
+Nenhum cria documento fiscal paralelo: o fiscal é sempre FT, RC, NC, ND ou GR. Séries internas (não fiscais):
+
+| Documento | Série | Módulo | Movimentos |
+|---|---|---|---|
+| Talão de levantamento | `LV` | `pickup` | **Nenhum** de stock (a fatura já baixou). Saldo por linha; NC só credita o que não foi levantado (`CreditNoteLineGuard`) |
+| Desmancha | `DM` | `butchery` | `PRODUCTION`: carcaça sai, cortes entram com custo repartido; lançamento §3 |
+| Lote produzido | `PD…` (lote) | `productionplan` | `PRODUCTION`: ingredientes saem (FEFO), produto entra com validade; lançamento §3 |
+| Guia de consignação | `CG` | `consignment` | `TRANSFER` loja → "Em consignação"; no acerto: devolvido volta, estragado `WASTE`, vendido faturado (FT) |
+| Talão de pesagem | `TP` | `weighbridge` | Nenhum (só peso); peso manual assinalado |
+| Adiantamento | — | `advances` | FT do sinal + RC; aplicar: NC + recibo de compensação (sem caixa nem diário); devolver: NC + anulação do RC |
+| Devolução ao fornecedor | `DF` | `purchases` | Saída do stock da compra; abate a dívida ao fornecedor e o IVA dedutível; D Fornecedores / C Mercadorias e IVA dedutível |
+| Vasilhame | — | `returnables` | `TRANSFER` loja ⇄ "Vasilhame em clientes"; não devolvido faturado (FT) |
+
+Armazéns de trânsito (`TransitWarehouseProvider`, tipo `TRANSIT`, sem venda no POS): **"Em consignação"** e
+**"Vasilhame em clientes"**. Custo médio ponderado dos produtos feitos em casa: `AverageCostUpdater`.
+Specs: `docs/SECTORES_ACTIVIDADE_SPEC.md` e as specs de cada módulo.

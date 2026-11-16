@@ -1,5 +1,10 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
@@ -44,38 +49,18 @@ public class PosSessionHistoryDialog extends JDialog {
         this.posApiClient = posApiClient;
         this.companyId = companyId;
         this.printApiClient = printApiClient;
-        setLayout(new BorderLayout());
         UIHelper.applyStandardModalBounds(this, 960, 580);
 
-        add(createHeaderPanel(), BorderLayout.NORTH);
-        add(createCenterPanel(), BorderLayout.CENTER);
-        add(createFooterPanel(), BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-history", "Histórico de Fechos de Caixa (Relatório Z)",
+                "Consulta de sessões anteriores, reconciliação de gaveta e reimpressão de dossiês fiscais",
+                createCenterPanel(), createFooterPanel()));
 
         loadData();
     }
 
-    private JPanel createHeaderPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIHelper.ROW_ALT);
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
-
-        JLabel title = new JLabel("Histórico de Fechos de Caixa (Relatório Z)");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
-        title.setForeground(UIHelper.TEXT_LIGHT);
-
-        JLabel subtitle = new JLabel("Consulta de sessões anteriores, reconciliação de gaveta e reimpressão de dossiês fiscais");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-
-        panel.add(title, BorderLayout.NORTH);
-        panel.add(subtitle, BorderLayout.SOUTH);
-        return panel;
-    }
-
     private JPanel createCenterPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 15, 12, 15));
+        panel.setOpaque(false);
 
         String[] cols = {"ID", "Operador", "Abertura", "Fecho", "Esperado", "Contado", "Diferença", "Total Vendas", "Estado"};
         tableModel = new DefaultTableModel(cols, 0) {
@@ -105,26 +90,17 @@ public class PosSessionHistoryDialog extends JDialog {
     }
 
     private JPanel createFooterPanel() {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
-        footer.setBackground(UIHelper.ROW_ALT);
-
         ModernButton btnReload = UIHelper.createRefreshButton(() -> loadData());
 
-        ModernButton btnPrintZ = UIHelper.createPrimaryButton("Re-imprimir Relatório Z (A4)");
-        btnPrintZ.setIcon(UIHelper.icon("fas-print", 13, Color.WHITE));
-        btnPrintZ.setForeground(Color.WHITE);
-        btnPrintZ.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        ModernButton btnPrintZ = ButtonStyles.main(UIHelper.createPrimaryButton("Re-imprimir Relatório Z (A4)"));
+        btnPrintZ.setIcon(UIHelper.icon("fas-print", 13));
         btnPrintZ.addActionListener(e -> printSelectedZ());
 
-        ModernButton btnClose = UIHelper.createDangerButton("Fechar");
-        btnClose.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
-        btnClose.setForeground(Color.WHITE);
+        ModernButton btnClose = ButtonStyles.secondary(UIHelper.createDangerButton("Fechar"));
+        btnClose.setIcon(UIHelper.icon("fas-times", 13));
         btnClose.addActionListener(e -> dispose());
 
-        footer.add(btnReload);
-        footer.add(btnPrintZ);
-        footer.add(btnClose);
-        return footer;
+        return DialogChrome.footer(btnReload, btnClose, btnPrintZ);
     }
 
     private void loadData() {
@@ -146,7 +122,7 @@ public class PosSessionHistoryDialog extends JDialog {
                 });
             }
         } catch (Exception ex) {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao carregar histórico de caixa: " + ex.getMessage());
+            UserErrors.toast(this, "carregar histórico de caixa", ex);
         }
     }
 

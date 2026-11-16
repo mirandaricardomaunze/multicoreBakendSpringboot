@@ -9,10 +9,14 @@ import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.model.Payslip;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.repository.EmploymentContractRepository;
 import mz.multicore.erp.modules.hr.repository.PayslipRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.hr.service.PayrollPeriodService;
 import mz.multicore.erp.modules.performance.dto.*;
 import mz.multicore.erp.modules.performance.model.*;
@@ -66,12 +70,16 @@ class CommercialPerformanceHarnessTest {
         invoiceRepository = mock(InvoiceRepository.class);
 
         bonusCalculatorEngine = new BonusCalculatorEngine();
-        progressEngine = new GoalProgressEngine(invoiceRepository, employeeRepository, bonusCalculatorEngine);
+        var invoiceLookup = new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository);
+        var employeeLookup = new EmployeeLookup(employeeRepository, payslipRepository,
+                mock(EmploymentContractRepository.class));
+        var employeeCommandService = new EmployeeCommandService(employeeRepository, payslipRepository);
+        progressEngine = new GoalProgressEngine(invoiceLookup, employeeLookup, bonusCalculatorEngine);
         salesGoalService = new SalesGoalService(
-                salesGoalRepository, bonusRepository, companyRepository, employeeRepository,
-                payslipRepository, payrollPeriodService, progressEngine, bonusCalculatorEngine, auditLogService
+                salesGoalRepository, bonusRepository, new CompanyLookup(companyRepository), employeeLookup,
+                employeeCommandService, payrollPeriodService, progressEngine, bonusCalculatorEngine, auditLogService
         );
-        employeeRankingService = new EmployeeRankingService(invoiceRepository, employeeRepository, salesGoalRepository);
+        employeeRankingService = new EmployeeRankingService(invoiceLookup, employeeLookup, salesGoalRepository);
 
         CurrentUserContext.setCurrentCompanyId(1L);
         CurrentUserContext.setCurrentUser("admin", "ADMIN");

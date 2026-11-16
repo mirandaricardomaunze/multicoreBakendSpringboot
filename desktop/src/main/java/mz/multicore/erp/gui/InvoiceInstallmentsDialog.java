@@ -45,7 +45,7 @@ public class InvoiceInstallmentsDialog {
         headerCard.setBackground(UIHelper.BG_CARD);
         headerCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.GRID),
-                new EmptyBorder(10, 12, 10, 12)
+                new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD)
         ));
 
         headerCard.add(createHeaderItem("Fatura", invoice.invoiceNumber() != null ? invoice.invoiceNumber() : "—"));
@@ -135,7 +135,7 @@ public class InvoiceInstallmentsDialog {
                         });
                     }
                 },
-                error -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao carregar prestações: " + error.getMessage())
+                error -> UserErrors.toast(dialog.getDialog(), "carregar prestações", error)
         );
 
         loadInstallments.run();
@@ -161,7 +161,7 @@ public class InvoiceInstallmentsDialog {
                         loadInstallments.run();
                         if (onPlanUpdated != null) onPlanUpdated.run();
                     },
-                    err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro ao gerar plano: " + err.getMessage())
+                    err -> UserErrors.toast(dialog.getDialog(), "gerar plano", err)
             );
         });
 
@@ -171,15 +171,20 @@ public class InvoiceInstallmentsDialog {
             BigDecimal val = UIHelper.promptAmount("Amortização de Prestação", "fas-hand-holding-usd",
                     "Indique o valor a amortizar nas prestações", "Valor (MT) *:", BigDecimal.ZERO);
             if (val == null || val.compareTo(BigDecimal.ZERO) <= 0) return;
-            UIHelper.runWithProgress(dialog.getDialog(), "A amortizar prestação…",
-                    () -> api.payInvoiceInstallment(invoice.id(), val),
-                    updated -> {
-                        ToastManager.show(dialog.getDialog(), FeedbackType.SUCCESS, "Amortização registada com sucesso.");
-                        loadInstallments.run();
-                        if (onPlanUpdated != null) onPlanUpdated.run();
-                    },
-                    err -> ToastManager.show(dialog.getDialog(), FeedbackType.ERROR, "Erro na amortização: " + err.getMessage())
-            );
+            UIHelper.runWithProgress(dialog.getDialog(), "A carregar contas…", api::treasuryAccounts, accounts -> {
+                Long accountId = TreasuryAccountChooser.choose(dialog.getDialog(), "Receber Prestação",
+                        "O valor entra por recibo (RC) na conta escolhida.", accounts, false);
+                if (accountId == null) return;
+                UIHelper.runWithProgress(dialog.getDialog(), "A emitir recibo da prestação…",
+                        () -> api.payInvoiceInstallment(invoice.id(), val, accountId),
+                        updated -> {
+                            ToastManager.show(dialog.getDialog(), FeedbackType.SUCCESS, "Recibo emitido; prestações actualizadas.");
+                            loadInstallments.run();
+                            if (onPlanUpdated != null) onPlanUpdated.run();
+                        },
+                        err -> UserErrors.toast(dialog.getDialog(), "receber", err)
+                );
+            }, err -> UserErrors.toast(dialog.getDialog(), "carregar contas", err));
         });
 
         dialog.addActionButton(generateBtn);
@@ -194,11 +199,11 @@ public class InvoiceInstallmentsDialog {
         JPanel p = new JPanel(new BorderLayout(0, 2));
         p.setOpaque(false);
         JLabel l = new JLabel(label);
-        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        l.setFont(Typography.CAPTION);
         l.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel v = new JLabel(value);
-        v.setFont(v.getFont().deriveFont(Font.BOLD, 12f));
+        v.setFont(Typography.BODY_BOLD);
         v.setForeground(UIHelper.TEXT_LIGHT);
 
         p.add(l, BorderLayout.NORTH);

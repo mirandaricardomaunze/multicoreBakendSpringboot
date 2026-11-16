@@ -5,6 +5,7 @@ import mz.multicore.erp.modules.accounting.model.Account;
 import mz.multicore.erp.modules.accounting.repository.AccountRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ class ChartOfAccountsBootstrapTest {
         companyRepository = mock(CompanyRepository.class);
         accountRepository = mock(AccountRepository.class);
         when(accountRepository.findByCompanyIdOrderByCode(anyLong())).thenReturn(List.of());
-        bootstrap = new ChartOfAccountsBootstrap(companyRepository, accountRepository,
+        bootstrap = new ChartOfAccountsBootstrap(new CompanyLookup(companyRepository), accountRepository,
                 new ChartOfAccountsMutationService(accountRepository, mock(CompanyService.class)));
     }
 

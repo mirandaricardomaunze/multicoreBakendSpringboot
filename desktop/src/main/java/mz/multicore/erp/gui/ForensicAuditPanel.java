@@ -45,7 +45,7 @@ public class ForensicAuditPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(8, 12, 8, 12));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         add(buildHeader(), BorderLayout.NORTH);
 
@@ -67,7 +67,7 @@ public class ForensicAuditPanel extends JPanel {
 
         JLabel title = UIHelper.createHeading("Central de Auditoria Forense & Controlo de Fraude");
         JLabel subtitle = new JLabel("Deteção analítica de faturas canceladas, quebras anormais, desvios e concessão de descontos");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
 
         titles.add(title);
@@ -99,7 +99,7 @@ public class ForensicAuditPanel extends JPanel {
     private JPanel buildMainCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         card.add(buildFilterBar(), BorderLayout.NORTH);
 
@@ -155,14 +155,14 @@ public class ForensicAuditPanel extends JPanel {
 
     private JPanel buildFilterBar() {
         JLabel lblStart = new JLabel("Início:");
-        lblStart.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblStart.setFont(Typography.BODY);
         lblStart.setForeground(UIHelper.TEXT_MUTED);
 
         startDateField = new DateField(LocalDate.now().minusDays(30));
         startDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
 
         JLabel lblEnd = new JLabel("Fim:");
-        lblEnd.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lblEnd.setFont(Typography.BODY);
         lblEnd.setForeground(UIHelper.TEXT_MUTED);
 
         endDateField = new DateField(LocalDate.now());
@@ -195,10 +195,9 @@ public class ForensicAuditPanel extends JPanel {
         pdfBtn.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         pdfBtn.addActionListener(e -> emitForensicPdf());
 
-        return TableFilter.toolbar(
-                new JComponent[]{lblStart, startDateField, lblEnd, endDateField, severityCombo, categoryCombo, operatorField},
-                new JComponent[]{refreshBtn, pdfBtn}
-        );
+        return UIHelper.tableCardTop("Ocorrências de Auditoria",
+                TableFilter.bar(lblStart, startDateField, lblEnd, endDateField, severityCombo, categoryCombo, operatorField),
+                refreshBtn, pdfBtn);
     }
 
     public void loadData() {
@@ -225,7 +224,7 @@ public class ForensicAuditPanel extends JPanel {
                     ForensicAuditSummaryDTO summary = get();
                     renderSummary(summary);
                 } catch (Exception ex) {
-                    ToastManager.show(ForensicAuditPanel.this, FeedbackType.ERROR, "Falha ao carregar auditoria forense: " + ex.getMessage());
+                    UserErrors.toast(ForensicAuditPanel.this, "carregar auditoria forense", ex);
                 }
             }
         }.execute();

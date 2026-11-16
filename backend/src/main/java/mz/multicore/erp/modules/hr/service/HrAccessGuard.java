@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import org.springframework.stereotype.Component;
@@ -29,11 +29,11 @@ import java.util.Optional;
 public class HrAccessGuard {
 
     private final EmployeeRepository employeeRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
 
-    public HrAccessGuard(EmployeeRepository employeeRepository, CompanyRepository companyRepository) {
+    public HrAccessGuard(EmployeeRepository employeeRepository, CompanyLookup companyLookup) {
         this.employeeRepository = employeeRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
     }
 
     public Long currentCompanyId() {
@@ -45,8 +45,7 @@ public class HrAccessGuard {
     }
 
     public Company currentCompany() {
-        return companyRepository.findById(currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa ativa não encontrada."));
+        return companyLookup.requireActive(currentCompanyId());
     }
 
     /**

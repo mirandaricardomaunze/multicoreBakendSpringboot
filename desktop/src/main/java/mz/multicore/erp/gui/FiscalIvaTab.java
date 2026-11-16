@@ -34,7 +34,7 @@ final class FiscalIvaTab {
     public JPanel buildTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
 
         JPanel topRow = new JPanel(new BorderLayout(20, 0));
         topRow.setOpaque(false);
@@ -123,7 +123,7 @@ final class FiscalIvaTab {
         wrap.add(UIHelper.createSubheading(title), BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(10, 10, 10, 10));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
@@ -250,7 +250,7 @@ final class FiscalIvaTab {
     private JLabel filterLabel(String text) {
         JLabel l = new JLabel(text);
         l.setForeground(UIHelper.TEXT_MUTED);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        l.setFont(Typography.BODY_BOLD);
         return l;
     }
 }

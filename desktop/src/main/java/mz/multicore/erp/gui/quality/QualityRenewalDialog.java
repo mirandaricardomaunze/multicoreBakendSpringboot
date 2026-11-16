@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui.quality;
 
+import mz.multicore.erp.gui.components.DialogChrome;
+import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.QualityApiClient;
 import mz.multicore.erp.gui.components.*;
 
@@ -18,7 +20,7 @@ public final class QualityRenewalDialog {
 
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new GridBagLayout());
-        card.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
+        card.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         GridBagConstraints g = new GridBagConstraints();
         g.insets = new Insets(6, 6, 6, 6);
         g.fill = GridBagConstraints.HORIZONTAL;
@@ -42,13 +44,9 @@ public final class QualityRenewalDialog {
         g.gridx = 0; g.gridy = 2; g.gridwidth = 2;
         card.add(printCheck, g);
 
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        footer.setBackground(UIHelper.BG_DARK);
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER));
-
-        ModernButton cancelBtn = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dialog.dispose());
-        ModernButton confirmBtn = UIHelper.createPrimaryButton("Confirmar Renovação");
+        ModernButton confirmBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Confirmar Renovação"));
 
         confirmBtn.addActionListener(e -> {
             LocalDate newDate = renewalDateField.getDate();
@@ -69,14 +67,11 @@ public final class QualityRenewalDialog {
                 if (print && client != null) {
                     QualityPrintHelper.printDeliverySheet(parent, client, renewed.id(), companyId);
                 }
-            }, err -> ToastManager.show(dialog, FeedbackType.ERROR, "Erro ao renovar: " + err.getMessage()));
+            }, err -> UserErrors.toast(dialog, "renovar", err));
         });
 
-        footer.add(cancelBtn);
-        footer.add(confirmBtn);
-
-        dialog.add(card, BorderLayout.CENTER);
-        dialog.add(footer, BorderLayout.SOUTH);
+        dialog.setContentPane(DialogChrome.frame("fas-sync-alt", "Renovar Equipamento",
+                "Nova entrega do equipamento ao colaborador.", card, DialogChrome.footer(cancelBtn, confirmBtn)));
         dialog.pack();
         UIHelper.applyStandardModalBounds(dialog, 480, 260);
         dialog.setLocationRelativeTo(parent);

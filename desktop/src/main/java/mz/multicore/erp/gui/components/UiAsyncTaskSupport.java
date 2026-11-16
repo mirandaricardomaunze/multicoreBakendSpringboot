@@ -50,6 +50,7 @@ final class UiAsyncTaskSupport {
             scope.putClientProperty("loading", Boolean.TRUE);
             scope.putClientProperty("loadError", null);
         }
+        java.util.List<JTable> loadingTables = TableLoadingState.begin(scope);
         CurrentUserContext.UserSession capturedUser = CurrentUserContext.findCurrentUser();
         Long capturedCompany = CurrentUserContext.findCurrentCompanyId();
 
@@ -80,6 +81,7 @@ final class UiAsyncTaskSupport {
                     if (onError != null) onError.accept(cause);
                 } finally {
                     if (scope != null) scope.putClientProperty("loading", Boolean.FALSE);
+                    TableLoadingState.end(loadingTables);
                     endLoading(window);
                 }
             }
@@ -123,10 +125,10 @@ final class UiAsyncTaskSupport {
         JPanel panel = new JPanel(new BorderLayout(0, 12));
         panel.setBackground(UIHelper.BG_CARD);
         panel.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(UIHelper.BORDER, 1, true), new EmptyBorder(18, 26, 18, 26)));
+                new LineBorder(UIHelper.BORDER, 1, true), new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL)));
         JLabel label = new JLabel(message);
         label.setForeground(UIHelper.TEXT_LIGHT);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        label.setFont(Typography.EMPHASIS_BOLD);
         panel.add(label, BorderLayout.NORTH);
         panel.add(createBusyBar(), BorderLayout.SOUTH);
         dialog.setContentPane(panel);
@@ -163,6 +165,18 @@ final class UiAsyncTaskSupport {
             }
         };
         worker.execute();
+        // When called off the EDT the task can finish before the dialog opens; done() would then dispose
+        // a dialog that is not shown yet and the modal one would stay open forever. The watchdog runs
+        // inside the modal loop and closes it as soon as the task is over.
+        // It waits until the dialog is visible: closing it before it opens left the modal open forever.
+        Timer watchdog = new Timer(100, e -> {
+            if (worker.isDone() && dialog.isVisible()) {
+                ((Timer) e.getSource()).stop();
+                dialog.dispose();
+            }
+        });
+        watchdog.start();
         dialog.setVisible(true);
+        watchdog.stop();
     }
 }

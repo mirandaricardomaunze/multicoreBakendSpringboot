@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui.monitoring;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.SoundAlertManager;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -30,31 +32,18 @@ public class SystemMonitoringOverviewBuilder {
         overallBadge.setOpaque(true);
         overallBadge.setBackground(UIHelper.BG_CARD);
         overallBadge.setForeground(UIHelper.TEXT_MUTED);
-        overallBadge.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        overallBadge.setFont(Typography.BODY_BOLD);
         overallBadge.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.BORDER, 1), new EmptyBorder(6, 16, 6, 16)));
-        uptimeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                BorderFactory.createLineBorder(UIHelper.BORDER, 1), new EmptyBorder(Spacing.XS, Spacing.LG, Spacing.XS, Spacing.LG)));
+        uptimeLabel.setFont(Typography.BODY);
         uptimeLabel.setForeground(UIHelper.TEXT_MUTED);
     }
 
+    /** Uptime and overall state, live, under the dialog's shared header (the title lives in the header). */
     public JPanel buildHeader() {
         JPanel header = new JPanel(new BorderLayout(16, 0));
         header.setOpaque(false);
-
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        left.setOpaque(false);
-        left.add(new JLabel(UIHelper.icon("fas-heartbeat", 30, UIHelper.ACCENT_CYAN)));
-
-        JPanel titles = new JPanel(new GridLayout(2, 1, 0, 2));
-        titles.setOpaque(false);
-        JLabel title = new JLabel("Diagnóstico & Saúde Operacional");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 17));
-        title.setForeground(UIHelper.TEXT_LIGHT);
-        titles.add(title);
-        titles.add(uptimeLabel);
-        left.add(titles);
-
-        header.add(left, BorderLayout.WEST);
+        header.add(uptimeLabel, BorderLayout.WEST);
         header.add(overallBadge, BorderLayout.EAST);
         return header;
     }
@@ -174,13 +163,13 @@ public class SystemMonitoringOverviewBuilder {
     private ModernPanel createCard(String title, String iconName, Color iconColor) {
         ModernPanel p = new ModernPanel();
         p.setLayout(new BorderLayout(0, 6));
-        p.setBorder(new EmptyBorder(8, 10, 8, 10));
+        p.setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         header.setOpaque(false);
         header.add(new JLabel(UIHelper.icon(iconName, 16, iconColor)));
         JLabel lbl = new JLabel(title);
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lbl.setFont(Typography.EMPHASIS_BOLD);
         lbl.setForeground(UIHelper.TEXT_LIGHT);
         header.add(lbl);
 
@@ -201,7 +190,7 @@ public class SystemMonitoringOverviewBuilder {
 
     private JLabel createDetailLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        l.setFont(Typography.BODY);
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }

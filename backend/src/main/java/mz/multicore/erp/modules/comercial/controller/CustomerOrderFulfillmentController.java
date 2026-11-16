@@ -42,10 +42,11 @@ public class CustomerOrderFulfillmentController {
         return ResponseEntity.ok(service.getPickingDetails(id));
     }
 
-    @GetMapping("/{id}/picking-sheet-a4")
+    /** POST e não GET: a primeira impressão inicia a separação, ou seja, muda o estado da encomenda. */
+    @PostMapping("/{id}/picking-sheet-a4")
     public ResponseEntity<ByteArrayResource> printA4(@PathVariable Long id,
-            @RequestParam(required = false) String terminal) {
-        return pdf(service.printForPickingA4(id, terminal), "guia-separacao-a4-" + id);
+            @RequestBody(required = false) @Valid OrderActionRequest request) {
+        return pdf(service.printForPickingA4(id, request == null ? null : request.terminalName()), "guia-separacao-a4-" + id);
     }
 
     @PostMapping("/{id}/picking-confirm")

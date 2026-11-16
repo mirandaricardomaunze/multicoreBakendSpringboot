@@ -174,7 +174,7 @@ public class POSPanel extends JPanel {
         this.cartController = new PosCartController(this);
         this.checkoutCoordinator = new PosCheckoutCoordinator(this);
         this.suspendedSaleActions = new PosSuspendedSaleActions(this);
-        this.scaleReader = new mz.multicore.erp.modules.pos.scale.SerialScaleReader(true);
+        this.scaleReader = mz.multicore.erp.modules.pos.scale.ScaleConnection.connectedReader();
         this.scaleWidget = new mz.multicore.erp.gui.pos.scale.PosScaleLiveWidget(this.scaleReader);
         this.scaleWidget.setOnWeightCapturedCallback(this.catalogController::handleScaleWeightCaptured);
         this.loyaltyController = new mz.multicore.erp.gui.pos.loyalty.PosLoyaltyController(comercialApiClient);
@@ -189,7 +189,7 @@ public class POSPanel extends JPanel {
         barcodeField = new JTextField();
         UIHelper.styleTextField(barcodeField);
         barcodeField.putClientProperty("JTextField.placeholderText", "Leia ou escreva o código (F3)");
-        barcodeField.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        barcodeField.setFont(mz.multicore.erp.gui.components.Typography.EMPHASIS_BOLD);
         barcodeField.addActionListener(e -> handleBarcodeScan());
         JPanel barcodeBox = PosLayout.iconInputBox("fas-barcode", 16, UIHelper.ACCENT, barcodeField);
 
@@ -214,7 +214,7 @@ public class POSPanel extends JPanel {
 
         JPanel salesTab = new JPanel(new BorderLayout(0, PosLayout.SECTION_VERTICAL_GAP));
         salesTab.setOpaque(false);
-        salesTab.setBorder(new EmptyBorder(4, 5, 4, 5));
+        salesTab.setBorder(new EmptyBorder(mz.multicore.erp.gui.components.Spacing.XS, mz.multicore.erp.gui.components.Spacing.XS, mz.multicore.erp.gui.components.Spacing.XS, mz.multicore.erp.gui.components.Spacing.XS));
         salesTab.add(PosWorkspaceBuilder.buildTopSelectsBar(this, barcodeBox), BorderLayout.NORTH);
         salesTab.add(PosWorkspaceBuilder.buildWorkspace(this), BorderLayout.CENTER);
 

@@ -37,7 +37,7 @@ public final class SupplierStatementOperationsCoordinator {
                         ToastManager.show(parent, FeedbackType.ERROR, "Documento de extrato vazio.");
                     }
                 } catch (Exception ex) {
-                    ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gerar extrato em PDF: " + ex.getMessage());
+                    UserErrors.toast(parent, "gerar extrato em PDF", ex);
                 }
             }
         }.execute();

@@ -19,7 +19,7 @@ class LicenseGateHarnessTest {
         String launcher = Files.readString(ROOT.resolve(
                 "desktop/src/main/java/mz/multicore/erp/desktop/DesktopLauncher.java"));
         assertThat(launcher.indexOf("ensureLicenseAccepted()"))
-                .isLessThan(launcher.indexOf("showMainFrame(null"));
+                .isLessThan(launcher.indexOf("WindowPrefs.savedBounds()"));
     }
 
     @Test

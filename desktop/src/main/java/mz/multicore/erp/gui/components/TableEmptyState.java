@@ -31,6 +31,12 @@ public final class TableEmptyState {
     private static final String INSTALLED     = "tableEmptyState.installed";
     private static final String EMPTY_TEXT    = "emptyText";
     private static final String EMPTY_SUBTEXT = "emptySubtext";
+    /** Client property: the screen's main action (a button), offered when the table has no data. */
+    static final String EMPTY_ACTION  = "emptyState.action";
+    /** Client property: the filters container, cleared by "Limpar filtros" when they hide every row. */
+    static final String EMPTY_FILTERS = "emptyState.filters";
+    static final String CLEAR_FILTERS = "Limpar filtros";
+    static final String LOADING_TEXT = "A carregar…";
 
     private TableEmptyState() {}
 
@@ -52,7 +58,7 @@ public final class TableEmptyState {
 
         Runnable refresh = () -> {
             boolean empty = table.getRowCount() == 0;
-            if (empty) updateOverlayText(overlay, table);
+            if (empty) updateOverlayText(overlay, table, TableLoadingState.isLoading(table));
             // Aplicar sempre o estado calculado. Evita que um overlay visível de um estado
             // anterior sobreviva a actualizações consecutivas do modelo/sorter.
             overlay.setVisible(empty);
@@ -66,6 +72,7 @@ public final class TableEmptyState {
             SwingUtilities.invokeLater(refresh);
         };
         table.getModel().addTableModelListener(e -> refreshAfterSwingUpdate.run());
+        table.addPropertyChangeListener(TableLoadingState.COUNT, e -> refresh.run());
         table.addPropertyChangeListener("model", e -> {
             table.getModel().addTableModelListener(ev -> refreshAfterSwingUpdate.run());
             refreshAfterSwingUpdate.run();
@@ -89,13 +96,27 @@ public final class TableEmptyState {
         // Ícone elegante proporcional (fas-inbox, 32px)
         JLabel iconLbl = new JLabel(UIHelper.icon("fas-inbox", 32, UIHelper.TEXT_MUTED));
         iconLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
-        iconLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 6, 0));
+        iconLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, Spacing.XS, 0));
         panel.add(iconLbl);
+
+        // While the data is on its way: an animated bar in place of the icon (docs/ESTADO_CARREGAR_SPEC.md)
+        javax.swing.JProgressBar busyBar = UIHelper.createBusyBar();
+        busyBar.setPreferredSize(new Dimension(180, 6));
+        busyBar.setMaximumSize(new Dimension(180, 6));
+        busyBar.setAlignmentX(Component.CENTER_ALIGNMENT);
+        busyBar.setVisible(false);
+        JPanel busyRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 0, 0));
+        busyRow.setOpaque(false);
+        busyRow.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, Spacing.SM, 0));
+        busyRow.setAlignmentX(Component.CENTER_ALIGNMENT);
+        busyRow.add(busyBar);
+        busyRow.setVisible(false);
+        panel.add(busyRow);
 
         // Título em negrito
         JLabel titleLbl = new JLabel(resolveText(table));
         titleLbl.setForeground(UIHelper.TEXT_LIGHT);
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        titleLbl.setFont(Typography.EMPHASIS_BOLD);
         titleLbl.setHorizontalAlignment(SwingConstants.CENTER);
         titleLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(titleLbl);
@@ -103,24 +124,102 @@ public final class TableEmptyState {
         // Subtítulo em muted
         JLabel subLbl = new JLabel(resolveSubtext(table));
         subLbl.setForeground(UIHelper.TEXT_MUTED);
-        subLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subLbl.setFont(Typography.BODY);
         subLbl.setHorizontalAlignment(SwingConstants.CENTER);
         subLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
-        subLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        subLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(Spacing.XS, 0, 0, 0));
         panel.add(subLbl);
 
+        // Acção: a principal do ecrã quando não há dados, ou "Limpar filtros" quando os filtros escondem tudo
+        ModernButton actionBtn = UIHelper.createSuccessButton(" ");
+        actionBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        actionBtn.setVisible(false);
+        actionBtn.addActionListener(e -> runAction(table));
+        JPanel actionRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 0, 0));
+        actionRow.setOpaque(false);
+        actionRow.setBorder(javax.swing.BorderFactory.createEmptyBorder(Spacing.MD, 0, 0, 0));
+        actionRow.setAlignmentX(Component.CENTER_ALIGNMENT);
+        actionRow.add(actionBtn);
+        panel.add(actionRow);
+
         // Guardar referências para actualização posterior
+        panel.putClientProperty("iconLabel", iconLbl);
+        panel.putClientProperty("busyRow", busyRow);
+        panel.putClientProperty("busyBar", busyBar);
         panel.putClientProperty("titleLabel", titleLbl);
         panel.putClientProperty("subLabel",   subLbl);
+        panel.putClientProperty("actionButton", actionBtn);
         return panel;
     }
 
     /** Actualiza os textos do painel quando o estado vazio muda de tabela/filtro. */
-    private static void updateOverlayText(JPanel overlay, JTable table) {
+    private static void updateOverlayText(JPanel overlay, JTable table, boolean loading) {
         Object titleRef = overlay.getClientProperty("titleLabel");
         Object subRef   = overlay.getClientProperty("subLabel");
-        if (titleRef instanceof JLabel title) title.setText(resolveText(table));
-        if (subRef   instanceof JLabel sub)   sub.setText(resolveSubtext(table));
+        if (titleRef instanceof JLabel title) title.setText(loading ? LOADING_TEXT : resolveText(table));
+        if (subRef   instanceof JLabel sub)   sub.setText(loading ? "" : resolveSubtext(table));
+        if (overlay.getClientProperty("iconLabel") instanceof JLabel icon) icon.setVisible(!loading);
+        if (overlay.getClientProperty("busyRow") instanceof JPanel busyRow) busyRow.setVisible(loading);
+        if (overlay.getClientProperty("busyBar") instanceof javax.swing.JProgressBar bar) {
+            bar.setVisible(loading);
+            bar.setIndeterminate(loading); // stops the animation timer when hidden
+        }
+        if (loading) {
+            if (overlay.getClientProperty("actionButton") instanceof ModernButton button) button.setVisible(false);
+            return;
+        }
+        if (overlay.getClientProperty("actionButton") instanceof ModernButton button) {
+            String label = resolveActionLabel(table);
+            button.setVisible(label != null);
+            if (label != null) {
+                button.setText(label);
+                if (CLEAR_FILTERS.equals(label)) {
+                    ButtonStyles.outline(button);
+                    button.setIcon(UIHelper.icon("fas-filter", 13));
+                } else {
+                    button.setColors(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER);
+                    button.putClientProperty("button.outline", null);
+                    javax.swing.Icon icon = ((javax.swing.AbstractButton) table.getClientProperty(EMPTY_ACTION)).getIcon();
+                    button.setIcon(icon);
+                }
+            }
+        }
+    }
+
+    /**
+     * "Limpar filtros" when rows exist but the filters hide them all; the screen's main action when the
+     * table has no data at all; nothing when neither applies (or the action is hidden or disabled).
+     */
+    static String resolveActionLabel(JTable table) {
+        if (table.getModel().getRowCount() > 0) {
+            return table.getClientProperty(EMPTY_FILTERS) instanceof Container ? CLEAR_FILTERS : null;
+        }
+        if (table.getClientProperty(EMPTY_ACTION) instanceof javax.swing.AbstractButton main
+                && main.isVisible() && main.isEnabled() && main.getText() != null && !main.getText().isBlank()) {
+            return ModernButton.stripEllipsis(main.getText());
+        }
+        return null;
+    }
+
+    static void runAction(JTable table) {
+        if (table.getModel().getRowCount() > 0) {
+            if (table.getClientProperty(EMPTY_FILTERS) instanceof Container filters) clearFilters(filters);
+        } else if (table.getClientProperty(EMPTY_ACTION) instanceof javax.swing.AbstractButton main) {
+            main.doClick();
+        }
+    }
+
+    /** Empties search fields and puts every filter combo back on its first option ("Todos…"). */
+    static void clearFilters(Container root) {
+        for (Component child : root.getComponents()) {
+            if (child instanceof javax.swing.JComboBox<?> combo) {
+                if (combo.getItemCount() > 0 && combo.getSelectedIndex() != 0) combo.setSelectedIndex(0);
+            } else if (child instanceof javax.swing.JTextField field) {
+                if (!field.getText().isEmpty()) field.setText("");
+            } else if (child instanceof Container nested) {
+                clearFilters(nested);
+            }
+        }
     }
 
     /** Título do estado vazio: client-property {@code emptyText} da tabela, ou "Sem registos.". */

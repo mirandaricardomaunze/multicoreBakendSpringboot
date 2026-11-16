@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.monitoring.service.SystemAlertEmailService;
 import mz.multicore.erp.modules.monitoring.service.SystemIncidentManager;
 import mz.multicore.erp.modules.monitoring.service.TenantMonitoringService;
@@ -37,7 +38,7 @@ class SecurityAttackSurfaceTest {
     private final CompanyRepository companies = mock(CompanyRepository.class);
     private final BCryptPasswordEncoder passwords = new BCryptPasswordEncoder();
     private final AuthSessionService sessions = new AuthSessionService();
-    private final AppUserService userService = new AppUserService(users, passwords, companies, accesses,
+    private final AppUserService userService = new AppUserService(users, passwords, new CompanyLookup(companies), accesses,
             new ManagerPinRateLimiter(3, 5, java.time.Clock.systemUTC()), null, sessions);
 
     @AfterEach
@@ -87,7 +88,8 @@ class SecurityAttackSurfaceTest {
     @Test
     void suspendedCompanyOrSubscriptionLosesAccessOnNextRequest() {
         SubscriptionService subscriptions = mock(SubscriptionService.class);
-        TenantAccessService tenantAccess = new TenantAccessService(users, subscriptions);
+        TenantAccessService tenantAccess = new TenantAccessService(
+                new mz.multicore.erp.modules.users.service.AppUserLookup(users, null), subscriptions);
         AppUser user = user("ana", "ADMIN", 1L);
         when(users.findByUsername("ana")).thenReturn(Optional.of(user));
         when(subscriptions.allowsLogin(1L)).thenReturn(true, false);
@@ -116,7 +118,8 @@ class SecurityAttackSurfaceTest {
         assertEquals("", CurrentUserContext.getRole());
 
         CompanyRepository companyRepo = mock(CompanyRepository.class);
-        TenantMonitoringService monitoring = new TenantMonitoringService(companyRepo, accesses,
+        TenantMonitoringService monitoring = new TenantMonitoringService(new CompanyLookup(companyRepo),
+                new mz.multicore.erp.modules.users.service.AppUserLookup(null, accesses),
                 mock(ForensicAuditService.class), mock(ScheduledBackupService.class),
                 mock(SystemIncidentManager.class), mock(SystemAlertEmailService.class));
         Company own = company(1L);
@@ -143,8 +146,9 @@ class SecurityAttackSurfaceTest {
 
     @Test
     void forensicSummaryRejectsForeignCompanyForTenantAdmin() {
-        ForensicAuditService forensic = new ForensicAuditService(mock(InvoiceRepository.class),
-                mock(StockWasteRepository.class), mock(AuditLogRepository.class));
+        ForensicAuditService forensic = new ForensicAuditService(new mz.multicore.erp.modules.comercial.service.InvoiceLookup(mock(InvoiceRepository.class)),
+                new mz.multicore.erp.modules.inventory.service.StockWasteLookup(mock(StockWasteRepository.class)),
+                mock(AuditLogRepository.class));
         CurrentUserContext.setCurrentUser("admin-a", "ADMIN");
         CurrentUserContext.setCurrentCompanyId(1L);
         assertThrows(BusinessRuleException.class,

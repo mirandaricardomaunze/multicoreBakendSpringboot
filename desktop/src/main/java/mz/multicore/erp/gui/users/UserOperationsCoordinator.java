@@ -88,7 +88,7 @@ public final class UserOperationsCoordinator {
                 ToastManager.success(parent, "PIN de gestor atribuído com sucesso a " + selected.name());
                 onDone.run();
             } catch (Exception ex) {
-                ToastManager.show(parent, FeedbackType.ERROR, "Erro ao definir PIN: " + ex.getMessage());
+                UserErrors.toast(parent, "definir PIN", ex);
             }
         }
     }
@@ -103,7 +103,7 @@ public final class UserOperationsCoordinator {
                 ToastManager.success(parent, "Senha redefinida com sucesso para " + selected.name());
                 onDone.run();
             } catch (Exception ex) {
-                ToastManager.show(parent, FeedbackType.ERROR, "Erro ao redefinir senha: " + ex.getMessage());
+                UserErrors.toast(parent, "redefinir senha", ex);
             }
         }
     }
@@ -122,7 +122,7 @@ public final class UserOperationsCoordinator {
                 ToastManager.success(parent, "Estado do utilizador alterado com sucesso.");
                 onDone.run();
             } catch (Exception ex) {
-                ToastManager.show(parent, FeedbackType.ERROR, "Erro ao alterar estado: " + ex.getMessage());
+                UserErrors.toast(parent, "alterar estado", ex);
             }
         }
     }

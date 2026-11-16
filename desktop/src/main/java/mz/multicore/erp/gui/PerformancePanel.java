@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.desktop.client.PerformanceApiClient;
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.desktop.session.DesktopSessionStore;
@@ -34,7 +35,7 @@ public class PerformancePanel extends JPanel {
     public PerformancePanel(PerformanceApiClient apiClient, DesktopSession session) {
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(25, 25, 25, 25));
+        setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel north = new JPanel();
         north.setOpaque(false);

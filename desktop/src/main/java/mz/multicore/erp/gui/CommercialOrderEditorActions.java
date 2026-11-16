@@ -28,6 +28,7 @@ final class CommercialOrderEditorActions {
         owner.resetOrderDraft();
         owner.editingOrder = order;
         owner.orderClientCombo.setSelectedIndex(CommercialOrderCreditPolicy.clientIndex(owner, order.clientId()));
+        OrderEditorExtras.loadForOrder(owner, order);
         owner.orderClientWalkInField.setText(order.walkInName() == null ? "" : order.walkInName());
         if (owner.orderNotesField != null) owner.orderNotesField.setText(order.notes() == null ? "" : order.notes());
         CommercialOrderLifecycleCoordinator.selectWarehouse(owner, owner.orderWarehouseCombo, order.warehouseId());

@@ -63,7 +63,7 @@ public class ModernCalendarPopup extends JPopupMenu {
         setBackground(bg);
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER, 1, true),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                BorderFactory.createEmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
         ));
 
         JPanel content = new JPanel();
@@ -85,14 +85,14 @@ public class ModernCalendarPopup extends JPopupMenu {
 
         monthCombo = new JComboBox<>(MONTH_NAMES);
         UIHelper.styleComboBox(monthCombo);
-        monthCombo.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        monthCombo.setFont(Typography.BODY_BOLD);
         monthCombo.setSelectedIndex(viewingDate.getMonthValue() - 1);
         monthCombo.addActionListener(e -> {
             if (!adjusting) onHeaderChanged();
         });
 
         yearSpinner = new JSpinner(new SpinnerNumberModel(viewingDate.getYear(), 1900, 2150, 1));
-        yearSpinner.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        yearSpinner.setFont(Typography.BODY_BOLD);
         JSpinner.NumberEditor editor = new JSpinner.NumberEditor(yearSpinner, "#");
         yearSpinner.setEditor(editor);
         yearSpinner.setPreferredSize(new Dimension(68, 28));
@@ -116,7 +116,7 @@ public class ModernCalendarPopup extends JPopupMenu {
         weekdaysPanel.setOpaque(false);
         for (String wd : WEEKDAY_NAMES) {
             JLabel lbl = new JLabel(wd, SwingConstants.CENTER);
-            lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            lbl.setFont(Typography.CAPTION_BOLD);
             lbl.setForeground(UIHelper.TEXT_MUTED);
             weekdaysPanel.add(lbl);
         }
@@ -231,7 +231,7 @@ public class ModernCalendarPopup extends JPopupMenu {
 
     private JButton createNavButton(String text, String tooltip) {
         JButton btn = new JButton(text);
-        btn.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        btn.setFont(Typography.TITLE);
         btn.setPreferredSize(new Dimension(28, 26));
         btn.setFocusable(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -241,7 +241,7 @@ public class ModernCalendarPopup extends JPopupMenu {
     }
 
     private void styleQuickActionButton(JButton btn) {
-        btn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        btn.setFont(Typography.CAPTION);
         btn.setFocusable(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
@@ -256,9 +256,9 @@ public class ModernCalendarPopup extends JPopupMenu {
         public DayButton() {
             setFocusable(false);
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+            setFont(Typography.BODY);
             setPreferredSize(new Dimension(34, 28));
-            setBorder(new EmptyBorder(2, 2, 2, 2));
+            setBorder(new EmptyBorder(Spacing.XXS, Spacing.XXS, Spacing.XXS, Spacing.XXS));
             putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 
             addActionListener(e -> {
@@ -280,24 +280,24 @@ public class ModernCalendarPopup extends JPopupMenu {
             if (isSelected) {
                 setBackground(UIHelper.ACCENT_BLUE);
                 setForeground(Color.WHITE);
-                setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+                setFont(Typography.BODY_BOLD);
                 setOpaque(true);
                 setBorder(BorderFactory.createLineBorder(UIHelper.ACCENT_BLUE, 1, true));
             } else if (isToday) {
                 setBackground(UIHelper.isLight() ? UIHelper.ROW_ALT : UIHelper.BG_DARK);
                 setForeground(UIHelper.ACCENT_BLUE);
-                setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+                setFont(Typography.BODY_BOLD);
                 setOpaque(true);
                 setBorder(BorderFactory.createLineBorder(UIHelper.ACCENT_BLUE, 1, true));
             } else {
                 setOpaque(false);
-                setBorder(new EmptyBorder(2, 2, 2, 2));
+                setBorder(new EmptyBorder(Spacing.XXS, Spacing.XXS, Spacing.XXS, Spacing.XXS));
                 if (isCurrentMonth) {
                     setForeground(UIHelper.isLight() ? Color.DARK_GRAY : Color.WHITE);
-                    setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+                    setFont(Typography.BODY);
                 } else {
                     setForeground(UIHelper.TEXT_MUTED);
-                    setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+                    setFont(Typography.CAPTION);
                 }
             }
         }

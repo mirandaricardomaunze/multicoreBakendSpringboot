@@ -189,9 +189,9 @@ public final class TableNavigator {
 
         private void refreshIcons() {
             boolean light = UIHelper.isLight();
-            Color base = light ? new Color(51, 65, 85) : new Color(226, 232, 240);
+            Color base = ThemeColors.control();
             Color hover = UIHelper.ACCENT_BLUE;
-            Color disabled = light ? new Color(203, 213, 225) : new Color(100, 116, 139);
+            Color disabled = ThemeColors.controlSubtle();
             setIcon(UIHelper.icon(iconCode, 13, base));
             setRolloverIcon(UIHelper.icon(iconCode, 13, hover));
             setDisabledIcon(UIHelper.icon(iconCode, 13, disabled));
@@ -211,9 +211,9 @@ public final class TableNavigator {
                         UIHelper.ACCENT_BLUE.getGreen(), UIHelper.ACCENT_BLUE.getBlue(), 90));
                 g2.drawRoundRect(1, 1, w - 3, h - 3, 8, 8);
             } else if (isEnabled() && UIHelper.isLight()) {
-                g2.setColor(new Color(241, 245, 249));
+                g2.setColor(ThemeColors.subtleFill());
                 g2.fillRoundRect(1, 1, w - 2, h - 2, 8, 8);
-                g2.setColor(new Color(226, 232, 240));
+                g2.setColor(ThemeColors.hairline());
                 g2.drawRoundRect(1, 1, w - 3, h - 3, 8, 8);
             }
             g2.dispose();
@@ -230,7 +230,7 @@ public final class TableNavigator {
         NavigationBar(JScrollBar scrollBar) {
             super(new GridBagLayout());
             setOpaque(false);
-            setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
+            setBorder(BorderFactory.createEmptyBorder(0, Spacing.SM, 0, 0));
             top = navButton("fas-angle-double-up", "Ir para o início da lista (Home)",
                     () -> TableNavigator.top(scrollBar));
             pageUp = navButton("fas-angle-up", "Subir uma página (Page Up)",
@@ -262,7 +262,7 @@ public final class TableNavigator {
         Strip() {
             setOpaque(false);
             setLayout(new GridLayout(4, 1, 0, 3));
-            setBorder(BorderFactory.createEmptyBorder(6, 4, 6, 4));
+            setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         }
 
         @Override
@@ -270,9 +270,9 @@ public final class TableNavigator {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             boolean light = UIHelper.isLight();
-            g2.setColor(light ? new Color(248, 250, 252) : UIHelper.BG_CARD);
+            g2.setColor(light ? UIHelper.ROW_ALT : UIHelper.BG_CARD);
             g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
-            g2.setColor(light ? new Color(203, 213, 225) : UIHelper.BORDER);
+            g2.setColor(UIHelper.BORDER);
             g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
             g2.dispose();
             super.paintComponent(g);

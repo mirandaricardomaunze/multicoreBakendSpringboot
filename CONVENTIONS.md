@@ -9,7 +9,8 @@ Convenções diárias. Onde colidirem com [ARCHITECTURE.md](ARCHITECTURE.md), a 
 - **Mensagens ao utilizador** (UI, exceções, logs visíveis): **português de Moçambique**.
 - **Identificadores Java** (classes, métodos, variáveis): **inglês**.
 - **Tabelas SQL e colunas**: `snake_case` em inglês (`product_batches`, `expiration_date`).
-- **Comentários**: PT quando expressam regra de negócio, EN quando explicam mecanismo técnico.
+- **Comentários e Javadocs**: sempre em inglês profissional, tanto para regras de negócio como para mecanismos técnicos.
+- **Texto visível ao utilizador**: sempre em português de Moçambique; não confundir conteúdo funcional com comentários de código.
 
 ```java
 // ✅ correcto
@@ -256,16 +257,19 @@ try {
 ## 16. Comentários
 
 - Por defeito **nenhum**. Bom naming substitui comentário.
-- Quando justificado: explicar **o porquê** (constraint legal, decisão fiscal, workaround documentado).
+- Quando justificado: explicar **o porquê** em inglês profissional (legal constraint, fiscal decision, documented workaround).
+- Javadocs, comentários de linha, comentários de bloco e comentários em testes são sempre escritos em inglês.
+- Termos oficiais, nomes próprios e rótulos em português podem ser citados entre aspas quando forem dados do domínio ou texto apresentado ao utilizador.
+- Ao encontrar um comentário legado em português, traduzi-lo se preservar conhecimento relevante; removê-lo se apenas repetir o código.
 - Nunca referenciar IDs de issues, autores, datas — isso vive no `git log`.
 
 ```java
-// ✅ explica regra fiscal não-óbvia
-// IVA Moçambique aplicado depois do desconto de linha, antes do desconto comercial global.
+// Correct: explains a non-obvious fiscal rule.
+// Mozambican VAT is applied after the line discount and before the global commercial discount.
 BigDecimal taxBase = lineSubtotal.subtract(lineDiscount);
 
-// ❌ redundante
-// soma os totais
+// Incorrect: merely repeats the operation.
+// Adds the amount to the total.
 total = total.add(amount);
 ```
 

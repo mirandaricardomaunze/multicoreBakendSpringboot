@@ -25,7 +25,7 @@ public class StatusBar extends JPanel {
         setLayout(new BorderLayout(0, 0));
         setPreferredSize(new Dimension(0, BAR_HEIGHT));
         setBackground(barBg());
-        setBorder(new EmptyBorder(0, 8, 0, 8));
+        setBorder(new EmptyBorder(0, Spacing.SM, 0, Spacing.SM));
 
         // Lado direito — aviso de versão (quando houver), hora
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
@@ -102,12 +102,12 @@ public class StatusBar extends JPanel {
     // ── Helpers ───────────────────────────────────────────────────────────────────────────────
 
     private static Color barBg() {
-        return UIHelper.isLight() ? new Color(241, 245, 249) : new Color(15, 23, 42);
+        return UIHelper.TABLE_HEADER_BG;
     }
 
     private static JLabel slimLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        l.setFont(Typography.CAPTION);
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }

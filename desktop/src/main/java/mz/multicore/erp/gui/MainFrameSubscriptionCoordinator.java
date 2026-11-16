@@ -1,5 +1,8 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.MySubscriptionApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ToastManager;
@@ -8,7 +11,6 @@ import mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO;
 
 import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import java.awt.Color;
@@ -55,10 +57,10 @@ final class MainFrameSubscriptionCoordinator {
                 : (s.daysRemaining() == 0 ? "Assinatura expira hoje" : "Assinatura: " + s.daysRemaining() + " dia(s)");
 
         JLabel chip = new JLabel(text, UIHelper.icon("fas-exclamation-triangle", 14, color), JLabel.LEFT);
-        chip.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        chip.setFont(Typography.BODY_BOLD);
         chip.setForeground(color);
         chip.setToolTipText("Veja Configurações → A Minha Assinatura, ou contacte o suporte.");
-        chip.setBorder(new EmptyBorder(0, 6, 0, 6));
+        chip.setBorder(new EmptyBorder(0, Spacing.XS, 0, Spacing.XS));
         return chip;
     }
 
@@ -91,10 +93,9 @@ final class MainFrameSubscriptionCoordinator {
 
     static void enforceExpiredSubscription(Component parent, MySubscriptionDTO s, Runnable onExpired) {
         String estado = (s != null && s.statusLabel() != null) ? s.statusLabel().toLowerCase() : "expirada";
-        JOptionPane.showMessageDialog(parent,
+        ModernMessageDialog.show(parent, FeedbackType.ERROR, "Assinatura",
                 "A assinatura da sua empresa está " + estado + ".\n"
-                        + "O acesso vai ser suspenso. Contacte o suporte da plataforma para regularizar.",
-                "Assinatura", JOptionPane.ERROR_MESSAGE);
+                        + "O acesso vai ser suspenso. Contacte o suporte da plataforma para regularizar.");
         if (onExpired != null) {
             onExpired.run();
         }

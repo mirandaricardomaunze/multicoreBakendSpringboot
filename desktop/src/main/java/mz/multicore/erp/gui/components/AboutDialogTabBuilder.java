@@ -11,7 +11,7 @@ final class AboutDialogTabBuilder {
     static JComponent buildAuthorTab() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 16));
-        card.setBorder(new EmptyBorder(20, 24, 20, 24));
+        card.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel authorHeader = new JPanel(new BorderLayout(16, 0));
         authorHeader.setOpaque(false);
@@ -25,7 +25,7 @@ final class AboutDialogTabBuilder {
                     g2.setPaint(new GradientPaint(0, 0, UIHelper.ACCENT_BLUE, getWidth(), getHeight(), UIHelper.ACCENT_BLUE_HOVER));
                     g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
                     g2.setColor(Color.WHITE);
-                    g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 22));
+                    g2.setFont(Typography.METRIC);
                     FontMetrics fm = g2.getFontMetrics();
                     String text = "MRM";
                     int tx = (getWidth() - fm.stringWidth(text)) / 2;
@@ -45,15 +45,15 @@ final class AboutDialogTabBuilder {
         authorMeta.setLayout(new BoxLayout(authorMeta, BoxLayout.Y_AXIS));
 
         JLabel nameLabel = new JLabel("Miranda Ricardo Maunze");
-        nameLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
+        nameLabel.setFont(Typography.TITLE);
         nameLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel roleLabel = new JLabel("Autor, Fundador & Arquiteto de Software Principal");
-        roleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        roleLabel.setFont(Typography.EMPHASIS_BOLD);
         roleLabel.setForeground(UIHelper.ACCENT_BLUE);
 
         JLabel locationLabel = new JLabel("Maputo, Moçambique • Engenharia de Sistemas Empresariais");
-        locationLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        locationLabel.setFont(Typography.BODY);
         locationLabel.setForeground(UIHelper.TEXT_MUTED);
 
         authorMeta.add(nameLabel);
@@ -70,10 +70,10 @@ final class AboutDialogTabBuilder {
 
         ModernPanel visionPanel = new ModernPanel(12);
         visionPanel.setLayout(new BoxLayout(visionPanel, BoxLayout.Y_AXIS));
-        visionPanel.setBorder(new EmptyBorder(14, 16, 14, 16));
+        visionPanel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JLabel visionTitle = new JLabel("Concepção & Liderança de Engenharia");
-        visionTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        visionTitle.setFont(Typography.EMPHASIS_BOLD);
         visionTitle.setForeground(UIHelper.TEXT_LIGHT);
 
         JTextArea visionText = new JTextArea(
@@ -83,7 +83,7 @@ final class AboutDialogTabBuilder {
                 + "O sistema reúne décadas de boas práticas de engenharia de software, garantindo tempo de resposta "
                 + "instantâneo no terminal desktop, consistência transacional absoluta e controlo total das operações empresariais."
         );
-        visionText.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        visionText.setFont(Typography.BODY);
         visionText.setForeground(UIHelper.TEXT_MUTED);
         visionText.setWrapStyleWord(true);
         visionText.setLineWrap(true);
@@ -97,10 +97,10 @@ final class AboutDialogTabBuilder {
 
         ModernPanel infoPanel = new ModernPanel(12);
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
-        infoPanel.setBorder(new EmptyBorder(14, 16, 14, 16));
+        infoPanel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         JLabel infoTitle = new JLabel("Ficha de Identificação do Autor");
-        infoTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        infoTitle.setFont(Typography.EMPHASIS_BOLD);
         infoTitle.setForeground(UIHelper.TEXT_LIGHT);
         infoPanel.add(infoTitle);
         infoPanel.add(Box.createRigidArea(new Dimension(0, 8)));
@@ -120,10 +120,10 @@ final class AboutDialogTabBuilder {
     static JComponent buildModulesTab() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(new EmptyBorder(18, 20, 18, 20));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JLabel title = new JLabel("Ecossistema de Módulos Integrados — Multicore ERP");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        title.setFont(Typography.EMPHASIS_BOLD);
         title.setForeground(UIHelper.TEXT_LIGHT);
         card.add(title, BorderLayout.NORTH);
 
@@ -147,17 +147,17 @@ final class AboutDialogTabBuilder {
     static JComponent buildArchitectureTab() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(18, 20, 18, 20));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JLabel title = new JLabel("Padrões de Engenharia & Arquitetura de Software");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        title.setFont(Typography.EMPHASIS_BOLD);
         title.setForeground(UIHelper.TEXT_LIGHT);
         card.add(title);
         card.add(Box.createRigidArea(new Dimension(0, 10)));
 
         ModernPanel techGrid = new ModernPanel(12);
         techGrid.setLayout(new GridLayout(2, 2, 16, 12));
-        techGrid.setBorder(new EmptyBorder(14, 16, 14, 16));
+        techGrid.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         techGrid.add(createTechFeature("Multi-Módulo Reactor", "Divisão física estrita em contracts (agnóstico), backend (Spring Boot 3 headless) e desktop (cliente gráfico Java 21).", "fas-network-wired", UIHelper.ACCENT_BLUE));
         techGrid.add(createTechFeature("Arquitetura Hexagonal & DDD", "Domínio limpo isolado de infraestrutura, com DTOs records imutáveis em todas as fronteiras de comunicação.", "fas-layer-group", UIHelper.APPROVED_GREEN));
@@ -171,10 +171,10 @@ final class AboutDialogTabBuilder {
     static JComponent buildLicenseTab() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(20, 24, 20, 24));
+        card.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JLabel title = new JLabel("Direitos de Autor & Termos de Uso");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         card.add(title);
         card.add(Box.createRigidArea(new Dimension(0, 12)));
@@ -192,7 +192,7 @@ final class AboutDialogTabBuilder {
                 + "Para informações sobre licenciamento corporativo, integrações ou expansão de módulos, "
                 + "contacte diretamente a equipa Multicore sob liderança técnica de Miranda Ricardo Maunze."
         );
-        licenseText.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        licenseText.setFont(Typography.BODY);
         licenseText.setForeground(UIHelper.TEXT_MUTED);
         licenseText.setLineWrap(true);
         licenseText.setWrapStyleWord(true);
@@ -209,12 +209,12 @@ final class AboutDialogTabBuilder {
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
 
         JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        lbl.setFont(Typography.CAPTION_BOLD);
         lbl.setForeground(UIHelper.TEXT_MUTED);
         lbl.setPreferredSize(new Dimension(160, 20));
 
         JLabel val = new JLabel(value);
-        val.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        val.setFont(Typography.CAPTION);
         val.setForeground(UIHelper.TEXT_LIGHT);
 
         row.add(lbl, BorderLayout.WEST);
@@ -226,17 +226,17 @@ final class AboutDialogTabBuilder {
     private static JPanel createModuleCard(String title, String desc, String icon, Color color) {
         ModernPanel p = new ModernPanel(10);
         p.setLayout(new BorderLayout(10, 0));
-        p.setBorder(new EmptyBorder(10, 12, 10, 12));
+        p.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         p.add(new JLabel(UIHelper.icon(icon, 18, color)), BorderLayout.WEST);
 
         JPanel text = new JPanel(new GridLayout(2, 1, 0, 2));
         text.setOpaque(false);
         JLabel t = new JLabel(title);
-        t.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        t.setFont(Typography.BODY_BOLD);
         t.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel d = new JLabel(desc);
-        d.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        d.setFont(Typography.CAPTION);
         d.setForeground(UIHelper.TEXT_MUTED);
 
         text.add(t);
@@ -248,18 +248,18 @@ final class AboutDialogTabBuilder {
     private static JPanel createTechFeature(String title, String desc, String icon, Color color) {
         ModernPanel p = new ModernPanel(10);
         p.setLayout(new BorderLayout(12, 0));
-        p.setBorder(new EmptyBorder(12, 14, 12, 14));
+        p.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         p.add(new JLabel(UIHelper.icon(icon, 22, color)), BorderLayout.WEST);
 
         JPanel text = new JPanel();
         text.setOpaque(false);
         text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
         JLabel t = new JLabel(title);
-        t.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        t.setFont(Typography.EMPHASIS_BOLD);
         t.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel d = new JLabel("<html>" + desc + "</html>");
-        d.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        d.setFont(Typography.CAPTION);
         d.setForeground(UIHelper.TEXT_MUTED);
 
         text.add(t);

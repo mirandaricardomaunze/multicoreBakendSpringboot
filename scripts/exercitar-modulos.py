@@ -186,8 +186,8 @@ check("capital negativo é recusado", 400, code)
 
 section("RH §B5: as retenções nascem no pagamento e reapurar não as duplica")
 code, slip = call("/api/hr/payslips", token, "POST",
-                  {"employeeId": 1, "year": 2026, "month": 7, "overtimeHours": 0,
-                   "bonuses": 0, "otherDeductions": 0})
+                  {"employeeId": 1, "year": 2026, "month": 7, "overtime": 0,
+                   "allowances": 0, "otherDeductions": 0})
 if code == 200:
     check("recibo nasce em rascunho", "DRAFT", slip["status"])
     check("aprovado antes de pago", "APPROVED",
@@ -195,7 +195,9 @@ if code == 200:
     check("pago", "PAID",
           call(f"/api/hr/payslips/{slip['id']}/mark-paid", token, "POST")[1]["status"])
 else:
-    print(f"  NOTA  a folha de 2026/7 já tinha sido processada ({code})")
+    # Mostrar a resposta: a nota antiga presumia "já processada" e escondeu durante semanas que o
+    # corpo usava campos que a API já não aceita (overtimeHours/bonuses), e o RHC-53 parecia falhar.
+    print(f"  NOTA  recibo de 2026/7 recusado ({code}): {str(slip)[:160]}")
 
 # Reapurar em vez de somar recibo a recibo é o que torna isto idempotente: pagar o mesmo recibo
 # duas vezes não pode duplicar a dívida ao Estado.
@@ -277,17 +279,16 @@ section("Compras: a dívida ao fornecedor nasce e baixa ao pagar")
 payables = call("/api/purchases/payables?companyId=1", token)[1]
 if payables:
     payable = payables[0]
-    owed = Decimal(str(payable.get("outstandingAmount") or payable.get("totalAmount") or 0))
+    owed = Decimal(str(payable["outstanding"]))
     account = call("/api/finance/accounts?companyId=1", token)[1][0]["id"]
     pay = min(owed, Decimal("1000"))
-    code, _ = call(f"/api/purchases/{payable['id']}/pay?amount={pay}"
+    code, _ = call(f"/api/purchases/{payable['purchaseId']}/pay?amount={pay}"
                    f"&financeAccountId={account}&reference=TESTE", token, "POST")
     check("pagamento ao fornecedor aceite", 200, code)
     after_pay = [p for p in call("/api/purchases/payables?companyId=1", token)[1]
-                 if p["id"] == payable["id"]]
+                 if p["purchaseId"] == payable["purchaseId"]]
     if after_pay:
-        left = Decimal(str(after_pay[0].get("outstandingAmount")
-                           or after_pay[0].get("totalAmount") or 0))
+        left = Decimal(str(after_pay[0]["outstanding"]))
         check("a dívida baixa exactamente o que se pagou", owed - pay, left)
     else:
         print("  NOTA  a conta saiu da lista de pendentes — ficou liquidada")

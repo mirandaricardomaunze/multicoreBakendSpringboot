@@ -34,21 +34,19 @@ public final class ExecutiveTvCalculationHelper {
                 .toList();
     }
 
+    /** Visão global ({@code businessUnitId == null}): faturas sem unidade ou de unidades incluídas na meta. */
+    public static boolean belongsTo(InvoiceDTO inv, Long businessUnitId) {
+        if (businessUnitId == null) {
+            return inv.businessUnitId() == null || BusinessUnitGoalManager.isUnitIncluded(inv.businessUnitId());
+        }
+        return businessUnitId.equals(inv.businessUnitId());
+    }
+
     public static BigDecimal calculateTotalBilled(List<InvoiceDTO> filteredInvoices, Long businessUnitId) {
         if (filteredInvoices == null) return BigDecimal.ZERO;
         BigDecimal total = BigDecimal.ZERO;
         for (InvoiceDTO inv : filteredInvoices) {
-            if (businessUnitId == null) {
-                if (inv.businessUnitId() == null || BusinessUnitGoalManager.isUnitIncluded(inv.businessUnitId())) {
-                    if (inv.totalAmount() != null) {
-                        total = total.add(inv.totalAmount());
-                    }
-                }
-            } else if (businessUnitId.equals(inv.businessUnitId())) {
-                if (inv.totalAmount() != null) {
-                    total = total.add(inv.totalAmount());
-                }
-            }
+            if (belongsTo(inv, businessUnitId) && inv.totalAmount() != null) total = total.add(inv.totalAmount());
         }
         return total;
     }

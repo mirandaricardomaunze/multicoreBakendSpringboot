@@ -10,6 +10,7 @@ import mz.multicore.erp.modules.accounting.model.JournalEntry;
 import mz.multicore.erp.modules.accounting.model.JournalLine;
 import mz.multicore.erp.modules.accounting.model.JournalSource;
 import mz.multicore.erp.modules.accounting.service.CommercialPostingHandler;
+import mz.multicore.erp.modules.accounting.service.GoodsAccounts;
 import mz.multicore.erp.modules.accounting.service.JournalService;
 import mz.multicore.erp.modules.accounting.service.PostingHelper;
 import mz.multicore.erp.modules.comercial.dto.CreateCreditNoteLineRequest;
@@ -54,7 +55,8 @@ class ComercialDocumentosHarnessTest {
     private final DocumentNumberService numbers = mock(DocumentNumberService.class);
     private final CreditNoteQueryService queryService = mock(CreditNoteQueryService.class);
     private final CreditNoteCreationService creationService = new CreditNoteCreationService(
-            creditNoteRepository, invoiceRepository, warehouseRepository, numbers, queryService);
+            creditNoteRepository, invoiceRepository,
+            new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), numbers, queryService, java.util.List.of());
 
     @BeforeEach
     void signIn() {
@@ -158,7 +160,7 @@ class ComercialDocumentosHarnessTest {
         posted.addLine(JournalLine.credit(sales, new BigDecimal("116.00"), "Vendas"));
         when(journal.findByDocument(1L, JournalSource.INVOICE, 10L)).thenReturn(Optional.of(posted));
 
-        new CommercialPostingHandler(helper, journal)
+        new CommercialPostingHandler(helper, journal, new GoodsAccounts(helper, null))
                 .postInvoiceCancellation(new InvoiceCancelledEvent(1L, 10L, "FT-1", LocalDate.of(2026, 11, 1)));
 
         ArgumentCaptor<JournalEntry> saved = ArgumentCaptor.forClass(JournalEntry.class);

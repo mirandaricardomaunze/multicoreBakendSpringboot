@@ -6,7 +6,10 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
 import mz.multicore.erp.modules.comercial.model.Product;
+import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import org.junit.jupiter.api.AfterEach;
@@ -77,7 +80,7 @@ class OrderPickingPrintServiceTest {
         when(orders.findById(9L)).thenReturn(Optional.of(order(company(false))));
         CurrentUserContext.setCurrentCompanyId(1L);
 
-        byte[] pdf = new OrderPickingPrintService(orders).render(9L, true);
+        byte[] pdf = new OrderPickingPrintService(lookup(orders)).render(9L, true);
 
         assertTrue(extract(pdf).contains("REIMPRESSAO"), extract(pdf));
     }
@@ -87,9 +90,13 @@ class OrderPickingPrintServiceTest {
         when(orders.findById(9L)).thenReturn(Optional.of(order(company)));
         CurrentUserContext.setCurrentCompanyId(1L);
 
-        byte[] pdf = new OrderPickingPrintService(orders).render(9L, false);
+        byte[] pdf = new OrderPickingPrintService(lookup(orders)).render(9L, false);
         assertEquals("%PDF", new String(pdf, 0, 4, java.nio.charset.StandardCharsets.US_ASCII));
         return extract(pdf);
+    }
+
+    private static OrderLookup lookup(OrderRepository orders) {
+        return new OrderLookup(orders, mock(QuotationRepository.class), mock(DeliveryGuideRepository.class));
     }
 
     private static String extract(byte[] pdf) throws Exception {

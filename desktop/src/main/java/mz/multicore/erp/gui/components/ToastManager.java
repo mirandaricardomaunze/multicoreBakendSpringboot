@@ -61,12 +61,12 @@ public final class ToastManager {
         panel.setBackground(UIHelper.BG_CARD);
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(type.color(), 1),
-                BorderFactory.createEmptyBorder(10, 14, 10, 12)));
+                BorderFactory.createEmptyBorder(Spacing.SM, Spacing.LG, Spacing.SM, Spacing.MD)));
 
         JLabel icon = new JLabel(UIHelper.icon(type.iconCode(), 18, type.color()));
         JLabel text = new JLabel("<html><body style='width:300px'>" + escape(message) + "</body></html>");
         text.setForeground(UIHelper.TEXT_LIGHT);
-        text.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        text.setFont(Typography.BODY);
 
         JLabel closeBtn = new JLabel(UIHelper.icon("fas-times", 12, UIHelper.TEXT_MUTED));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));

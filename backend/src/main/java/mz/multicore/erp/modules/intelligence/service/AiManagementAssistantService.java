@@ -6,14 +6,14 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Invoice;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.intelligence.dto.AiAssistantRequest;
 import mz.multicore.erp.modules.intelligence.dto.AiAssistantResponse;
 import mz.multicore.erp.modules.intelligence.dto.AiEvidenceDTO;
 import mz.multicore.erp.modules.inventory.model.Stock;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrder;
-import mz.multicore.erp.modules.purchases.repository.PurchaseOrderRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,20 +29,20 @@ public class AiManagementAssistantService {
 
     public static final String HUMAN_NOTICE = "Confirme os valores nos módulos operacionais antes de decidir.";
 
-    private final InvoiceRepository invoiceRepository;
-    private final StockRepository stockRepository;
-    private final PurchaseOrderRepository purchaseOrderRepository;
+    private final InvoiceLookup invoiceLookup;
+    private final StockLookup stockLookup;
+    private final SupplierLookup supplierLookup;
     private final ManagementAiGateway aiGateway;
     private final AuditLogService auditLogService;
 
-    public AiManagementAssistantService(InvoiceRepository invoiceRepository,
-                                        StockRepository stockRepository,
-                                        PurchaseOrderRepository purchaseOrderRepository,
+    public AiManagementAssistantService(InvoiceLookup invoiceLookup,
+                                        StockLookup stockLookup,
+                                        SupplierLookup supplierLookup,
                                         ManagementAiGateway aiGateway,
                                         AuditLogService auditLogService) {
-        this.invoiceRepository = invoiceRepository;
-        this.stockRepository = stockRepository;
-        this.purchaseOrderRepository = purchaseOrderRepository;
+        this.invoiceLookup = invoiceLookup;
+        this.stockLookup = stockLookup;
+        this.supplierLookup = supplierLookup;
         this.aiGateway = aiGateway;
         this.auditLogService = auditLogService;
     }
@@ -68,19 +68,19 @@ public class AiManagementAssistantService {
 
     private ManagementAiContext aggregate(Long companyId) {
         LocalDateTime since = LocalDateTime.now().minusDays(30);
-        List<Invoice> sales = invoiceRepository.findByCompanyIdAndCreatedAtBetween(companyId, since, LocalDateTime.now())
+        List<Invoice> sales = invoiceLookup.listCreatedBetween(companyId, since, LocalDateTime.now())
                 .stream().filter(invoice -> invoice.getStatus() != null && invoice.getStatus().isRealisedSale()).toList();
         BigDecimal salesTotal = sales.stream().map(Invoice::getTotalAmount).map(AiManagementAssistantService::nz)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal average = sales.isEmpty() ? BigDecimal.ZERO
                 : salesTotal.divide(BigDecimal.valueOf(sales.size()), 2, RoundingMode.HALF_UP);
 
-        List<Stock> stocks = stockRepository.findByWarehouseCompanyId(companyId);
+        List<Stock> stocks = stockLookup.listForCompany(companyId);
         long out = stocks.stream().filter(stock -> nz(stock.getQuantity()).signum() <= 0).count();
         long low = stocks.stream().filter(stock -> nz(stock.getQuantity()).signum() > 0
                 && nz(stock.getQuantity()).compareTo(nz(stock.getProduct().getMinStock())) <= 0).count();
 
-        List<PurchaseOrder> openOrders = purchaseOrderRepository.findByCompanyIdOrderByOrderDateDesc(companyId).stream()
+        List<PurchaseOrder> openOrders = supplierLookup.listPurchaseOrdersForCompany(companyId).stream()
                 .filter(order -> PurchaseOrder.ORDERED.equals(order.getStatus())
                         || PurchaseOrder.PARTIALLY_RECEIVED.equals(order.getStatus())).toList();
         long overdue = openOrders.stream().filter(order -> order.getExpectedDate() != null

@@ -56,14 +56,11 @@ class SellerExperienceHarnessTest {
         String source = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/MainFrame.java"));
         String sidebar = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/MainFrameSidebarBuilder.java"));
         assertTrue(source.contains("new SellerDashboardPanel("));
-        assertTrue(source.contains("buildSellerSearchIndex()"));
+        assertTrue(source.contains("if (\"SELLER\".equalsIgnoreCase(role)) return MainFrameSellerSearchIndex.build("));
         assertTrue(source.contains("perfil de gestor ou administrador"));
-        assertTrue(source.contains("Painel do Vendedor"));
+        String sellerIndex = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/MainFrameSellerSearchIndex.java"));
+        assertTrue(sellerIndex.contains("Painel do Vendedor"));
         assertTrue(sidebar.contains("Pedidos e Cotações"));
-        int sellerIndexStart = source.indexOf("private List<GlobalSearchDialog.SearchItem> buildSellerSearchIndex()");
-        int sellerIndexEnd = source.indexOf("\n    private ", sellerIndexStart + 1);
-        String sellerIndex = source.substring(sellerIndexStart,
-                sellerIndexEnd > sellerIndexStart ? sellerIndexEnd : source.length());
         assertFalse(sellerIndex.contains("seller_financeiro"));
         String commercial = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/ComercialPanel.java"));
         assertTrue(commercial.contains("boolean sellerView"));

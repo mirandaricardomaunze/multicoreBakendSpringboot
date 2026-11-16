@@ -67,6 +67,12 @@ public class AccountingApiClient {
                 IncomeStatementDTO.class);
     }
 
+    /** Acerta 3201 e 3401 ao stock físico ao custo. */
+    public mz.multicore.erp.modules.accounting.dto.InventoryAdjustmentDTO adjustInventory() {
+        return clientFactory.authenticatedClient().post("/api/accounting/inventory-adjustment", null,
+                mz.multicore.erp.modules.accounting.dto.InventoryAdjustmentDTO.class);
+    }
+
     public BalanceSheetDTO getBalanceSheet(LocalDate asOf) {
         return clientFactory.authenticatedClient().get(
                 "/api/accounting/balance-sheet?asOf=" + asOf, BalanceSheetDTO.class);

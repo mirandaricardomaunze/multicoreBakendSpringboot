@@ -203,7 +203,7 @@ public final class TableDataExporter {
                 }
                 ToastManager.show(parent, FeedbackType.SUCCESS, "Ficheiro CSV guardado com sucesso: " + file.getName());
             } catch (Exception ex) {
-                ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gravar CSV: " + ex.getMessage());
+                UserErrors.toast(parent, "gravar CSV", ex);
             }
         }
     }
@@ -235,7 +235,7 @@ public final class TableDataExporter {
                 }
                 ToastManager.show(parent, FeedbackType.SUCCESS, "Folha de cálculo Excel guardada com sucesso: " + file.getName());
             } catch (Exception ex) {
-                ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gravar folha Excel: " + ex.getMessage());
+                UserErrors.toast(parent, "gravar folha Excel", ex);
             }
         }
     }

@@ -85,9 +85,9 @@ public class OrderPickingCoordinator {
     @Transactional
     public byte[] printForPickingA4(Long id, String terminal) {
         PermissionGuard.requireManagerOrAdmin("imprimir guia de separacao A4");
-        Order order = requireOrder(id);
+        Order order = requireSeparationCircuit(id, "imprimir a lista de separação A4");
         if (OrderFulfillmentStatus.AWAITING_SEPARATION.name().equals(order.getStatus())
-                || "PENDING".equalsIgnoreCase(order.getStatus())) {
+                || OrderStatus.is(order.getStatus(), OrderStatus.PENDING)) {
             order.setStatus(OrderFulfillmentStatus.IN_SEPARATION.name());
         }
         byte[] document = sheetPrintService.renderA4(id, false);

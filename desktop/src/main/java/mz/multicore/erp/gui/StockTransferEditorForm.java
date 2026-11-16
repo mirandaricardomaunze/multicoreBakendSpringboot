@@ -78,7 +78,7 @@ final class StockTransferEditorForm {
         UIHelper.styleComboBox(originCombo); UIHelper.styleComboBox(destinationCombo);
         for (JTextField f : List.of(driverField, plateField, responsibleField, vehicleField, notesField)) UIHelper.styleTextField(f);
         requiresReceiptCheck.setOpaque(false);
-        requiresReceiptCheck.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        requiresReceiptCheck.setFont(mz.multicore.erp.gui.components.Typography.BODY);
         requiresReceiptCheck.setSelected(true);
 
         headerModel = new DefaultTableModel(
@@ -191,7 +191,7 @@ final class StockTransferEditorForm {
     private JComponent buildLinesSection() {
         ModernPanel section = new ModernPanel(16);
         section.setLayout(new BorderLayout(0, 10));
-        section.setBorder(new EmptyBorder(14, 16, 14, 16));
+        section.setBorder(new EmptyBorder(mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG, mz.multicore.erp.gui.components.Spacing.LG));
 
         JLabel instruction = new JLabel("Edite directamente na grelha. Qtd, Emb. e Cx. mantêm-se sincronizadas.");
         instruction.setForeground(UIHelper.TEXT_MUTED);
@@ -221,11 +221,11 @@ final class StockTransferEditorForm {
         tableArea.add(scroll, BorderLayout.CENTER);
 
         totalLinesLabel.setForeground(UIHelper.TEXT_MUTED);
-        totalValueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        totalValueLabel.setFont(mz.multicore.erp.gui.components.Typography.EMPHASIS_BOLD);
         totalValueLabel.setForeground(Color.WHITE);
         JPanel totalsRow = new JPanel(new BorderLayout());
         totalsRow.setOpaque(false);
-        totalsRow.setBorder(new EmptyBorder(8, 4, 0, 4));
+        totalsRow.setBorder(new EmptyBorder(mz.multicore.erp.gui.components.Spacing.SM, mz.multicore.erp.gui.components.Spacing.XS, 0, mz.multicore.erp.gui.components.Spacing.XS));
         totalsRow.add(totalLinesLabel, BorderLayout.WEST);
         totalsRow.add(totalValueLabel, BorderLayout.EAST);
         tableArea.add(totalsRow, BorderLayout.SOUTH);
@@ -325,11 +325,11 @@ final class StockTransferEditorForm {
         stopCellEditing();
         syncHeaderModel();
         int origin = originCombo.getSelectedIndex(), destination = destinationCombo.getSelectedIndex();
-        if (origin < 0 || destination < 0) throw new IllegalArgumentException("Seleccione os armazéns de origem e destino.");
-        if (origin == destination) throw new IllegalArgumentException("O armazém de origem e o de destino devem ser diferentes.");
+        if (origin < 0 || destination < 0) throw mz.multicore.erp.gui.components.FieldValidationException.of(originCombo, "Seleccione os armazéns de origem e destino.");
+        if (origin == destination) throw mz.multicore.erp.gui.components.FieldValidationException.of(originCombo, "O armazém de origem e o de destino devem ser diferentes.");
         String driver = blank(driverField.getText()), plate = blank(plateField.getText());
-        if (driver == null) { driverField.requestFocusInWindow(); throw new IllegalArgumentException("O nome do motorista é obrigatório."); }
-        if (plate == null) { plateField.requestFocusInWindow(); throw new IllegalArgumentException("A matrícula do veículo é obrigatória."); }
+        if (driver == null) { throw mz.multicore.erp.gui.components.FieldValidationException.of(driverField, "O nome do motorista é obrigatório."); }
+        if (plate == null) { throw mz.multicore.erp.gui.components.FieldValidationException.of(plateField, "A matrícula do veículo é obrigatória."); }
         return new Values(warehouses.get(origin).id(), warehouses.get(destination).id(), driver, plate,
                 blank(responsibleField.getText()), blank(vehicleField.getText()), blank(notesField.getText()));
     }

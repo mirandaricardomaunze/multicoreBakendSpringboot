@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.architecture.format.DisplayLocale;
 import mz.multicore.erp.desktop.client.CashFlowForecastApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -70,7 +71,7 @@ public final class CashFlowForecastOperationsCoordinator {
                         ToastManager.show(parent, FeedbackType.ERROR, "Não foi possível gerar o PDF de fluxo de caixa.");
                     }
                 } catch (Exception ex) {
-                    ToastManager.show(parent, FeedbackType.ERROR, "Erro ao gerar PDF: " + ex.getMessage());
+                    UserErrors.toast(parent, "gerar PDF", ex);
                 }
             }
         }.execute();

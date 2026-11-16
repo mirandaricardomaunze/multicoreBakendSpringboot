@@ -8,6 +8,7 @@ import java.util.List;
 /**
  * Dados do fecho de caixa (Z) — reconciliação da gaveta e desagregação por meio de pagamento.
  * {@code countedCash} e {@code difference} vêm null enquanto a sessão está aberta (pré-visualização).
+ * {@code counterReceipts}: numerário de recibos emitidos ao balcão durante a sessão (sinal, vasilhame, dívidas).
  */
 public record PosZReportDTO(
         Long sessionId,
@@ -33,12 +34,30 @@ public record PosZReportDTO(
         int refundsCount,
         String closingNotes,
         String cashBreakdownJson,
-        List<ShiftReconciliationDTO> shiftReconciliations
+        List<ShiftReconciliationDTO> shiftReconciliations,
+        BigDecimal counterReceipts
 ) {
     public PosZReportDTO {
         if (shiftReconciliations == null) {
             shiftReconciliations = Collections.emptyList();
         }
+        if (counterReceipts == null) {
+            counterReceipts = BigDecimal.ZERO;
+        }
+    }
+
+    /** Construtor para compatibilidade com versões sem recebimentos ao balcão. */
+    public PosZReportDTO(Long sessionId, String operator, String currentOperator, LocalDateTime openDate,
+                         LocalDateTime closeDate, String status, BigDecimal openingBalance, BigDecimal cashSales,
+                         BigDecimal cardSales, BigDecimal mpesaSales, BigDecimal chequeSales, BigDecimal creditSales,
+                         BigDecimal totalSales, BigDecimal suprimentos, BigDecimal sangrias, BigDecimal refunds,
+                         BigDecimal expectedCash, BigDecimal countedCash, BigDecimal difference, int saleCount,
+                         int refundsCount, String closingNotes, String cashBreakdownJson,
+                         List<ShiftReconciliationDTO> shiftReconciliations) {
+        this(sessionId, operator, currentOperator, openDate, closeDate, status, openingBalance, cashSales, cardSales,
+                mpesaSales, chequeSales, creditSales, totalSales, suprimentos, sangrias, refunds, expectedCash,
+                countedCash, difference, saleCount, refundsCount, closingNotes, cashBreakdownJson,
+                shiftReconciliations, BigDecimal.ZERO);
     }
 
     /** Construtor para compatibilidade com versões que não tinham currentOperator nem shiftReconciliations. */
@@ -90,7 +109,8 @@ public record PosZReportDTO(
                 refundsCount,
                 closingNotes,
                 cashBreakdownJson,
-                Collections.emptyList()
+                Collections.emptyList(),
+                BigDecimal.ZERO
         );
     }
 

@@ -69,6 +69,13 @@ public class InvoiceInstallment extends BaseEntity {
         return payment.subtract(toApply);
     }
 
+    /** Back to nothing paid, before the payments are spread again. */
+    public void resetPayments() {
+        this.paidAmount = BigDecimal.ZERO;
+        this.remainingBalance = this.amount;
+        updateStatusBasedOnBalance();
+    }
+
     public void updateStatusBasedOnBalance() {
         if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0) {
             this.status = "PAID";

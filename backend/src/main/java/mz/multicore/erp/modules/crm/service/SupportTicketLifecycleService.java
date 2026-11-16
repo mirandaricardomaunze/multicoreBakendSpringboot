@@ -3,8 +3,8 @@ package mz.multicore.erp.modules.crm.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.crm.dto.ChangeTicketStatusRequest;
 import mz.multicore.erp.modules.crm.dto.CreateTicketRequest;
 import mz.multicore.erp.modules.crm.dto.SupportTicketDTO;
@@ -23,31 +23,30 @@ import java.time.LocalDateTime;
 public class SupportTicketLifecycleService {
 
     private final SupportTicketRepository ticketRepository;
-    private final ClientRepository clientRepository;
-    private final CompanyRepository companyRepository;
+    private final ClientLookup clientLookup;
+    private final CompanyLookup companyLookup;
     private final WorkSheetRepository workSheetRepository;
 
     public SupportTicketLifecycleService(
             SupportTicketRepository ticketRepository,
-            ClientRepository clientRepository,
-            CompanyRepository companyRepository,
+            ClientLookup clientLookup,
+            CompanyLookup companyLookup,
             WorkSheetRepository workSheetRepository
     ) {
         this.ticketRepository = ticketRepository;
-        this.clientRepository = clientRepository;
-        this.companyRepository = companyRepository;
+        this.clientLookup = clientLookup;
+        this.companyLookup = companyLookup;
         this.workSheetRepository = workSheetRepository;
     }
 
     @Transactional
     public SupportTicketDTO createTicket(CreateTicketRequest request) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), companyId)
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+        Client client = clientLookup.requireForCompany(request.clientId(), companyId);
 
         SupportTicket ticket = new SupportTicket();
         ticket.setClient(client);
-        ticket.setCompany(companyRepository.getReferenceById(companyId));
+        ticket.setCompany(companyLookup.reference(companyId));
         ticket.setSubject(request.subject());
         ticket.setDescription(request.description());
         ticket.setStatus(TicketStatus.OPEN);

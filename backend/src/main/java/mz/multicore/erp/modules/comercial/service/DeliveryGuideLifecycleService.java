@@ -8,7 +8,9 @@ import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuide;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuideLine;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuideStatus;
+import mz.multicore.erp.modules.comercial.model.OrderStatus;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
+import mz.multicore.erp.modules.comercial.repository.OrderLineRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import org.springframework.stereotype.Service;
@@ -26,12 +28,14 @@ public class DeliveryGuideLifecycleService {
     private final InventoryService inventoryService;
     private final AuditLogService auditLogService;
     private final DeliveryGuideQueryService queryService;
+    /** Nulo só no construtor legado dos testes antigos; aí não há reservas a respeitar. */
+    private final OrderLineRepository orderLineRepository;
 
-    public DeliveryGuideLifecycleService(DeliveryGuideRepository guideRepository,
-                                         OrderRepository orderRepository,
-                                         InventoryService inventoryService,
-                                         AuditLogService auditLogService,
-                                         DeliveryGuideQueryService queryService) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public DeliveryGuideLifecycleService(DeliveryGuideRepository guideRepository, OrderRepository orderRepository,
+                                         InventoryService inventoryService, AuditLogService auditLogService,
+                                         DeliveryGuideQueryService queryService, OrderLineRepository orderLineRepository) {
+        this.orderLineRepository = orderLineRepository;
         this.guideRepository = guideRepository;
         this.orderRepository = orderRepository;
         this.inventoryService = inventoryService;
@@ -39,13 +43,26 @@ public class DeliveryGuideLifecycleService {
         this.queryService = queryService;
     }
 
+    public DeliveryGuideLifecycleService(DeliveryGuideRepository guideRepository, OrderRepository orderRepository,
+                                         InventoryService inventoryService, AuditLogService auditLogService,
+                                         DeliveryGuideQueryService queryService) {
+        this(guideRepository, orderRepository, inventoryService, auditLogService, queryService, null);
+    }
+
     @Transactional
     public DeliveryGuideDTO approve(Long id) {
-        DeliveryGuide guide = queryService.load(id);
         PermissionGuard.requireManagerOrAdmin("aprovar ou rejeitar guias de remessa");
+        // Bloquear antes de ler: dois gerentes a aprovar ao mesmo tempo tirariam o stock duas vezes.
+        guideRepository.findForUpdate(id, CurrentUserContext.requireCurrentCompanyId());
+        DeliveryGuide guide = queryService.load(id);
         if (guide.getStatus() != DeliveryGuideStatus.PENDING_APPROVAL) {
             throw new BusinessRuleException(
                     "Apenas guias pendentes podem ser aprovadas. Estado actual: " + guide.getStatus().getLabel());
+        }
+        if (orderLineRepository != null) {
+            OrderStockAvailability.require(null, guide.getWarehouse(), guide.getLines().stream()
+                    .map(l -> new OrderStockAvailability.Outgoing(l.getProduct(), l.getQuantity())).toList(),
+                    inventoryService, orderLineRepository);
         }
 
         for (DeliveryGuideLine line : guide.getLines()) {
@@ -69,7 +86,7 @@ public class DeliveryGuideLifecycleService {
         guide.setApprovedAt(LocalDateTime.now());
         DeliveryGuide saved = guideRepository.save(guide);
 
-        if (saved.getOrderId() != null) markOrder(saved.getOrderId(), "GUIDED", saved.getId());
+        if (saved.getOrderId() != null) markOrder(saved.getOrderId(), OrderStatus.GUIDED.name(), saved.getId());
 
         auditLogService.logCurrent("DELIVERY_GUIDE_APPROVE",
                 "Guia de remessa " + saved.getGuideNumber() + " aprovada — stock expedido.");
@@ -122,7 +139,7 @@ public class DeliveryGuideLifecycleService {
 
     private void releaseOrder(Long orderId) {
         orderRepository.findById(orderId).ifPresent(order -> {
-            order.setStatus("PENDING");
+            order.setStatus(OrderStatus.PENDING.name());
             order.setDeliveryGuideId(null);
             orderRepository.save(order);
         });

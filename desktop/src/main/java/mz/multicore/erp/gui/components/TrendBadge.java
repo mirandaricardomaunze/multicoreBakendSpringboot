@@ -16,11 +16,11 @@ public class TrendBadge extends JPanel {
 
     public TrendBadge(BigDecimal percent, String comparisonLabel) {
         setOpaque(false);
-        setBorder(new EmptyBorder(1, 6, 1, 6));
+        setBorder(new EmptyBorder(Spacing.XXS, Spacing.XS, Spacing.XXS, Spacing.XS));
         setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 
         label = new JLabel();
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        label.setFont(Typography.CAPTION_BOLD);
         add(label);
 
         updateTrend(percent, comparisonLabel);
@@ -39,7 +39,7 @@ public class TrendBadge extends JPanel {
         if (percent == null || percent.compareTo(BigDecimal.ZERO) == 0) {
             text = DashboardTrendCalculator.formatPercentage(percent);
             fg = UIHelper.TEXT_MUTED;
-            bg = UIHelper.isLight() ? new Color(241, 245, 249) : new Color(51, 65, 85, 120);
+            bg = ThemeColors.subtleFill();
         } else if (percent.compareTo(BigDecimal.ZERO) > 0) {
             text = DashboardTrendCalculator.formatPercentage(percent);
             fg = UIHelper.APPROVED_GREEN;

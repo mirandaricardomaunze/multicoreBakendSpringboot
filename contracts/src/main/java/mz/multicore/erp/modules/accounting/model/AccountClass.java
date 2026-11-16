@@ -1,9 +1,9 @@
 package mz.multicore.erp.modules.accounting.model;
 
 /**
- * Classes do <b>PGC-NIRF</b> (Plano Geral de Contabilidade de Moçambique). A classe é dada pelo
- * primeiro dígito do código da conta — é essa a convenção do plano, e é por ela que o balancete
- * e os mapas se organizam.
+ * Classes in the <b>PGC-NIRF</b>, Mozambique's General Accounting Plan. The first digit of the
+ * account code determines the class, following the convention used to organize trial balances
+ * and financial statements.
  */
 public enum AccountClass {
 
@@ -35,15 +35,15 @@ public enum AccountClass {
     }
 
     /**
-     * Natureza habitual da classe. É só o ponto de partida: contas como "Clientes" (classe 2,
-     * devedora) e "Fornecedores" (classe 2, <b>credora</b>) vivem na mesma classe, pelo que a
-     * natureza é gravada em cada conta e não derivada da classe na hora de calcular saldos.
+     * Typical nature of the class. This is only a default: accounts such as Customers (class 2,
+     * debit) and Suppliers (class 2, <b>credit</b>) share a class. Each account therefore stores its
+     * nature instead of deriving it from the class when balances are calculated.
      */
     public AccountNature defaultNature() {
         return defaultNature;
     }
 
-    /** Classe a partir do código da conta ({@code "2101"} → {@link #TERCEIROS}). */
+    /** Resolves the class from an account code ({@code "2101"} → {@link #TERCEIROS}). */
     public static AccountClass ofCode(String code) {
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("Código de conta vazio.");

@@ -1,9 +1,9 @@
 package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.purchases.model.PurchaseLine;
 import mz.multicore.erp.modules.purchases.repository.PurchaseLineRepository;
 import org.springframework.stereotype.Component;
@@ -19,21 +19,21 @@ public class ReorderDataCollector {
 
     public record ProductPurchaseInfo(Long supplierId, String supplierName, BigDecimal unitPrice) {}
 
-    private final StockRepository stockRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final StockLookup stockLookup;
+    private final InvoiceLookup invoiceLookup;
     private final PurchaseLineRepository purchaseLineRepository;
 
-    public ReorderDataCollector(StockRepository stockRepository,
-                                InvoiceRepository invoiceRepository,
+    public ReorderDataCollector(StockLookup stockLookup,
+                                InvoiceLookup invoiceLookup,
                                 PurchaseLineRepository purchaseLineRepository) {
-        this.stockRepository = stockRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.stockLookup = stockLookup;
+        this.invoiceLookup = invoiceLookup;
         this.purchaseLineRepository = purchaseLineRepository;
     }
 
     public Map<Long, BigDecimal> collectStockByProduct(Long companyId) {
         Map<Long, BigDecimal> stockByProduct = new HashMap<>();
-        for (Stock s : stockRepository.findByWarehouseCompanyId(companyId)) {
+        for (Stock s : stockLookup.listForCompany(companyId)) {
             Long pid = s.getProduct().getId();
             BigDecimal qty = s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity();
             stockByProduct.merge(pid, qty, BigDecimal::add);
@@ -44,7 +44,7 @@ public class ReorderDataCollector {
     public Map<Long, BigDecimal> collectSalesLast30Days(Long companyId) {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         Map<Long, BigDecimal> salesLast30Days = new HashMap<>();
-        List<Object[]> salesAgg = invoiceRepository.sumQuantitySoldByProductSince(
+        List<Object[]> salesAgg = invoiceLookup.sumQuantitySoldByProductSince(
                 companyId, InvoiceStatus.realisedSaleStatuses(), thirtyDaysAgo);
         if (salesAgg != null) {
             for (Object[] row : salesAgg) {

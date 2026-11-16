@@ -39,10 +39,14 @@ class PosSessionConcurrencyHarnessTest {
         assertThat(companyRepository).contains(
                 "@Lock(LockModeType.PESSIMISTIC_WRITE)",
                 "Optional<Company> lockById");
+        String companyLookup = read("backend/src/main/java/mz/multicore/erp/modules/company/service/CompanyLookup.java");
+        assertThat(companyLookup).contains(
+                "@Transactional(propagation = Propagation.MANDATORY)",
+                "companyRepository.lockById(id)");
 
         String service = read("backend/src/main/java/mz/multicore/erp/modules/pos/service/POSService.java");
         int method = service.indexOf("public TillSession openSession");
-        int companyLock = service.indexOf("companyRepository.lockById", method);
+        int companyLock = service.indexOf("companyLookup.lockForUpdate", method);
         int activeCheck = service.indexOf("findActiveSessionForOperator", companyLock);
         int save = service.indexOf("tillSessionRepository.save(session)", activeCheck);
         assertThat(companyLock).isGreaterThan(method);

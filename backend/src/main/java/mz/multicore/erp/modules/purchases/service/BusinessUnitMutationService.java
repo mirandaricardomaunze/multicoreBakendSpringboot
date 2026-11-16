@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO;
 import mz.multicore.erp.modules.purchases.dto.CreateBusinessUnitRequest;
 import mz.multicore.erp.modules.purchases.dto.UpdateBusinessUnitRequest;
@@ -19,18 +19,18 @@ public class BusinessUnitMutationService {
 
     private final BusinessUnitRepository businessUnitRepository;
     private final SupplierRepository supplierRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
     private final BusinessUnitQueryAndPolicyService queryAndPolicyService;
 
     public BusinessUnitMutationService(BusinessUnitRepository businessUnitRepository,
                                        SupplierRepository supplierRepository,
-                                       CompanyRepository companyRepository,
+                                       CompanyLookup companyLookup,
                                        AuditLogService auditLogService,
                                        BusinessUnitQueryAndPolicyService queryAndPolicyService) {
         this.businessUnitRepository = businessUnitRepository;
         this.supplierRepository = supplierRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
         this.queryAndPolicyService = queryAndPolicyService;
     }
@@ -42,8 +42,7 @@ public class BusinessUnitMutationService {
             throw new BusinessRuleException("Já existe uma linha de negócio com o código '" + code + "' nesta empresa.");
         }
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(companyId);
 
         Supplier supplier = resolveSupplier(request.supplierId());
 

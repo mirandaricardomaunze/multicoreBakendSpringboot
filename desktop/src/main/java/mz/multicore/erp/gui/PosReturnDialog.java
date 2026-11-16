@@ -185,10 +185,9 @@ final class PosReturnDialog {
                         + ", total " + note.totalAmount() + " MT.");
             }
 
-            int exchange = JOptionPane.showConfirmDialog(owner,
-                    "Pretende lançar agora a venda de troca/substituição?",
-                    "Troca no POS", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-            if (exchange == JOptionPane.YES_OPTION) {
+            boolean exchange = ModernMessageDialog.confirm(owner, FeedbackType.INFO, "Troca no POS",
+                    "Pretende lançar agora a venda de troca/substituição?", "Lançar troca");
+            if (exchange) {
                 owner.selectView(false);
             }
             owner.refreshSalesHistory();
@@ -201,16 +200,16 @@ final class PosReturnDialog {
     private void showVoucherIssuedModal(StoreVoucherDTO voucher, CreditNoteDTO note) {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(16, 20, 16, 20));
+        card.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JLabel titleLabel = new JLabel("VALE DE COMPRAS EMITIDO");
-        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
+        titleLabel.setFont(Typography.TITLE);
         titleLabel.setForeground(UIHelper.APPROVED_GREEN);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JTextField codeField = new JTextField(voucher.code());
         codeField.setEditable(false);
-        codeField.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
+        codeField.setFont(Typography.METRIC);
         codeField.setHorizontalAlignment(JTextField.CENTER);
         codeField.setBackground(UIHelper.ROW_ALT);
         codeField.setBorder(UIHelper.fieldBorder(UIHelper.APPROVED_GREEN, 2));
@@ -218,14 +217,14 @@ final class PosReturnDialog {
         codeField.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel valueLabel = new JLabel(String.format("Valor do Saldo: %,.2f MT", voucher.remainingAmount()));
-        valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        valueLabel.setFont(Typography.TITLE);
         valueLabel.setForeground(UIHelper.ACCENT_BLUE);
         valueLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         String expiry = voucher.expiresAt() != null
                 ? voucher.expiresAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "—";
         JLabel expLabel = new JLabel("Válido até: " + expiry + " · Beneficiário: " + voucher.clientName());
-        expLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        expLabel.setFont(Typography.BODY);
         expLabel.setForeground(UIHelper.TEXT_MUTED);
         expLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 

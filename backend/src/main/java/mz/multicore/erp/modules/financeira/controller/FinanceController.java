@@ -14,9 +14,12 @@ import java.util.List;
 public class FinanceController {
 
     private final FinanceService financeService;
+    private final mz.multicore.erp.modules.comercial.service.InvoiceSettlementService settlementService;
 
-    public FinanceController(FinanceService financeService) {
+    public FinanceController(FinanceService financeService,
+                             mz.multicore.erp.modules.comercial.service.InvoiceSettlementService settlementService) {
         this.financeService = financeService;
+        this.settlementService = settlementService;
     }
 
     @GetMapping("/accounts")
@@ -38,7 +41,7 @@ public class FinanceController {
 
     @PostMapping("/pay-invoice")
     public ResponseEntity<Void> payInvoice(@RequestBody @Valid PayInvoiceRequest request) {
-        financeService.payInvoice(request.invoiceId(), request.accountId());
+        settlementService.settle(request.invoiceId(), request.accountId(), null); // always with a receipt (RC)
         return ResponseEntity.ok().build();
     }
 }

@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.comercial.service;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.approvals.model.ApprovalRequest;
 import mz.multicore.erp.modules.approvals.model.ApprovalStatus;
-import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
+import mz.multicore.erp.modules.approvals.service.ApprovalRequestLookup;
 import mz.multicore.erp.modules.comercial.dto.ClientCreditRiskDTO;
 import mz.multicore.erp.modules.comercial.dto.CreditRiskSummaryDTO;
 import mz.multicore.erp.modules.comercial.model.AgingBucket;
@@ -36,16 +36,16 @@ public class CreditRiskAssessmentService {
 
     private final InvoiceRepository invoiceRepository;
     private final ClientRepository clientRepository;
-    private final ApprovalRequestRepository approvalRequestRepository;
+    private final ApprovalRequestLookup approvalRequestLookup;
 
     public CreditRiskAssessmentService(
             InvoiceRepository invoiceRepository,
             ClientRepository clientRepository,
-            ApprovalRequestRepository approvalRequestRepository
+            ApprovalRequestLookup approvalRequestLookup
     ) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
-        this.approvalRequestRepository = approvalRequestRepository;
+        this.approvalRequestLookup = approvalRequestLookup;
     }
 
     @Transactional(readOnly = true)
@@ -117,8 +117,8 @@ public class CreditRiskAssessmentService {
             acc.add(inv, refDate);
         }
 
-        List<ApprovalRequest> activeExceptions = approvalRequestRepository
-                .findByCompanyIdAndStatus(companyId, ApprovalStatus.APPROVED).stream()
+        List<ApprovalRequest> activeExceptions = approvalRequestLookup
+                .listForCompanyByStatus(companyId, ApprovalStatus.APPROVED).stream()
                 .filter(req -> APPROVAL_DOC_TYPE_CREDIT_EXCEPTION.equalsIgnoreCase(req.getDocumentType()))
                 .toList();
         Map<Long, Boolean> approvedExceptionClients = new LinkedHashMap<>();

@@ -3,8 +3,11 @@ package mz.multicore.erp.modules.inventory.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
 import mz.multicore.erp.modules.inventory.dto.CreateStockAdjustmentRequest;
 import mz.multicore.erp.modules.inventory.model.StockAdjustmentOperation;
@@ -61,9 +64,10 @@ class InventoryServiceTest {
                 stockMovementRepository,
                 stockMovementOperationRepository,
                 adjustmentOperationRepository,
-                mock(CompanyRepository.class),
+                mock(CompanyLookup.class),
+                mock(CompanyService.class),
                 productBatchService,
-                productRepository,
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 mock(AuditLogService.class));
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);

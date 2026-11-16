@@ -1,5 +1,9 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UserErrors;
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.FieldValidationException;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -47,10 +51,10 @@ final class BankStatementImportDialog {
         JPanel balPanel = flow(openBalField, new JLabel("Final:"), closeBalField);
 
         JTextArea csvArea = new JTextArea(8, 35);
-        csvArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        csvArea.setFont(Typography.MONO);
         csvArea.setBackground(UIHelper.FIELD_BG);
         csvArea.setForeground(UIHelper.TEXT_LIGHT);
-        csvArea.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        csvArea.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS));
         csvArea.setText("# Formato: Data;Descrição;Referência;Valor\n"
                 + LocalDate.now() + ";Depósito Cliente ABC;DEP-9988;25000.00\n"
                 + LocalDate.now() + ";Comissão de Manutenção;;-150.00");
@@ -69,7 +73,7 @@ final class BankStatementImportDialog {
                     File f = chooser.getSelectedFile();
                     csvArea.setText(Files.readString(f.toPath()));
                 } catch (Exception ex) {
-                    ToastManager.show(owner, FeedbackType.ERROR, "Erro ao ler ficheiro: " + ex.getMessage());
+                    UserErrors.toast(owner, "ler ficheiro", ex);
                 }
             }
         });
@@ -98,7 +102,7 @@ final class BankStatementImportDialog {
             BigDecimal cBal = parseAmountSafe(closeBalField.getText().trim());
 
             List<BankStatementItemImportDTO> items = parseCsvLines(csvArea.getText());
-            if (items.isEmpty()) throw new IllegalArgumentException("Nenhuma linha de movimento válida foi detectada no extracto.");
+            if (items.isEmpty()) throw FieldValidationException.of(csvArea, "Nenhuma linha de movimento válida foi detectada no extracto.");
 
             ImportBankStatementRequest req = new ImportBankStatementRequest(acc.id(), ref, sDate, eDate, oBal, cBal, items);
             return () -> owner.apiClient.importStatement(req);

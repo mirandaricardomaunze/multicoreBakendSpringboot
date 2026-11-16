@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.printing;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.assets.model.Asset;
-import mz.multicore.erp.modules.assets.repository.AssetRepository;
+import mz.multicore.erp.modules.assets.service.AssetLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,21 +18,21 @@ import java.util.List;
 @Service
 public class AssetDepreciationMapPrintService {
 
-    private final AssetRepository assetRepository;
+    private final AssetLookup assetLookup;
     private final CompanyService companyService;
     private final AssetDepreciationMapDocumentRenderer documentRenderer;
 
     @Autowired
-    public AssetDepreciationMapPrintService(AssetRepository assetRepository,
+    public AssetDepreciationMapPrintService(AssetLookup assetLookup,
                                             CompanyService companyService,
                                             AssetDepreciationMapDocumentRenderer documentRenderer) {
-        this.assetRepository = assetRepository;
+        this.assetLookup = assetLookup;
         this.companyService = companyService;
         this.documentRenderer = documentRenderer;
     }
 
-    public AssetDepreciationMapPrintService(AssetRepository assetRepository, CompanyService companyService) {
-        this(assetRepository, companyService, new AssetDepreciationMapDocumentRenderer());
+    public AssetDepreciationMapPrintService(AssetLookup assetLookup, CompanyService companyService) {
+        this(assetLookup, companyService, new AssetDepreciationMapDocumentRenderer());
     }
 
     @Transactional(readOnly = true)
@@ -41,7 +41,7 @@ public class AssetDepreciationMapPrintService {
         if (company == null) {
             throw new BusinessRuleException("Empresa não encontrada.");
         }
-        List<Asset> assets = assetRepository.findByCompanyIdOrderByAssetCodeAsc(companyId);
+        List<Asset> assets = assetLookup.listForCompany(companyId);
         return documentRenderer.renderLandscapeA4(company, fiscalYear, assets);
     }
 }

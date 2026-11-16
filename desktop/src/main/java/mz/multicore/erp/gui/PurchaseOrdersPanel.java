@@ -49,11 +49,11 @@ final class PurchaseOrdersPanel {
     public JPanel buildPanel() {
         JPanel tab = new JPanel(pages);
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(Spacing.MD, Spacing.XS, Spacing.XS, Spacing.XS));
 
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new GridBagLayout());
-        formCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+        formCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         GridBagConstraints g = new GridBagConstraints();
         g.fill = GridBagConstraints.HORIZONTAL; g.insets = new Insets(4, 8, 4, 8); g.weightx = 1;
 
@@ -105,9 +105,9 @@ final class PurchaseOrdersPanel {
 
         owner.poTotalLabel = new JLabel("Total da Encomenda: 0,00 MT");
         owner.poTotalLabel.setForeground(Color.WHITE);
-        owner.poTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        owner.poTotalLabel.setFont(Typography.EMPHASIS_BOLD);
         JPanel poFooter = new JPanel(new BorderLayout()); poFooter.setOpaque(false);
-        poFooter.setBorder(new EmptyBorder(8, 0, 0, 0));
+        poFooter.setBorder(new EmptyBorder(Spacing.SM, 0, 0, 0));
         poFooter.add(owner.poTotalLabel, BorderLayout.WEST);
 
         // Contratos PHC/EDE: "Adicionar linha", "Remover item"
@@ -168,13 +168,13 @@ final class PurchaseOrdersPanel {
 
         JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
         filtersRow.setOpaque(false);
-        filtersRow.setBorder(new EmptyBorder(0, 0, 6, 0));
+        filtersRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filtersRow.add(poFilters, BorderLayout.WEST);
         filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
-        listCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+        listCard.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
         listCard.add(UIHelper.tableCardTop("Encomendas Registadas", filtersRow,
                 refreshBtn, actionsMenu, newOrderBtn), BorderLayout.NORTH);
         listCard.add(listScroll, BorderLayout.CENTER);

@@ -46,7 +46,8 @@ class AssetDepreciationMapPrintServiceTest {
         when(companyService.getCompanyById(1L)).thenReturn(company);
         when(assetRepository.findByCompanyIdOrderByAssetCodeAsc(1L)).thenReturn(List.of(asset));
 
-        AssetDepreciationMapPrintService service = new AssetDepreciationMapPrintService(assetRepository, companyService);
+        AssetDepreciationMapPrintService service = new AssetDepreciationMapPrintService(
+                new mz.multicore.erp.modules.assets.service.AssetLookup(assetRepository), companyService);
         byte[] pdf = service.render(1L, 2026);
 
         assertNotNull(pdf);

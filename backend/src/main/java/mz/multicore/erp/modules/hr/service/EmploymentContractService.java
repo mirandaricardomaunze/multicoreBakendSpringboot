@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.ContractAlertsDTO;
 import mz.multicore.erp.modules.hr.dto.CreateContractRequest;
 import mz.multicore.erp.modules.hr.dto.EmploymentContractDTO;
@@ -47,7 +47,7 @@ public class EmploymentContractService {
     public EmploymentContractService(
             EmploymentContractRepository contractRepository,
             EmployeeRepository employeeRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             DocumentNumberService documentNumberService,
             SalaryHistoryService salaryHistoryService,
             AuditLogService auditLogService
@@ -55,7 +55,7 @@ public class EmploymentContractService {
         ContractValidationService vService = new ContractValidationService(contractRepository);
         ContractQueryService qService = new ContractQueryService(contractRepository);
         ContractLifecycleService lService = new ContractLifecycleService(
-                contractRepository, employeeRepository, companyRepository,
+                contractRepository, employeeRepository, companyLookup,
                 documentNumberService, salaryHistoryService, auditLogService,
                 vService, qService
         );

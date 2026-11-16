@@ -1,0 +1,105 @@
+# Consistência das tabelas: botões, estados, rodapé e botão de espreitar
+
+**Código:** SPEC-TABELAS-CONSISTENCIA  
+**Módulo:** `desktop` (`mz.multicore.erp.gui.components`)  
+**Data:** 2026-11-14  
+**Estado:** APROVADO / IMPLEMENTADO  
+**Harness:** `desktop/src/test/java/mz/multicore/erp/gui/components/TableConsistencyHarnessTest.java`  
+**Relacionado:** `docs/ECRA_CAMINHO_E_MENU_SPEC.md` (cabeçalho comum)
+
+## 1. Problema
+
+Comparando Cotações, Faturação, Pedidos e Recibos: 3 ou 4 botões grandes de cores diferentes em cada
+cabeçalho, com “Anular Recibo” num bloco vermelho ao lado de “Actualizar”. Havia também dois renderizadores de estado com listas de cores diferentes, dois
+paginadores com textos e ícones diferentes, e o botão “Espreitar detalhes” num sítio diferente em cada ecrã.
+
+## 2. Regras (todas centrais; os ecrãs não mudam)
+
+1. **Hierarquia dos botões** (`TableHeaderActions`, aplicada pelo cabeçalho comum).
+   - Uma só acção principal com cor cheia (verde): o último botão verde que o ecrã dá.
+   - Todos os outros botões com contorno (`ButtonStyles.outline`): Actualizar, menus, azuis, amarelos e
+     verdes que não são o último.
+   - Botões destrutivos (vermelhos) ficam no sítio onde o ecrã os pôs, com contorno e texto e ícone a
+     vermelho (`ButtonStyles.outlineDanger`). Nunca aparecem como bloco vermelho cheio. Não vão para um menu porque
+     alguns são de uso constante (“Remover linha” nos editores).
+2. **Um só vocabulário de estados** (`StatusTone`). A mesma lista de estados e cores é usada pelo
+   renderizador comum e por `TableCellRenderers.status()`: “Paga”, “Faturado” e “Cancelado” têm a mesma cor
+   em todas as tabelas. O estado continua a ser **texto colorido, não etiqueta**, por decisão de
+   2026-11-05 (`TableStatusPtMzHarnessTest`). A linha só é pintada quando precisa de atenção (vermelho ou
+   âmbar).
+3. **Rodapé igual em todas as tabelas.** “0 registos / 1 registo / 12 registos” e “Página 1 de 1”,
+   também quando a tabela está vazia, nos dois paginadores (`ClientTablePagination`, `TablePager`),
+   com os mesmos ícones.
+4. **Botão de espreitar no fim dos filtros.** O cabeçalho comum encontra o botão “Espreitar…” onde quer
+   que o ecrã o tenha posto (filtros ou acções) e coloca-o no fim dos filtros, com contorno.
+
+5. **Atalhos iguais em todos os ecrãs** (`TableHeaderShortcuts`). Ctrl+N corre a acção principal (o botão
+   verde), F5 o Actualizar e Ctrl+F leva à pesquisa dos filtros. Ficam ligados ao cabeçalho com
+   `WHEN_IN_FOCUSED_WINDOW`, por isso só o ecrã à vista responde, e só quando o botão está visível e
+   activo. Atalhos mais próximos do foco (POS, pesquisa rápida da tabela) têm prioridade. Os tooltips
+   indicam o atalho e o guia F1 lista-os.
+6. **Estado vazio com o passo seguinte** (`TableEmptyState`). Tabela sem dados: botão com a acção
+   principal do cabeçalho (“Nova Cotação”), só se estiver visível e activa. Quando os filtros escondem
+   todas as linhas: botão “Limpar filtros”, que esvazia a pesquisa e põe os combos na primeira opção.
+   O cabeçalho só se liga à tabela quando o cartão tem uma tabela.
+7. **Tema escuro.** Ao mudar de tema a janela principal é reconstruída, por isso os botões de contorno
+   ficam com as cores do novo tema. O contraste fica garantido por teste.
+
+8. **Combos dos filtros com o texto inteiro** (`SingleRowFilterLayout`). Muitos ecrãs fixavam os combos em
+   120 a 145 px e “Todos os negócios” aparecia cortado. A barra de filtros dá a cada combo pelo menos a
+   largura da sua opção mais comprida (calculada pelo próprio combo, até 260 px), mantendo a altura.
+9. **Diálogos com a mesma hierarquia** (`ButtonStyles`). “Cancelar” é sempre o botão comum
+   `ButtonStyles.cancelButton()`, com contorno e nunca vermelho. No `ModernFormDialog` (131 usos) só a
+   confirmação tem cor cheia, e os botões extra ficam com contorno (texto vermelho se forem destrutivos,
+   como “Rejeitar”).
+10. **Todos os diálogos com papéis explícitos.** Cada botão de um diálogo é criado com um papel:
+    `ButtonStyles.main` (a confirmação, verde e única), `ButtonStyles.secondary` (Fechar, Voltar, Imprimir
+    quando não é a acção principal: contorno, nunca vermelho) ou `ButtonStyles.destructive` (Rejeitar:
+    contorno com texto vermelho). Excepções nomeadas no teste: a confirmação de uma acção destrutiva no
+    `ModernMessageDialog` mantém o vermelho cheio de propósito, e o selector de filtros dos alertas não é
+    acção. O Painel Executivo usa o seu próprio tema e fica de fora.
+11. **As mesmas teclas em todos os diálogos** (`DialogKeys`, instalado uma vez para toda a app). **Enter**
+    carrega no único botão verde (`ButtonStyles.main`) e **Esc** fecha o diálogo como o "X" da janela.
+    Um diálogo que já definiu as suas teclas mantém-nas. Não há Enter quando há mais do que um botão verde,
+    quando o campo com foco usa o Enter (leitor de código de barras, tabela, texto de várias linhas), na
+    aceitação da licença, nem na confirmação de uma acção destrutiva (aí o Enter é "Cancelar").
+12. **Valores e datas iguais em todas as tabelas** (`UiTableCellStyler.formatValue`, o formatador comum das
+    células). Dinheiro `1.234,50 MT`, também quando é negativo (`-1.234,50 MT`) ou tem sinal (`+250,00 MT`).
+    Quantidades com `un`/`kg` e valores com sinal ficam alinhados à direita. Datas sempre `dd/MM/yyyy`, com
+    `HH:mm` quando há hora, mesmo que cheguem como objecto de data ou em ISO (`2026-11-14T10:20`). Os números
+    inteiros (códigos, anos, nº de documento) não levam separador de milhares.
+13. **Nenhum diálogo maior do que o ecrã** (`UiThemeAndWindowSupport.fitOnScreen`, instalado no arranque).
+    Ao abrir, um diálogo que não cabe (por exemplo o Fecho de Caixa, 720x760, num ecrã de 1366x720) encolhe para
+    caber na janela e fica centrado. O rodapé fica em baixo e o conteúdo ganha scroll, por isso os botões ficam
+    sempre visíveis. Um diálogo que cabe mantém o tamanho e o lugar.
+14. **Uma só moldura para os diálogos** (`DialogChrome`, a mesma do `ModernFormDialog`). Cabeçalho comum (ícone,
+    título, subtítulo e linha), margem `Spacing.XL`, `Spacing.LG` entre partes, e rodapé com os botões à direita
+    sob uma linha, com o verde em último. Uma nota, contagem ou acções da ficha podem ficar à esquerda
+    (`footerWithNote`). Ficam fora a pesquisa global (Ctrl+K, uma paleta de comandos) e o Painel Executivo.
+    Nenhum botão com contorno tem texto ou ícone branco, porque ficaria invisível no fundo claro. Havia onze
+    casos em oito diálogos, por exemplo o texto do "Fechar" no Histórico de Fechos de Caixa.
+
+A coluna estreita à esquerda das tabelas com linhas é a coluna de selecção (UA-06 a UA-08). Já era igual
+em todas as tabelas e esconde-se quando a tabela está vazia.
+
+## 3. Critérios de aceitação
+
+| ID | Critério | Teste |
+|---|---|---|
+| TC-01 | Um só verde cheio; restantes com contorno; destrutivos com contorno e texto vermelho; nada some nem muda de ordem | `tc01_buttonHierarchy` |
+| TC-02 | “Remover linha” dos editores continua à vista | `tc02_editorRemoveStaysVisible` |
+| TC-03 | O mesmo estado tem a mesma cor nos dois renderizadores | `tc03_sharedStatusVocabulary` |
+| TC-04 | Texto do rodapé igual e estável, também vazio | `tc04_pagerText` |
+| TC-05 | Botão de espreitar no fim dos filtros, com contorno | `tc05_peekToggleAtEndOfFilters` |
+| TC-06 | Ctrl+N, F5 e Ctrl+F em todos os cabeçalhos; ecrã escondido não responde; tooltips com o atalho | `TableShortcutsAndEmptyStateHarnessTest.tc06_sameShortcutsOnEveryHeader` |
+| TC-07 | Tabela vazia oferece a acção principal; filtros que escondem tudo oferecem “Limpar filtros” | `tc07_emptyStateOffersTheNextStep` |
+| TC-08 | Botões de contorno legíveis no tema escuro | `tc08_outlineReadableInDarkTheme` |
+| TC-09 | Combo de filtro mostra a opção inteira mesmo com largura fixa estreita | `TabNamesAndCombosHarnessTest.tc09_comboShowsWholeOption` |
+| TC-10 | “Cancelar” com contorno; extras de diálogo com contorno, vermelho só no texto | `DialogButtonsHarnessTest.tc10_dialogButtonHierarchy` |
+| TC-11 | Nenhum diálogo cria o “Cancelar” à mão; o `ModernFormDialog` aplica a regra | `tc11_everyDialogUsesTheSharedCancel` |
+| TC-12 | Em todos os diálogos cada botão tem papel (principal, secundário ou destrutivo) | `tc12_everyDialogButtonHasARole` |
+| TC-13 | Enter carrega no botão verde e Esc fecha; teclas próprias e excepções respeitadas; instalado para toda a app | `tc13_enterAndEscapeInEveryDialog` |
+| TC-14 | Dinheiro com sinal, unidades à direita e datas dd/MM/yyyy mesmo em ISO | `TableValuesFormatHarnessTest.tc14_valuesAndDatesLookTheSameEverywhere` |
+| TC-15 | O diálogo que não cabe encolhe ao abrir; o que cabe não é mexido; instalado no arranque | `DialogFitHarnessTest.tc15_dialogsNeverOutgrowTheScreen` |
+| TC-16 | Todos os diálogos usam o cabeçalho e o rodapé comuns; margens e alinhamento da moldura | `DialogChromeHarnessTest.tc16_everyDialogUsesTheSharedFrame` |
+| TC-17 | Nenhum botão com contorno com texto ou ícone branco | `DialogChromeHarnessTest.tc17_noWhiteOnOutlineButtons` |

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.desktop.client.AiAssistantApiClient;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.intelligence.AiAnalysisView;
@@ -32,7 +33,7 @@ public class AiManagementAssistantPanel extends JPanel {
         Objects.requireNonNull(apiClient, "O cliente de inteligência é obrigatório.");
         setLayout(new BorderLayout(0, 14));
         setOpaque(false);
-        setBorder(new EmptyBorder(16, 20, 16, 20));
+        setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
 
         JPanel heading = new JPanel(new BorderLayout());
         heading.setOpaque(false);

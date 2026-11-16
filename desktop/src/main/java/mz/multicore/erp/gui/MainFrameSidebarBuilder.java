@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.gui.components.CollapsibleSidebar;
+import mz.multicore.erp.gui.components.SidebarCollapsePreference;
 import mz.multicore.erp.gui.components.UIHelper;
 
 import java.util.function.Consumer;
@@ -23,7 +24,29 @@ final class MainFrameSidebarBuilder {
             DesktopSession initialSession,
             boolean superAdmin,
             Consumer<String> navigate,
+            ComercialPanel comercialPanel,
+            SectorModules sectors
+    ) {
+        CollapsibleSidebar sb = buildItems(initialSession, superAdmin, navigate, comercialPanel, sectors);
+        if (SidebarCollapsePreference.startCollapsed()) sb.setCollapsedState(true);
+        return sb;
+    }
+
+    static CollapsibleSidebar build(
+            DesktopSession initialSession,
+            boolean superAdmin,
+            Consumer<String> navigate,
             ComercialPanel comercialPanel
+    ) {
+        return build(initialSession, superAdmin, navigate, comercialPanel, null);
+    }
+
+    private static CollapsibleSidebar buildItems(
+            DesktopSession initialSession,
+            boolean superAdmin,
+            Consumer<String> navigate,
+            ComercialPanel comercialPanel,
+            SectorModules sectors
     ) {
         CollapsibleSidebar sb = new CollapsibleSidebar("MULTICORE", companyLabel(initialSession));
 
@@ -39,7 +62,16 @@ final class MainFrameSidebarBuilder {
             sb.addItem(UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), "Painel do Vendedor", UIHelper.MODULE_DASHBOARD, () -> navigate.accept("dashboard"));
             sb.addItem(UIHelper.icon("fas-cash-register", 16, UIHelper.MODULE_POS), "POS — Caixa", UIHelper.MODULE_POS, () -> navigate.accept("pos"));
             sb.addItem(UIHelper.icon("fas-clipboard-list", 16, UIHelper.MODULE_COMERCIAL), "Pedidos e Cotações", UIHelper.MODULE_COMERCIAL, () -> navigate.accept("comercial"));
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.PICKUPS, true, navigate);
             sb.addItem(UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), "Clientes", UIHelper.MODULE_CLIENTES, () -> navigate.accept("clientes"));
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.PROJECTS, true, navigate);
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.BUTCHERY, true, navigate);
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.EXPIRY, true, navigate);
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.PRODUCTION_PLAN, true, navigate);
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.CUSTOM_ORDERS, true, navigate);
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.CONSIGNMENT, true, navigate);
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.RETURNABLES, true, navigate);
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.WEIGHBRIDGE, true, navigate);
             sb.addItem(UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), "CRM e Assistência", UIHelper.MODULE_CRM, () -> navigate.accept("crm"));
             sb.addSection("Avisos");
             sb.addItem(UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_ORANGE), "Notificações", UIHelper.ACCENT_ORANGE, () -> navigate.accept("notifications"));
@@ -60,6 +92,7 @@ final class MainFrameSidebarBuilder {
             navigate.accept("comercial");
             if (comercialPanel != null) comercialPanel.showCustomerOrders();
         });
+        if (sectors != null) sectors.addSidebarItem(sb, SectorModules.PICKUPS, false, navigate);
         sb.addItem(UIHelper.icon("fas-shopping-cart", 16, UIHelper.MODULE_COMPRAS), "Compras", UIHelper.MODULE_COMPRAS, () -> navigate.accept("compras"));
         sb.addItem(UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK), "Stock", UIHelper.MODULE_STOCK, () -> navigate.accept("stock"));
         sb.addItem(UIHelper.icon("fas-warehouse", 16, UIHelper.ACCENT_CYAN), "Armazéns", UIHelper.ACCENT_CYAN, () -> navigate.accept("armazens"));
@@ -81,6 +114,20 @@ final class MainFrameSidebarBuilder {
         sb.addItem(UIHelper.icon("fas-trophy", 16, UIHelper.MODULE_COMERCIAL), "Desempenho", UIHelper.MODULE_COMERCIAL, () -> navigate.accept("desempenho"));
         sb.addItem(UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), "CRM & Assistência", UIHelper.MODULE_CRM, () -> navigate.accept("crm"));
         sb.addItem(UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), "Clientes", UIHelper.MODULE_CLIENTES, () -> navigate.accept("clientes"));
+        if (sectors != null) {
+            sectors.addSidebarItem(sb, SectorModules.PROJECTS, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.ADVANCES, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.BUTCHERY, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.EXPIRY, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.PRODUCTION_PLAN, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.CUSTOM_ORDERS, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.CONSIGNMENT, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.RETURNABLES, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.VARIANTS, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.WEIGHBRIDGE, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.EXCEPTIONS, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.PRICES, false, navigate);
+        }
         sb.addItem(UIHelper.icon("fas-file-contract", 16, UIHelper.ACCENT_BLUE), "Avenças & Contratos", UIHelper.ACCENT_BLUE, () -> navigate.accept("recurring"));
 
         // 3. FINANÇAS & FISCAL

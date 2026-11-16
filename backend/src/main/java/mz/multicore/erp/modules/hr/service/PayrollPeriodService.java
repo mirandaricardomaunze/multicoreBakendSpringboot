@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.PayrollPeriodDTO;
 import mz.multicore.erp.modules.hr.model.PayrollPeriod;
 import mz.multicore.erp.modules.hr.repository.PayrollPeriodRepository;
@@ -33,14 +33,14 @@ import java.util.List;
 public class PayrollPeriodService {
 
     private final PayrollPeriodRepository periodRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
 
     public PayrollPeriodService(PayrollPeriodRepository periodRepository,
-                                CompanyRepository companyRepository,
+                                CompanyLookup companyLookup,
                                 AuditLogService auditLogService) {
         this.periodRepository = periodRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -117,8 +117,7 @@ public class PayrollPeriodService {
         return periodRepository.findByCompanyIdAndYearAndMonth(companyId, year, month)
                 .orElseGet(() -> {
                     PayrollPeriod period = new PayrollPeriod();
-                    period.setCompany(companyRepository.findById(companyId)
-                            .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada.")));
+                    period.setCompany(companyLookup.requireActive(companyId));
                     period.setYear(year);
                     period.setMonth(month);
                     period.setStatus("ABERTO");

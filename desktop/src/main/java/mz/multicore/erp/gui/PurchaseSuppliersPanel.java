@@ -18,7 +18,7 @@ final class PurchaseSuppliersPanel {
     public JPanel buildPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Gerir Fornecedor")
                 .addAction("Editar", UIHelper.icon("fas-edit", 14), () -> {
@@ -36,7 +36,7 @@ final class PurchaseSuppliersPanel {
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 6));
-        listCard.setBorder(new EmptyBorder(8, 12, 8, 12));
+        listCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] supCols = {"Nome do Fornecedor", "NUIT/NIF", "Telefone", "Contacto", "Correio Eletrónico", "Endereço", "Estado"};
         owner.suppliersModel = new DefaultTableModel(supCols, 0) {
@@ -67,7 +67,7 @@ final class PurchaseSuppliersPanel {
 
         JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
         filtersRow.setOpaque(false);
-        filtersRow.setBorder(new EmptyBorder(0, 0, 6, 0));
+        filtersRow.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         filtersRow.add(supFilters, BorderLayout.WEST);
         filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 

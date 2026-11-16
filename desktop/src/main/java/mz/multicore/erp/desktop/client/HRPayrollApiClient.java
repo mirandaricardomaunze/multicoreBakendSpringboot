@@ -38,6 +38,17 @@ public class HRPayrollApiClient {
         return clientFactory.authenticatedClient().post("/api/hr/payslips/" + id + "/mark-paid", null, PayslipDTO.class);
     }
 
+    /** Paga o líquido pela conta escolhida (transferência bancária ou caixa). */
+    public PayslipDTO markPayslipPaid(Long id, Long financeAccountId) {
+        return clientFactory.authenticatedClient().post("/api/hr/payslips/" + id + "/mark-paid?financeAccountId="
+                + financeAccountId, null, PayslipDTO.class);
+    }
+
+    public List<mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO> treasuryAccounts() {
+        return clientFactory.authenticatedClient().getList("/api/finance/accounts",
+                mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO.class);
+    }
+
     public PayslipDTO approvePayslip(Long id) {
         return clientFactory.authenticatedClient()
                 .post("/api/hr/payslips/" + id + "/approve", null, PayslipDTO.class);

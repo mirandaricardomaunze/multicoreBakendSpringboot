@@ -32,6 +32,8 @@ public class ConfigPanel extends JPanel {
     private final ConfigBackupsPanel backupsPanel;
     private final ConfigDocumentColumnsPanel columnsPanel;
     private final ConfigSubscriptionPanel subscriptionPanel;
+    /** Activity profile panel (SA-C01); {@code null} in legacy constructors. */
+    private final mz.multicore.erp.gui.sector.ActivityProfilePanel activityPanel;
     private UserManagementPanel usersPanel;
 
     // TAB 1: AUDIT LOGS
@@ -47,6 +49,18 @@ public class ConfigPanel extends JPanel {
                        DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
                        MySubscriptionApiClient mySubscriptionApiClient,
                        SystemMonitoringApiClient monitoringApiClient) {
+        this(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient,
+                mySubscriptionApiClient, monitoringApiClient, null);
+    }
+
+    /** With the company activity profile (SA-C01): appends its tab at the end. */
+    public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
+                       DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
+                       MySubscriptionApiClient mySubscriptionApiClient,
+                       SystemMonitoringApiClient monitoringApiClient,
+                       mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient) {
+        this.activityPanel = activityApiClient == null ? null
+                : new mz.multicore.erp.gui.sector.ActivityProfilePanel(activityApiClient);
         this.userApiClient = userApiClient;
         this.auditApiClient = auditApiClient;
         this.backupApiClient = backupApiClient;
@@ -62,7 +76,7 @@ public class ConfigPanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         add(buildAppearanceBar(), BorderLayout.NORTH);
 
@@ -75,6 +89,13 @@ public class ConfigPanel extends JPanel {
         tabbedPane.addTab("Colunas dos Documentos", UIHelper.icon("fas-table", 16, UIHelper.PENDING_YELLOW), columnsPanel.buildPanel());
         tabbedPane.addTab("Suporte à Plataforma", UIHelper.icon("fas-headset", 16, UIHelper.ACCENT_SKY), supportPanel.buildPanel());
         tabbedPane.addTab("A Minha Assinatura", UIHelper.icon("fas-id-card", 16, UIHelper.APPROVED_GREEN), subscriptionPanel.buildPanel());
+        if (activityPanel != null) {
+            tabbedPane.addTab("Perfil de Actividade", UIHelper.icon("fas-industry", 16, UIHelper.ACCENT_ORANGE), activityPanel);
+            tabbedPane.addTab("Balança deste Posto", UIHelper.icon("fas-balance-scale", 16, UIHelper.ACCENT_BLUE),
+                    new mz.multicore.erp.gui.pos.scale.ScaleSettingsPanel());
+            tabbedPane.addTab("Gaveta deste Posto", UIHelper.icon("fas-cash-register", 16, UIHelper.APPROVED_GREEN),
+                    new mz.multicore.erp.gui.pos.drawer.DrawerSettingsPanel());
+        }
 
         add(tabbedPane, BorderLayout.CENTER);
     }
@@ -128,11 +149,11 @@ public class ConfigPanel extends JPanel {
     private JPanel createAuditTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(20, 20, 20, 20));
+        card.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         String[] cols = {"Data/Hora", "Utilizador", "Ação", "Detalhes do Evento"};
         auditTableModel = new DefaultTableModel(cols, 0) {
@@ -151,7 +172,7 @@ public class ConfigPanel extends JPanel {
                 List.of(new TableFilter.PeriodFilter(auditPeriodo, 0)));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadAuditLogs);
         JPanel auditToolbar = TableFilter.bar(auditSearch, TableFilter.label("Data:", "fas-calendar-alt"), auditPeriodo);
-        auditToolbar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        auditToolbar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         card.add(UIHelper.tableCardTop("Registo de Auditoria de Acções Críticas", auditToolbar, refreshBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         TableQuickPeekController.install(auditTable, card, (peek, row) -> {
@@ -185,6 +206,7 @@ public class ConfigPanel extends JPanel {
         if (columnsPanel != null) columnsPanel.refresh();
         if (supportPanel != null) supportPanel.refresh();
         if (subscriptionPanel != null) subscriptionPanel.refresh();
+        if (activityPanel != null) activityPanel.refresh();
     }
 
     void loadAuditLogs() {

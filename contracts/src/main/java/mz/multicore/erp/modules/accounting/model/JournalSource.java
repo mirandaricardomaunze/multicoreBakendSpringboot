@@ -1,49 +1,61 @@
 package mz.multicore.erp.modules.accounting.model;
 
-/** De onde nasceu o lançamento. Distingue o que o sistema lançou do que o contabilista lançou. */
+/** Origin of a journal entry, distinguishing system-generated entries from accountant entries. */
 public enum JournalSource {
 
-    /** Lançado à mão pelo contabilista (ajustes, amortizações, regularizações). */
+    /** Manually posted by the accountant for adjustments, amortization, or regularization. */
     MANUAL("Manual"),
 
-    /** Emissão de fatura (inclui venda de balcão, que é uma fatura real). */
+    /** Invoice issuance, including counter sales, which are actual invoices. */
     INVOICE("Fatura"),
     INVOICE_CANCELLATION("Anulação de fatura"),
     RECEIPT_CANCELLATION("Anulação de recibo"),
+    CUSTOMER_REFUND("Reembolso ao cliente"),
+    TRANSIT_LOSS("Perda em trânsito"),
+    SUPPLIER_RETURN("Devolução a fornecedor"),
+    INVENTORY_ADJUSTMENT("Acerto de existências"),
+    SUPPLIER_REFUND("Reembolso de fornecedor"),
+    TREASURY_PAYOUT("Pagamento automático"),
 
-    /** Recebimento de cliente (recibo ou liquidação em tesouraria). */
+    /** Customer receipt or treasury settlement. */
     RECEIPT("Recibo"),
 
-    /** Compra a fornecedor. */
+    /** Purchase from a supplier. */
     PURCHASE("Compra"),
 
-    /** Pagamento que liquida uma compra a fornecedor. */
+    /** Payment settling a supplier purchase. */
     SUPPLIER_PAYMENT("Pagamento a fornecedor"),
 
-    /** Nota de crédito aprovada. */
+    /** Approved credit note. */
     CREDIT_NOTE("Nota de crédito"),
 
-    /** Nota de débito aprovada. */
+    /** Approved debit note. */
     DEBIT_NOTE("Nota de débito"),
 
-    /** Processamento salarial. */
+    /** Payroll processing. */
     PAYROLL("Salários"),
 
     /**
-     * Entrega das retenções da folha ao Estado (IRPS, INSS). Fonte própria e não {@link #PAYROLL}
-     * porque a chave anti-duplicação é <b>fonte + id do documento</b>: com a mesma fonte, o recibo
-     * nº 12 e a retenção nº 12 seriam o mesmo lançamento aos olhos do sistema.
+     * Remittance of payroll withholdings to the State (IRPS, INSS). Uses a distinct source rather
+     * than {@link #PAYROLL} because the deduplication key is <b>source + document ID</b>. With the
+     * same source, payslip 12 and withholding 12 would appear to be the same entry.
      */
     PAYROLL_DELIVERY("Entrega de retenções"),
 
-    /** Conclusão de ordem de produção (entrada de produto acabado e variação de produção). */
+    /** Production-order completion, including finished-goods receipt and production variance. */
     PRODUCTION("Produção industrial"),
 
-    /** Quota de amortização / depreciação periódica de activo fixo. */
+    /** Periodic amortization or depreciation charge for a fixed asset. */
     ASSET_DEPRECIATION("Depreciação de activo"),
 
-    /** Abastecimento de combustível de viatura da frota. */
-    FLEET_FUEL("Combustível de frota");
+    /** Fuel supplied to a fleet vehicle. */
+    FLEET_FUEL("Combustível de frota"),
+    STOCK_WASTE("Quebra de existências"),
+    STOCK_ADJUSTMENT("Acerto de existências"),
+    CARCASS_BREAKDOWN("Desmancha"),
+    CARCASS_BREAKDOWN_CANCEL("Anulação de desmancha"),
+    PRODUCTION_RUN("Lote produzido"),
+    PRODUCTION_CONSUMPTION("Consumo de produção");
 
     private final String label;
 
@@ -55,7 +67,7 @@ public enum JournalSource {
         return label;
     }
 
-    /** Lançamento gerado pelo sistema — não deve ser editado à mão. */
+    /** System-generated entry that must not be edited manually. */
     public boolean isAutomatic() {
         return this != MANUAL;
     }

@@ -76,20 +76,18 @@ final class PosCashSessionActions {
     private Long chooseDepositAccount() {
         if (owner.accountsList == null || owner.accountsList.isEmpty()) return null;
 
-        String[] options = new String[owner.accountsList.size() + 1];
-        for (int i = 0; i < owner.accountsList.size(); i++) {
-            options[i] = owner.accountsList.get(i).name();
-        }
-        options[owner.accountsList.size()] = "Não depositar agora";
-
-        int choice = JOptionPane.showOptionDialog(owner,
-                "Depositar o numerário da sessão em que conta de tesouraria?",
-                "Depósito de Fecho de Caixa",
-                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
-                null, options, options[0]);
-
-        if (choice < 0 || choice == owner.accountsList.size()) return null;
-        return owner.accountsList.get(choice).id();
+        // A list instead of one button per account: it stays readable with many treasury accounts.
+        JComboBox<String> accounts = new JComboBox<>(owner.accountsList.stream()
+                .map(account -> account.name()).toArray(String[]::new));
+        UIHelper.styleComboBox(accounts);
+        JPanel form = UIHelper.createDialogForm("Conta de tesouraria:", accounts);
+        ModernFormDialog dialog = new ModernFormDialog(SwingUtilities.getWindowAncestor(owner),
+                "Depósito de Fecho de Caixa", "fas-university",
+                "Depositar o numerário da sessão em que conta de tesouraria?", form)
+                .setConfirmButton("Depositar", "fas-check")
+                .setCancelButton("Não depositar agora", "fas-times");
+        if (!dialog.showDialog() || accounts.getSelectedIndex() < 0) return null;
+        return owner.accountsList.get(accounts.getSelectedIndex()).id();
     }
 
     public void manageCashMovements() {

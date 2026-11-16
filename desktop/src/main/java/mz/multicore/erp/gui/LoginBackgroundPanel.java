@@ -9,7 +9,7 @@ import java.io.InputStream;
 
 /**
  * Painel de fundo do LoginDialog que renderiza a imagem com preservação de proporção ('cover')
- * e sobreposição elegante de profundidade e contraste.
+ * e sobreposição escura (azul-marinho) para contraste com o cartão de login.
  */
 class LoginBackgroundPanel extends JPanel {
 
@@ -46,21 +46,17 @@ class LoginBackgroundPanel extends JPanel {
 
             g2.drawImage(BG_IMAGE, x, y, drawW, drawH, null);
 
-            // Sobreposição translúcida luminosa clara para tema claro acolhedor
-            g2.setColor(UIHelper.withAlpha(Color.WHITE, 80));
-            g2.fillRect(0, 0, w, h);
-
-            // Gradiente vertical subtil para claridade, suavidade e elegância visual
+            // Camada escura na cor da marca: dá contraste ao cartão branco e ao rodapé
             GradientPaint gp = new GradientPaint(
-                    0, 0, UIHelper.withAlpha(Color.WHITE, 50),
-                    0, h, UIHelper.withAlpha(UIHelper.BG_DARK, 140)
+                    0, 0, UIHelper.withAlpha(UIHelper.KPI_NEUTRAL_DARK, 175),
+                    w, h, UIHelper.withAlpha(UIHelper.KPI_INFO_DARK, 200)
             );
             g2.setPaint(gp);
             g2.fillRect(0, 0, w, h);
             g2.dispose();
         } else {
             Graphics2D g2 = (Graphics2D) g.create();
-            GradientPaint gp = new GradientPaint(0, 0, UIHelper.BG_CARD, 0, h, UIHelper.BG_DARK);
+            GradientPaint gp = new GradientPaint(0, 0, UIHelper.KPI_NEUTRAL_DARK, w, h, UIHelper.KPI_INFO_DARK);
             g2.setPaint(gp);
             g2.fillRect(0, 0, w, h);
             g2.dispose();

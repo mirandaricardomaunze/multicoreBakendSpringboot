@@ -33,7 +33,7 @@ class DocumentNumberServiceTest {
     @BeforeEach
     void setUp() {
         repository = mock(DocumentSequenceRepository.class);
-        service = new DocumentNumberService(repository);
+        service = new DocumentNumberService(repository, mock(org.springframework.transaction.PlatformTransactionManager.class));
         year = LocalDate.now().getYear();
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("op", "ADMIN");
@@ -46,7 +46,9 @@ class DocumentNumberServiceTest {
 
     @Test
     void next_primeiraEmissao_criaSequencia_eDevolveUm() {
-        when(repository.lockByCompanyAndSeriesAndYear(COMPANY_ID, DocumentSeries.INVOICE, year)).thenReturn(Optional.empty());
+        // Não existe -> criada à parte (que confirma que falta) -> relida já com bloqueio.
+        when(repository.lockByCompanyAndSeriesAndYear(COMPANY_ID, DocumentSeries.INVOICE, year))
+                .thenReturn(Optional.empty(), Optional.empty(), Optional.of(sequence(DocumentSeries.INVOICE, 0)));
         when(repository.saveAndFlush(any(DocumentSequence.class))).thenAnswer(inv -> inv.getArgument(0));
         when(repository.save(any(DocumentSequence.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -69,7 +71,8 @@ class DocumentNumberServiceTest {
 
     @Test
     void next_serieNotaDebito_usaPrefixoND() {
-        when(repository.lockByCompanyAndSeriesAndYear(COMPANY_ID, DocumentSeries.DEBIT_NOTE, year)).thenReturn(Optional.empty());
+        when(repository.lockByCompanyAndSeriesAndYear(COMPANY_ID, DocumentSeries.DEBIT_NOTE, year))
+                .thenReturn(Optional.empty(), Optional.empty(), Optional.of(sequence(DocumentSeries.DEBIT_NOTE, 0)));
         when(repository.saveAndFlush(any(DocumentSequence.class))).thenAnswer(inv -> inv.getArgument(0));
         when(repository.save(any(DocumentSequence.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -99,11 +102,10 @@ class DocumentNumberServiceTest {
     @Test
     void next_criacaoConcorrente_releComBloqueio_eContinua() {
         DocumentSequence concurrent = sequence(DocumentSeries.RECEIPT, 3);
-        // Primeira leitura: não existe → tenta criar e bate na unique constraint.
-        // Segunda leitura (após a corrida): já existe a linha criada pela outra transação.
+        // Não existe -> a criação à parte bate na unique constraint (outro posto criou-a) ->
+        // a releitura com bloqueio encontra a linha do outro, e a venda continua.
         when(repository.lockByCompanyAndSeriesAndYear(COMPANY_ID, DocumentSeries.RECEIPT, year))
-                .thenReturn(Optional.empty())
-                .thenReturn(Optional.of(concurrent));
+                .thenReturn(Optional.empty(), Optional.empty(), Optional.of(concurrent));
         when(repository.saveAndFlush(any(DocumentSequence.class)))
                 .thenThrow(new DataIntegrityViolationException("unique violation"));
         when(repository.save(any(DocumentSequence.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -111,7 +113,7 @@ class DocumentNumberServiceTest {
         String number = service.next(DocumentSeries.RECEIPT);
 
         assertEquals("RC-" + year + "/4", number);
-        verify(repository, times(2)).lockByCompanyAndSeriesAndYear(COMPANY_ID, DocumentSeries.RECEIPT, year);
+        verify(repository, times(3)).lockByCompanyAndSeriesAndYear(COMPANY_ID, DocumentSeries.RECEIPT, year);
     }
 
     @Test
@@ -121,7 +123,7 @@ class DocumentNumberServiceTest {
         when(repository.saveAndFlush(any(DocumentSequence.class)))
                 .thenThrow(new DataIntegrityViolationException("unique violation"));
 
-        assertThrows(DataIntegrityViolationException.class, () -> service.next(DocumentSeries.ORDER));
+        assertThrows(IllegalStateException.class, () -> service.next(DocumentSeries.ORDER));
     }
 
     private DocumentSequence sequence(String series, long lastNumber) {

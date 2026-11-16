@@ -9,6 +9,7 @@ import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.documents.model.DocumentType;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
@@ -40,9 +41,9 @@ class InvoicePrintServiceTest {
     @BeforeEach
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
-        lineRowMapper = new LineRowMapper(mock(ProductBatchRepository.class));
+        lineRowMapper = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class)));
         documentConfigService = mock(DocumentConfigService.class);
-        printService = new InvoicePrintService(invoiceRepository, lineRowMapper, documentConfigService);
+        printService = new InvoicePrintService(new InvoiceLookup(invoiceRepository), lineRowMapper, documentConfigService);
 
         CurrentUserContext.setCurrentCompanyId(1L);
         CurrentUserContext.setCurrentUser("admin", "ADMIN");

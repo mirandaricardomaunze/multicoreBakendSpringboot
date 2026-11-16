@@ -129,7 +129,7 @@ public final class OrderDetailsDialog {
     private JComponent buildLinesTab(OrderDTO order) {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(UIHelper.BG_DARK);
-        p.setBorder(new EmptyBorder(12, 12, 12, 12));
+        p.setBorder(new EmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
 
         DefaultTableModel model = new DefaultTableModel(
                 new String[]{"Produto", "Lote", "Qtd / Caixas", "Peso kg", "% Qtd", "% Peso", "Preço Unit.", "Total"}, 0) {

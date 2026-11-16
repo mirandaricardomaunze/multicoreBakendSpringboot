@@ -51,6 +51,7 @@ public class PosZReportCalculator {
         BigDecimal suprimentos = BigDecimal.ZERO;
         BigDecimal sangrias = BigDecimal.ZERO;
         BigDecimal refunds = BigDecimal.ZERO;
+        BigDecimal counterReceipts = BigDecimal.ZERO;
         int saleCount = 0;
         int refundsCount = 0;
         for (TillMovement m : tillMovementRepository.findByTillSessionId(sessionId)) {
@@ -59,6 +60,7 @@ public class PosZReportCalculator {
                 case SUPRIMENTO -> suprimentos = suprimentos.add(m.getAmount());
                 case SANGRIA -> sangrias = sangrias.add(m.getAmount());
                 case REFUND -> { refunds = refunds.add(m.getAmount()); refundsCount++; }
+                case COUNTER_RECEIPT, COUNTER_RECEIPT_REVERSAL -> counterReceipts = counterReceipts.add(m.getMovementType().signed(m.getAmount()));
             }
         }
 
@@ -89,7 +91,7 @@ public class PosZReportCalculator {
         }
 
         BigDecimal totalSales = cashSales.add(cardSales).add(mpesaSales).add(chequeSales).add(creditSales);
-        BigDecimal expected = opening.add(cashSales).add(suprimentos).subtract(sangrias).subtract(refunds);
+        BigDecimal expected = opening.add(cashSales).add(suprimentos).subtract(sangrias).subtract(refunds).add(counterReceipts);
         BigDecimal counted = session.getClosingBalanceReal();
         BigDecimal difference = counted == null ? null : counted.subtract(expected);
 
@@ -103,7 +105,7 @@ public class PosZReportCalculator {
                 session.getOpenDate(), session.getCloseDate(), session.getStatus(),
                 opening, cashSales, cardSales, mpesaSales, chequeSales, creditSales,
                 totalSales, suprimentos, sangrias, refunds, expected, counted, difference,
-                saleCount, refundsCount, session.getClosingNotes(), session.getCashBreakdownJson(), recons
+                saleCount, refundsCount, session.getClosingNotes(), session.getCashBreakdownJson(), recons, counterReceipts
         );
     }
 

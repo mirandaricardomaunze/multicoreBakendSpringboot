@@ -1,7 +1,7 @@
 # Tarefa actual
 
 Estado: **estabilização para produção**
-Actualizado em: 2026-11-01
+Actualizado em: 2026-11-16
 Histórico: [até 2026-10-31](archive/current-history-through-2026-10-31.md) ·
 [até 2026-10-10](archive/current-history-through-2026-10-10.md)
 
@@ -10,6 +10,19 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Trabalho activo
 
+- Grafo profissional de entrega em `tasks/graph.yaml`, governado por
+  `docs/DELIVERY_GRAPH_SPEC.md`. O `DeliveryGraphHarnessTest` valida dependências, ciclos, estados e
+  evidências e gera `backend/target/delivery-graph-report.md` com trabalho executável e bloqueios.
+- Migração transversal dos comentários e Javadocs de código para inglês profissional, conforme
+  `docs/CODE_COMMENT_LANGUAGE_SPEC.md`. A regra canónica já foi alterada; o legado deve ser revisto
+  por domínio, preservando conhecimento fiscal e operacional e removendo comentários redundantes.
+- Sectores de actividade (talho, padaria, estaleiro e outros) em `docs/SECTORES_ACTIVIDADE_SPEC.md`,
+  aprovada em 2026-11-08. F1 feita (perfil de actividade, unidades de medida, tabelas de preço; V112),
+  ainda por rever visualmente no desktop. F2 em curso: material por levantar (talão LV, V120) e granel por
+  medição (V121) feitos; faltam unidade nas linhas, obras, frete, adiantamentos e contingência das guias.
+- Registo profissional de empresas pelo superadmin em `docs/EMPRESA_CADASTRO_PROFISSIONAL_SPEC.md`:
+  perfil legal/fiscal/morada (V113), registo atómico com administrador, assinatura e banco, assistente
+  em passos. Corrigido o registo de empresa partido desde `513a0ad`. Falta a verificação ao vivo (CP-50..54).
 - Sem fase de código em curso. Paridade PostgreSQL e formato numérico concluídos e integrados em
   `main`; ver `docs/POSTGRES_SCHEMA_PARITY_SPEC.md` e `docs/FORMATO_NUMERICO_SPEC.md`.
 - Design do ecrã POS revisto em `docs/POS_DESIGN_ECRA_SPEC.md`. A balança real continua sem driver de
@@ -38,6 +51,72 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 - Deploy real no VPS por validar.
 
 ## Decisões permanentes relevantes
+
+36. **Módulos Desacoplados por Lookups (2026-11-13):**
+    - Nenhum módulo lê o Repository de outro: leitura por `<Agregado>Lookup` no módulo dono, escrita pelo
+      Service/CommandService dono, stock alheio só pelo ledger de movimentos.
+    - SPEC em `docs/MODULE_DECOUPLING_SPEC.md`; baseline do CA-07 vazia (era 395) e imposta pelo
+      `CleanArchitectureHarnessTest` e `ModuleDecouplingHarnessTest`. Feito pelo Ralph Loop (GOAL-001..005).
+37. **KPIs compactos por cima de tabelas (2026-11-13):** `KpiCard.createGrid` é a faixa compacta (56 px);
+    só os painéis de indicadores usam `createHeroGrid` (96 px). SPEC em `docs/KPI_FAIXA_COMPACTA_SPEC.md`,
+    imposta pelo `KpiStripHarnessTest`.
+38. **Caminho na topbar e menu recolhido (2026-11-13):** topbar `Módulo › Separador`; `tableCardTop` numa
+    fila e sem título repetido; menu lateral recolhido abaixo de 1440 px salvo escolha do utilizador.
+    SPEC em `docs/ECRA_CAMINHO_E_MENU_SPEC.md`, imposta pelo `ScreenChromeHarnessTest`.
+39. **Separadores (2026-11-14):** "Mais ▾" em vez de setas, ícones sóbrios com destaque só no activo,
+    último separador lembrado na janela principal. SPEC em `docs/SEPARADORES_SPEC.md`, imposta pelo
+    `TabStripHarnessTest`.
+40. **Tabelas consistentes (2026-11-14):** cabeçalho comum em todos os ecrãs com filtros (uma ou duas filas,
+    filtros nunca esmagados); um só botão verde cheio, restantes de contorno, destrutivos com contorno
+    vermelho; um só vocabulário de estados (`StatusTone`), estado continua texto colorido; rodapé igual.
+    SPECs `docs/ECRA_CAMINHO_E_MENU_SPEC.md` e `docs/TABELAS_CONSISTENCIA_SPEC.md`.
+41. **Escala tipográfica e diálogos temáticos (2026-11-14):** todo o texto usa um papel de `Typography`
+    (8 tamanhos fechados); nenhum `JOptionPane` fora do `ModernMessageDialog`. SPEC em
+    `docs/TIPOGRAFIA_ESCALA_SPEC.md`, imposta pelo `TypographyHarnessTest`.
+42. **Validação no próprio campo (2026-11-15):** `throw FieldValidationException.of(campo, msg)` assinala o campo
+    (borda vermelha, mensagem por baixo, cursor no campo). SPEC `docs/VALIDACAO_CAMPOS_SPEC.md`, `FieldValidationHarnessTest`.
+43. **Tabela a carregar (2026-11-15):** o `loadAsync` central marca as tabelas da área; vazias mostram "A carregar…"
+    em vez de "Sem registos.". SPEC `docs/ESTADO_CARREGAR_SPEC.md`, `TableLoadingStateHarnessTest`.
+44. **Cores do cromo em três temas (2026-11-15):** `ThemeColors` com valores para claro, escuro e alto contraste;
+    proibido `isLight() ? new Color(..) : new Color(..)`. SPEC `docs/CORES_TEMA_SPEC.md`, `ThemeColorsHarnessTest`.
+45. **Densidade e espaçamentos (2026-11-15):** a densidade escala letra, altura dos campos e espaços (reconstrói a janela);
+    margens só com `Spacing.*`. SPEC `docs/DENSIDADE_ESPACAMENTO_SPEC.md`, `DensitySpacingHarnessTest`.
+46. **Memória do ecrã (2026-11-15):** colunas, ordem e ordenação por tabela (`TablePrefs`, "Repor colunas") e
+    tamanho/posição da janela (`WindowPrefs`). SPEC `docs/MEMORIA_ECRA_SPEC.md`, `ScreenMemoryHarnessTest`.
+47. **Mensagens de erro (2026-11-15):** "Não foi possível {acção}. {motivo}" via `UserErrors`; erros técnicos só no log.
+    SPEC `docs/MENSAGENS_ERRO_SPEC.md`, `UserErrorsHarnessTest`.
+48. **Teclado nos diálogos (2026-11-15):** Alt+letra automático e único por diálogo; tooltip como nome acessível.
+    SPEC `docs/TECLADO_ACESSIBILIDADE_SPEC.md`, `KeyboardAccessHarnessTest`.
+49. **Diálogos uniformes (2026-11-15):** moldura única `DialogChrome` (cabeçalho comum, rodapé à direita, verde em
+    último); botões com papel `ButtonStyles.main/secondary/destructive`; Enter = botão verde, Esc = fechar
+    (`DialogKeys`, nunca Enter numa acção destrutiva); nenhum diálogo maior do que o ecrã (`fitOnScreen`).
+    SPEC `docs/TABELAS_CONSISTENCIA_SPEC.md` regras 10, 11, 13 e 14; `DialogButtonsHarnessTest`, `DialogFitHarnessTest`,
+    `DialogChromeHarnessTest`.
+50. **Separadores com nome curto e "Mais" inteiro (2026-11-14):** `TabShortNames` só muda o que se desenha
+    (`getTitleAt` fica com o nome completo); "Mais" com 30 px e barra que pára no início de um separador.
+    SPEC `docs/SEPARADORES_SPEC.md` (TAB-07 a TAB-10).
+51. **Valores e datas nas células (2026-11-14):** `UiTableCellStyler.formatValue` formata negativos e sinal, alinha
+    `un`/`kg` à direita e mostra datas ISO como dd/MM/yyyy. Regra 12, `TableValuesFormatHarnessTest`.
+52. **Galeria visual (2026-11-16):** `VisualGalleryTest` (só com `-Dgallery=true`) guarda uma imagem de cada ecrã,
+    separador e diálogo nos três temas, para rever o sistema inteiro sem clicar. SPEC `docs/GALERIA_VISUAL_SPEC.md`.
+
+35. **Painel Executivo com Tema e Modais Próprios:**
+    - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.
+    - Os modais (Metas, Vendedores) abrem sempre no tema actual do painel, na moldura `ExecutiveTvDialog`.
+    - SPEC em `docs/SALA_DE_REUNIOES_TV_SPEC.md` §7 (ET-01 a ET-07); harness em `ExecutiveThemeConsistencyHarnessTest`.
+
+34. **Circuito da Encomenda Validado no Backend:**
+    - A faturação directa não aceita pedidos de separação. A conferência exige todas as linhas.
+      A folha A4 é `POST`.
+    - Faturar e aprovar uma guia respeitam as reservas de outros pedidos. Os estados estão no enum
+      `OrderStatus`. Quem pede uma aprovação não a aprova (excepto ADMIN).
+    - SPEC em `docs/COMERCIAL_DOCUMENTOS_AUDITORIA_SPEC.md`, "Circuito da encomenda". Harness em
+      `OrderStatusTest`, `OrderStockAvailabilityTest`, `DeliveryGuideApprovalReservationTest`,
+      `OrderSearchQueryHarnessTest` e `OrderPickingConferenciaHarnessTest`.
+    - POS, fatura directa e cotação convertida também respeitam reservas (`SaleStockIssuer`).
+    - Crédito: uma encomenda A4 aprovada por gerente ou ADMIN fatura mesmo acima do limite; a Green Lane não.
+    - Carga POS repetida em 2026-11-07 (`docs/CARGA_POSTGRES_SPEC.md`): 12.252 vendas, 0 erros. Encontrou e
+      corrigiu as corridas do "Consumidor Final" e da série FT na primeira venda do ano (CG-06, CG-07).
 
 33. **Acções Sobre a Linha Seleccionada:**
     - Acções de tabela usam `TableFilter.selectedModelRow(table)`. Com filtro ou da 2.ª página em

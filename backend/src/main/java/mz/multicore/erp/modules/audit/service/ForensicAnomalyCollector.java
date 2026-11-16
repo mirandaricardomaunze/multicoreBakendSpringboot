@@ -9,9 +9,9 @@ import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.inventory.model.StockWaste;
-import mz.multicore.erp.modules.inventory.repository.StockWasteRepository;
+import mz.multicore.erp.modules.inventory.service.StockWasteLookup;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -24,15 +24,15 @@ import java.util.List;
 @Component
 public class ForensicAnomalyCollector {
 
-    private final InvoiceRepository invoiceRepository;
-    private final StockWasteRepository stockWasteRepository;
+    private final InvoiceLookup invoiceLookup;
+    private final StockWasteLookup stockWasteLookup;
     private final AuditLogRepository auditLogRepository;
 
-    public ForensicAnomalyCollector(InvoiceRepository invoiceRepository,
-                                    StockWasteRepository stockWasteRepository,
+    public ForensicAnomalyCollector(InvoiceLookup invoiceLookup,
+                                    StockWasteLookup stockWasteLookup,
                                     AuditLogRepository auditLogRepository) {
-        this.invoiceRepository = invoiceRepository;
-        this.stockWasteRepository = stockWasteRepository;
+        this.invoiceLookup = invoiceLookup;
+        this.stockWasteLookup = stockWasteLookup;
         this.auditLogRepository = auditLogRepository;
     }
 
@@ -46,8 +46,8 @@ public class ForensicAnomalyCollector {
 
     private void collectInvoiceAnomalies(Long companyId, List<ForensicAnomalyDTO> out) {
         List<Invoice> invoices = companyId != null
-                ? invoiceRepository.findByCompanyId(companyId)
-                : invoiceRepository.findAll();
+                ? invoiceLookup.listForCompany(companyId)
+                : invoiceLookup.listAll();
 
         for (Invoice inv : invoices) {
             LocalDateTime eventTime = inv.getUpdatedAt() != null
@@ -96,8 +96,8 @@ public class ForensicAnomalyCollector {
 
     private void collectStockWasteAnomalies(Long companyId, List<ForensicAnomalyDTO> out) {
         List<StockWaste> wasteRecords = companyId != null
-                ? stockWasteRepository.findByCompanyIdOrderByCreatedAtDesc(companyId)
-                : stockWasteRepository.findAll();
+                ? stockWasteLookup.listForCompany(companyId)
+                : stockWasteLookup.listAll();
 
         for (StockWaste waste : wasteRecords) {
             LocalDateTime eventTime = waste.getCreatedAt() != null ? waste.getCreatedAt() : LocalDateTime.now();

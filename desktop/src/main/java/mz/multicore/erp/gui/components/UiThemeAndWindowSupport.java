@@ -19,10 +19,8 @@ final class UiThemeAndWindowSupport {
     private UiThemeAndWindowSupport() {}
 
     static void requestLogout(Component parent) {
-        int opt = JOptionPane.showConfirmDialog(
-                parent, "Deseja realmente terminar a sessão?", "Terminar Sessão",
-                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (opt == JOptionPane.YES_OPTION) {
+        if (ModernMessageDialog.confirm(parent, FeedbackType.INFO, "Terminar Sessão",
+                "Deseja realmente terminar a sessão?", "Terminar sessão")) {
             if (UIHelper.onForcedLogout != null) {
                 UIHelper.onForcedLogout.run();
             } else {
@@ -33,9 +31,7 @@ final class UiThemeAndWindowSupport {
     }
 
     static boolean confirm(Component parent, String message, String title) {
-        int opt = JOptionPane.showConfirmDialog(
-                parent, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        return opt == JOptionPane.YES_OPTION;
+        return ModernMessageDialog.confirm(parent, FeedbackType.WARNING, title, message, "Confirmar");
     }
 
     static Rectangle getUsableScreenBounds(Component ref) {
@@ -76,14 +72,30 @@ final class UiThemeAndWindowSupport {
         containWithinMain(dialog);
     }
 
+    /**
+     * A dialog with a fixed size larger than the screen (720x760 on a 1366x720 screen) hid its own footer buttons.
+     * Only a dialog that does not fit is resized and re-centred; one that fits keeps its size and place.
+     */
+    static void fitOnScreen(Window dialog) {
+        if (dialog == null || dialog == UIHelper.mainWindow) return;
+        Dimension max = maxModalSize(dialog);
+        if (dialog.getWidth() > max.width || dialog.getHeight() > max.height) containWithinMain(dialog);
+    }
+
+    static Dimension maxModalSize(Window dialog) {
+        Rectangle usable = getUsableScreenBounds(dialog);
+        Rectangle area = mainArea();
+        return new Dimension(Math.min((int) (area.width * 0.94), usable.width - 24),
+                Math.min((int) (area.height * 0.94), usable.height - 36));
+    }
+
     static void containWithinMain(Window dialog) {
         if (dialog == null) return;
         Rectangle usable = getUsableScreenBounds(dialog);
         Rectangle area = mainArea();
-        int maxW = Math.min((int) (area.width * 0.94), usable.width - 24);
-        int maxH = Math.min((int) (area.height * 0.94), usable.height - 36);
-        int w = Math.min(dialog.getWidth(), maxW);
-        int h = Math.min(dialog.getHeight(), maxH);
+        Dimension max = maxModalSize(dialog);
+        int w = Math.min(dialog.getWidth(), max.width);
+        int h = Math.min(dialog.getHeight(), max.height);
         if (w > 0 && h > 0) dialog.setSize(w, h);
         int x = area.x + Math.max(0, (area.width - dialog.getWidth()) / 2);
         int y = area.y + Math.max(0, (area.height - dialog.getHeight()) / 2);
@@ -104,9 +116,16 @@ final class UiThemeAndWindowSupport {
         installModalContainment();
     }
 
-    private static void installModalContainment() {
+    /** Window rules for every dialog: kept inside the main window, never taller or wider than the screen, same keys. */
+    static void installModalContainment() {
         if (modalContainmentInstalled) return;
         modalContainmentInstalled = true;
+        DialogKeys.install();
+        Toolkit.getDefaultToolkit().addAWTEventListener(event -> {
+            if (event.getID() == java.awt.event.WindowEvent.WINDOW_OPENED && event.getSource() instanceof Dialog dialog) {
+                fitOnScreen(dialog);
+            }
+        }, AWTEvent.WINDOW_EVENT_MASK);
         Toolkit.getDefaultToolkit().addAWTEventListener(event -> {
             if (event.getID() != java.awt.event.ComponentEvent.COMPONENT_MOVED) return;
             Object source = event.getSource();
@@ -147,6 +166,7 @@ final class UiThemeAndWindowSupport {
     }
 
     static void loadAndApplySavedTheme() {
+        installModalContainment(); // at startup, so the login and licence dialogs follow the same rules
         String saved = PREFS.get("theme", "light");
         if ("dark".equalsIgnoreCase(saved)) {
             saved = "light";
@@ -181,6 +201,7 @@ final class UiThemeAndWindowSupport {
         } else {
             restyleAllWindows(previous, theme);
         }
+        ThemeChangeListeners.fire(theme);
     }
 
     static Theme cycleTheme() {
@@ -302,8 +323,8 @@ final class UiThemeAndWindowSupport {
             UIManager.put("Panel.background", UIHelper.BG_DARK);
             UIManager.put("OptionPane.background", UIHelper.BG_DARK);
             UIManager.put("OptionPane.messageForeground", UIHelper.TEXT_LIGHT);
-            UIManager.put("OptionPane.messageFont", new Font(UIHelper.FONT, Font.BOLD, 13));
-            UIManager.put("OptionPane.buttonFont", new Font(UIHelper.FONT, Font.BOLD, 12));
+            UIManager.put("OptionPane.messageFont", Typography.EMPHASIS_BOLD);
+            UIManager.put("OptionPane.buttonFont", Typography.BODY_BOLD);
 
             UIManager.put("Button.background", UIHelper.BG_CARD);
             UIManager.put("Button.foreground", readableTextOn(UIHelper.BG_CARD));
@@ -330,7 +351,7 @@ final class UiThemeAndWindowSupport {
             UIManager.put("TabbedPane.focus", new Color(0, 0, 0, 0));
 
             UIManager.put("Label.foreground", UIHelper.TEXT_LIGHT);
-            UIManager.put("Label.font", new Font(UIHelper.FONT, Font.PLAIN, 13));
+            UIManager.put("Label.font", Typography.EMPHASIS);
 
             UIManager.put("ComboBox.background", UIHelper.FIELD_BG);
             UIManager.put("ComboBox.foreground", UIHelper.TEXT_LIGHT);
@@ -348,10 +369,10 @@ final class UiThemeAndWindowSupport {
 
             UIManager.put("ToolTip.background", UIHelper.BG_CARD);
             UIManager.put("ToolTip.foreground", UIHelper.TEXT_LIGHT);
-            UIManager.put("ToolTip.font", new Font(UIHelper.FONT, Font.PLAIN, 12));
+            UIManager.put("ToolTip.font", Typography.BODY);
             UIManager.put("ToolTip.border", BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(UIHelper.BORDER, 1, true),
-                    BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+                    BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)));
             ToolTipManager.sharedInstance().setInitialDelay(600);
             ToolTipManager.sharedInstance().setDismissDelay(8000);
         } catch (Exception ignored) {}

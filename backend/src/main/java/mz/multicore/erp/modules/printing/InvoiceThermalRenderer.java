@@ -10,7 +10,9 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /** Compõe exclusivamente a via térmica simplificada da factura. */
 @Component
@@ -30,11 +32,19 @@ public class InvoiceThermalRenderer {
             if (buyer != null && !buyer.isBlank()) ThermalReceiptRenderer.centered(doc, "Cliente: " + buyer, PdfTheme.smallFont());
             if (invoice.getClient() != null && invoice.getClient().getTaxId() != null) {
                 ThermalReceiptRenderer.centered(doc, "NUIT Cliente: " + invoice.getClient().getTaxId(), PdfTheme.smallFont());
+                String address = invoice.getClient().getAddress();
+                if (address != null && !address.isBlank() && !"-".equals(address.trim()) && !"—".equals(address.trim())) {
+                    ThermalReceiptRenderer.centered(doc, "Morada: " + address.trim(), PdfTheme.smallFont());
+                }
             }
             ThermalReceiptRenderer.dottedLine(doc);
             doc.add(lines(invoice));
             ThermalReceiptRenderer.dottedLine(doc);
             ThermalReceiptRenderer.right(doc, "Subtotal: " + MoneyFormat.format(invoice.getTotalBeforeTax()), PdfTheme.bodyFont());
+            for (TotalsBlockRenderer.TaxBreakdown b : TotalsBlockRenderer.calculateBreakdowns(taxRows(invoice))) {
+                ThermalReceiptRenderer.right(doc, b.taxRateLabel() + " s/ " + MoneyFormat.format(b.taxableAmount())
+                        + ": " + MoneyFormat.format(b.taxAmount()), PdfTheme.smallFont());
+            }
             ThermalReceiptRenderer.right(doc, "IVA:      " + MoneyFormat.format(invoice.getTaxAmount()), PdfTheme.bodyFont());
             ThermalReceiptRenderer.right(doc, "TOTAL:    " + MoneyFormat.format(invoice.getTotalAmount()), PdfTheme.boldFont());
             ThermalReceiptRenderer.dottedLine(doc);
@@ -57,6 +67,7 @@ public class InvoiceThermalRenderer {
             if (line.getDiscountPercentage() != null && line.getDiscountPercentage().signum() > 0) {
                 detail += " (-" + MoneyFormat.formatQty(line.getDiscountPercentage()) + "%)";
             }
+            detail += " · " + rateLabel(line.getTaxRate());
             description.add(new Chunk("\n" + detail, PdfTheme.smallFont()));
             PdfPCell cell = new PdfPCell(description);
             cell.setHorizontalAlignment(Element.ALIGN_LEFT);
@@ -67,5 +78,17 @@ public class InvoiceThermalRenderer {
             ThermalReceiptRenderer.cell(table, MoneyFormat.formatPlain(line.getLineTotal()), PdfTheme.boldFont(), Element.ALIGN_RIGHT, false);
         }
         return table;
+    }
+
+    /** Per-rate VAT summary with the legal reason of each VAT-free group (Código do IVA). */
+    private static List<LineItemsTableRenderer.Row> taxRows(Invoice invoice) {
+        return invoice.getLines().stream().map(line -> new LineItemsTableRenderer.Row(null, null, null, null,
+                line.getQuantity(), null, null, line.getUnitPrice(), line.getTaxRate(), line.getDiscountPercentage(),
+                line.getLineTotal(), line.effectiveExemptionReason())).toList();
+    }
+
+    private static String rateLabel(BigDecimal rate) {
+        if (rate == null || rate.signum() == 0) return "Isento";
+        return "IVA " + MoneyFormat.formatQty(rate.multiply(BigDecimal.valueOf(100))) + "%";
     }
 }

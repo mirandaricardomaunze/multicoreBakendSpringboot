@@ -57,7 +57,7 @@ public class StockTransferTransitService {
                                         ProductBatchService productBatchService, AuditLogService auditLogService) {
         this(transferRepository,
                 new StockTransferDispatchService(productBatchService, ledger, auditLogService),
-                new StockTransferReceiptService(transferRepository, productBatchService, ledger, auditLogService));
+                new StockTransferReceiptService(transferRepository, productBatchService, ledger, auditLogService, null));
     }
 
     /**

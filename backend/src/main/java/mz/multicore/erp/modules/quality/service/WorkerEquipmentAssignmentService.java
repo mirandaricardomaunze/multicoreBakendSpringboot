@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.hr.model.Employee;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.quality.dto.AssignmentStatus;
 import mz.multicore.erp.modules.quality.dto.EquipmentAssignmentRequest;
 import mz.multicore.erp.modules.quality.dto.WorkerEquipmentAssignmentDTO;
@@ -32,18 +32,18 @@ public class WorkerEquipmentAssignmentService {
 
     private final EquipmentRepository equipmentRepository;
     private final WorkerEquipmentAssignmentRepository assignmentRepository;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeLookup employeeLookup;
     private final CompanyService companyService;
 
     public WorkerEquipmentAssignmentService(
             EquipmentRepository equipmentRepository,
             WorkerEquipmentAssignmentRepository assignmentRepository,
-            EmployeeRepository employeeRepository,
+            EmployeeLookup employeeLookup,
             CompanyService companyService
     ) {
         this.equipmentRepository = equipmentRepository;
         this.assignmentRepository = assignmentRepository;
-        this.employeeRepository = employeeRepository;
+        this.employeeLookup = employeeLookup;
         this.companyService = companyService;
     }
 
@@ -71,8 +71,7 @@ public class WorkerEquipmentAssignmentService {
         Equipment equipment = equipmentRepository.findByIdAndCompanyId(req.equipmentId(), companyId)
                 .orElseThrow(() -> new BusinessRuleException("Equipamento não encontrado."));
 
-        Employee employee = employeeRepository.findByIdAndCompanyId(req.employeeId(), companyId)
-                .orElseThrow(() -> new BusinessRuleException("Colaborador não encontrado nesta empresa."));
+        Employee employee = employeeLookup.requireForCompany(req.employeeId(), companyId);
 
         LocalDate assignedDate = req.assignedDate() != null ? req.assignedDate() : LocalDate.now();
         LocalDate expiryDate = WorkerEquipmentAssignment.calculateExpiryDate(

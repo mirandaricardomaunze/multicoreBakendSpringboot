@@ -52,7 +52,7 @@ public final class ProductLookupLocalDialog {
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(10, 12, 10, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
         card.add(TableFilter.bar(searchField, categoryCombo), BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(table);

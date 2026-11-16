@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
@@ -54,11 +56,11 @@ final class HREmployeeProfileDialog {
     private static JPanel profile(EmployeeDTO employee) {
         JPanel root = new JPanel(new BorderLayout(0, 14));
         root.setOpaque(false);
-        root.setBorder(new EmptyBorder(8, 4, 8, 4));
+        root.setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, Spacing.SM, Spacing.XS));
 
         ModernPanel identity = new ModernPanel(16);
         identity.setLayout(new BorderLayout(16, 0));
-        identity.setBorder(new EmptyBorder(16, 18, 16, 18));
+        identity.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         CircularAvatar avatar = new CircularAvatar(employee.photo(), CircularAvatar.initials(employee.name()), 82);
         identity.add(avatar, BorderLayout.WEST);
 
@@ -67,7 +69,7 @@ final class HREmployeeProfileDialog {
         names.setLayout(new BoxLayout(names, BoxLayout.Y_AXIS));
         JLabel name = new JLabel(employee.name());
         name.setForeground(UIHelper.TEXT_LIGHT);
-        name.setFont(name.getFont().deriveFont(Font.BOLD, 20f));
+        name.setFont(Typography.METRIC);
         JLabel role = new JLabel(roleLabel(employee.role()) + " · " + value(employee.department()));
         role.setForeground(UIHelper.TEXT_MUTED);
         JLabel status = new JLabel(statusLabel(employee.status()));
@@ -123,7 +125,7 @@ final class HREmployeeProfileDialog {
     private static JPanel health(OccupationalHealthSummaryDTO health) {
         JPanel panel = new JPanel(new BorderLayout(0, 14));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(14, 4, 4, 4));
+        panel.setBorder(new EmptyBorder(Spacing.LG, Spacing.XS, Spacing.XS, Spacing.XS));
         if (health == null || !health.hasExam()) {
             panel.add(section("Aptidão médica", "fas-heartbeat",
                     row("Situação", "Sem exame ocupacional registado"),
@@ -179,7 +181,7 @@ final class HREmployeeProfileDialog {
     private static JPanel historyPanel(JTable table, int count, String emptyMessage) {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(10, 4, 4, 4));
+        panel.setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, Spacing.XS, Spacing.XS));
         JLabel summary = new JLabel(count == 0 ? emptyMessage : count + " registo(s) encontrado(s)");
         summary.setForeground(UIHelper.TEXT_MUTED);
         panel.add(summary, BorderLayout.NORTH);
@@ -205,10 +207,10 @@ final class HREmployeeProfileDialog {
     private static ModernPanel section(String title, String icon, JLabel... rows) {
         ModernPanel panel = new ModernPanel(16);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(new EmptyBorder(14, 16, 14, 16));
+        panel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
         JLabel heading = new JLabel(title, UIHelper.icon(icon, 14, UIHelper.ACCENT_BLUE), SwingConstants.LEFT);
         heading.setForeground(UIHelper.TEXT_LIGHT);
-        heading.setFont(heading.getFont().deriveFont(Font.BOLD, 14f));
+        heading.setFont(Typography.EMPHASIS_BOLD);
         heading.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(heading);
         panel.add(Box.createVerticalStrut(10));

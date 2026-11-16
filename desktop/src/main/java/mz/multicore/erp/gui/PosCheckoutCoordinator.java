@@ -68,7 +68,8 @@ public class PosCheckoutCoordinator {
         TreasuryAccountDTO acc = owner.accountsList.get(accIdx);
 
         List<POSCheckoutLineRequest> lines = owner.cartItems.stream()
-                .map(i -> new POSCheckoutLineRequest(i.product.id(), i.qty, i.discount, i.batch, i.serial, i.customUnitPrice))
+                .map(i -> new POSCheckoutLineRequest(i.product.id(), i.qty, i.discount, i.batch, i.serial, i.customUnitPrice,
+                        i.weightSource()))
                 .toList();
 
         String operator = CurrentUserContext.getUsername();
@@ -109,6 +110,7 @@ public class PosCheckoutCoordinator {
                     ToastManager.success(owner, "Venda concluída · " + inv.invoiceNumber() + " · "
                             + inv.totalAmount() + " MT · " + paymentLabel + ".");
 
+                    if (!fiado) mz.multicore.erp.modules.pos.drawer.CashDrawer.afterSale(payments.get(0).method());
                     PosReceiptPrinter.printReceiptIfConfirmed(owner, inv);
                     owner.clearCart();
                     owner.refreshSessionState();

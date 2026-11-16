@@ -68,9 +68,34 @@ final class UiTabbedPaneStyler {
                 selectedTabPadInsets = new Insets(0, 0, 0, 0);
             }
 
+            /** "Mais ▾" lists the tabs that do not fit, instead of arrows that hide them. */
             @Override
             protected javax.swing.JButton createScrollButton(int direction) {
-                return UiTabScrollSupport.button(direction);
+                return UiTabOverflow.button(tabPane, direction);
+            }
+
+            /** Room for the short label only; the full name stays the tab's title (see TabShortNames). */
+            @Override
+            protected int calculateTabWidth(int tabPlacement, int tabIndex, FontMetrics metrics) {
+                int width = super.calculateTabWidth(tabPlacement, tabIndex, metrics);
+                String full = tabPane.getTitleAt(tabIndex);
+                String label = TabShortNames.of(full);
+                if (full == null || label.equals(full)) return width;
+                if (tabPane.getToolTipTextAt(tabIndex) == null) tabPane.setToolTipTextAt(tabIndex, full);
+                return width - metrics.stringWidth(full) + metrics.stringWidth(label);
+            }
+
+            @Override
+            protected void layoutLabel(int tabPlacement, FontMetrics metrics, int tabIndex, String title, javax.swing.Icon icon,
+                                       Rectangle tabRect, Rectangle iconRect, Rectangle textRect, boolean isSelected) {
+                super.layoutLabel(tabPlacement, metrics, tabIndex, TabShortNames.of(title), icon, tabRect, iconRect, textRect, isSelected);
+            }
+
+            /** One quiet icon colour: muted, accent only on the selected tab. */
+            @Override
+            protected void paintIcon(Graphics g, int tabPlacement, int tabIndex, javax.swing.Icon icon, Rectangle iconRect, boolean isSelected) {
+                if (icon == null) return;
+                UiTabIcons.tinted(icon, isSelected ? UIHelper.ACCENT : UIHelper.TEXT_MUTED).paintIcon(tabPane, g, iconRect.x, iconRect.y);
             }
 
             @Override
@@ -98,10 +123,15 @@ final class UiTabbedPaneStyler {
 
             @Override
             protected void paintText(Graphics g, int tabPlacement, Font font, FontMetrics metrics, int tabIndex, String title, Rectangle textRect, boolean isSelected) {
-                g.setFont(font);
+                // Widths are measured in bold so tabs never jump; only the selected one is drawn bold.
+                title = TabShortNames.of(tabPane.getTitleAt(tabIndex));
+                Font drawn = isSelected ? font : font.deriveFont(Font.PLAIN);
+                FontMetrics drawnMetrics = g.getFontMetrics(drawn);
+                int x = textRect.x + (textRect.width - drawnMetrics.stringWidth(title)) / 2;
+                g.setFont(drawn);
                 g.setColor(isSelected ? UIHelper.TEXT_LIGHT : UIHelper.TEXT_MUTED);
                 int mnemonicIndex = tabPane.getDisplayedMnemonicIndexAt(tabIndex);
-                BasicGraphicsUtils.drawStringUnderlineCharAt(g, title, mnemonicIndex, textRect.x, textRect.y + metrics.getAscent());
+                BasicGraphicsUtils.drawStringUnderlineCharAt(g, title, mnemonicIndex, x, textRect.y + metrics.getAscent());
             }
 
             @Override
@@ -113,13 +143,14 @@ final class UiTabbedPaneStyler {
 
             @Override protected void paintFocusIndicator(Graphics g, int tabPlacement, Rectangle[] rects, int tabIndex, Rectangle iconRect, Rectangle textRect, boolean isSelected) {}
         });
+        UiTabMemory.install(tabbedPane);
     }
 
     private static void prepare(JTabbedPane tabbedPane) {
         tabbedPane.setOpaque(false);
         tabbedPane.setBackground(UIHelper.BG_DARK);
         tabbedPane.setForeground(UIHelper.TEXT_LIGHT);
-        tabbedPane.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        tabbedPane.setFont(Typography.EMPHASIS_BOLD);
         // SCROLL_TAB_LAYOUT evita a 2.ª linha de abas inacessível com muitas abas.
         tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         UiTabScrollSupport.installMouseWheel(tabbedPane);

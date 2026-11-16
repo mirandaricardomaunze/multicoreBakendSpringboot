@@ -61,16 +61,16 @@ public final class ClientTablePagination {
         component.setOpaque(false);
         component.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
-                new EmptyBorder(6, 8, 6, 8)));
+                new EmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM)));
 
         // Esquerda: contagem de registos
         statusLeft.setForeground(UIHelper.TEXT_MUTED);
-        statusLeft.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        statusLeft.setFont(Typography.BODY);
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         leftPanel.setOpaque(false);
         JLabel perPageLabel = new JLabel("Por página:");
         perPageLabel.setForeground(UIHelper.TEXT_MUTED);
-        perPageLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        perPageLabel.setFont(Typography.BODY);
         UIHelper.styleComboBox(pageSize);
         pageSize.setSelectedItem(50);
         pageSize.setPreferredSize(new Dimension(86, UIHelper.FORM_CONTROL_HEIGHT - 4));
@@ -83,7 +83,7 @@ public final class ClientTablePagination {
         // Centro: rótulo "Página X de Y"
         pageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         pageLabel.setForeground(UIHelper.TEXT_LIGHT);
-        pageLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        pageLabel.setFont(Typography.BODY_BOLD);
         component.add(pageLabel, BorderLayout.CENTER);
 
         // Direita: botões de navegação ghost
@@ -240,18 +240,28 @@ public final class ClientTablePagination {
     private int selectedPageSize() { return (Integer) pageSize.getSelectedItem(); }
     private int totalPages() { return Math.max(1, (matchingRows + selectedPageSize() - 1) / selectedPageSize()); }
 
+    /** Same footer text in every table, server-paged or not: "1 registo", "12 registos". */
+    static String recordsText(long count) {
+        return count == 1 ? "1 registo" : count + " registos";
+    }
+
+    /** "Página 1 de 1" even when empty, so the footer never changes shape. */
+    static String pageText(int pageIndex, int pages) {
+        return String.format("Página  %d  de  %d", pageIndex + 1, Math.max(1, pages));
+    }
+
     void updateStatusText() {
         if (matchingRows == 0) {
-            statusLeft.setText("Sem registos");
-            pageLabel.setText("");
+            statusLeft.setText(recordsText(0));
+            pageLabel.setText(pageText(0, 1));
             return;
         }
         int pages = totalPages();
-        pageLabel.setText(String.format("Página  %d  de  %d", page + 1, pages));
+        pageLabel.setText(pageText(page, pages));
 
         int[] selectedRows = table.getSelectedRows();
         StringBuilder sb = new StringBuilder();
-        sb.append(matchingRows).append(" registo(s)");
+        sb.append(recordsText(matchingRows));
 
         if (selectedRows != null && selectedRows.length > 0) {
             sb.append(" · ").append(selectedRows.length).append(" sel.");
@@ -294,9 +304,9 @@ public final class ClientTablePagination {
      */
     static GhostNavButton ghostBtn(String icon, String tooltip) {
         boolean light = UIHelper.isLight();
-        Color base = light ? new Color(51, 65, 85) : new Color(226, 232, 240);
+        Color base = ThemeColors.control();
         Color hover = UIHelper.ACCENT_BLUE;
-        Color disabled = light ? new Color(203, 213, 225) : new Color(100, 116, 139);
+        Color disabled = ThemeColors.controlSubtle();
         GhostNavButton b = new GhostNavButton(UIHelper.icon(icon, 12, base), tooltip);
         b.setRolloverIcon(UIHelper.icon(icon, 12, hover));
         b.setDisabledIcon(UIHelper.icon(icon, 12, disabled));
@@ -335,7 +345,7 @@ public final class ClientTablePagination {
             if (!isEnabled()) {
                 g2.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, 0.45f));
                 if (UIHelper.isLight()) {
-                    g2.setColor(new Color(241, 245, 249));
+                    g2.setColor(ThemeColors.subtleFill());
                     g2.fillRoundRect(0, 0, w, h, ARC, ARC);
                 }
             } else if (hovered) {
@@ -347,9 +357,9 @@ public final class ClientTablePagination {
                 g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, w - 1, h - 1, ARC, ARC);
             } else if (UIHelper.isLight()) {
-                g2.setColor(new Color(241, 245, 249));
+                g2.setColor(ThemeColors.subtleFill());
                 g2.fillRoundRect(0, 0, w, h, ARC, ARC);
-                g2.setColor(new Color(226, 232, 240));
+                g2.setColor(ThemeColors.hairline());
                 g2.drawRoundRect(0, 0, w - 1, h - 1, ARC, ARC);
             }
             super.paintComponent(g);

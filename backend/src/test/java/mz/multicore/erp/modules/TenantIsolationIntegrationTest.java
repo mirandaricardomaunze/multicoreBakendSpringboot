@@ -55,7 +55,10 @@ class TenantIsolationIntegrationTest {
         int firstCompanyTaxRates = taxRateService.getAll().size();
 
         CurrentUserContext.setCurrentCompanyId(secondCompany);
-        assertTrue(comercialService.getAllClients().isEmpty());
+        // Cada empresa tem o seu "Consumidor Final" desde o arranque (WalkInClientBootstrap); fora dele,
+        // nenhum cliente da primeira empresa pode aparecer na segunda.
+        assertTrue(comercialService.getAllClients().stream()
+                .allMatch(c -> mz.multicore.erp.modules.comercial.service.WalkInClientProvider.WALK_IN_TAX_ID.equals(c.taxId())));
         assertFalse(comercialService.getAllProducts().isEmpty());
         assertTrue(crmService.getAllTickets().isEmpty());
         assertTrue(approvalService.getAllRequests().isEmpty());

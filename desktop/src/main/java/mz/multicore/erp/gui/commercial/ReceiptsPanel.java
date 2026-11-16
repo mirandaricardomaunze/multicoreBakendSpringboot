@@ -26,12 +26,12 @@ public final class ReceiptsPanel extends JPanel {
         this.invoicesRefresh = invoicesRefresh;
         setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(4, 0, 0, 0));
+        setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
         add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         model = new DefaultTableModel(
                 new String[]{"ID", "Nº Recibo", "Negócio", "Fatura", "Cliente", "Montante Pago", "Método Pag.", "Estado", "Data"}, 0) {
@@ -72,7 +72,7 @@ public final class ReceiptsPanel extends JPanel {
                 TableFilter.label("Estado:"), status,
                 TableFilter.label("Data:"), period,
                 peekToggleBtn);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        filters.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         card.add(UIHelper.tableCardTop("Recibos Emitidos (Liquidações)", filters, refresh, cancel), BorderLayout.NORTH);
 
         UIHelper.ensureHeadersFit(table);

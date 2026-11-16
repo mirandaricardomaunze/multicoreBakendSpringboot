@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.inventory.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -14,12 +14,12 @@ import java.util.List;
 @Component
 public class WarehouseQueryService {
     private final WarehouseRepository warehouseRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
 
     public WarehouseQueryService(WarehouseRepository warehouseRepository,
-                                 CompanyRepository companyRepository) {
+                                 CompanyLookup companyLookup) {
         this.warehouseRepository = warehouseRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
     }
 
     public List<Warehouse> getWarehousesByCompany(Long companyId) {
@@ -66,7 +66,7 @@ public class WarehouseQueryService {
 
     public boolean isStockCountLocked(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return companyRepository.findById(companyId)
+        return companyLookup.find(companyId)
                 .map(Company::isStockCountLocked)
                 .orElse(false);
     }

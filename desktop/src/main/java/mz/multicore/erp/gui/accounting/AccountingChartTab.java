@@ -46,10 +46,10 @@ public final class AccountingChartTab extends JPanel {
 
         ModernButton refresh = UIHelper.createRefreshButton(() -> loadAccounts());
 
-        JPanel chartToolbar = UIHelper.filterBar(null, new JComponent[]{refresh, create, seed});
+        JPanel chartToolbar = UIHelper.tableCardTop("Plano de Contas", null, refresh, create, seed);
         JPanel chartNorth = new JPanel(new BorderLayout(0, 8));
         chartNorth.setOpaque(false);
-        chartNorth.setBorder(new EmptyBorder(0, 0, 10, 0));
+        chartNorth.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
         chartNorth.add(emptyChartWarning, BorderLayout.NORTH);
         chartNorth.add(chartToolbar, BorderLayout.CENTER);
         card.add(chartNorth, BorderLayout.NORTH);

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.RecordDetailsDialog;
 import mz.multicore.erp.gui.components.TableCellRenderers;
@@ -36,6 +37,8 @@ public final class StockProductDetailTabsBuilder {
         tabs.addTab("Especificações & Logística", UIHelper.icon("fas-info-circle", 15, UIHelper.ACCENT_BLUE), buildSpecsTab(product));
         tabs.addTab("Saldos por Armazém",        UIHelper.icon("fas-warehouse", 15, UIHelper.ACCENT_CYAN), buildWarehousesTab(owner, product));
         tabs.addTab("Lotes & Validades",         UIHelper.icon("fas-calendar-times", 15, UIHelper.ACCENT_ORANGE), buildBatchesTab(owner, product));
+        JComponent unitsTab = mz.multicore.erp.gui.sector.SectorDesktopWiring.productUnitsTab(owner, product.id());
+        if (unitsTab != null) tabs.addTab("Unidades", UIHelper.icon("fas-ruler-combined", 15, UIHelper.MODULE_STOCK), unitsTab);
 
         return tabs;
     }
@@ -86,7 +89,7 @@ public final class StockProductDetailTabsBuilder {
 
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
-        p.setBorder(new EmptyBorder(8, 6, 6, 6));
+        p.setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, Spacing.XS, Spacing.XS));
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         p.add(scroll, BorderLayout.CENTER);
@@ -129,7 +132,7 @@ public final class StockProductDetailTabsBuilder {
 
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
-        p.setBorder(new EmptyBorder(8, 6, 6, 6));
+        p.setBorder(new EmptyBorder(Spacing.SM, Spacing.XS, Spacing.XS, Spacing.XS));
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         p.add(scroll, BorderLayout.CENTER);

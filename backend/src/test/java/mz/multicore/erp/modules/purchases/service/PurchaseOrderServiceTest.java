@@ -4,9 +4,12 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -63,8 +66,10 @@ class PurchaseOrderServiceTest {
         discrepancyRepository = mock(mz.multicore.erp.modules.purchases.repository.GoodsReceiptDiscrepancyRepository.class);
         receiptRepository = mock(mz.multicore.erp.modules.purchases.repository.PurchaseOrderReceiptRepository.class);
         when(discrepancyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        service = new PurchaseOrderService(orderRepository, supplierRepository, productRepository,
-                warehouseRepository, companyRepository, inventoryService, documentNumberService,
+        service = new PurchaseOrderService(orderRepository, supplierRepository,
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
+                new CompanyLookup(companyRepository), inventoryService, documentNumberService,
                 mock(AuditLogService.class), discrepancyRepository, receiptRepository,
                 mock(PurchaseOrderPayableRegistrar.class));
 
@@ -233,8 +238,8 @@ class PurchaseOrderServiceTest {
         when(orderRepository.findById(99L)).thenReturn(Optional.of(o));
         PurchaseOrderDTO dto = service.receiveOrder(99L);
         assertEquals(PurchaseOrder.RECEIVED, dto.status());
-        verify(inventoryService, times(1)).registerMovement(
-                any(), any(), eq(new BigDecimal("10")), eq("PURCHASE"), eq("L1"), any(), anyString(), any());
+        verify(inventoryService, times(1)).registerPurchase(
+                any(), any(), eq(new BigDecimal("10")), any(), eq("L1"), any(), anyString(), any());
     }
 
     @Test // PO-04
@@ -260,8 +265,8 @@ class PurchaseOrderServiceTest {
                         "2 caixas amolgadas na descarga"))));
 
         // O stock recebe 7 — nunca as 10 nem as 9.
-        verify(inventoryService).registerMovement(any(), any(), eq(new BigDecimal("7")),
-                eq("PURCHASE"), any(), any(), any(), any());
+        verify(inventoryService).registerPurchase(any(), any(), eq(new BigDecimal("7")),
+                any(), any(), any(), any(), any());
     }
 
     @Test // CC-02
@@ -407,8 +412,8 @@ class PurchaseOrderServiceTest {
         PurchaseOrderDTO dto = service.receivePartial(99L, receive(5L, "6"));
         assertEquals(PurchaseOrder.PARTIALLY_RECEIVED, dto.status());
         assertEquals(0, new BigDecimal("6").compareTo(dto.lines().get(0).receivedQuantity()));
-        verify(inventoryService, times(1)).registerMovement(
-                any(), any(), eq(new BigDecimal("6")), eq("PURCHASE"), eq("L1"), any(), anyString(), any());
+        verify(inventoryService, times(1)).registerPurchase(
+                any(), any(), eq(new BigDecimal("6")), any(), eq("L1"), any(), anyString(), any());
     }
 
     @Test // RP-02
@@ -417,8 +422,8 @@ class PurchaseOrderServiceTest {
         PurchaseOrderDTO dto = service.receivePartial(99L, receive(5L, "4"));
         assertEquals(PurchaseOrder.RECEIVED, dto.status());
         assertNotNull(dto.receivedAt());
-        verify(inventoryService, times(1)).registerMovement(
-                any(), any(), eq(new BigDecimal("4")), eq("PURCHASE"), any(), any(), anyString(), any());
+        verify(inventoryService, times(1)).registerPurchase(
+                any(), any(), eq(new BigDecimal("4")), any(), any(), any(), anyString(), any());
     }
 
     @Test // RP-03
@@ -459,8 +464,8 @@ class PurchaseOrderServiceTest {
         orderInState(PurchaseOrder.PARTIALLY_RECEIVED, new BigDecimal("10"), new BigDecimal("6"), 5L);
         PurchaseOrderDTO dto = service.receiveOrder(99L);
         assertEquals(PurchaseOrder.RECEIVED, dto.status());
-        verify(inventoryService, times(1)).registerMovement(
-                any(), any(), eq(new BigDecimal("4")), eq("PURCHASE"), any(), any(), anyString(), any());
+        verify(inventoryService, times(1)).registerPurchase(
+                any(), any(), eq(new BigDecimal("4")), any(), any(), any(), anyString(), any());
     }
 
     @Test // RP-09
@@ -468,8 +473,8 @@ class PurchaseOrderServiceTest {
         orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
         PurchaseOrderDTO dto = service.receiveOrder(99L);
         assertEquals(PurchaseOrder.RECEIVED, dto.status());
-        verify(inventoryService, times(1)).registerMovement(
-                any(), any(), eq(new BigDecimal("10")), eq("PURCHASE"), any(), any(), anyString(), any());
+        verify(inventoryService, times(1)).registerPurchase(
+                any(), any(), eq(new BigDecimal("10")), any(), any(), any(), anyString(), any());
     }
 
     @Test // RP-10
@@ -492,8 +497,8 @@ class PurchaseOrderServiceTest {
                 new ReceiveLine(5L, new BigDecimal("5")), new ReceiveLine(6L, new BigDecimal("2"))));
         PurchaseOrderDTO dto = service.receivePartial(99L, req);
         assertEquals(PurchaseOrder.PARTIALLY_RECEIVED, dto.status());
-        verify(inventoryService, times(2)).registerMovement(
-                any(), any(), any(), eq("PURCHASE"), any(), any(), anyString(), any());
+        verify(inventoryService, times(2)).registerPurchase(
+                any(), any(), any(), any(), any(), any(), anyString(), any());
     }
 
     @Test // RP-12

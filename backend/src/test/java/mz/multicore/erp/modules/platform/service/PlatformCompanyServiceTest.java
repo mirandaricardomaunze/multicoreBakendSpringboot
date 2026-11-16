@@ -5,6 +5,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
 import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
@@ -37,7 +39,10 @@ class PlatformCompanyServiceTest {
         companyAccessRepository = mock(AppUserCompanyAccessRepository.class);
         auditLogService = mock(AuditLogService.class);
         eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        service = new PlatformCompanyService(companyRepository, companyAccessRepository, auditLogService, eventPublisher);
+        service = new PlatformCompanyService(new CompanyLookup(companyRepository),
+                new CompanyService(companyRepository, null),
+                new mz.multicore.erp.modules.users.service.AppUserLookup(null, companyAccessRepository),
+                auditLogService, eventPublisher);
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
     }
 
@@ -116,5 +121,39 @@ class PlatformCompanyServiceTest {
         service.createCompany(new CreateCompanyRequest("Nova", "400123457", "n@n.mz", "Maputo", "+258 84 000 0000"));
 
         verify(eventPublisher).publishEvent(new mz.multicore.erp.architecture.events.CompanyCreatedEvent(12L));
+    }
+
+    @Test
+    void createCompany_gravaPerfilELimpaCamposEmBranco() { // CP-08
+        when(companyRepository.findByTaxId("400123458")).thenReturn(Optional.empty());
+        when(companyRepository.save(any(Company.class))).thenAnswer(inv -> inv.getArgument(0));
+        mz.multicore.erp.modules.platform.dto.CompanyProfile profile = new mz.multicore.erp.modules.platform.dto.CompanyProfile(
+                "  Mercearia Sol ", mz.multicore.erp.modules.company.model.CompanyLegalForm.PRIVATE_LIMITED,
+                "   ", null, null, null, mz.multicore.erp.modules.company.model.VatRegime.NORMAL, null,
+                null, "Maputo", mz.multicore.erp.modules.company.model.MozambiqueProvince.MAPUTO_CITY, null,
+                null, null, null, null);
+
+        PlatformCompanyDTO dto = service.createCompany(
+                new CreateCompanyRequest("Sol, Lda", "400123458", "  ", "Av. 1", null, profile));
+
+        assertEquals("Mercearia Sol", dto.profile().tradeName());
+        assertNull(dto.profile().registryNumber(), "texto só com espaços grava-se como vazio");
+        assertNull(dto.email());
+        assertEquals("Maputo", dto.profile().city());
+    }
+
+    @Test
+    void updateCompany_semPerfil_mantemOPerfilGravado() { // CP-09
+        Company c = company(5L, "Sol", true);
+        c.setTradeName("Mercearia Sol");
+        c.setCity("Beira");
+        when(companyRepository.findById(5L)).thenReturn(Optional.of(c));
+
+        PlatformCompanyDTO dto = service.updateCompany(5L,
+                new mz.multicore.erp.modules.platform.dto.UpdateCompanyRequest("Sol Novo", null, null, null));
+
+        assertEquals("Sol Novo", dto.name());
+        assertEquals("Mercearia Sol", dto.profile().tradeName());
+        assertEquals("Beira", dto.profile().city());
     }
 }

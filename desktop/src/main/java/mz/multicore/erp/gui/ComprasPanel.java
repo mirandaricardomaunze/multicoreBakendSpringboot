@@ -123,7 +123,7 @@ public class ComprasPanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
 
         tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
@@ -152,7 +152,7 @@ public class ComprasPanel extends JPanel {
     private JPanel createComprasTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
 
         VScrollForm formCard = new VScrollForm(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -206,7 +206,7 @@ public class ComprasPanel extends JPanel {
         bottomPanel.setOpaque(false);
 
         totalLabel = new JLabel("Total Compra: 0,00 MT (excl. IVA)");
-        totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        totalLabel.setFont(Typography.EMPHASIS_BOLD);
         totalLabel.setForeground(Color.WHITE);
 
         JPanel totalRow = new JPanel(new BorderLayout());
@@ -223,7 +223,7 @@ public class ComprasPanel extends JPanel {
 
         ModernPanel historyCard = new ModernPanel(16);
         historyCard.setLayout(new BorderLayout(0, 6));
-        historyCard.setBorder(new EmptyBorder(8, 12, 8, 12));
+        historyCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
         String[] historyCols = {"Nº Documento", "Fornecedor", "Armazém", "Total Faturado", "Imposto", "Data", "Negócio"};
         purchasesModel = new DefaultTableModel(historyCols, 0) {
@@ -245,14 +245,16 @@ public class ComprasPanel extends JPanel {
                 java.util.List.of(new TableFilter.ColumnFilter(histBusinessUnitCombo, 6)),
                 java.util.List.of(new TableFilter.PeriodFilter(histPeriodo, 5)));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadPurchasesHistory);
+        ModernButton returnBtn = SupplierReturnDialog.button(this, purchasesTable);
+        ModernButton refundBtn = SupplierRefundDialog.button(this, purchasesTable);
         JPanel histFilters = UIHelper.filterBar(
                 new JComponent[]{histSearch,
                         TableFilter.label("Negócio:"), histBusinessUnitCombo,
                         TableFilter.label("Data:", "fas-calendar-alt"), histPeriodo},
                 null);
-        histFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
+        histFilters.setBorder(new EmptyBorder(0, 0, Spacing.XS, 0));
         historyCard.add(UIHelper.tableCardTop("Faturas de Compra Registadas", histFilters,
-                refreshBtn, newPurchaseBtn), BorderLayout.NORTH);
+                refreshBtn, returnBtn, refundBtn, newPurchaseBtn), BorderLayout.NORTH);
         historyCard.add(histScroll, BorderLayout.CENTER);
         TableQuickPeekController.install(purchasesTable, historyCard, (peek, row) -> {
             String doc = String.valueOf(purchasesModel.getValueAt(row, 0));

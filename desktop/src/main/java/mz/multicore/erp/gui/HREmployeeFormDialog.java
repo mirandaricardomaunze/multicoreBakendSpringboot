@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.CircularAvatar;
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -67,7 +68,7 @@ final class HREmployeeFormDialog {
         photoActions.add(removePhotoButton);
         JLabel photoHint = new JLabel("JPG ou PNG · máximo 2 MB");
         photoHint.setForeground(UIHelper.TEXT_MUTED);
-        photoHint.setFont(photoHint.getFont().deriveFont(11f));
+        photoHint.setFont(Typography.CAPTION);
         photoHint.setAlignmentX(Component.LEFT_ALIGNMENT);
         photoActions.add(Box.createVerticalStrut(8));
         photoActions.add(photoHint);

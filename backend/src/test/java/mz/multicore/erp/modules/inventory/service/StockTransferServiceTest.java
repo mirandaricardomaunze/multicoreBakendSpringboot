@@ -3,10 +3,13 @@ package mz.multicore.erp.modules.inventory.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Product;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferLineRequest;
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
@@ -79,7 +82,8 @@ class StockTransferServiceTest {
         eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new StockTransferService(
-                transferRepository, warehouseRepository, companyRepository, productRepository,
+                transferRepository, warehouseRepository, new CompanyLookup(companyRepository),
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 stockRepository, stockMovementRepository, productBatchService, documentNumberService,
                 auditLogService, eventPublisher);
 

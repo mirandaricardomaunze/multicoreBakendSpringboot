@@ -1,5 +1,7 @@
 package mz.multicore.erp.gui.pos.loyalty;
 
+import mz.multicore.erp.gui.components.FieldValidationException;
+import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.LoyaltyEngine;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -62,7 +64,7 @@ public class PosLoyaltyController {
         searchField.setToolTipText("Digite ou bipe o Cartão (ex: LOY-1001), NUIT ou número de telefone");
 
         JLabel infoLabel = new JLabel("Pressione Enter ou clique em Seleccionar");
-        infoLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        infoLabel.setFont(Typography.BODY.deriveFont(Font.ITALIC));
         infoLabel.setForeground(UIHelper.TEXT_MUTED);
 
         JPanel content = new JPanel(new BorderLayout(10, 10));
@@ -89,7 +91,7 @@ public class PosLoyaltyController {
         dialog.setOnSave(() -> {
             String query = searchField.getText().trim();
             if (query.isEmpty()) {
-                throw new IllegalArgumentException("Por favor, introduza o código do cartão, NUIT ou telefone.");
+                throw FieldValidationException.of(searchField, "Por favor, introduza o código do cartão, NUIT ou telefone.");
             }
 
             try {

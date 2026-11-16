@@ -130,7 +130,7 @@ class PurchaseOrderPayableHarnessTest {
         assertEquals(new BigDecimal("290.00"), purchase.getOutstanding());
         assertEquals(0, purchase.getAmountPaid().signum());
         assertSame(order, purchase.getPurchaseOrder());
-        verify(inventoryService, times(1)).registerMovement(any(), any(), any(), eq("PURCHASE"),
+        verify(inventoryService, times(1)).registerPurchase(any(), any(), any(), any(),
                 any(), any(), anyString(), any());
     }
 
