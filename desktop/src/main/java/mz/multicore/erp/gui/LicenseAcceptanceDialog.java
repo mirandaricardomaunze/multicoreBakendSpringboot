@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernMessageDialog;
@@ -62,14 +63,8 @@ public class LicenseAcceptanceDialog extends JDialog {
     }
 
     private void buildUi() {
-        JPanel root = new JPanel(new BorderLayout(12, 12));
-        root.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
-        root.setBackground(UIHelper.BG_DARK);
-
-        JLabel title = new JLabel("Contrato de Licença do Utilizador Final");
-        title.setFont(Typography.METRIC);
-        title.setForeground(UIHelper.TEXT_LIGHT);
-        root.add(title, BorderLayout.NORTH);
+        JPanel body = new JPanel(new BorderLayout(0, Spacing.MD));
+        body.setOpaque(false);
 
         contractArea.setEditable(false);
         contractArea.setLineWrap(true);
@@ -78,29 +73,25 @@ public class LicenseAcceptanceDialog extends JDialog {
         contractArea.setCaretPosition(0);
         contractArea.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD));
         JScrollPane scroll = new JScrollPane(contractArea);
-        root.add(scroll, BorderLayout.CENTER);
+        body.add(scroll, BorderLayout.CENTER);
 
-        JPanel footer = new JPanel(new BorderLayout(8, 8));
-        footer.setOpaque(false);
+        JPanel confirmation = new JPanel(new BorderLayout(0, Spacing.SM));
+        confirmation.setOpaque(false);
         authorityCheck.setOpaque(false);
         authorityCheck.setForeground(UIHelper.TEXT_LIGHT);
         authorityCheck.setEnabled(false);
         authorityCheck.addActionListener(event -> acceptButton.setEnabled(authorityCheck.isSelected()));
-        footer.add(authorityCheck, BorderLayout.NORTH);
+        confirmation.add(authorityCheck, BorderLayout.NORTH);
 
         progress.setVisible(true);
-        footer.add(progress, BorderLayout.CENTER);
+        confirmation.add(progress, BorderLayout.CENTER);
+        body.add(confirmation, BorderLayout.SOUTH);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
         declineButton.addActionListener(event -> dispose());
         acceptButton.setEnabled(false);
         acceptButton.addActionListener(event -> acceptTerms());
-        actions.add(declineButton);
-        actions.add(acceptButton);
-        footer.add(actions, BorderLayout.SOUTH);
-        root.add(footer, BorderLayout.SOUTH);
-        setContentPane(root);
+        setContentPane(DialogChrome.frame("fas-file-contract", "Contrato de Licença do Utilizador Final",
+                "Leia o contrato até ao fim para poder aceitar.", body, DialogChrome.footer(declineButton, acceptButton)));
     }
 
     private void loadTerms() {

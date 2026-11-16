@@ -52,7 +52,7 @@ public class ShelfLabelsDialog extends JDialog {
 
         JPanel root = new JPanel(new BorderLayout(0, 16));
         root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
+        root.setBorder(BorderFactory.createEmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         root.add(UIHelper.buildPremiumHeader(
                 "fas-barcode", "Gerador de Etiquetas, Lotes e Códigos de Barras",
@@ -145,13 +145,11 @@ public class ShelfLabelsDialog extends JDialog {
     }
 
     private JPanel buildFooter() {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0)); footer.setOpaque(false);
         ModernButton cancelBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar (ESC)"));
         cancelBtn.setIcon(UIHelper.icon("fas-times", 14)); cancelBtn.addActionListener(e -> dispose());
         ModernButton printBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Imprimir Etiquetas"));
         printBtn.setIcon(UIHelper.icon("fas-print", 14)); printBtn.addActionListener(e -> printLabels());
-        footer.add(cancelBtn); footer.add(printBtn);
-        return footer;
+        return DialogChrome.footer(cancelBtn, printBtn);
     }
 
     private void populateList(String query) {

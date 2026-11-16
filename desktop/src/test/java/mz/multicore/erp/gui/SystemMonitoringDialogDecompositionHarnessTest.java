@@ -76,14 +76,8 @@ class SystemMonitoringDialogDecompositionHarnessTest {
         assertThat(dialog.getContentPane()).isNotNull();
 
         // Verificar presença do JTabbedPane com as abas canónicas
-        Component[] comps = ((JPanel) dialog.getContentPane()).getComponents();
-        JTabbedPane tabbedPane = null;
-        for (Component comp : comps) {
-            if (comp instanceof JTabbedPane tp) {
-                tabbedPane = tp;
-                break;
-            }
-        }
+        // Os separadores ficam dentro do corpo da moldura comum dos diálogos (DialogChrome).
+        JTabbedPane tabbedPane = findTabs(dialog.getContentPane());
 
         assertThat(tabbedPane).isNotNull();
         assertThat(tabbedPane.getTabCount()).isEqualTo(3);
@@ -139,5 +133,16 @@ class SystemMonitoringDialogDecompositionHarnessTest {
         builder.setUpdatingState();
         builder.setOfflineState();
         builder.setErrorState();
+    }
+
+    private static JTabbedPane findTabs(Component c) {
+        if (c instanceof JTabbedPane tp) return tp;
+        if (c instanceof java.awt.Container container) {
+            for (Component child : container.getComponents()) {
+                JTabbedPane found = findTabs(child);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 }

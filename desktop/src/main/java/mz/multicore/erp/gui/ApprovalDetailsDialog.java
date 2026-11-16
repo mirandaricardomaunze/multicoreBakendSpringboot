@@ -55,37 +55,24 @@ public final class ApprovalDetailsDialog extends JDialog {
         getContentPane().setBackground(UIHelper.BG_DARK);
         UIHelper.applyStandardModalBounds(this, 920, 610);
 
-        JPanel root = new JPanel(new BorderLayout(0, 12)); root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
-        root.add(buildHeaderCard(), BorderLayout.NORTH);
-        root.add(buildContentTabs(), BorderLayout.CENTER);
-        root.add(buildActionsBar(), BorderLayout.SOUTH);
-        setContentPane(root);
+        JPanel body = new JPanel(new BorderLayout(0, Spacing.MD)); body.setOpaque(false);
+        body.add(buildAmountStrip(), BorderLayout.NORTH);
+        body.add(buildContentTabs(), BorderLayout.CENTER);
+        setContentPane(DialogChrome.frame(resolveIcon(request.documentType()),
+                humanType(request.documentType()) + " #" + request.documentId(),
+                "Pedido de Aprovação #" + request.id() + " • Submetido por " + request.submitter(),
+                body, buildActionsBar()));
     }
 
-    private JPanel buildHeaderCard() {
-        ModernPanel card = new ModernPanel(16); card.setLayout(new BorderLayout(16, 0)); card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0)); left.setOpaque(false);
-        left.add(new JLabel(UIHelper.icon(resolveIcon(request.documentType()), 32, resolveColor(request.documentType()))));
-
-        JPanel info = new JPanel(); info.setOpaque(false); info.setLayout(new BoxLayout(info, BoxLayout.Y_AXIS));
-        JLabel titleLbl = new JLabel(humanType(request.documentType()) + " #" + request.documentId());
-        titleLbl.setFont(Typography.TITLE); titleLbl.setForeground(UIHelper.TEXT_LIGHT);
-        JLabel subLbl = new JLabel("Pedido de Aprovação #" + request.id() + " • Submetido por " + request.submitter());
-        subLbl.setFont(Typography.BODY); subLbl.setForeground(UIHelper.TEXT_MUTED);
-        info.add(titleLbl); info.add(Box.createVerticalStrut(2)); info.add(subLbl);
-        left.add(info); card.add(left, BorderLayout.WEST);
-
-        JPanel right = new JPanel(); right.setOpaque(false); right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
+    /** Amount and required role: what the approver decides on, right under the shared header. */
+    private JPanel buildAmountStrip() {
+        JPanel strip = new JPanel(new FlowLayout(FlowLayout.LEFT, Spacing.LG, 0)); strip.setOpaque(false);
         JLabel amountLbl = new JLabel(String.format("%,.2f MT", request.amount() != null ? request.amount() : BigDecimal.ZERO));
         amountLbl.setFont(Typography.METRIC); amountLbl.setForeground(UIHelper.APPROVED_GREEN);
-        amountLbl.setAlignmentX(Component.RIGHT_ALIGNMENT);
         JLabel roleChip = new JLabel("Perfil Requerido: " + (request.requiredRole() != null ? request.requiredRole() : "MANAGER"));
         roleChip.setFont(Typography.CAPTION_BOLD); roleChip.setForeground(UIHelper.ACCENT_BLUE);
-        roleChip.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        right.add(amountLbl); right.add(Box.createVerticalStrut(4)); right.add(roleChip);
-        card.add(right, BorderLayout.EAST);
-        return card;
+        strip.add(amountLbl); strip.add(roleChip);
+        return strip;
     }
 
     private JComponent buildContentTabs() {
@@ -109,7 +96,6 @@ public final class ApprovalDetailsDialog extends JDialog {
     }
 
     private JPanel buildActionsBar() {
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0)); bar.setOpaque(false); bar.setBorder(new EmptyBorder(Spacing.XS, 0, 0, 0));
         ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.setIcon(UIHelper.icon("fas-times", 14)); closeBtn.addActionListener(e -> dispose());
 
@@ -119,8 +105,7 @@ public final class ApprovalDetailsDialog extends JDialog {
         ModernButton approveBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Aprovar Documento"));
         approveBtn.setIcon(UIHelper.icon("fas-check-circle", 14)); approveBtn.addActionListener(e -> handleApprove(approveBtn));
 
-        bar.add(closeBtn); bar.add(rejectBtn); bar.add(approveBtn);
-        return bar;
+        return DialogChrome.footer(closeBtn, rejectBtn, approveBtn);
     }
 
     private void handleReject(ModernButton trigger) {
@@ -172,14 +157,6 @@ public final class ApprovalDetailsDialog extends JDialog {
             case "EXPENSE", "EXPENSE_CLAIM" -> "fas-receipt"; case "STOCK_TRANSFER", "TRANSFER" -> "fas-truck";
             case "STOCK_WASTE", "WASTE" -> "fas-trash-alt"; case "PURCHASE_ORDER", "PURCHASE" -> "fas-shopping-bag";
             default -> "fas-file-alt";
-        };
-    }
-
-    private static Color resolveColor(String dt) {
-        if (dt == null) return UIHelper.ACCENT_BLUE;
-        return switch (dt.toUpperCase(java.util.Locale.ROOT)) {
-            case "ORDER" -> UIHelper.PENDING_YELLOW; case "INVOICE" -> UIHelper.APPROVED_GREEN;
-            case "STOCK_WASTE", "WASTE" -> UIHelper.REJECTED_RED; default -> UIHelper.ACCENT_BLUE;
         };
     }
 }

@@ -38,22 +38,8 @@ public class DatabaseBackupDialog extends JDialog {
     }
 
     private void initComponents() {
-        JPanel root = new JPanel(new BorderLayout(0, 16));
-        root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
-
-        // Topo
-        JPanel header = new JPanel(new BorderLayout(0, 6));
-        header.setOpaque(false);
-        JLabel title = UIHelper.createHeading("Cópias de Segurança & Integridade");
-        title.setIcon(UIHelper.icon("fas-database", 18));
-        JLabel subtitle = new JLabel("Geração de cópias completas dos dados e validação de arquivos.");
-        subtitle.setFont(Typography.BODY);
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-
-        header.add(title, BorderLayout.NORTH);
-        header.add(subtitle, BorderLayout.SOUTH);
-        root.add(header, BorderLayout.NORTH);
+        JPanel root = DialogChrome.frame("fas-database", "Cópias de Segurança & Integridade",
+                "Geração de cópias completas dos dados e validação de arquivos.", null, null);
 
         // Painel Central com Cartões
         JPanel center = new JPanel(new BorderLayout(0, 12));
@@ -131,12 +117,9 @@ public class DatabaseBackupDialog extends JDialog {
         root.add(center, BorderLayout.CENTER);
 
         // Rodapé
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        footer.setOpaque(false);
         ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
-        footer.add(closeBtn);
-        root.add(footer, BorderLayout.SOUTH);
+        root.add(DialogChrome.footer(closeBtn), BorderLayout.SOUTH);
 
         setContentPane(root);
     }

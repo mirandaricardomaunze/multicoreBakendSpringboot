@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
@@ -54,45 +55,20 @@ public class PosBlindCloseDialog extends JDialog {
         setSize(720, 760);
         setMinimumSize(new Dimension(680, 680));
         setLocationRelativeTo(owner);
-        setLayout(new BorderLayout());
-
-        add(createHeaderPanel(), BorderLayout.NORTH);
-        add(createContentPanel(), BorderLayout.CENTER);
-        add(createFooterPanel(), BorderLayout.SOUTH);
-
-        breakdownPanel.recalculate();
-    }
-
-    private JPanel createHeaderPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIHelper.ROW_ALT);
-        panel.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
-
-        JLabel title = new JLabel("Fecho Cego de Caixa (Blind Drop)");
-        title.setFont(Typography.TITLE);
-        title.setForeground(UIHelper.TEXT_LIGHT);
-        title.setIcon(UIHelper.icon("fas-cash-register", 18, UIHelper.ACCENT_CYAN));
-        title.setIconTextGap(10);
-
-        String subtitleText = String.format("Operador: %s  |  Sessão #%d  |  Abertura: %,.2f MT",
+        String subtitle = String.format("Operador: %s  |  Sessão #%d  |  Abertura: %,.2f MT",
                 session.operator() != null ? session.operator() : "—",
                 session.id(),
                 session.openingBalance() != null ? session.openingBalance() : BigDecimal.ZERO);
-        JLabel subtitle = new JLabel(subtitleText);
-        subtitle.setFont(Typography.BODY);
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-        subtitle.setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XXL, 0, 0));
+        setContentPane(DialogChrome.frame("fas-cash-register", "Fecho Cego de Caixa (Blind Drop)", subtitle,
+                createContentPanel(), createFooterPanel()));
 
-        panel.add(title, BorderLayout.NORTH);
-        panel.add(subtitle, BorderLayout.SOUTH);
-        return panel;
+        breakdownPanel.recalculate();
     }
 
     private JComponent createContentPanel() {
         JPanel root = new JPanel();
         root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
-        root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
+        root.setOpaque(false);
 
         breakdownPanel.addTo(root);
         root.add(Box.createVerticalStrut(12));
@@ -104,6 +80,8 @@ public class PosBlindCloseDialog extends JDialog {
         UIHelper.styleScrollPane(scroll);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
         return scroll;
     }
 
@@ -135,26 +113,20 @@ public class PosBlindCloseDialog extends JDialog {
     }
 
     private JPanel createFooterPanel() {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        footer.setBackground(UIHelper.ROW_ALT);
-
         btnPrintZ = ButtonStyles.secondary(UIHelper.createPrimaryButton("Imprimir Relatório Z (A4)"));
-        btnPrintZ.setIcon(UIHelper.icon("fas-print", 13, Color.WHITE));
+        btnPrintZ.setIcon(UIHelper.icon("fas-print", 13));
         btnPrintZ.setEnabled(false);
         btnPrintZ.addActionListener(e -> printZReport());
 
         btnConfirm = ButtonStyles.main(UIHelper.createSuccessButton("Confirmar Fecho de Caixa"));
-        btnConfirm.setIcon(UIHelper.icon("fas-lock", 13, Color.WHITE));
+        btnConfirm.setIcon(UIHelper.icon("fas-lock", 13));
         btnConfirm.addActionListener(e -> executeClose());
 
         btnCancel = ButtonStyles.secondary(UIHelper.createDangerButton("Cancelar / Voltar"));
-        btnCancel.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
+        btnCancel.setIcon(UIHelper.icon("fas-times", 13));
         btnCancel.addActionListener(e -> dispose());
 
-        footer.add(btnPrintZ);
-        footer.add(btnConfirm);
-        footer.add(btnCancel);
-        return footer;
+        return DialogChrome.footer(btnCancel, btnPrintZ, btnConfirm);
     }
 
     private void executeClose() {

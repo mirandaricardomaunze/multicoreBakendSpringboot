@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.performance;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.PerformanceApiClient;
 import mz.multicore.erp.desktop.session.DesktopSession;
@@ -197,13 +198,11 @@ public class BonusTab extends JPanel {
 
         Window window = SwingUtilities.getWindowAncestor(this);
         JDialog dialog = new JDialog(window, "Ajustar Prémio Comercial", Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setLayout(new BorderLayout());
-        dialog.setSize(420, 260);
+        dialog.setSize(460, 400);
         dialog.setLocationRelativeTo(window);
 
         JPanel form = new JPanel(new GridBagLayout());
-        form.setBackground(UIHelper.BG_CARD);
-        form.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
+        form.setOpaque(false);
 
         GridBagConstraints gc = new GridBagConstraints();
         gc.insets = new Insets(6, 6, 6, 6);
@@ -219,13 +218,8 @@ public class BonusTab extends JPanel {
         JTextField txtJustification = PerformanceControls.createTextInput("", "Justificação do ajuste", 0);
         form.add(new FormField("Justificação do Ajuste", txtJustification, true, null), gc);
 
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        footer.setBackground(UIHelper.BG_DARK);
-
         ModernButton btnCancel = ButtonStyles.cancelButton();
-        btnCancel.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         btnCancel.addActionListener(e -> dialog.dispose());
-        footer.add(btnCancel);
 
         ModernButton btnSave = ButtonStyles.main(UIHelper.createPrimaryButton("Guardar Ajuste"));
         btnSave.setIcon(UIHelper.icon("fas-check", 14));
@@ -248,10 +242,8 @@ public class BonusTab extends JPanel {
                 ModernMessageDialog.show(dialog, FeedbackType.ERROR, "Validação", "Indique um valor numérico válido e uma justificação.");
             }
         });
-        footer.add(btnSave);
-
-        dialog.add(form, BorderLayout.CENTER);
-        dialog.add(footer, BorderLayout.SOUTH);
+        dialog.setContentPane(DialogChrome.frame("fas-award", "Ajustar Prémio Comercial",
+                "O novo valor substitui o aprovado, com justificação.", form, DialogChrome.footer(btnCancel, btnSave)));
         dialog.setVisible(true);
     }
 

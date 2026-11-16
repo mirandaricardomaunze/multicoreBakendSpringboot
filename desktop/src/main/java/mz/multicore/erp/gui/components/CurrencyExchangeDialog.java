@@ -46,20 +46,6 @@ public class CurrencyExchangeDialog extends JDialog {
     }
 
     private void initComponents() {
-        JPanel root = new JPanel(new BorderLayout(0, 16));
-        root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
-
-        // Cabeçalho
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        JLabel title = UIHelper.createHeading("Pagamento em Moeda Estrangeira");
-        JLabel sub = new JLabel("Total da Venda: " + MultiCurrencyEngine.formatCurrency(totalMzn, Currency.MZN));
-        sub.setFont(Typography.TITLE);
-        sub.setForeground(UIHelper.ACCENT_BLUE);
-        header.add(title, BorderLayout.NORTH);
-        header.add(sub, BorderLayout.SOUTH);
-        root.add(header, BorderLayout.NORTH);
 
         // Formulário em Card
         ModernPanel card = new ModernPanel(14);
@@ -136,22 +122,15 @@ public class CurrencyExchangeDialog extends JDialog {
         changeMznLabel.setForeground(UIHelper.APPROVED_GREEN);
         card.add(changeMznLabel, gbc);
 
-        root.add(card, BorderLayout.CENTER);
-
-        // Botões de Ação
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        buttons.setOpaque(false);
         ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
         confirmBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Confirmar Pagamento"));
         confirmBtn.setIcon(UIHelper.icon("fas-check", 14));
         confirmBtn.addActionListener(e -> onConfirmClicked());
 
-        buttons.add(cancelBtn);
-        buttons.add(confirmBtn);
-        root.add(buttons, BorderLayout.SOUTH);
-
-        setContentPane(root);
+        setContentPane(DialogChrome.frame("fas-exchange-alt", "Pagamento em Moeda Estrangeira",
+                "Total da Venda: " + MultiCurrencyEngine.formatCurrency(totalMzn, Currency.MZN),
+                card, DialogChrome.footer(cancelBtn, confirmBtn)));
     }
 
     private JLabel createFieldTitle(String text) {

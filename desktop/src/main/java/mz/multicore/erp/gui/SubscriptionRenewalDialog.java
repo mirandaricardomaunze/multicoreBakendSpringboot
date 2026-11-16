@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -62,10 +63,8 @@ public final class SubscriptionRenewalDialog extends JDialog {
         setSize(560, 640);
         setLocationRelativeTo(owner);
 
-        JPanel content = new JPanel(new BorderLayout(0, 16));
-        content.setBackground(UIHelper.BG_DARK);
-        content.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
-        content.add(SubscriptionRenewalViewBuilder.buildHeader(), BorderLayout.NORTH);
+        JPanel content = DialogChrome.frame("fas-crown", "Activar ou Renovar Plano do Sistema",
+                "Seleccione o seu plano comercial e efectue o pagamento.", null, null);
 
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
@@ -99,7 +98,7 @@ public final class SubscriptionRenewalDialog extends JDialog {
         content.add(body, BorderLayout.CENTER);
 
         submitBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Proceder ao Pagamento"));
-        submitBtn.setIcon(UIHelper.icon("fas-check-circle", 13, Color.WHITE));
+        submitBtn.setIcon(UIHelper.icon("fas-check-circle", 13));
         submitBtn.addActionListener(e -> processRenewal());
         content.add(SubscriptionRenewalViewBuilder.buildFooter(this::dispose, submitBtn), BorderLayout.SOUTH);
 

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.CreditRiskApiClient;
@@ -20,9 +21,7 @@ public final class CreditExceptionDialog {
     public static void show(Component parent, CreditRiskApiClient client, ClientCreditRiskDTO selected, Runnable onSuccess) {
         Window ancestor = SwingUtilities.getWindowAncestor(parent);
         JDialog dialog = new JDialog((Frame) (ancestor instanceof Frame ? ancestor : null), "Pedido de Excepção de Crédito", true);
-        dialog.setLayout(new BorderLayout(0, 16));
         dialog.getContentPane().setBackground(UIHelper.BG_DARK);
-        ((JComponent) dialog.getContentPane()).setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
@@ -61,11 +60,6 @@ public final class CreditExceptionDialog {
         UIHelper.styleScrollPane(reasonScroll);
         content.add(reasonScroll);
 
-        dialog.add(content, BorderLayout.CENTER);
-
-        // Botões do diálogo
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        buttons.setOpaque(false);
 
         ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.setPreferredSize(new Dimension(100, UIHelper.FORM_CONTROL_HEIGHT));
@@ -123,9 +117,8 @@ public final class CreditExceptionDialog {
             }.execute();
         });
 
-        buttons.add(cancelBtn);
-        buttons.add(submitBtn);
-        dialog.add(buttons, BorderLayout.SOUTH);
+        dialog.setContentPane(DialogChrome.frame("fas-hand-holding-usd", "Pedido de Excepção de Crédito",
+                "O pedido segue para aprovação da gerência.", content, DialogChrome.footer(cancelBtn, submitBtn)));
 
         dialog.pack();
         UIHelper.applyStandardModalBounds(dialog, 480, 420);

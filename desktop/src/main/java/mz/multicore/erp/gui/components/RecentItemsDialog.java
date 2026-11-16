@@ -56,25 +56,14 @@ public class RecentItemsDialog extends JDialog {
     }
 
     private void initUi() {
-        setLayout(new BorderLayout());
         getContentPane().setBackground(UIHelper.BG_DARK);
         setSize(700, 500);
         setMinimumSize(new Dimension(550, 400));
         UIHelper.containWithinMain(this);
 
-        // Cabeçalho Premium
-        JComponent header = UIHelper.buildPremiumHeader(
-                "Histórico de Itens Recentes",
-                "Alterne e abra instantaneamente os últimos registos acedidos (Ctrl+H)",
-                "fas-history",
-                UIHelper.ACCENT_CYAN
-        );
-        add(header, BorderLayout.NORTH);
-
         // Corpo Central
         JPanel body = new JPanel(new BorderLayout(0, 10));
         body.setOpaque(false);
-        body.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         // Barra de Pesquisa Rápida
         JPanel searchBox = new JPanel(new BorderLayout(8, 0));
@@ -142,12 +131,6 @@ public class RecentItemsDialog extends JDialog {
         scroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1));
         body.add(scroll, BorderLayout.CENTER);
 
-        add(body, BorderLayout.CENTER);
-
-        // Rodapé de Ações
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(Spacing.SM, Spacing.LG, Spacing.LG, Spacing.LG));
 
         ModernButton clearBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Limpar Histórico"));
         clearBtn.setIcon(UIHelper.icon("fas-trash-alt", 13, UIHelper.REJECTED_RED));
@@ -166,9 +149,6 @@ public class RecentItemsDialog extends JDialog {
             }
         });
 
-        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        rightActions.setOpaque(false);
-
         ModernButton openBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Abrir Registo"));
         openBtn.setIcon(UIHelper.icon("fas-arrow-right", 14, Color.WHITE));
         openBtn.addActionListener(e -> {
@@ -181,12 +161,9 @@ public class RecentItemsDialog extends JDialog {
         ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
 
-        rightActions.add(clearBtn);
-        rightActions.add(closeBtn);
-        rightActions.add(openBtn);
-        footer.add(rightActions, BorderLayout.EAST);
-
-        add(footer, BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-history", "Histórico de Itens Recentes",
+                "Alterne e abra instantaneamente os últimos registos acedidos (Ctrl+H)",
+                body, DialogChrome.footer(clearBtn, closeBtn, openBtn)));
     }
 
     private void refreshFilteredList() {

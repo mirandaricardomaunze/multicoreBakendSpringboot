@@ -39,24 +39,11 @@ public class SystemMonitoringOverviewBuilder {
         uptimeLabel.setForeground(UIHelper.TEXT_MUTED);
     }
 
+    /** Uptime and overall state, live, under the dialog's shared header (the title lives in the header). */
     public JPanel buildHeader() {
         JPanel header = new JPanel(new BorderLayout(16, 0));
         header.setOpaque(false);
-
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        left.setOpaque(false);
-        left.add(new JLabel(UIHelper.icon("fas-heartbeat", 30, UIHelper.ACCENT_CYAN)));
-
-        JPanel titles = new JPanel(new GridLayout(2, 1, 0, 2));
-        titles.setOpaque(false);
-        JLabel title = new JLabel("Diagnóstico & Saúde Operacional");
-        title.setFont(Typography.TITLE);
-        title.setForeground(UIHelper.TEXT_LIGHT);
-        titles.add(title);
-        titles.add(uptimeLabel);
-        left.add(titles);
-
-        header.add(left, BorderLayout.WEST);
+        header.add(uptimeLabel, BorderLayout.WEST);
         header.add(overallBadge, BorderLayout.EAST);
         return header;
     }

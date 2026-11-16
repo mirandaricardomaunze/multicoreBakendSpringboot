@@ -72,6 +72,12 @@ paginadores com textos e ícones diferentes, e o botão “Espreitar detalhes”
     Ao abrir, um diálogo que não cabe (por exemplo o Fecho de Caixa, 720x760, num ecrã de 1366x720) encolhe para
     caber na janela e fica centrado. O rodapé fica em baixo e o conteúdo ganha scroll, por isso os botões ficam
     sempre visíveis. Um diálogo que cabe mantém o tamanho e o lugar.
+14. **Uma só moldura para os diálogos** (`DialogChrome`, a mesma do `ModernFormDialog`). Cabeçalho comum (ícone,
+    título, subtítulo e linha), margem `Spacing.XL`, `Spacing.LG` entre partes, e rodapé com os botões à direita
+    sob uma linha, com o verde em último. Uma nota, contagem ou acções da ficha podem ficar à esquerda
+    (`footerWithNote`). Ficam fora a pesquisa global (Ctrl+K, uma paleta de comandos) e o Painel Executivo.
+    Nenhum botão com contorno tem texto ou ícone branco, porque ficaria invisível no fundo claro. Havia onze
+    casos em oito diálogos, por exemplo o texto do "Fechar" no Histórico de Fechos de Caixa.
 
 A coluna estreita à esquerda das tabelas com linhas é a coluna de selecção (UA-06 a UA-08). Já era igual
 em todas as tabelas e esconde-se quando a tabela está vazia.
@@ -95,3 +101,5 @@ em todas as tabelas e esconde-se quando a tabela está vazia.
 | TC-13 | Enter carrega no botão verde e Esc fecha; teclas próprias e excepções respeitadas; instalado para toda a app | `tc13_enterAndEscapeInEveryDialog` |
 | TC-14 | Dinheiro com sinal, unidades à direita e datas dd/MM/yyyy mesmo em ISO | `TableValuesFormatHarnessTest.tc14_valuesAndDatesLookTheSameEverywhere` |
 | TC-15 | O diálogo que não cabe encolhe ao abrir; o que cabe não é mexido; instalado no arranque | `DialogFitHarnessTest.tc15_dialogsNeverOutgrowTheScreen` |
+| TC-16 | Todos os diálogos usam o cabeçalho e o rodapé comuns; margens e alinhamento da moldura | `DialogChromeHarnessTest.tc16_everyDialogUsesTheSharedFrame` |
+| TC-17 | Nenhum botão com contorno com texto ou ícone branco | `DialogChromeHarnessTest.tc17_noWhiteOnOutlineButtons` |

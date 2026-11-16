@@ -83,13 +83,10 @@ public class ShortcutHelpDialog extends JDialog {
         root.add(scrollPane, BorderLayout.CENTER);
 
         // Footer Actions
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        footer.setOpaque(false);
         ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar (ESC)"));
         closeBtn.setIcon(UIHelper.icon("fas-times", 14));
         closeBtn.addActionListener(e -> dispose());
-        footer.add(closeBtn);
-        root.add(footer, BorderLayout.SOUTH);
+        root.add(DialogChrome.footer(closeBtn), BorderLayout.SOUTH);
 
         add(root);
 

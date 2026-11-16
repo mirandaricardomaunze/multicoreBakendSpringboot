@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -59,34 +60,8 @@ public class PosImportQuotationDialog extends JDialog {
 
         setSize(780, 520);
         setLocationRelativeTo(owner);
-        setLayout(new BorderLayout());
         getContentPane().setBackground(UIHelper.BG_DARK);
 
-        // Header
-        JPanel header = new JPanel(new BorderLayout(10, 0));
-        header.setOpaque(false);
-        header.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.MD, Spacing.XL));
-
-        JLabel titleIcon = new JLabel(UIHelper.icon("fas-file-import", 22, UIHelper.ACCENT_CYAN));
-        JPanel titlePanel = new JPanel();
-        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
-        titlePanel.setOpaque(false);
-
-        JLabel title = new JLabel("Importar Cotação / Pró-forma");
-        title.setFont(Typography.TITLE);
-        title.setForeground(UIHelper.TEXT_LIGHT);
-
-        JLabel subtitle = new JLabel("Selecione uma cotação aberta para preencher o cliente e artigos no carrinho do POS");
-        subtitle.setFont(Typography.BODY);
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-
-        titlePanel.add(title);
-        titlePanel.add(Box.createVerticalStrut(2));
-        titlePanel.add(subtitle);
-
-        header.add(titleIcon, BorderLayout.WEST);
-        header.add(titlePanel, BorderLayout.CENTER);
-        add(header, BorderLayout.NORTH);
 
         // Center card
         ModernPanel card = new ModernPanel(16);
@@ -128,28 +103,16 @@ public class PosImportQuotationDialog extends JDialog {
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
 
-        JPanel centerWrapper = new JPanel(new BorderLayout());
-        centerWrapper.setOpaque(false);
-        centerWrapper.setBorder(new EmptyBorder(0, Spacing.LG, Spacing.SM, Spacing.LG));
-        centerWrapper.add(card, BorderLayout.CENTER);
-        add(centerWrapper, BorderLayout.CENTER);
-
-        // Bottom footer
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        footer.setBackground(UIHelper.ROW_ALT);
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER));
-
         ModernButton cancelBtn = ButtonStyles.cancelButton();
-        cancelBtn.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         cancelBtn.addActionListener(e -> dispose());
 
         ModernButton importBtn = ButtonStyles.main(UIHelper.createSuccessButton("Importar para o Carrinho"));
         importBtn.setIcon(UIHelper.icon("fas-file-import", 13));
         importBtn.addActionListener(e -> confirmSelection());
 
-        footer.add(cancelBtn);
-        footer.add(importBtn);
-        add(footer, BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-file-import", "Importar Cotação / Pró-forma",
+                "Selecione uma cotação aberta para preencher o cliente e artigos no carrinho do POS",
+                card, DialogChrome.footer(cancelBtn, importBtn)));
 
         table.addMouseListener(new MouseAdapter() {
             @Override

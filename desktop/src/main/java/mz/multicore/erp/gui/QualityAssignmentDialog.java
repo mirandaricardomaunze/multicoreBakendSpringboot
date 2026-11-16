@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
@@ -75,12 +76,10 @@ public class QualityAssignmentDialog extends JDialog {
     }
 
     private void initComponents() {
-        setLayout(new BorderLayout());
         getContentPane().setBackground(UIHelper.BG_DARK);
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
         content.setOpaque(false);
 
         // Estilos
@@ -191,21 +190,14 @@ public class QualityAssignmentDialog extends JDialog {
         addFormRow(card, g, row++, "", printSheetCheck);
 
         content.add(card);
-        add(content, BorderLayout.CENTER);
-
-        // Rodapé
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        footer.setBackground(UIHelper.BG_DARK);
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER));
 
         ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
         ModernButton saveBtn = ButtonStyles.main(UIHelper.createPrimaryButton("Gravar Atribuição"));
         saveBtn.addActionListener(e -> save());
 
-        footer.add(cancelBtn);
-        footer.add(saveBtn);
-        add(footer, BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-hard-hat", getTitle(),
+                "Entrega de equipamento de protecção a um trabalhador, com validade calculada.", content, DialogChrome.footer(cancelBtn, saveBtn)));
 
         pack();
         UIHelper.applyStandardModalBounds(this, 580, 560);

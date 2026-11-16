@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.performance;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.PerformanceApiClient;
 import mz.multicore.erp.desktop.session.DesktopSession;
@@ -23,12 +24,10 @@ public final class GoalCreateDialog {
 
     public static void show(Window window, PerformanceApiClient apiClient, DesktopSession session, Runnable onSaved) {
         JDialog dialog = new JDialog(window, "Nova Meta Comercial", Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setLayout(new BorderLayout());
         dialog.setSize(540, 600);
         dialog.setLocationRelativeTo(window);
         JPanel form = new JPanel(new GridBagLayout());
-        form.setBackground(UIHelper.BG_CARD);
-        form.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
+        form.setOpaque(false);
 
         GridBagConstraints gc = new GridBagConstraints();
         gc.insets = new Insets(6, 6, 6, 6);
@@ -132,24 +131,19 @@ public final class GoalCreateDialog {
 
         JScrollPane scrollForm = new JScrollPane(form);
         scrollForm.setBorder(BorderFactory.createEmptyBorder());
-        scrollForm.getViewport().setBackground(UIHelper.BG_CARD);
+        scrollForm.setOpaque(false);
+        scrollForm.getViewport().setOpaque(false);
         scrollForm.getVerticalScrollBar().setUnitIncrement(14);
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        footer.setBackground(UIHelper.BG_DARK);
         ModernButton btnCancel = ButtonStyles.cancelButton();
-        btnCancel.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         btnCancel.addActionListener(e -> dialog.dispose());
-        footer.add(btnCancel);
 
         ModernButton btnSave = ButtonStyles.main(UIHelper.createSuccessButton("Criar Meta"));
         btnSave.setIcon(UIHelper.icon("fas-check", 14));
         btnSave.addActionListener(e -> saveGoal(dialog, apiClient, session, onSaved, txtName, cbPeriod, txtStart, txtEnd,
                 cbScope, cbBusinessUnit, txtSeller, txtSupervisor, txtRevenue, txtMargin, chkBonusOptional, cbBonusType,
                 txtBonusValue, txtBonusCap, chkAuto));
-        footer.add(btnSave);
-
-        dialog.add(scrollForm, BorderLayout.CENTER);
-        dialog.add(footer, BorderLayout.SOUTH);
+        dialog.setContentPane(DialogChrome.frame("fas-bullseye", "Nova Meta Comercial",
+                "Objectivos de venda e margem, com prémio opcional.", scrollForm, DialogChrome.footer(btnCancel, btnSave)));
         UIHelper.applyStandardModalBounds(dialog, 540, 600);
         dialog.setVisible(true);
     }

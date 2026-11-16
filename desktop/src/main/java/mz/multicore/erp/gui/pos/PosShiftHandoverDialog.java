@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
@@ -46,38 +47,17 @@ public class PosShiftHandoverDialog extends JDialog {
         setSize(720, 760);
         setMinimumSize(new Dimension(680, 680));
         setLocationRelativeTo(owner);
-        setLayout(new BorderLayout());
-
-        add(createHeaderPanel(), BorderLayout.NORTH);
-        add(createContentPanel(), BorderLayout.CENTER);
-        add(createFooterPanel(), BorderLayout.SOUTH);
+        String effectiveOp = session.currentOperator() != null ? session.currentOperator() : session.operator();
+        setContentPane(DialogChrome.frame("fas-people-arrows", "Passagem de Turno",
+                "Operador actual: " + (effectiveOp != null ? effectiveOp : "—") + " | Sessão #" + session.id(),
+                createContentPanel(), createFooterPanel()));
 
         breakdownPanel.recalculate();
     }
 
-    private JPanel createHeaderPanel() {
-        JPanel header = new ModernPanel(16);
-        header.setLayout(new BorderLayout(12, 8)); header.setBackground(UIHelper.SELECTION_BG);
-        header.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
-
-        JLabel icon = new JLabel(UIHelper.icon("fas-people-arrows", 28, UIHelper.ACCENT_CYAN));
-        JLabel title = new JLabel("Passagem de Turno");
-        title.setFont(Typography.TITLE); title.setForeground(Color.WHITE);
-
-        String effectiveOp = session.currentOperator() != null ? session.currentOperator() : session.operator();
-        JLabel subtitle = new JLabel("Operador actual: " + (effectiveOp != null ? effectiveOp : "—") + " | Sessão #" + session.id());
-        subtitle.setFont(Typography.BODY); subtitle.setForeground(UIHelper.TEXT_LIGHT);
-
-        JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 2)); textPanel.setOpaque(false);
-        textPanel.add(title); textPanel.add(subtitle);
-
-        header.add(icon, BorderLayout.WEST); header.add(textPanel, BorderLayout.CENTER);
-        return header;
-    }
-
     private JComponent createContentPanel() {
         JPanel content = new JPanel(); content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(UIHelper.BG_DARK); content.setBorder(BorderFactory.createEmptyBorder(Spacing.MD, Spacing.XL, Spacing.MD, Spacing.XL));
+        content.setOpaque(false);
 
         content.add(createOperatorPanel());
         content.add(Box.createVerticalStrut(8));
@@ -91,6 +71,8 @@ public class PosShiftHandoverDialog extends JDialog {
         UIHelper.styleScrollPane(scroll);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
         return scroll;
     }
 
@@ -128,17 +110,15 @@ public class PosShiftHandoverDialog extends JDialog {
     }
 
     private JPanel createFooterPanel() {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12)); footer.setBackground(UIHelper.ROW_ALT);
         btnConfirm = ButtonStyles.main(UIHelper.createPrimaryButton("Confirmar Passagem"));
-        btnConfirm.setIcon(UIHelper.icon("fas-check", 13, Color.WHITE));
+        btnConfirm.setIcon(UIHelper.icon("fas-check", 13));
         btnConfirm.addActionListener(e -> performHandover());
 
         btnCancel = ButtonStyles.cancelButton();
         btnCancel.setIcon(UIHelper.icon("fas-times", 13));
         btnCancel.addActionListener(e -> dispose());
 
-        footer.add(btnConfirm); footer.add(btnCancel);
-        return footer;
+        return DialogChrome.footer(btnCancel, btnConfirm);
     }
 
     private void performHandover() {

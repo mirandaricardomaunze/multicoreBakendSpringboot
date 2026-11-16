@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.ButtonStyles;
 import mz.multicore.erp.desktop.client.SystemMonitoringApiClient;
@@ -62,12 +63,6 @@ public class SystemMonitoringDialog {
         dialog.setMinimumSize(new Dimension(880, 600));
         dialog.getContentPane().setBackground(UIHelper.BG_DARK);
 
-        JPanel mainPanel = new JPanel(new BorderLayout(0, 14));
-        mainPanel.setBackground(UIHelper.BG_DARK);
-        mainPanel.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
-
-        mainPanel.add(overviewBuilder.buildHeader(), BorderLayout.NORTH);
-
         JTabbedPane tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
 
@@ -77,10 +72,12 @@ public class SystemMonitoringDialog {
             tabbedPane.addTab("Central de Alarmes", tabsBuilder.buildAlertsPanel(dialog, this::handleTestEmail));
         }
 
-        mainPanel.add(tabbedPane, BorderLayout.CENTER);
-        mainPanel.add(buildFooter(), BorderLayout.SOUTH);
-
-        dialog.setContentPane(mainPanel);
+        JPanel body = new JPanel(new BorderLayout(0, Spacing.MD));
+        body.setOpaque(false);
+        body.add(overviewBuilder.buildHeader(), BorderLayout.NORTH);
+        body.add(tabbedPane, BorderLayout.CENTER);
+        dialog.setContentPane(DialogChrome.frame("fas-heartbeat", "Diagnóstico & Saúde Operacional",
+                "Memória, disco, base de dados e serviços do servidor.", body, buildFooter()));
     }
 
     private JPanel buildGeneralDiagnosticsPanel() {
@@ -92,9 +89,6 @@ public class SystemMonitoringDialog {
     }
 
     private JPanel buildFooter() {
-        JPanel footer = new JPanel(new BorderLayout(10, 0));
-        footer.setOpaque(false);
-
         JPanel leftActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftActions.setOpaque(false);
 
@@ -102,25 +96,19 @@ public class SystemMonitoringDialog {
         leftActions.add(refreshButton);
 
         ModernButton copyButton = ButtonStyles.secondary(new ModernButton("Copiar Diagnóstico", UIHelper.ACCENT, UIHelper.ACCENT_HOVER));
-        copyButton.setIcon(UIHelper.icon("fas-copy", 14, Color.WHITE));
+        copyButton.setIcon(UIHelper.icon("fas-copy", 14));
         copyButton.addActionListener(e -> SystemMonitoringExporter.copyToClipboard(dialog, lastDiagnosticsExport));
         leftActions.add(copyButton);
 
         ModernButton exportButton = ButtonStyles.secondary(new ModernButton("Exportar Relatório (.txt)", UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER));
-        exportButton.setIcon(UIHelper.icon("fas-file-download", 14, Color.WHITE));
+        exportButton.setIcon(UIHelper.icon("fas-file-download", 14));
         exportButton.addActionListener(e -> SystemMonitoringExporter.exportToFile(dialog, lastDiagnosticsExport));
         leftActions.add(exportButton);
 
-        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        rightActions.setOpaque(false);
         ModernButton closeButton = ButtonStyles.secondary(UIHelper.createDangerButton("Fechar"));
-        closeButton.setIcon(UIHelper.icon("fas-times", 14, Color.WHITE));
+        closeButton.setIcon(UIHelper.icon("fas-times", 14));
         closeButton.addActionListener(e -> dialog.dispose());
-        rightActions.add(closeButton);
-
-        footer.add(leftActions, BorderLayout.WEST);
-        footer.add(rightActions, BorderLayout.EAST);
-        return footer;
+        return DialogChrome.footerWithNote(leftActions, closeButton);
     }
 
     private void handleTestEmail() {

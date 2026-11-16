@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.UserErrors;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
@@ -51,12 +52,10 @@ public class QualityEquipmentFormDialog extends JDialog {
     }
 
     private void initComponents() {
-        setLayout(new BorderLayout());
         getContentPane().setBackground(UIHelper.BG_DARK);
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
         content.setOpaque(false);
 
         // Estilos
@@ -132,21 +131,14 @@ public class QualityEquipmentFormDialog extends JDialog {
         addFormRow(card, g, row++, "Instruções / Descrição:", descScroll);
 
         content.add(card);
-        add(content, BorderLayout.CENTER);
-
-        // Rodapé de botões
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        footer.setBackground(UIHelper.BG_DARK);
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.BORDER));
 
         ModernButton cancelBtn = ButtonStyles.cancelButton();
         cancelBtn.addActionListener(e -> dispose());
         ModernButton saveBtn = ButtonStyles.main(UIHelper.createPrimaryButton(editingEquipment == null ? "Gravar Equipamento" : "Actualizar"));
         saveBtn.addActionListener(e -> save());
 
-        footer.add(cancelBtn);
-        footer.add(saveBtn);
-        add(footer, BorderLayout.SOUTH);
+        setContentPane(DialogChrome.frame("fas-toolbox", getTitle(),
+                "Equipamento ou EPI e o seu prazo de renovação.", content, DialogChrome.footer(cancelBtn, saveBtn)));
 
         pack();
         UIHelper.applyStandardModalBounds(this, 560, 520);

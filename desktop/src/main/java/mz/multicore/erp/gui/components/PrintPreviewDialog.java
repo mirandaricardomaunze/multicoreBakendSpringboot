@@ -111,7 +111,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
 
         JPanel main = new JPanel(new BorderLayout(0, 14));
         main.setBackground(UIHelper.BG_DARK);
-        main.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.LG, Spacing.XL));
+        main.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
         JPanel north = new JPanel(); north.setOpaque(false);
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
@@ -170,12 +170,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
     }
 
     private JComponent buildFooter() {
-        JPanel footer = new JPanel(new BorderLayout()); footer.setOpaque(false);
-        footer.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID), new EmptyBorder(Spacing.MD, 0, 0, 0)));
         summaryLabel.setFont(Typography.BODY); summaryLabel.setForeground(UIHelper.TEXT_MUTED);
-        footer.add(summaryLabel, BorderLayout.WEST);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0)); actions.setOpaque(false);
         ModernButton cancel = ButtonStyles.cancelButton();
         cancel.setIcon(UIHelper.icon("fas-times", 14)); cancel.setPreferredSize(new Dimension(120, 38)); cancel.addActionListener(e -> close());
 
@@ -187,9 +182,7 @@ public final class PrintPreviewDialog implements PrintPreviewPaperCanvas.Geometr
 
         printButton.setIcon(UIHelper.icon("fas-print", 14)); printButton.setPreferredSize(new Dimension(150, 38)); printButton.addActionListener(e -> print());
 
-        actions.add(cancel); actions.add(openInViewer); actions.add(save); actions.add(printButton);
-        footer.add(actions, BorderLayout.EAST);
-        return footer;
+        return DialogChrome.footerWithNote(summaryLabel, cancel, openInViewer, save, printButton);
     }
 
     private void installShortcuts() {

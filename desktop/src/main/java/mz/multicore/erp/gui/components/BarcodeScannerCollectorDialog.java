@@ -62,29 +62,18 @@ public class BarcodeScannerCollectorDialog {
         UIHelper.applyStandardModalBounds(dialog, 840, 600);
         dialog.setMinimumSize(new Dimension(740, 500)); dialog.setLocationRelativeTo(parent);
 
-        JPanel main = new JPanel(new BorderLayout(0, 12)); main.setOpaque(false);
-        main.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
-
-        JPanel header = new JPanel(new BorderLayout()); header.setOpaque(false);
-        JLabel titleLabel = UIHelper.createHeading("Modo Coletor — " + mode.title);
-        titleLabel.setIcon(UIHelper.icon(mode.icon, 20, UIHelper.ACCENT_BLUE));
-        JLabel tip = new JLabel("Aponte o scanner laser/óptico para o código de barras ou prima Enter");
-        tip.setFont(Typography.BODY); tip.setForeground(UIHelper.TEXT_MUTED);
-        header.add(titleLabel, BorderLayout.WEST); header.add(tip, BorderLayout.SOUTH);
-        main.add(header, BorderLayout.NORTH);
-
         JPanel center = new JPanel(new BorderLayout(0, 10)); center.setOpaque(false);
         center.add(buildScanBar(), BorderLayout.NORTH);
 
         detailsCard = new BarcodeScannerProductDetailsCard(mode, e -> executeAction());
         JPanel contentSplit = new JPanel(new GridLayout(1, 2, 12, 0)); contentSplit.setOpaque(false);
         contentSplit.add(detailsCard.getPanel()); contentSplit.add(buildHistoryCard());
-        center.add(contentSplit, BorderLayout.CENTER); main.add(center, BorderLayout.CENTER);
+        center.add(contentSplit, BorderLayout.CENTER);
 
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT)); footer.setOpaque(false);
         ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar Coletor"));
         closeBtn.addActionListener(e -> dialog.dispose());
-        footer.add(closeBtn); main.add(footer, BorderLayout.SOUTH);
+        JPanel main = DialogChrome.frame(mode.icon, "Modo Coletor — " + mode.title,
+                "Aponte o scanner laser/óptico para o código de barras ou prima Enter", center, DialogChrome.footer(closeBtn));
 
         dialog.getContentPane().add(main);
         dialog.getRootPane().registerKeyboardAction(e -> dialog.dispose(),

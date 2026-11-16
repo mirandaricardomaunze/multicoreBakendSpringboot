@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.DialogChrome;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.gui.components.ButtonStyles;
@@ -14,27 +15,6 @@ import java.awt.*;
 final class SubscriptionRenewalViewBuilder {
 
     private SubscriptionRenewalViewBuilder() {}
-
-    static JPanel buildHeader() {
-        JPanel headerPanel = new JPanel(new BorderLayout(12, 4));
-        headerPanel.setOpaque(false);
-        headerPanel.add(new JLabel(UIHelper.icon("fas-crown", 28, UIHelper.PENDING_YELLOW)), BorderLayout.WEST);
-
-        JPanel headerText = new JPanel(new GridLayout(2, 1, 0, 2));
-        headerText.setOpaque(false);
-        JLabel titleLabel = new JLabel("Activar ou Renovar Plano do Sistema");
-        titleLabel.setFont(Typography.TITLE);
-        titleLabel.setForeground(UIHelper.TEXT_LIGHT);
-
-        JLabel subtitleLabel = new JLabel("Seleccione o seu plano comercial e efectue o pagamento.");
-        subtitleLabel.setFont(Typography.BODY);
-        subtitleLabel.setForeground(UIHelper.TEXT_MUTED);
-
-        headerText.add(titleLabel);
-        headerText.add(subtitleLabel);
-        headerPanel.add(headerText, BorderLayout.CENTER);
-        return headerPanel;
-    }
 
     static ModernPanel buildTotalCard(JLabel discountBadge, JLabel totalLabel) {
         ModernPanel totalCard = new ModernPanel(12);
@@ -129,13 +109,8 @@ final class SubscriptionRenewalViewBuilder {
     }
 
     static JPanel buildFooter(Runnable onCancel, ModernButton submitBtn) {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        footer.setOpaque(false);
         ModernButton cancelBtn = ButtonStyles.cancelButton();
-        cancelBtn.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         cancelBtn.addActionListener(e -> onCancel.run());
-        footer.add(cancelBtn);
-        footer.add(submitBtn);
-        return footer;
+        return DialogChrome.footer(cancelBtn, submitBtn);
     }
 }

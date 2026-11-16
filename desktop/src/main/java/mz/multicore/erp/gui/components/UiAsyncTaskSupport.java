@@ -168,8 +168,9 @@ final class UiAsyncTaskSupport {
         // When called off the EDT the task can finish before the dialog opens; done() would then dispose
         // a dialog that is not shown yet and the modal one would stay open forever. The watchdog runs
         // inside the modal loop and closes it as soon as the task is over.
+        // It waits until the dialog is visible: closing it before it opens left the modal open forever.
         Timer watchdog = new Timer(100, e -> {
-            if (worker.isDone()) {
+            if (worker.isDone() && dialog.isVisible()) {
                 ((Timer) e.getSource()).stop();
                 dialog.dispose();
             }

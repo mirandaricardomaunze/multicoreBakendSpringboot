@@ -82,22 +82,8 @@ public class SmartAlertsDialog extends JDialog {
     }
 
     private void initComponents() {
-        JPanel root = new JPanel(new BorderLayout(0, 14));
-        root.setBackground(UIHelper.BG_DARK);
-        root.setBorder(new EmptyBorder(Spacing.LG, Spacing.XL, Spacing.LG, Spacing.XL));
-
-        // Topo
-        JPanel header = new JPanel(new BorderLayout(0, 8));
-        header.setOpaque(false);
-        JLabel title = UIHelper.createHeading("Alertas Inteligentes & Acções Proativas");
-        title.setIcon(UIHelper.icon("fas-bell", 18));
-        JLabel subtitle = new JLabel("Situações operacionais que exigem atenção com ações diretas.");
-        subtitle.setFont(Typography.BODY);
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-
-        header.add(title, BorderLayout.NORTH);
-        header.add(subtitle, BorderLayout.SOUTH);
-        root.add(header, BorderLayout.NORTH);
+        JPanel root = DialogChrome.frame("fas-bell", "Alertas Inteligentes & Acções Proativas",
+                "Situações operacionais que exigem atenção com ações diretas.", null, null);
 
         // Barra de Filtros
         JPanel filterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -135,12 +121,9 @@ public class SmartAlertsDialog extends JDialog {
         root.add(centerPanel, BorderLayout.CENTER);
 
         // Rodapé
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        footer.setOpaque(false);
         ModernButton closeBtn = ButtonStyles.secondary(UIHelper.createSecondaryButton("Fechar"));
         closeBtn.addActionListener(e -> dispose());
-        footer.add(closeBtn);
-        root.add(footer, BorderLayout.SOUTH);
+        root.add(DialogChrome.footer(closeBtn), BorderLayout.SOUTH);
 
         setContentPane(root);
     }
