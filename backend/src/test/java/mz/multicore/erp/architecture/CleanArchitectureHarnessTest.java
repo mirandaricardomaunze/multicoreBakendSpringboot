@@ -35,7 +35,7 @@ class CleanArchitectureHarnessTest {
     private static final int MAX_LINES = 600;
     /** Files already above MAX_LINES; each may not grow beyond the recorded size. */
     private static final Map<String, Integer> OVERSIZE_BASELINE = Map.of(
-            "desktop/src/main/java/mz/multicore/erp/gui/MainFrame.java", 744);
+            "desktop/src/main/java/mz/multicore/erp/gui/MainFrame.java", 715);
     /** Controllers that still map an entity themselves. Must only shrink. */
     private static final Set<String> CONTROLLER_ENTITY_BASELINE = Set.of(
             "backend/src/main/java/mz/multicore/erp/modules/audit/controller/AuditController.java -> AuditLog",

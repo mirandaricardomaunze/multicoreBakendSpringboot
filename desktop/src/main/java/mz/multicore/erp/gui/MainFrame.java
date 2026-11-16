@@ -583,7 +583,7 @@ public class MainFrame extends JFrame {
         }
 
         String role = CurrentUserContext.getRole();
-        if ("SELLER".equalsIgnoreCase(role)) return buildSellerSearchIndex();
+        if ("SELLER".equalsIgnoreCase(role)) return MainFrameSellerSearchIndex.build(this::navigate, this::handleSellerDashboardAction, this);
         if (!"MANAGER".equalsIgnoreCase(role) && !"ADMIN".equalsIgnoreCase(role)) {
             items.add(new GlobalSearchDialog.SearchItem("mod_dashboard", "Painel Inicial", "Módulos", null,
                     UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), UIHelper.MODULE_DASHBOARD,
@@ -685,38 +685,6 @@ public class MainFrame extends JFrame {
         items.add(new GlobalSearchDialog.SearchItem("act_transfer", "Transferência entre Armazéns", "Stock & Logística", null, UIHelper.icon("fas-dolly", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("stock"), List.of("transferencia", "transferir stock", "guias", "armazens", "logistica")));
         items.add(new GlobalSearchDialog.SearchItem("act_pos_cash_move", "Movimento de Caixa (Sangria / Suprimento)", "POS & Caixa", "F9", UIHelper.icon("fas-money-bill-wave", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> navigate("pos"), List.of("sangria", "suprimento", "caixa", "troco", "retirada", "reforco", "dinheiro", "gaveta")));
 
-        return items;
-    }
-
-    private List<GlobalSearchDialog.SearchItem> buildSellerSearchIndex() {
-        List<GlobalSearchDialog.SearchItem> items = new java.util.ArrayList<>();
-        items.add(new GlobalSearchDialog.SearchItem("seller_dashboard", "Painel do Vendedor", "Vendas", null,
-                UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), UIHelper.MODULE_DASHBOARD,
-                () -> navigate("dashboard"), List.of("inicio", "resumo", "vendedor")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_pos", "Nova venda no POS", "Vendas", "F9",
-                UIHelper.icon("fas-cash-register", 16, UIHelper.MODULE_POS), UIHelper.MODULE_POS,
-                () -> navigate("pos"), List.of("venda", "caixa", "pagamento")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_order", "Criar nova encomenda", "Vendas", null,
-                UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE,
-                () -> handleSellerDashboardAction("new-order"), List.of("encomenda", "pedido")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_quotation", "Criar nova cotação", "Vendas", null,
-                UIHelper.icon("fas-file-signature", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW,
-                () -> handleSellerDashboardAction("new-quotation"), List.of("cotacao", "proposta", "orcamento")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_clients", "Pesquisar clientes", "Vendas", null,
-                UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), UIHelper.MODULE_CLIENTES,
-                () -> navigate("clientes"), List.of("cliente", "contacto", "nuit")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_products", "Consultar produtos", "Vendas", null,
-                UIHelper.icon("fas-box-open", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN,
-                () -> navigate("pos"), List.of("produto", "artigo", "preco", "stock")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_crm", "CRM & Assistência", "Vendas", null,
-                UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), UIHelper.MODULE_CRM,
-                () -> navigate("crm"), List.of("crm", "assistencia", "ticket")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_notifications", "Notificações", "Sistema", null,
-                UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_ORANGE), UIHelper.ACCENT_ORANGE,
-                () -> navigate("notifications"), List.of("alertas", "avisos")));
-        items.add(new GlobalSearchDialog.SearchItem("seller_logout", "Terminar sessão", "Sistema", null,
-                UIHelper.icon("fas-sign-out-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED,
-                () -> UIHelper.requestLogout(this), List.of("logout", "sair")));
         return items;
     }
 
