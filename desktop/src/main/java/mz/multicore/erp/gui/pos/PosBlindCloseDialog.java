@@ -52,7 +52,7 @@ public class PosBlindCloseDialog extends JDialog {
         this.onCloseSuccess = onCloseSuccess;
         this.printApiClient = printApiClient;
 
-        setSize(720, 760);
+        setSize(820, 760); // a contagem de notas e moedas precisa de ~760 px sem scroll horizontal
         setMinimumSize(new Dimension(680, 680));
         setLocationRelativeTo(owner);
         String subtitle = String.format("Operador: %s  |  Sessão #%d  |  Abertura: %,.2f MT",

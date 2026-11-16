@@ -48,18 +48,11 @@ class AllScreensHeaderAuditTest {
     private static final int HEIGHT = 720;
     private static final int TOLERANCE = 2;
 
-    /** Os módulos da janela principal e os ecrãs de sector. */
-    private static final List<String> MAIN_SCREENS = List.of(
-            "ComercialPanel", "ComprasPanel", "StockPanel", "FinanceiroPanel", "HRPanel", "CRMPanel",
-            "ClientesPanel", "FiscalPanel", "accounting.AccountingPanel", "AssetsPanel", "ManufacturingPanel",
-            "FleetPanel", "RecurringContractsPanel", "QualityPanel", "ApprovalsPanel", "ConfigPanel",
-            "PerformancePanel", "ForensicAuditPanel", "PlataformaPanel");
-
     @Test
     @DisplayName("ECR-11: em todos os ecrãs os cabeçalhos de tabela estão alinhados e nada é esmagado ou cortado")
     void ecr11_everyHeaderInEveryScreenIsAligned() throws Exception {
-        List<String> screens = new ArrayList<>(MAIN_SCREENS);
-        screens.addAll(sectorScreens());
+        List<String> screens = new ArrayList<>(ScreenFactory.MAIN_SCREENS);
+        screens.addAll(ScreenFactory.sectorScreens());
         Map<String, String> notBuilt = new LinkedHashMap<>();
         List<String> problems = new ArrayList<>();
         List<String> audited = new ArrayList<>();
@@ -69,9 +62,9 @@ class AllScreensHeaderAuditTest {
             SwingUtilities.invokeAndWait(() -> {
                 JComponent screen;
                 try {
-                    screen = build("mz.multicore.erp.gui." + name);
+                    screen = ScreenFactory.buildScreen("mz.multicore.erp.gui." + name);
                 } catch (Throwable e) {
-                    notBuilt.put(name, rootMessage(e));
+                    notBuilt.put(name, ScreenFactory.rootMessage(e));
                     return;
                 }
                 try {
@@ -86,7 +79,7 @@ class AllScreensHeaderAuditTest {
                         });
                     }
                 } catch (Throwable e) {
-                    notBuilt.put(name + " (a percorrer)", rootMessage(e));
+                    notBuilt.put(name + " (a percorrer)", ScreenFactory.rootMessage(e));
                     return;
                 }
                 audited.add(name);
@@ -101,7 +94,7 @@ class AllScreensHeaderAuditTest {
         Files.writeString(Path.of("target", "all-screens-header-audit.txt"), report);
         System.out.println(report);
 
-        assertThat(audited).as("ecrãs auditados").hasSizeGreaterThanOrEqualTo(MAIN_SCREENS.size() - 2);
+        assertThat(audited).as("ecrãs auditados").hasSizeGreaterThanOrEqualTo(ScreenFactory.MAIN_SCREENS.size() - 2);
         assertThat(problems).as(report).isEmpty();
     }
 
@@ -193,7 +186,7 @@ class AllScreensHeaderAuditTest {
     /** Lays the screen out at the width, then selects every tab of every tab pane, one level at a time. */
     private static void visitAllTabs(JComponent screen, int width, Runnable onEachState) {
         screen.setSize(width, HEIGHT);
-        layoutTwice(screen);
+        ScreenFactory.layoutTwice(screen);
         onEachState.run();
         visitTabsBelow(screen, screen, onEachState);
     }
@@ -209,7 +202,7 @@ class AllScreensHeaderAuditTest {
                     // A listener reacted with simulated clients (no session); the tab is still selected.
                 }
                 if (tabs.getSelectedIndex() != i) continue;
-                layoutTwice(screen);
+                ScreenFactory.layoutTwice(screen);
                 onEachState.run();
                 if (tabs.getComponentAt(i) instanceof Container page) visitTabsBelow(screen, page, onEachState);
             }
@@ -231,80 +224,10 @@ class AllScreensHeaderAuditTest {
         return out;
     }
 
-    /** Two passes: the table header decides one or two rows only once it knows its width. */
-    private static void layoutTwice(Container root) {
-        layoutTree(root);
-        layoutTree(root);
-    }
-
-    private static void layoutTree(Container root) {
-        root.doLayout();
-        for (Component child : root.getComponents()) {
-            if (child instanceof Container c && c.isVisible()) layoutTree(c);
-        }
-    }
-
-    // ── construir ecrãs com clientes simulados ───────────────────────────────────────────────
-
-    private static JComponent build(String className) throws Exception {
-        Class<?> type = Class.forName(className);
-        Constructor<?> constructor = Arrays.stream(type.getDeclaredConstructors())
-                .filter(c -> !Modifier.isPrivate(c.getModifiers()))
-                .max(Comparator.comparingInt(Constructor::getParameterCount))
-                .orElseThrow();
-        constructor.setAccessible(true);
-        Object[] args = Arrays.stream(constructor.getParameterTypes()).map(AllScreensHeaderAuditTest::fake).toArray();
-        return (JComponent) constructor.newInstance(args);
-    }
-
-    private static Object fake(Class<?> type) {
-        if (type == boolean.class) return false;
-        if (type == int.class) return 0;
-        if (type == long.class) return 0L;
-        if (type == double.class) return 0d;
-        if (type == String.class) return "";
-        if (type == Runnable.class) return (Runnable) () -> { };
-        if (type == java.util.function.Consumer.class) return (java.util.function.Consumer<Object>) x -> { };
-        if (type == Supplier.class) return (Supplier<Object>) () -> null;
-        if (type == BooleanSupplier.class) return (BooleanSupplier) () -> false;
-        if (type == IntSupplier.class) return (IntSupplier) () -> 0;
-        if (type == List.class) return List.of();
-        try {
-            return mock(type);
-        } catch (RuntimeException e) {
-            return null;
-        }
-    }
-
-    private static List<String> sectorScreens() throws IOException {
-        Path dir = Path.of("src/main/java/mz/multicore/erp/gui/sector");
-        try (Stream<Path> files = Files.list(dir)) {
-            return files.filter(f -> f.toString().endsWith("Panel.java"))
-                    .filter(f -> read(f).contains("ResponsiveSupport.cardTop(") && read(f).contains("extends JPanel"))
-                    .map(f -> "sector." + f.getFileName().toString().replace(".java", ""))
-                    .sorted()
-                    .toList();
-        }
-    }
-
-    private static String read(Path p) {
-        try {
-            return Files.readString(p);
-        } catch (IOException e) {
-            return "";
-        }
-    }
-
-    private static String rootMessage(Throwable e) {
-        Throwable t = e;
-        while (t.getCause() != null) t = t.getCause();
-        return t.getClass().getSimpleName() + (t.getMessage() == null ? "" : ": " + t.getMessage().lines().findFirst().orElse(""));
-    }
-
     private static void snapshot(JComponent screen, String name) {
         try {
             screen.setSize(1270, HEIGHT);
-            layoutTwice(screen);
+            ScreenFactory.layoutTwice(screen);
             BufferedImage image = new BufferedImage(1270, HEIGHT, BufferedImage.TYPE_INT_RGB);
             Graphics2D g = image.createGraphics();
             screen.paint(g);

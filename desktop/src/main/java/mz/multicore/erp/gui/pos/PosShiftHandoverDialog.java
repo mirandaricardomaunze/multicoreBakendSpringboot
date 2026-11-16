@@ -44,7 +44,7 @@ public class PosShiftHandoverDialog extends JDialog {
         this.session = session;
         this.onSuccess = onSuccess;
 
-        setSize(720, 760);
+        setSize(820, 760); // a contagem de notas e moedas precisa de ~760 px sem scroll horizontal
         setMinimumSize(new Dimension(680, 680));
         setLocationRelativeTo(owner);
         String effectiveOp = session.currentOperator() != null ? session.currentOperator() : session.operator();
@@ -82,7 +82,7 @@ public class PosShiftHandoverDialog extends JDialog {
         panel.setAlignmentX(Component.LEFT_ALIGNMENT); panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
         JLabel lblOp = new JLabel("Operador Seguinte (username):");
-        lblOp.setFont(Typography.EMPHASIS_BOLD); lblOp.setForeground(Color.WHITE);
+        lblOp.setFont(Typography.EMPHASIS_BOLD); lblOp.setForeground(UIHelper.TEXT_LIGHT);
 
         incomingOperatorField = new JTextField(); UIHelper.styleTextField(incomingOperatorField);
         incomingOperatorField.setFont(Typography.EMPHASIS);

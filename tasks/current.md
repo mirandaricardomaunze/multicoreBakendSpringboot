@@ -1,7 +1,7 @@
 # Tarefa actual
 
 Estado: **estabilização para produção**
-Actualizado em: 2026-11-01
+Actualizado em: 2026-11-16
 Histórico: [até 2026-10-31](archive/current-history-through-2026-10-31.md) ·
 [até 2026-10-10](archive/current-history-through-2026-10-10.md)
 
@@ -87,6 +87,18 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
     SPEC `docs/MENSAGENS_ERRO_SPEC.md`, `UserErrorsHarnessTest`.
 48. **Teclado nos diálogos (2026-11-15):** Alt+letra automático e único por diálogo; tooltip como nome acessível.
     SPEC `docs/TECLADO_ACESSIBILIDADE_SPEC.md`, `KeyboardAccessHarnessTest`.
+49. **Diálogos uniformes (2026-11-15):** moldura única `DialogChrome` (cabeçalho comum, rodapé à direita, verde em
+    último); botões com papel `ButtonStyles.main/secondary/destructive`; Enter = botão verde, Esc = fechar
+    (`DialogKeys`, nunca Enter numa acção destrutiva); nenhum diálogo maior do que o ecrã (`fitOnScreen`).
+    SPEC `docs/TABELAS_CONSISTENCIA_SPEC.md` regras 10, 11, 13 e 14; `DialogButtonsHarnessTest`, `DialogFitHarnessTest`,
+    `DialogChromeHarnessTest`.
+50. **Separadores com nome curto e "Mais" inteiro (2026-11-14):** `TabShortNames` só muda o que se desenha
+    (`getTitleAt` fica com o nome completo); "Mais" com 30 px e barra que pára no início de um separador.
+    SPEC `docs/SEPARADORES_SPEC.md` (TAB-07 a TAB-10).
+51. **Valores e datas nas células (2026-11-14):** `UiTableCellStyler.formatValue` formata negativos e sinal, alinha
+    `un`/`kg` à direita e mostra datas ISO como dd/MM/yyyy. Regra 12, `TableValuesFormatHarnessTest`.
+52. **Galeria visual (2026-11-16):** `VisualGalleryTest` (só com `-Dgallery=true`) guarda uma imagem de cada ecrã,
+    separador e diálogo nos três temas, para rever o sistema inteiro sem clicar. SPEC `docs/GALERIA_VISUAL_SPEC.md`.
 
 35. **Painel Executivo com Tema e Modais Próprios:**
     - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.

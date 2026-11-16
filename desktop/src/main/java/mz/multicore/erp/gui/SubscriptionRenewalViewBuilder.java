@@ -76,6 +76,8 @@ final class SubscriptionRenewalViewBuilder {
 
         mobileCard.add(phonePrompt, BorderLayout.NORTH);
         mobileCard.add(phoneField, BorderLayout.CENTER);
+        // In the dialog's vertical box the card would stretch and make the field ~80 px tall.
+        mobileCard.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, mobileCard.getPreferredSize().height));
         return mobileCard;
     }
 
