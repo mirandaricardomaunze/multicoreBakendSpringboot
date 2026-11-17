@@ -44,6 +44,29 @@ public class ProductCategoryService {
         return toDTO(repository.save(c));
     }
 
+    /**
+     * Makes the category available to the company without failing when it already is: links the shared
+     * category with that code, or creates it. Used to seed the categories of an activity profile (SA-C01).
+     *
+     * @return true when the company gained the category, false when it already had it
+     */
+    @Transactional
+    public boolean ensureForCompany(Long companyId, String code, String name, String colorHex) {
+        if (repository.findByCodeAndCompaniesId(code, companyId).isPresent()) return false;
+        ProductCategory category = repository.findByCode(code).orElseGet(() -> {
+            ProductCategory c = new ProductCategory();
+            c.setCode(code);
+            c.setName(name);
+            c.setColorHex(colorHex);
+            c.setActive(true);
+            c.setCreatedBy("SYSTEM");
+            return c;
+        });
+        category.getCompanies().add(companyService.getCurrentCompanyReference(companyId));
+        repository.save(category);
+        return true;
+    }
+
     @Transactional
     public ProductCategoryDTO update(Long id, CreateProductCategoryRequest req) {
         ProductCategory c = repository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())

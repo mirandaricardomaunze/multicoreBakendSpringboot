@@ -20,6 +20,8 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
   aprovada em 2026-11-08. F1 feita (perfil de actividade, unidades de medida, tabelas de preço; V112),
   ainda por rever visualmente no desktop. F2 em curso: material por levantar (talão LV, V120) e granel por
   medição (V121) feitos; faltam unidade nas linhas, obras, frete, adiantamentos e contingência das guias.
+  SA-C01 fechado em 2026-11-17: o perfil esconde menus e funcionalidades, o servidor recusa trabalho novo
+  fora do perfil (`ActivityCapabilityPolicy`) e cada perfil novo traz as suas categorias.
 - Registo profissional de empresas pelo superadmin em `docs/EMPRESA_CADASTRO_PROFISSIONAL_SPEC.md`:
   perfil legal/fiscal/morada (V113), registo atómico com administrador, assinatura e banco, assistente
   em passos. Corrigido o registo de empresa partido desde `513a0ad`. Falta a verificação ao vivo (CP-50..54).
