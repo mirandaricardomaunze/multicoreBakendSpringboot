@@ -22,7 +22,7 @@ class HRContractsPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("HRContractsPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 175,
-                () -> "HRContractsPanel.java deve possuir <= 175 linhas. Atual: " + lines.size());
+                () -> "HRContractsPanel.java deve possuir <= 175 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -31,12 +31,12 @@ class HRContractsPanelDecompositionHarnessTest {
         Path formDialog = ROOT.resolve("HrContractFormDialog.java");
         List<String> formLines = Files.readAllLines(formDialog);
         assertTrue(formLines.size() <= 140,
-                () -> "HrContractFormDialog.java deve possuir <= 140 linhas. Atual: " + formLines.size());
+                () -> "HrContractFormDialog.java deve possuir <= 140 linhas. Actual: " + formLines.size());
 
         Path coord = ROOT.resolve("HRContractsOperationsCoordinator.java");
         List<String> coordLines = Files.readAllLines(coord);
         assertTrue(coordLines.size() <= 80,
-                () -> "HRContractsOperationsCoordinator.java deve possuir <= 80 linhas. Atual: " + coordLines.size());
+                () -> "HRContractsOperationsCoordinator.java deve possuir <= 80 linhas. Actual: " + coordLines.size());
     }
 
     @Test

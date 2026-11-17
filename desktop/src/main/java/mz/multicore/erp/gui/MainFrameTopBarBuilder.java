@@ -67,8 +67,8 @@ final class MainFrameTopBarBuilder {
     private JComponent buildThemeToggle() {
         String code = UIHelper.isHighContrast() ? "fas-adjust" : (UIHelper.isLight() ? "fas-moon" : "fas-sun");
         String tip = UIHelper.isHighContrast()
-                ? "Mudar para Tema Escuro (Atual: Alto Contraste)"
-                : (UIHelper.isLight() ? "Mudar para Alto Contraste (Atual: Claro)" : "Mudar para Tema Claro (Atual: Escuro)");
+                ? "Mudar para Tema Escuro (Actual: Alto Contraste)"
+                : (UIHelper.isLight() ? "Mudar para Alto Contraste (Actual: Claro)" : "Mudar para Tema Claro (Actual: Escuro)");
         JLabel toggle = new JLabel(UIHelper.icon(code, 18, UIHelper.TEXT_MUTED));
         toggle.setToolTipText(tip);
         toggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));

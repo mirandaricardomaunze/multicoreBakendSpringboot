@@ -228,7 +228,7 @@ class TableStatusPtMzHarnessTest {
         c3.setPreferredSize(new Dimension(150, 36));
         javax.swing.JComboBox<String> c4 = new javax.swing.JComboBox<>(new String[]{"Opção 3"});
         c4.setPreferredSize(new Dimension(150, 36));
-        javax.swing.JButton c5 = new javax.swing.JButton("Ação");
+        javax.swing.JButton c5 = new javax.swing.JButton("Acção");
         c5.setPreferredSize(new Dimension(100, 36));
 
         JPanel bar = TableFilter.bar(c1, c2, c3, c4, c5);

@@ -77,7 +77,7 @@ class StrategicPulseWidgetTest {
         widget.applyData(null, forecast, null, null);
 
         assertTrue(widget.getLiquidityValLabel().getText().contains("600"),
-                "Deverá conter o saldo projetado formatado");
+                "Deverá conter o saldo projectado formatado");
     }
 
     @Test

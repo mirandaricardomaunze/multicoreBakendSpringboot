@@ -78,7 +78,7 @@ public class PayrollTaxService {
     private PayrollTaxConfig applicableConfig(Long companyId, LocalDate date) {
         return configRepository.findApplicable(companyId, date).stream().findFirst()
                 .orElseThrow(() -> new BusinessRuleException(
-                        "Não existe configuração fiscal salarial ativa para " + date.getMonthValue() + "/" + date.getYear() + "."));
+                        "Não existe configuração fiscal salarial activa para " + date.getMonthValue() + "/" + date.getYear() + "."));
     }
 
     private BigDecimal gross(Payslip p) {

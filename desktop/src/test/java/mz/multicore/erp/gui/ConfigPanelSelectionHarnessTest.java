@@ -61,6 +61,6 @@ class ConfigPanelSelectionHarnessTest {
 
         assertNotNull(configPanel);
         assertDoesNotThrow(configPanel::onPanelSelected,
-                "onPanelSelected() não deve lançar NullPointerException ao selecionar o painel no sidebar");
+                "onPanelSelected() não deve lançar NullPointerException ao seleccionar o painel no sidebar");
     }
 }

@@ -62,7 +62,7 @@ public class StockTransferValidator {
     public void requireDraft(StockTransfer transfer, String operation) {
         if (transfer.getStatus() != TransferStatus.DRAFT) {
             throw new BusinessRuleException("Apenas guias em rascunho podem ser " + operation
-                    + ". Estado atual: " + transfer.getStatus().getLabel());
+                    + ". Estado actual: " + transfer.getStatus().getLabel());
         }
     }
 

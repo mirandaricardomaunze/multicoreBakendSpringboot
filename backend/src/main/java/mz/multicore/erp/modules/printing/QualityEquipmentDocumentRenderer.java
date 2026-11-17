@@ -39,7 +39,7 @@ public class QualityEquipmentDocumentRenderer {
         document.add(buildEmployeeInfoTable(employee));
         document.add(PdfDocumentBuilder.spacer(10f));
 
-        document.add(buildSectionTitle("2. ESPECIFICAÇÕES DO EQUIPAMENTO DE PROTEÇÃO / TRABALHO"));
+        document.add(buildSectionTitle("2. ESPECIFICAÇÕES DO EQUIPAMENTO DE PROTECÇÃO / TRABALHO"));
         document.add(PdfDocumentBuilder.spacer(4f));
         document.add(buildEquipmentTable(equipment, a));
         document.add(PdfDocumentBuilder.spacer(10f));
@@ -120,11 +120,11 @@ public class QualityEquipmentDocumentRenderer {
 
     private Paragraph buildTermsText() {
         String text = "Pelo presente termo, o(a) colaborador(a) acima identificado(a) declara ter recebido da entidade empregadora, "
-                + "a título de fornecimento de serviço, o(s) Equipamento(s) de Proteção Individual (EPI) e ferramentas acima discriminado(s), "
+                + "a título de fornecimento de serviço, o(s) Equipamento(s) de Protecção Individual (EPI) e ferramentas acima discriminado(s), "
                 + "em perfeito estado de uso e conservação, assumindo expressamente a obrigação de:\n"
                 + "a) Fazer uso obrigatório do(s) equipamento(s) estritamente durante a jornada de trabalho e de acordo com as normas de HST;\n"
                 + "b) Responsabilizar-se pela sua guarda, higienização e manutenção preventiva diária;\n"
-                + "c) Comunicar imediatamente ao setor de Qualidade / HST qualquer avaria, extravio, dano ou desgaste excessivo;\n"
+                + "c) Comunicar imediatamente ao sector de Qualidade / HST qualquer avaria, extravio, dano ou desgaste excessivo;\n"
                 + "d) Proceder à sua substituição dentro do prazo de validade estipulado ou devolver ao final do vínculo de utilização.";
         Paragraph p = new Paragraph(text, PdfTheme.bodyFont());
         p.setLeading(14f);

@@ -85,7 +85,7 @@ public final class CustomerCreditValidator {
             return new CreditAssessment(
                     CreditCheckStatus.BLOCKED_LIMIT_EXCEEDED,
                     creditLimit, debt, available,
-                    String.format("Limite de crédito excedido. Limite: %,.2f MT | Dívida atual: %,.2f MT | Disponível: %,.2f MT | Requerido: %,.2f MT.",
+                    String.format("Limite de crédito excedido. Limite: %,.2f MT | Dívida actual: %,.2f MT | Disponível: %,.2f MT | Requerido: %,.2f MT.",
                             creditLimit, debt, available, amount)
             );
         }
@@ -107,7 +107,7 @@ public final class CustomerCreditValidator {
             return new CreditAssessment(
                     CreditCheckStatus.NO_CREDIT_ALLOWED,
                     BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                    "Vendas a crédito exigem a seleção de um cliente cadastrado."
+                    "Vendas a crédito exigem a selecção de um cliente cadastrado."
             );
         }
         if (client.creditLimit() != null && client.creditLimit().compareTo(BigDecimal.ZERO) <= 0) {

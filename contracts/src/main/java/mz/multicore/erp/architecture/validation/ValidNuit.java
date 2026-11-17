@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.CONSTRUCTOR, ElementType.PARAMETER, ElementType.RECORD_COMPONENT, ElementType.TYPE_USE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidNuit {
-    String message() default "NUIT moçambicano inválido (deve conter exatamente 9 algarismos numéricos).";
+    String message() default "NUIT moçambicano inválido (deve conter exactamente 9 algarismos numéricos).";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 

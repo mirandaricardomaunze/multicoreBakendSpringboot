@@ -131,7 +131,7 @@ final class QuotationEditorHeaderForm {
 
     HeaderValues validateHeader() {
         int wh = warehouseCombo.getSelectedIndex();
-        if (wh < 0 || wh >= warehouses.size()) throw new RuntimeException("Selecione o armazém.");
+        if (wh < 0 || wh >= warehouses.size()) throw new RuntimeException("Seleccione o armazém.");
         int validity;
         try {
             validity = validityField.value().intValueExact();

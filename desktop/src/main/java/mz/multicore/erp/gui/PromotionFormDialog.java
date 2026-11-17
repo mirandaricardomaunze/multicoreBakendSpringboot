@@ -93,9 +93,9 @@ final class PromotionFormDialog {
             ProductDTO selectedProduct = productCombo.selectedProduct();
             int categoryIndex = categoryCombo.getSelectedIndex();
             if (byProduct && selectedProduct == null)
-                throw new IllegalArgumentException("Selecione um produto.");
+                throw new IllegalArgumentException("Seleccione um produto.");
             if (!byProduct && (categoryIndex < 0 || categoryIndex >= categories.size()))
-                throw new IllegalArgumentException("Selecione uma categoria.");
+                throw new IllegalArgumentException("Seleccione uma categoria.");
             BigDecimal percentValue = percent ? percentField.value() : null;
             Integer buy = percent ? null : buyField.value().intValueExact();
             Integer pay = percent ? null : payField.value().intValueExact();

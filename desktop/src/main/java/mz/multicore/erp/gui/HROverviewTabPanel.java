@@ -33,7 +33,7 @@ final class HROverviewTabPanel {
 
         JLabel ovActiveEmployees = KpiCard.valueLabel("0");
         JLabel ovActiveEmployeesSub = HROverviewUi.subtitle("");
-        grid.add(KpiCard.create("COLABORADORES ATIVOS", "fas-users", UIHelper.KPI_INFO_SOFT,
+        grid.add(KpiCard.create("COLABORADORES ACTIVOS", "fas-users", UIHelper.KPI_INFO_SOFT,
                 ovActiveEmployees, ovActiveEmployeesSub, UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END));
 
         JLabel ovPayrollNet = KpiCard.valueLabel("0,00 MT");

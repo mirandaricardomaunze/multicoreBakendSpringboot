@@ -167,7 +167,7 @@ class RateLimitingAndBruteForceHarnessTest {
         // 3ª tentativa falhada -> Activa o bloqueio
         UserSecurityRequestsDTOs.VerifyManagerPinResponse res3 = appUserService.verifyManagerPin("3333", clientIp);
         assertFalse(res3.approved());
-        assertTrue(res3.message().contains("Demasiadas tentativas de PIN incorreto"));
+        assertTrue(res3.message().contains("Demasiadas tentativas de PIN incorrecto"));
         assertTrue(managerPinRateLimiter.isLocked(companyId, clientIp));
 
         // 4ª tentativa: mesmo se o utilizador digitasse um PIN correto ou qualquer valor, é bloqueado de imediato

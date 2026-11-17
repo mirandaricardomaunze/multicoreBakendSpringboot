@@ -195,7 +195,7 @@ class QuotationConversionHarnessTest {
     }
 
     @Test
-    @DisplayName("CONV-01: Conversão direta de cotação em fatura comercial com preços acordados")
+    @DisplayName("CONV-01: Conversão directa de cotação em fatura comercial com preços acordados")
     void testConvertToInvoice_Success() {
         BigDecimal quotedPrice = new BigDecimal("850.00");
         Quotation quotation = createTestQuotation(QuotationStatus.ACCEPTED, 10, quotedPrice);

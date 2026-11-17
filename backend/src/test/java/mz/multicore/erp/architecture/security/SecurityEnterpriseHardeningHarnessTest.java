@@ -167,7 +167,7 @@ class SecurityEnterpriseHardeningHarnessTest {
     }
 
     @Test
-    @DisplayName("SEC-HARD-08: AppUserService.toggleUserStatus(false) desativa e revoga imediatamente as sessões do utilizador")
+    @DisplayName("SEC-HARD-08: AppUserService.toggleUserStatus(false) desactiva e revoga imediatamente as sessões do utilizador")
     void testToggleUserStatusRevokesSessions() {
         AppUser user = new AppUser();
         user.setUsername("operador");
@@ -186,7 +186,7 @@ class SecurityEnterpriseHardeningHarnessTest {
     }
 
     @Test
-    @DisplayName("SEC-HARD-09: AppUserService.updateCompanyRole revoga sessões ativas quando o perfil na empresa muda")
+    @DisplayName("SEC-HARD-09: AppUserService.updateCompanyRole revoga sessões activas quando o perfil na empresa muda")
     void testUpdateCompanyRoleRevokesSessionsOnChange() {
         AppUser user = new AppUser();
         user.setUsername("gerente");

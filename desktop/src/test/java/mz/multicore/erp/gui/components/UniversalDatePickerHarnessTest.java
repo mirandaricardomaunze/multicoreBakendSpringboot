@@ -88,8 +88,8 @@ class UniversalDatePickerHarnessTest {
 
             assertEquals(expectedDate.toString(), field.getText(),
                     "O campo de data deve ser preenchido estritamente no formato ISO AAAA-MM-DD");
-            assertEquals(expectedDate, field.value(), "O valor do campo deve ser resolvido sem exceção");
-            assertFalse(popup.isVisible(), "O popup de calendário deve fechar após a seleção");
+            assertEquals(expectedDate, field.value(), "O valor do campo deve ser resolvido sem excepção");
+            assertFalse(popup.isVisible(), "O popup de calendário deve fechar após a selecção");
         });
     }
 

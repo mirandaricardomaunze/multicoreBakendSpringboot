@@ -68,7 +68,7 @@ public class PhysicalInventoryPanelHarnessTest {
         assertNotNull(card, "O card da tabela deve existir");
         BorderLayout cardLayout = (BorderLayout) card.getLayout();
         java.awt.Component top = cardLayout.getLayoutComponent(BorderLayout.NORTH);
-        assertTrue(top instanceof java.awt.Container, "O topo do card deve conter filtros e ações");
+        assertTrue(top instanceof java.awt.Container, "O topo do card deve conter filtros e acções");
         java.awt.Container topContainer = (java.awt.Container) top;
         // Cabeçalho numa só fila: as acções ficam no EAST do próprio topo.
         java.awt.Container actions = (java.awt.Container) ((BorderLayout) topContainer.getLayout()).getLayoutComponent(BorderLayout.EAST);
@@ -81,8 +81,8 @@ public class PhysicalInventoryPanelHarnessTest {
                 .filter(button -> !"Actualizar".equals(button.getText())).count();
 
         assertTrue(buttonCount <= 3,
-                "A barra de ações do cabeçalho deve ter no máximo 3 botões visíveis além do Actualizar, mas tem: " + buttonCount);
-        assertTrue(hasActionMenu, "As ações do ciclo da sessão devem estar agrupadas em ActionMenuButton");
+                "A barra de acções do cabeçalho deve ter no máximo 3 botões visíveis além do Actualizar, mas tem: " + buttonCount);
+        assertTrue(hasActionMenu, "As acções do ciclo da sessão devem estar agrupadas em ActionMenuButton");
     }
 
     private static void collectButtons(java.awt.Container root,

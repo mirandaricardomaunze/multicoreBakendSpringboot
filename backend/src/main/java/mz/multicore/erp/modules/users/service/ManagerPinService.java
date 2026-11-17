@@ -20,7 +20,7 @@ import java.util.List;
 @Service
 public class ManagerPinService {
 
-    private static final String LOCKED_PREFIX = "Demasiadas tentativas de PIN incorreto. Bloqueado por ";
+    private static final String LOCKED_PREFIX = "Demasiadas tentativas de PIN incorrecto. Bloqueado por ";
     private static final String LOCKED_SUFFIX = " minuto(s) para protecção de segurança.";
 
     private final AppUserRepository appUserRepository;
@@ -43,7 +43,7 @@ public class ManagerPinService {
         UserAdminGuard.requireAdmin();
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         if (pin == null || pin.trim().length() != 4 || !pin.trim().matches("\\d{4}")) {
-            throw new BusinessRuleException("O PIN de gestor deve conter exatamente 4 dígitos numéricos.");
+            throw new BusinessRuleException("O PIN de gestor deve conter exactamente 4 dígitos numéricos.");
         }
         AppUser user = appUserRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
@@ -54,7 +54,7 @@ public class ManagerPinService {
         appUserRepository.save(user);
         if (auditLogService != null) {
             auditLogService.logCurrent("USER_PIN_SET",
-                    "Definido/atualizado PIN de gestor para utilizador " + username);
+                    "Definido/actualizado PIN de gestor para utilizador " + username);
         }
     }
 
@@ -94,7 +94,7 @@ public class ManagerPinService {
         if (remaining > 0) {
             return locked(remaining);
         }
-        return new VerifyManagerPinResponse(false, null, "PIN de gestor incorreto ou sem privilégios.");
+        return new VerifyManagerPinResponse(false, null, "PIN de gestor incorrecto ou sem privilégios.");
     }
 
     private static VerifyManagerPinResponse locked(long remainingMinutes) {

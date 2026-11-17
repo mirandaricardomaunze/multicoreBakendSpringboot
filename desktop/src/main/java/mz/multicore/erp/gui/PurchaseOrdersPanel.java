@@ -306,7 +306,7 @@ final class PurchaseOrdersPanel {
         stopPoCellEditing();
         int supIdx = owner.poSupplierCombo.getSelectedIndex(), whIdx = owner.poWarehouseCombo.getSelectedIndex();
         if (supIdx < 0 || supIdx >= owner.supplierComboList.size() || whIdx < 0 || whIdx >= owner.warehousesList.size()) {
-            throw new RuntimeException("Selecione fornecedor e armazém.");
+            throw new RuntimeException("Seleccione fornecedor e armazém.");
         }
         if (owner.poDraftLines.isEmpty()) throw new RuntimeException("Adicione pelo menos uma linha.");
         for (int row = 0; row < owner.poDraftLines.size(); row++) {

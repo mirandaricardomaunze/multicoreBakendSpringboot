@@ -331,10 +331,10 @@ final class CommercialOrdersView {
             convertMenu.setActionEnabled(3, row >= 0);
             convertMenu.setActionEnabled(4, sale);
 
-            convertMenu.setToolTipText(sale ? "Criar uma Guia de Remessa a partir da encomenda selecionada."
+            convertMenu.setToolTipText(sale ? "Criar uma Guia de Remessa a partir da encomenda seleccionada."
                     : replenishment ? "Criar a transferência entre armazéns que cumpre esta reposição."
-                    : kind == null ? "Selecione uma encomenda na tabela."
-                    : "Opções de conversão para a encomenda selecionada.");
+                    : kind == null ? "Seleccione uma encomenda na tabela."
+                    : "Opções de conversão para a encomenda seleccionada.");
         };
         owner.ordersTable.getSelectionModel()
                 .addListSelectionListener(e -> syncOrderActions.run());

@@ -42,13 +42,13 @@ public class SupplierDetailDialog {
 
         // KPIs
         String phoneStr = supplier.phone() != null && !supplier.phone().isBlank() ? supplier.phone() : "Sem telefone";
-        dialog.addKpi("Linha Direta", phoneStr, "Telefone / Central", UIHelper.APPROVED_GREEN, "fas-phone-alt");
+        dialog.addKpi("Linha Directa", phoneStr, "Telefone / Central", UIHelper.APPROVED_GREEN, "fas-phone-alt");
 
         String contactStr = supplier.contactPerson() != null && !supplier.contactPerson().isBlank() ? supplier.contactPerson() : "Geral";
         dialog.addKpi("Pessoa de Contacto", contactStr, "Representante comercial", UIHelper.ACCENT_BLUE, "fas-user-tie");
 
         String emailStr = supplier.email() != null && !supplier.email().isBlank() ? supplier.email() : "Não registado";
-        dialog.addKpi("Correio Eletrónico", emailStr, "Comunicação oficial", UIHelper.ACCENT_CYAN, "fas-envelope");
+        dialog.addKpi("Correio Electrónico", emailStr, "Comunicação oficial", UIHelper.ACCENT_CYAN, "fas-envelope");
 
         String idStr = "FORN-" + supplier.id();
         dialog.addKpi("Identificador", idStr, "Registo de Compras", UIHelper.ACCENT_ORANGE, "fas-hashtag");
@@ -86,7 +86,7 @@ public class SupplierDetailDialog {
         items.add(new RecordDetailsDialog.PropertyItem("Razão Social / Entidade", supplier.name()));
         items.add(new RecordDetailsDialog.PropertyItem("NUIT / NIF", supplier.taxId() != null ? supplier.taxId() : "—"));
         items.add(new RecordDetailsDialog.PropertyItem("Pessoa de Contacto", supplier.contactPerson() != null && !supplier.contactPerson().isBlank() ? supplier.contactPerson() : "Departamento Comercial"));
-        items.add(new RecordDetailsDialog.PropertyItem("Estado do Fornecedor", supplier.active() ? "Habilitado para Compras" : "Bloqueado / Inativo"));
+        items.add(new RecordDetailsDialog.PropertyItem("Estado do Fornecedor", supplier.active() ? "Habilitado para Compras" : "Bloqueado / Inactivo"));
         items.add(new RecordDetailsDialog.PropertyItem("Identificador Único", "#" + supplier.id()));
         return RecordDetailsDialog.buildPropertySheet(items);
     }

@@ -23,7 +23,7 @@ class ForensicAuditPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("ForensicAuditPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 280,
-                () -> "ForensicAuditPanel.java deve possuir <= 280 linhas. Atual: " + lines.size());
+                () -> "ForensicAuditPanel.java deve possuir <= 280 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -32,17 +32,17 @@ class ForensicAuditPanelDecompositionHarnessTest {
         Path dialog = ROOT.resolve("ForensicAnomalyDetailsDialog.java");
         List<String> dialogLines = Files.readAllLines(dialog);
         assertTrue(dialogLines.size() <= 75,
-                () -> "ForensicAnomalyDetailsDialog.java deve possuir <= 75 linhas. Atual: " + dialogLines.size());
+                () -> "ForensicAnomalyDetailsDialog.java deve possuir <= 75 linhas. Actual: " + dialogLines.size());
 
         Path coord = ROOT.resolve("ForensicAuditOperationsCoordinator.java");
         List<String> coordLines = Files.readAllLines(coord);
         assertTrue(coordLines.size() <= 115,
-                () -> "ForensicAuditOperationsCoordinator.java deve possuir <= 115 linhas. Atual: " + coordLines.size());
+                () -> "ForensicAuditOperationsCoordinator.java deve possuir <= 115 linhas. Actual: " + coordLines.size());
 
         Path renderer = ROOT.resolve("ForensicCellRenderer.java");
         List<String> rendererLines = Files.readAllLines(renderer);
         assertTrue(rendererLines.size() <= 50,
-                () -> "ForensicCellRenderer.java deve possuir <= 50 linhas. Atual: " + rendererLines.size());
+                () -> "ForensicCellRenderer.java deve possuir <= 50 linhas. Actual: " + rendererLines.size());
     }
 
     @Test
@@ -77,7 +77,7 @@ class ForensicAuditPanelDecompositionHarnessTest {
             assertFalse(line.contains("new Color("),
                     "Linha " + (i + 1) + " não pode instanciar new Color(...). Use tokens do UIHelper: " + line);
             assertFalse(line.toLowerCase().contains("atualizar"),
-                    "Linha " + (i + 1) + " não pode usar a palavra proibida 'atualizar'. Em Moçambique deve ser 'Actualizar': " + line);
+                    "Linha " + (i + 1) + " não pode usar a palavra proibida 'actualizar'. Em Moçambique deve ser 'Actualizar': " + line);
         }
     }
 

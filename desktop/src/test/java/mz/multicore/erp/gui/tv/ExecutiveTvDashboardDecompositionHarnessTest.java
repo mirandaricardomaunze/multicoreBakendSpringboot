@@ -56,7 +56,7 @@ class ExecutiveTvDashboardDecompositionHarnessTest {
     void testZeroJOptionPaneUsage() throws IOException {
         File dir = new File(TV_PACKAGE_PATH);
         File[] javaFiles = dir.listFiles((d, name) -> name.endsWith(".java"));
-        assertNotNull(javaFiles, "Diretório não encontrado: " + dir.getAbsolutePath());
+        assertNotNull(javaFiles, "Directório não encontrado: " + dir.getAbsolutePath());
 
         for (File f : javaFiles) {
             String content = Files.readString(f.toPath());

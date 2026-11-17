@@ -128,7 +128,7 @@ class UserManagementHarnessTest {
     }
 
     @Test
-    @DisplayName("GUP-05: Recusa de PIN incorreto ou inválido")
+    @DisplayName("GUP-05: Recusa de PIN incorrecto ou inválido")
     void testVerifyIncorrectManagerPin() {
         Company comp = new Company();
         comp.setId(1L);

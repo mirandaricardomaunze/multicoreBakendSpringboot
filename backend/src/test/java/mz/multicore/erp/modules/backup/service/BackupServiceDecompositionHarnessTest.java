@@ -25,10 +25,10 @@ class BackupServiceDecompositionHarnessTest {
         long verificationLines = Files.lines(VERIFICATION_FILE).count();
         long executionLines = Files.lines(EXECUTION_FILE).count();
 
-        assertTrue(serviceLines <= 95, "BackupService deve ter <= 95 linhas, atual: " + serviceLines);
-        assertTrue(collectorLines <= 245, "BackupDataCollector deve ter <= 245 linhas, atual: " + collectorLines);
-        assertTrue(verificationLines <= 105, "BackupVerificationService deve ter <= 105 linhas, atual: " + verificationLines);
-        assertTrue(executionLines <= 85, "BackupExecutionService deve ter <= 85 linhas, atual: " + executionLines);
+        assertTrue(serviceLines <= 95, "BackupService deve ter <= 95 linhas, actual: " + serviceLines);
+        assertTrue(collectorLines <= 245, "BackupDataCollector deve ter <= 245 linhas, actual: " + collectorLines);
+        assertTrue(verificationLines <= 105, "BackupVerificationService deve ter <= 105 linhas, actual: " + verificationLines);
+        assertTrue(executionLines <= 85, "BackupExecutionService deve ter <= 85 linhas, actual: " + executionLines);
     }
 
     @Test

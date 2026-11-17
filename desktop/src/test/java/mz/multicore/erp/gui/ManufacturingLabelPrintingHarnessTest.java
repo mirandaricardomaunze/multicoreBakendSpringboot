@@ -34,8 +34,8 @@ class ManufacturingLabelPrintingHarnessTest {
             );
 
             assertNotNull(card);
-            assertEquals(240, card.getPreferredSize().width, "Largura do cartão deve permanecer exatamente 240px");
-            assertEquals(130, card.getPreferredSize().height, "Altura do cartão deve permanecer exatamente 130px");
+            assertEquals(240, card.getPreferredSize().width, "Largura do cartão deve permanecer exactamente 240px");
+            assertEquals(130, card.getPreferredSize().height, "Altura do cartão deve permanecer exactamente 130px");
         });
     }
 

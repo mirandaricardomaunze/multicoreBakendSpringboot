@@ -191,7 +191,7 @@ public class ForensicAuditDocumentRenderer {
         c2.setBorder(0);
         c2.setPaddingTop(25f);
         c2.addElement(new Paragraph("____________________________________________", PdfTheme.smallFont()));
-        c2.addElement(new Paragraph("Direção Executiva & Conselho de Gerência", PdfTheme.bodyFont()));
+        c2.addElement(new Paragraph("Direcção Executiva & Conselho de Gerência", PdfTheme.bodyFont()));
         table.addCell(c2);
 
         return table;

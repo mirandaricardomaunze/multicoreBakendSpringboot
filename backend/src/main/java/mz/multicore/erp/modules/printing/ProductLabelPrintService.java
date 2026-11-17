@@ -50,7 +50,7 @@ public class ProductLabelPrintService {
             throw new BusinessRuleException("Empresa não encontrada.");
         }
         if (productIds == null || productIds.isEmpty()) {
-            throw new BusinessRuleException("Selecione pelo menos um produto.");
+            throw new BusinessRuleException("Seleccione pelo menos um produto.");
         }
         int copiesClamped = Math.max(1, Math.min(copies, MAX_COPIES));
         Set<Long> idSet = new HashSet<>(productIds);

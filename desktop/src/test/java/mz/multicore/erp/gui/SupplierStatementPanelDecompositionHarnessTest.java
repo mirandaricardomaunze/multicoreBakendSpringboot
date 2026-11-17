@@ -22,7 +22,7 @@ class SupplierStatementPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("SupplierStatementPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 165,
-                () -> "SupplierStatementPanel.java deve possuir <= 165 linhas. Atual: " + lines.size());
+                () -> "SupplierStatementPanel.java deve possuir <= 165 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -32,7 +32,7 @@ class SupplierStatementPanelDecompositionHarnessTest {
             Path coord = ROOT.resolve(file);
             List<String> lines = Files.readAllLines(coord);
             assertTrue(lines.size() <= 110,
-                    () -> file + " deve possuir <= 110 linhas. Atual: " + lines.size());
+                    () -> file + " deve possuir <= 110 linhas. Actual: " + lines.size());
         }
     }
 

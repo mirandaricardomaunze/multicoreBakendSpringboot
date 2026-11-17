@@ -62,7 +62,7 @@ final class PurchaseReorderPanel {
         card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
 
         String[] cols = {
-                "Produto", "SKU", "Stock Atual", "Mínimo", "Venda/Dia",
+                "Produto", "SKU", "Stock Actual", "Mínimo", "Venda/Dia",
                 "Dias Stock", "Und/Cx", "Sugerido (cx)", "Sugerido (und)",
                 "Fornecedor Habitual", "Preço Unit.", "Custo Total", "Urgência", "Negócio"
         };
@@ -130,7 +130,7 @@ final class PurchaseReorderPanel {
 
         ModernButton orderBtn = UIHelper.createSuccessButton("Criar Encomenda");
         orderBtn.setIcon(UIHelper.icon("fas-cart-plus", 14));
-        orderBtn.setToolTipText("Cria encomenda preenchida com o produto selecionado ou abre nova encomenda.");
+        orderBtn.setToolTipText("Cria encomenda preenchida com o produto seleccionado ou abre nova encomenda.");
         orderBtn.addActionListener(e -> orderSelectedOrOpen());
 
         card.add(UIHelper.tableCardTop("Reposição Inteligente & Previsão de Rutura", filtersRow,

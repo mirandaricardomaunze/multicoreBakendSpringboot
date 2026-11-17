@@ -214,12 +214,12 @@ public class SubscriptionRenewalService {
                     payment.setPeriodEnd(newValidUntil);
                     payment.setReference(tx.getFinancialReference());
                     payment.setPaymentDetails("Pagamento Móvel Aprovado (" + tx.getPhoneNumber() + ")");
-                    payment.setNote("Transação ID: " + tx.getTransactionId());
+                    payment.setNote("Transacção ID: " + tx.getTransactionId());
                     payment.setCreatedBy(CurrentUserContext.getUsername());
                     paymentRepository.save(payment);
 
                     auditLogService.logEvent(CurrentUserContext.getUsername(), companyId, "SUBSCRIPTION_PAYMENT_MOBILE",
-                            String.format("Pagamento móvel aprovado (%s MT) via %s. Assinatura ativa até %s.",
+                            String.format("Pagamento móvel aprovado (%s MT) via %s. Assinatura activa até %s.",
                                     tx.getAmount(), tx.getProvider().getDisplayName(), newValidUntil));
                 }
             }

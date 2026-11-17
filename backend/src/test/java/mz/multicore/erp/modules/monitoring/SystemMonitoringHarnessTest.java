@@ -67,7 +67,7 @@ class SystemMonitoringHarnessTest {
     }
 
     @Test
-    @DisplayName("Harness: Base de dados reporta conectividade ativa e métricas de pool Hikari")
+    @DisplayName("Harness: Base de dados reporta conectividade activa e métricas de pool Hikari")
     void testDatabaseTelemetry() {
         SystemHealthDTO health = monitoringService.getSystemHealth();
         var db = health.database();

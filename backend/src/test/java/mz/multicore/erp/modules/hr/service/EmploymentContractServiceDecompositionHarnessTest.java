@@ -25,10 +25,10 @@ class EmploymentContractServiceDecompositionHarnessTest {
         long lifecycleLines = Files.lines(LIFECYCLE_FILE).count();
         long queryLines = Files.lines(QUERY_FILE).count();
 
-        assertTrue(serviceLines <= 125, "EmploymentContractService deve ter <= 125 linhas, atual: " + serviceLines);
-        assertTrue(validationLines <= 110, "ContractValidationService deve ter <= 110 linhas, atual: " + validationLines);
-        assertTrue(lifecycleLines <= 220, "ContractLifecycleService deve ter <= 220 linhas, atual: " + lifecycleLines);
-        assertTrue(queryLines <= 140, "ContractQueryService deve ter <= 140 linhas, atual: " + queryLines);
+        assertTrue(serviceLines <= 125, "EmploymentContractService deve ter <= 125 linhas, actual: " + serviceLines);
+        assertTrue(validationLines <= 110, "ContractValidationService deve ter <= 110 linhas, actual: " + validationLines);
+        assertTrue(lifecycleLines <= 220, "ContractLifecycleService deve ter <= 220 linhas, actual: " + lifecycleLines);
+        assertTrue(queryLines <= 140, "ContractQueryService deve ter <= 140 linhas, actual: " + queryLines);
     }
 
     @Test

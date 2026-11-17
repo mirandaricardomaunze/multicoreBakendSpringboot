@@ -83,7 +83,7 @@ class CashFlowForecastPanelHarnessTest {
     }
 
     @Test
-    @DisplayName("TFC-07b: FinanceiroPanel inclui aba de Projeção Previsional")
+    @DisplayName("TFC-07b: FinanceiroPanel inclui aba de Projecção Previsional")
     void tfc07b_financeiroPanelComAbaForecast() {
         assertThat(financeiroPanel.getForecastPanel()).isNotNull();
         financeiroPanel.showForecastTab();

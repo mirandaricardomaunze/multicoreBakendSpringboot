@@ -28,7 +28,7 @@ public final class QualityRenewalDialog {
         DateField renewalDateField = new DateField(LocalDate.now());
         JTextField notesField = new JTextField("Renovação periódica de EPI");
         UIHelper.styleTextField(notesField);
-        JCheckBox printCheck = new JCheckBox("Imprimir Termo de Entrega atualizado", true);
+        JCheckBox printCheck = new JCheckBox("Imprimir Termo de Entrega actualizado", true);
         printCheck.setOpaque(false);
 
         g.gridx = 0; g.gridy = 0; g.weightx = 0.35;
@@ -51,7 +51,7 @@ public final class QualityRenewalDialog {
         confirmBtn.addActionListener(e -> {
             LocalDate newDate = renewalDateField.getDate();
             if (newDate == null) {
-                ToastManager.show(dialog, FeedbackType.WARNING, "Selecione uma data válida no calendário.");
+                ToastManager.show(dialog, FeedbackType.WARNING, "Seleccione uma data válida no calendário.");
                 renewalDateField.requestFocus();
                 return;
             }

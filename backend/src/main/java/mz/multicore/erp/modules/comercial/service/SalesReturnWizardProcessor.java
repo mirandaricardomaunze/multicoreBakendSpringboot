@@ -40,7 +40,7 @@ public class SalesReturnWizardProcessor {
         if (request == null) throw new BusinessRuleException("Pedido de devolução nulo.");
         if (request.invoiceId() == null) throw new BusinessRuleException("ID da fatura obrigatório.");
         if (request.lines() == null || request.lines().isEmpty()) {
-            throw new BusinessRuleException("Selecione pelo menos uma linha para devolução.");
+            throw new BusinessRuleException("Seleccione pelo menos uma linha para devolução.");
         }
 
         Invoice invoice = invoiceRepository.findById(request.invoiceId())

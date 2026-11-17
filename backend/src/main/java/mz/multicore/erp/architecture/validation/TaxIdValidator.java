@@ -13,7 +13,7 @@ public final class TaxIdValidator {
 
     public static void validate(String taxId) {
         if (taxId == null || !ValidationPatterns.NUIT_PATTERN.matcher(taxId.trim()).matches()) {
-            throw new BusinessRuleException("NUIT/NIF inválido. Deve conter exatamente 9 algarismos.");
+            throw new BusinessRuleException("NUIT/NIF inválido. Deve conter exactamente 9 algarismos.");
         }
     }
 }

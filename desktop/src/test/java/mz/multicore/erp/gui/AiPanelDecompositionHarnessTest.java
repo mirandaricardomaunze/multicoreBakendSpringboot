@@ -51,7 +51,7 @@ class AiPanelDecompositionHarnessTest {
         Path analysisViewPath = GUI_ROOT.resolve("intelligence/AiAnalysisView.java");
         String content = Files.readString(analysisViewPath);
         assertTrue(content.contains("ClientTablePagination.DISABLED"),
-                "AiAnalysisView deve desativar a paginação artificial na tabela de evidências.");
+                "AiAnalysisView deve desactivar a paginação artificial na tabela de evidências.");
         assertTrue(content.contains("ModernButton exportBtn = UIHelper.createExportButton"),
                 "AiAnalysisView deve incluir botão de exportação tabular.");
     }

@@ -27,7 +27,7 @@ public class DesktopSession {
         activeCompany = companies.stream()
                 .filter(company -> company.id().equals(companyId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("A empresa selecionada não pertence ao utilizador."));
+                .orElseThrow(() -> new IllegalArgumentException("A empresa seleccionada não pertence ao utilizador."));
     }
 
     public String token() {

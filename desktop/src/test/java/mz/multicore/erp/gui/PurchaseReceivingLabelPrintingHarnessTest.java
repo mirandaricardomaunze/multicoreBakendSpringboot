@@ -101,7 +101,7 @@ class PurchaseReceivingLabelPrintingHarnessTest {
     }
 
     @Test
-    @DisplayName("PRL-03: Diálogo e painel integram botão e ação com ícone fas-barcode sem emojis")
+    @DisplayName("PRL-03: Diálogo e painel integram botão e acção com ícone fas-barcode sem emojis")
     void testFileIntegrationsAndConventions() throws IOException {
         Path dialogPath = resolveSourcePath("src/main/java/mz/multicore/erp/gui/PurchaseOrderReceivingDialog.java");
         assertTrue(Files.exists(dialogPath), "PurchaseOrderReceivingDialog.java deve existir");

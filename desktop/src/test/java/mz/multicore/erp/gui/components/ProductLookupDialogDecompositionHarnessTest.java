@@ -33,10 +33,10 @@ class ProductLookupDialogDecompositionHarnessTest {
         List<String> localLines = Files.readAllLines(localFile);
         List<String> remoteLines = Files.readAllLines(remoteFile);
 
-        assertTrue(dialogLines.size() <= 120, "ProductLookupDialog deve ter <= 120 linhas (atual: " + dialogLines.size() + ")");
-        assertTrue(helperLines.size() <= 110, "ProductLookupTableHelper deve ter <= 110 linhas (atual: " + helperLines.size() + ")");
-        assertTrue(localLines.size() <= 190, "ProductLookupLocalDialog deve ter <= 190 linhas (atual: " + localLines.size() + ")");
-        assertTrue(remoteLines.size() <= 240, "ProductLookupRemoteDialog deve ter <= 240 linhas (atual: " + remoteLines.size() + ")");
+        assertTrue(dialogLines.size() <= 120, "ProductLookupDialog deve ter <= 120 linhas (actual: " + dialogLines.size() + ")");
+        assertTrue(helperLines.size() <= 110, "ProductLookupTableHelper deve ter <= 110 linhas (actual: " + helperLines.size() + ")");
+        assertTrue(localLines.size() <= 190, "ProductLookupLocalDialog deve ter <= 190 linhas (actual: " + localLines.size() + ")");
+        assertTrue(remoteLines.size() <= 240, "ProductLookupRemoteDialog deve ter <= 240 linhas (actual: " + remoteLines.size() + ")");
     }
 
     @Test

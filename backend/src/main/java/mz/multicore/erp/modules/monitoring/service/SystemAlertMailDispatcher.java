@@ -88,7 +88,7 @@ public class SystemAlertMailDispatcher {
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null) {
             return new SystemAlertTestResultDTO("EMAIL", true,
-                    "Modo de simulação ativo: Servidor SMTP não configurado localmente. Teste validado com sucesso.",
+                    "Modo de simulação activo: Servidor SMTP não configurado localmente. Teste validado com sucesso.",
                     Instant.now());
         }
 

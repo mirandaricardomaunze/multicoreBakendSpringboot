@@ -111,7 +111,7 @@ public class StockWasteLifecycleService {
             batch = batchRepository.findById(req.batchId())
                     .orElseThrow(() -> new BusinessRuleException("Lote não encontrado: " + req.batchId()));
             if (!batch.getProduct().getId().equals(product.getId())) {
-                throw new BusinessRuleException("O lote selecionado não pertence ao produto indicado.");
+                throw new BusinessRuleException("O lote seleccionado não pertence ao produto indicado.");
             }
         }
 
@@ -175,7 +175,7 @@ public class StockWasteLifecycleService {
                 .orElseThrow(() -> new BusinessRuleException("Registo de quebra não encontrado: " + id));
 
         if (waste.getStatus() != WasteStatus.PENDING_APPROVAL) {
-            throw new BusinessRuleException("Este registo já foi processado (estado atual: " + waste.getStatus() + ").");
+            throw new BusinessRuleException("Este registo já foi processado (estado actual: " + waste.getStatus() + ").");
         }
 
         String approver = CurrentUserContext.getUsername();
@@ -209,7 +209,7 @@ public class StockWasteLifecycleService {
 
         StockWaste saved = wasteRepository.save(waste);
         if (approvalService != null) {
-            approvalService.cancelPendingForDocument("STOCK_WASTE", id, "Decidido diretamente na gestão de quebras.");
+            approvalService.cancelPendingForDocument("STOCK_WASTE", id, "Decidido directamente na gestão de quebras.");
         }
         if (auditLogService != null) {
             String action = (req != null && req.approved()) ? "STOCK_WASTE_APPROVE" : "STOCK_WASTE_REJECT";

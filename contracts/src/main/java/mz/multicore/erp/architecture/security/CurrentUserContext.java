@@ -82,7 +82,7 @@ public final class CurrentUserContext {
     public static Long requireCurrentCompanyId() {
         Long companyId = companyIdThreadLocal.get();
         if (companyId == null) {
-            throw new BusinessRuleException("Selecione uma empresa antes de continuar.");
+            throw new BusinessRuleException("Seleccione uma empresa antes de continuar.");
         }
         return companyId;
     }

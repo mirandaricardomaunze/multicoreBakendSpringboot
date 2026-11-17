@@ -22,7 +22,7 @@ class CommercialNotesPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("CommercialNotesPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 370,
-                () -> "CommercialNotesPanel.java deve possuir <= 370 linhas. Atual: " + lines.size());
+                () -> "CommercialNotesPanel.java deve possuir <= 370 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -31,12 +31,12 @@ class CommercialNotesPanelDecompositionHarnessTest {
         Path debit = ROOT.resolve("DebitNoteFormDialog.java");
         List<String> debitLines = Files.readAllLines(debit);
         assertTrue(debitLines.size() <= 95,
-                () -> "DebitNoteFormDialog.java deve possuir <= 95 linhas. Atual: " + debitLines.size());
+                () -> "DebitNoteFormDialog.java deve possuir <= 95 linhas. Actual: " + debitLines.size());
 
         Path ops = ROOT.resolve("CommercialNotesOperationsCoordinator.java");
         List<String> opsLines = Files.readAllLines(ops);
         assertTrue(opsLines.size() <= 100,
-                () -> "CommercialNotesOperationsCoordinator.java deve possuir <= 100 linhas. Atual: " + opsLines.size());
+                () -> "CommercialNotesOperationsCoordinator.java deve possuir <= 100 linhas. Actual: " + opsLines.size());
     }
 
     @Test

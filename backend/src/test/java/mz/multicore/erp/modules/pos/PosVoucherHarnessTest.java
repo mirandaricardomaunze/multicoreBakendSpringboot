@@ -164,7 +164,7 @@ public class PosVoucherHarnessTest {
 
         CreditNoteDTO cnDTO = new CreditNoteDTO(
                 1L, "NC-2026-0001", LocalDateTime.now(), COMPANY_ID, CLIENT_ID, "Maria Manjate",
-                INVOICE_ID, "FT-2026-0001", WAREHOUSE_ID, "Armazém Principal", "Tamanho incorreto",
+                INVOICE_ID, "FT-2026-0001", WAREHOUSE_ID, "Armazém Principal", "Tamanho incorrecto",
                 "APPROVED", new BigDecimal("1500.00"), BigDecimal.ZERO, new BigDecimal("1500.00"),
                 "Devolução", "ADMIN", LocalDateTime.now(), null, List.of()
         );
@@ -177,7 +177,7 @@ public class PosVoucherHarnessTest {
         });
 
         POSReturnRequest request = new POSReturnRequest(
-                OPERATOR, COMPANY_ID, INVOICE_ID, WAREHOUSE_ID, "Tamanho incorreto",
+                OPERATOR, COMPANY_ID, INVOICE_ID, WAREHOUSE_ID, "Tamanho incorrecto",
                 "STORE_CREDIT", null, List.of(new CreateCreditNoteLineRequest(1L, BigDecimal.ONE))
         );
 
@@ -334,7 +334,7 @@ public class PosVoucherHarnessTest {
     }
 
     @Test
-    @DisplayName("VOUCH-05: Checkout com resgate integral de voucher atualiza status para FULLY_REDEEMED")
+    @DisplayName("VOUCH-05: Checkout com resgate integral de voucher actualiza status para FULLY_REDEEMED")
     void testCheckoutRedeemVoucherFull() {
         mockCheckoutPrerequisites();
 
@@ -366,7 +366,7 @@ public class PosVoucherHarnessTest {
     }
 
     @Test
-    @DisplayName("VOUCH-06: Checkout com resgate parcial de voucher atualiza status para PARTIALLY_USED")
+    @DisplayName("VOUCH-06: Checkout com resgate parcial de voucher actualiza status para PARTIALLY_USED")
     void testCheckoutRedeemVoucherPartial() {
         mockCheckoutPrerequisites();
 

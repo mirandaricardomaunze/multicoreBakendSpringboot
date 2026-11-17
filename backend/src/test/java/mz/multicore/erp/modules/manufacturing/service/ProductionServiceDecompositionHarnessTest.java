@@ -25,10 +25,10 @@ class ProductionServiceDecompositionHarnessTest {
         long orderLines = Files.lines(ORDER_FILE).count();
         long mapperLines = Files.lines(MAPPER_FILE).count();
 
-        assertTrue(serviceLines <= 110, "ProductionService deve ter <= 110 linhas, atual: " + serviceLines);
-        assertTrue(bomLines <= 165, "BillOfMaterialsService deve ter <= 165 linhas, atual: " + bomLines);
-        assertTrue(orderLines <= 245, "ProductionOrderLifecycleService deve ter <= 245 linhas, atual: " + orderLines);
-        assertTrue(mapperLines <= 60, "ProductionOrderMapper deve ter <= 60 linhas, atual: " + mapperLines);
+        assertTrue(serviceLines <= 110, "ProductionService deve ter <= 110 linhas, actual: " + serviceLines);
+        assertTrue(bomLines <= 165, "BillOfMaterialsService deve ter <= 165 linhas, actual: " + bomLines);
+        assertTrue(orderLines <= 245, "ProductionOrderLifecycleService deve ter <= 245 linhas, actual: " + orderLines);
+        assertTrue(mapperLines <= 60, "ProductionOrderMapper deve ter <= 60 linhas, actual: " + mapperLines);
     }
 
     @Test

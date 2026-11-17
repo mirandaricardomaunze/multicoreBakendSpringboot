@@ -64,7 +64,7 @@ public class TopNavBar extends JPanel {
         brandSubLabel = new JLabel(subBrand != null ? subBrand : "");
         brandSubLabel.setFont(Typography.CAPTION);
         brandSubLabel.setForeground(subText());
-        brandSubLabel.setToolTipText("Empresa ativa");
+        brandSubLabel.setToolTipText("Empresa activa");
         brandSubLabel.setVisible(subBrand != null && !subBrand.isBlank());
 
         // "Module › Tab": the path shows where the user is, so screens need not repeat the tab name.
@@ -187,7 +187,7 @@ public class TopNavBar extends JPanel {
         searchPill = new JPanel(new BorderLayout(8, 0));
         searchPill.setOpaque(false);
         searchPill.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
-        searchPill.setToolTipText("Pesquisar módulos ou ações (Ctrl+K)");
+        searchPill.setToolTipText("Pesquisar módulos ou acções (Ctrl+K)");
         searchPill.putClientProperty("search.action", onSearchClick);
         searchPill.setBorder(javax.swing.BorderFactory.createCompoundBorder(
                 javax.swing.BorderFactory.createLineBorder(ThemeColors.hairline(), 1),
@@ -195,7 +195,7 @@ public class TopNavBar extends JPanel {
         ));
 
         JLabel icon = new JLabel(UIHelper.icon("fas-search", 13, UIHelper.TEXT_MUTED));
-        JLabel text = new JLabel("Pesquisar módulos ou ações...");
+        JLabel text = new JLabel("Pesquisar módulos ou acções...");
         text.setFont(Typography.BODY);
         text.setForeground(UIHelper.TEXT_MUTED);
 

@@ -56,7 +56,7 @@ public class CreditRiskPanelHarnessTest {
     }
 
     @Test
-    @DisplayName("RCC-02: Atualização dos KPIs a partir do sumário executivo")
+    @DisplayName("RCC-02: Actualização dos KPIs a partir do sumário executivo")
     void testKpiUpdateFromSummary() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             CurrentUserContext.setCurrentUser("gestor.financeiro", "ADMIN");

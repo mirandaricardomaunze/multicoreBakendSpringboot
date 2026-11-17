@@ -83,7 +83,7 @@ class KpiCardDecompositionHarnessTest {
                 .contains("KpiCardPalette.resolvePalette(");
 
         assertThat(card)
-                .as("KpiCard deve delegar interatividade para KpiCardInteractiveHelper")
+                .as("KpiCard deve delegar interactividade para KpiCardInteractiveHelper")
                 .contains("KpiCardInteractiveHelper.makeInteractive(");
 
         assertThat(card)

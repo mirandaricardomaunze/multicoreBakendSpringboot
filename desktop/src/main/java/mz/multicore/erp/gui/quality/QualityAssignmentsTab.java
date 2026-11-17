@@ -175,7 +175,7 @@ public class QualityAssignmentsTab extends JPanel {
     private void renewSelectedAssignment() {
         int row = assignmentsTable.getSelectedRow();
         if (row < 0) {
-            ToastManager.show(this, FeedbackType.INFO, "Por favor selecione uma atribuição para renovar.");
+            ToastManager.show(this, FeedbackType.INFO, "Por favor seleccione uma atribuição para renovar.");
             return;
         }
         int modelRow = assignmentsTable.convertRowIndexToModel(row);
@@ -187,7 +187,7 @@ public class QualityAssignmentsTab extends JPanel {
     private void printSelectedDeliverySheet() {
         int row = assignmentsTable.getSelectedRow();
         if (row < 0) {
-            ToastManager.show(this, FeedbackType.INFO, "Por favor selecione uma linha para imprimir o Termo de Entrega.");
+            ToastManager.show(this, FeedbackType.INFO, "Por favor seleccione uma linha para imprimir o Termo de Entrega.");
             return;
         }
         int modelRow = assignmentsTable.convertRowIndexToModel(row);
@@ -207,7 +207,7 @@ public class QualityAssignmentsTab extends JPanel {
     private void returnSelectedAssignment() {
         int row = assignmentsTable.getSelectedRow();
         if (row < 0) {
-            ToastManager.show(this, FeedbackType.INFO, "Por favor selecione uma atribuição para devolver.");
+            ToastManager.show(this, FeedbackType.INFO, "Por favor seleccione uma atribuição para devolver.");
             return;
         }
         int modelRow = assignmentsTable.convertRowIndexToModel(row);

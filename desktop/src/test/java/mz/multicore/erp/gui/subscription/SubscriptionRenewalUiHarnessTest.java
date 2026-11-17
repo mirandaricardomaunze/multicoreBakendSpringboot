@@ -39,7 +39,7 @@ class SubscriptionRenewalUiHarnessTest {
     }
 
     @Test
-    @DisplayName("PSP-08: Callback de sucesso na renovação com atualização de estado")
+    @DisplayName("PSP-08: Callback de sucesso na renovação com actualização de estado")
     void testRenewalCallbackSuccess() {
         MySubscriptionApiClient client = Mockito.mock(MySubscriptionApiClient.class);
         MySubscriptionDTO renewedSub = new MySubscriptionDTO(

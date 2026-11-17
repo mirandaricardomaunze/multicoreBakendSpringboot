@@ -31,7 +31,7 @@ public final class PurchaseSuppliersViewCoordinator {
                 new QuickPeekPanel.PeekItem("NUIT / NIF", sup.taxId() != null ? sup.taxId() : "-", false),
                 new QuickPeekPanel.PeekItem("Pessoa de Contacto", sup.contactPerson() != null ? sup.contactPerson() : "-", false),
                 new QuickPeekPanel.PeekItem("Telefone", sup.phone() != null ? sup.phone() : "-", false),
-                new QuickPeekPanel.PeekItem("Correio Eletrónico", sup.email() != null ? sup.email() : "-", false),
+                new QuickPeekPanel.PeekItem("Correio Electrónico", sup.email() != null ? sup.email() : "-", false),
                 new QuickPeekPanel.PeekItem("Endereço", sup.address() != null ? sup.address() : "-", false)
         ));
 

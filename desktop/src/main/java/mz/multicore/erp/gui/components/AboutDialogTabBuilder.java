@@ -137,7 +137,7 @@ final class AboutDialogTabBuilder {
         grid.add(createModuleCard("Contabilidade & Razão", "Plano de contas geral, diários, balancetes e fecho de exercício.", "fas-calculator", UIHelper.MODULE_ACCOUNTING));
         grid.add(createModuleCard("Crédito & Cobrança", "Plafonds por cliente, prazos médios, scoring e risco financeiro.", "fas-balance-scale", UIHelper.PENDING_YELLOW));
         grid.add(createModuleCard("Motor de Aprovações", "Políticas de alçada executiva, aprovações duplas e alertas.", "fas-check-double", UIHelper.MODULE_APPROVALS));
-        grid.add(createModuleCard("Auditoria Forense", "Deteção de anomalias, cancelamentos, logs e controlo de fraude.", "fas-shield-alt", UIHelper.REJECTED_RED));
+        grid.add(createModuleCard("Auditoria Forense", "Detecção de anomalias, cancelamentos, logs e controlo de fraude.", "fas-shield-alt", UIHelper.REJECTED_RED));
         grid.add(createModuleCard("Recursos Humanos", "Processamento salarial, IRPS, INSS e mapa de remunerações.", "fas-users", UIHelper.ACCENT_CYAN));
 
         card.add(grid, BorderLayout.CENTER);
@@ -186,11 +186,11 @@ final class AboutDialogTabBuilder {
                 + "Todos os direitos de propriedade intelectual, código-fonte, arquitetura, bases de dados, "
                 + "layout e documentação deste software pertencem com exclusividade ao autor Miranda Ricardo Maunze.\n\n"
                 + "2. CONFORMIDADE LEGAL:\n"
-                + "O sistema foi projetado em estrita conformidade com a legislação fiscal da República de Moçambique, "
+                + "O sistema foi projectado em estrita conformidade com a legislação fiscal da República de Moçambique, "
                 + "assegurando transparência, auditabilidade e rigor contabilístico nas operações dos utilizadores licenciados.\n\n"
                 + "3. SUPORTE & AUTORIA:\n"
                 + "Para informações sobre licenciamento corporativo, integrações ou expansão de módulos, "
-                + "contacte diretamente a equipa Multicore sob liderança técnica de Miranda Ricardo Maunze."
+                + "contacte directamente a equipa Multicore sob liderança técnica de Miranda Ricardo Maunze."
         );
         licenseText.setFont(Typography.BODY);
         licenseText.setForeground(UIHelper.TEXT_MUTED);

@@ -25,10 +25,10 @@ class StockMovementServiceDecompositionHarnessTest {
         long adjustmentLines = Files.lines(ADJUSTMENT_FILE).count();
         long queryLines = Files.lines(QUERY_FILE).count();
 
-        assertTrue(serviceLines <= 140, "StockMovementService deve ter <= 140 linhas, atual: " + serviceLines);
-        assertTrue(registrationLines <= 230, "StockMovementRegistrationService deve ter <= 230 linhas, atual: " + registrationLines);
-        assertTrue(adjustmentLines <= 165, "StockAdjustmentCoordinator deve ter <= 165 linhas, atual: " + adjustmentLines);
-        assertTrue(queryLines <= 95, "StockMovementQueryService deve ter <= 95 linhas, atual: " + queryLines);
+        assertTrue(serviceLines <= 140, "StockMovementService deve ter <= 140 linhas, actual: " + serviceLines);
+        assertTrue(registrationLines <= 230, "StockMovementRegistrationService deve ter <= 230 linhas, actual: " + registrationLines);
+        assertTrue(adjustmentLines <= 165, "StockAdjustmentCoordinator deve ter <= 165 linhas, actual: " + adjustmentLines);
+        assertTrue(queryLines <= 95, "StockMovementQueryService deve ter <= 95 linhas, actual: " + queryLines);
     }
 
     @Test

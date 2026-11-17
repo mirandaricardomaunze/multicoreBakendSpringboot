@@ -105,7 +105,7 @@ public class OperationalPulseWidget extends ModernPanel {
                 recurringNavBtn));
 
         grid.add(StrategicPulseCardFactory.createPillarCard(
-                "PATRIMÓNIO & ATIVOS",
+                "PATRIMÓNIO & ACTIVOS",
                 "fas-landmark",
                 UIHelper.KPI_PURPLE_SOFT,
                 assetsValLabel,
@@ -193,7 +193,7 @@ public class OperationalPulseWidget extends ModernPanel {
 
     private void applyOfflineState() {
         manufacturingValLabel.setText("0 Ordens");
-        manufacturingSubLabel.setText("Sem ordens ativas");
+        manufacturingSubLabel.setText("Sem ordens activas");
         fleetValLabel.setText("0 Viaturas");
         fleetSubLabel.setText("Sem viaturas");
         recurringValLabel.setText("0 Contratos");

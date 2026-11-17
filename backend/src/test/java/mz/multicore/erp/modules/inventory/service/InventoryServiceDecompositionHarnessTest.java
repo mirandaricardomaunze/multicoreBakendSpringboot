@@ -68,13 +68,13 @@ class InventoryServiceDecompositionHarnessTest {
         String content = Files.readString(SERVICE_PATH);
 
         assertTrue(content.contains("CurrentUserContext.requireCompany(companyId)"),
-                "Deve exigir empresa ativa");
+                "Deve exigir empresa activa");
         assertTrue(content.contains("stockMovementRepository.findPageByCompanyId(companyId, PageQuery.of(page, size))"),
                 "Deve conter a chamada paginada do repositório");
         assertTrue(content.contains("Stock stock = stockRepository.findForReservation"),
                 "Deve referenciar o bloqueio pessimista para reserva de stock");
         assertTrue(content.contains("BigDecimal current = stockRepository.findForReservation"),
-                "Deve referenciar o bloqueio pessimista para leitura do saldo atual");
+                "Deve referenciar o bloqueio pessimista para leitura do saldo actual");
     }
 
     @Test

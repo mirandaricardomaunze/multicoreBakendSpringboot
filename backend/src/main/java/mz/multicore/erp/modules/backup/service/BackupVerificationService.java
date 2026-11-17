@@ -49,7 +49,7 @@ public class BackupVerificationService {
     public BackupVerificationDTO verifyBackup(String path) {
         PermissionGuard.requireAdmin("verificar cópia de segurança");
         if (path == null || path.isBlank()) {
-            throw new BusinessRuleException("Selecione um ficheiro de backup para verificar.");
+            throw new BusinessRuleException("Seleccione um ficheiro de backup para verificar.");
         }
 
         File backupFile = new File(path);

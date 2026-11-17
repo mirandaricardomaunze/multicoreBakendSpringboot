@@ -30,7 +30,7 @@ class KpiDrilldownAndTableErgonomicsHarnessTest {
         KpiCard.makeInteractive(card, "Filtrar vendas por este mês", () -> {});
 
         assertThat(card.getCursor().getType()).isEqualTo(Cursor.HAND_CURSOR);
-        assertTrue(card.isFocusable(), "Card interativo deve aceitar foco para acessibilidade");
+        assertTrue(card.isFocusable(), "Card interactivo deve aceitar foco para acessibilidade");
         assertThat(card.getToolTipText()).isEqualTo("Filtrar vendas por este mês");
         assertThat(card.getPreferredSize().height).isEqualTo(KpiCard.STANDARD_CARD_HEIGHT);
     }

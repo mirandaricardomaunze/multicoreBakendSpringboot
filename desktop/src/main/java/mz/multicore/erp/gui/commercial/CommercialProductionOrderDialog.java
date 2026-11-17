@@ -164,7 +164,7 @@ public final class CommercialProductionOrderDialog {
         dialog.setOnSaveAsync(() -> {
             BomMatch selectedMatch = (BomMatch) bomCombo.getSelectedItem();
             if (selectedMatch == null) {
-                throw FieldValidationException.of(bomCombo, "Selecione a ficha técnica a produzir.");
+                throw FieldValidationException.of(bomCombo, "Seleccione a ficha técnica a produzir.");
             }
 
             BigDecimal qty = qtyField.value();
@@ -175,7 +175,7 @@ public final class CommercialProductionOrderDialog {
             WarehouseDTO sourceWh = (WarehouseDTO) sourceWhCombo.getSelectedItem();
             WarehouseDTO targetWh = (WarehouseDTO) targetWhCombo.getSelectedItem();
             if (sourceWh == null || targetWh == null) {
-                throw new IllegalArgumentException("Selecione os armazéns de matéria-prima e produto acabado.");
+                throw new IllegalArgumentException("Seleccione os armazéns de matéria-prima e produto acabado.");
             }
 
             LocalDate endDate = endDateField.getDate();

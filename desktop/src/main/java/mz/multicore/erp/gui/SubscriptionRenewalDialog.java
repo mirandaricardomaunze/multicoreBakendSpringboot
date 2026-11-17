@@ -33,8 +33,8 @@ public final class SubscriptionRenewalDialog extends JDialog {
     private final JLabel totalLabel = new JLabel("3.500,00 MT");
     private final JLabel discountBadge = new JLabel("");
 
-    private final JRadioButton mpesaRadio = new JRadioButton("M-Pesa (Push USSD)", true);
-    private final JRadioButton emolaRadio = new JRadioButton("e-Mola (Push USSD)");
+    private final JRadioButton mpesaRadio = new JRadioButton("M-Pesa (pedido no telemóvel)", true);
+    private final JRadioButton emolaRadio = new JRadioButton("e-Mola (pedido no telemóvel)");
     private final JRadioButton bankRadio = new JRadioButton("Transferência Bancária / Comprovativo Manual");
 
     private final JTextField phoneField = new JTextField();
@@ -166,7 +166,7 @@ public final class SubscriptionRenewalDialog extends JDialog {
                         () -> subscriptionClient.renewSubscription(new SelfServiceSubscriptionPaymentRequest(planKey, months, prov.name(), phone, approvedRef, "Pagamento aprovado via " + prov.getDisplayName())),
                         result -> {
                             if (result.success()) {
-                                ToastManager.success(UIHelper.mainWindow, "Plano " + planKey + " ativado com sucesso! Ref: " + approvedRef);
+                                ToastManager.success(UIHelper.mainWindow, "Plano " + planKey + " activado com sucesso! Ref: " + approvedRef);
                                 if (onSuccess != null) onSuccess.accept(result.subscription());
                                 dispose();
                             }

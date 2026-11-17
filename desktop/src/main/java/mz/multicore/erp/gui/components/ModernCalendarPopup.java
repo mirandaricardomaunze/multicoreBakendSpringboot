@@ -140,7 +140,7 @@ public class ModernCalendarPopup extends JPopupMenu {
 
         JButton todayBtn = new JButton("Hoje");
         styleQuickActionButton(todayBtn);
-        todayBtn.setToolTipText("Selecionar a data de hoje");
+        todayBtn.setToolTipText("Seleccionar a data de hoje");
         todayBtn.addActionListener(e -> {
             targetField.setDate(LocalDate.now());
             setVisible(false);

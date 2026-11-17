@@ -111,7 +111,7 @@ public class PosImportQuotationDialog extends JDialog {
         importBtn.addActionListener(e -> confirmSelection());
 
         setContentPane(DialogChrome.frame("fas-file-import", "Importar Cotação / Pró-forma",
-                "Selecione uma cotação aberta para preencher o cliente e artigos no carrinho do POS",
+                "Seleccione uma cotação aberta para preencher o cliente e artigos no carrinho do POS",
                 card, DialogChrome.footer(cancelBtn, importBtn)));
 
         table.addMouseListener(new MouseAdapter() {

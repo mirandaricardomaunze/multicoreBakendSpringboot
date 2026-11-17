@@ -119,7 +119,7 @@ public class PosAudioFeedbackEngine {
             line.close();
         } catch (Throwable ex) {
             audioHardwareAvailable = false;
-            LOGGER.log(Level.FINE, "Dispositivo de áudio indisponível ou desativado: " + ex.getMessage());
+            LOGGER.log(Level.FINE, "Dispositivo de áudio indisponível ou desactivado: " + ex.getMessage());
         }
     }
 

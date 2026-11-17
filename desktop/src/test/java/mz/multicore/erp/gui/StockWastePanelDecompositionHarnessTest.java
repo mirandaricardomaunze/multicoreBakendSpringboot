@@ -86,7 +86,7 @@ public class StockWastePanelDecompositionHarnessTest {
     }
 
     @Test
-    @DisplayName("SWP-DEC-04: StockWasteRadarView e StockWasteMetricsView inicializam corretamente")
+    @DisplayName("SWP-DEC-04: StockWasteRadarView e StockWasteMetricsView inicializam correctamente")
     void testSubviewsInitialization() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             CurrentUserContext.setCurrentUser("admin", "ADMIN");

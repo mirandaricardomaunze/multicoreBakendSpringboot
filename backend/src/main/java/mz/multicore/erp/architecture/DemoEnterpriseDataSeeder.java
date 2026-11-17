@@ -259,7 +259,7 @@ public class DemoEnterpriseDataSeeder {
                 "Ao tentar iniciar a aplicação de vendas, o terminal de faturas indica erro de ligação com a impressora térmica."));
         crmService.createWorkSheet(new CreateWorkSheetRequest(
                 ticket1.id(), "João Silva", new BigDecimal("2.5"),
-                "Deslocação ao local, reconfiguração das portas COM no Windows e reinstalação dos drivers da impressora térmica. Teste efetuado com sucesso.",
+                "Deslocação ao local, reconfiguração das portas COM no Windows e reinstalação dos drivers da impressora térmica. Teste efectuado com sucesso.",
                 "Cabo RS232 Substituído", new BigDecimal("15.00")));
         crmService.createTicket(new CreateTicketRequest(
                 techSol.getId(), "Migração de Base de Dados para Nuvem",

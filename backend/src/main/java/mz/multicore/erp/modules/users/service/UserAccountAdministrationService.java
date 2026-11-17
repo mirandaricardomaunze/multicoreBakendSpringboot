@@ -90,7 +90,7 @@ public class UserAccountAdministrationService {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         AppUser user = findUser(username);
         if (user.findCompanyAccess(companyId).isEmpty()) {
-            throw new BusinessRuleException("O utilizador não pertence à empresa ativa.");
+            throw new BusinessRuleException("O utilizador não pertence à empresa activa.");
         }
         SharedAccountGuard.requireControlledAccount(user, currentActor(), companyId);
         user.setName(name.trim());
@@ -134,7 +134,7 @@ public class UserAccountAdministrationService {
         AppUserCompanyAccess access = requireAccess(user, companyId);
         if (!active && user.isActive() && "ADMIN".equalsIgnoreCase(access.getRole())
                 && companyAccessRepository.countActiveByCompanyIdAndRole(companyId, "ADMIN") <= 1) {
-            throw new BusinessRuleException("Não é possível desativar o único administrador da empresa.");
+            throw new BusinessRuleException("Não é possível desactivar o único administrador da empresa.");
         }
         if (!SharedAccountGuard.controlsAccount(user, currentActor(), companyId)) {
             return companyAccess.removeFromCompany(user, companyId, active);
@@ -160,7 +160,7 @@ public class UserAccountAdministrationService {
 
     private static AppUserCompanyAccess requireAccess(AppUser user, Long companyId) {
         return user.findCompanyAccess(companyId)
-                .orElseThrow(() -> new BusinessRuleException("O utilizador não pertence à empresa ativa."));
+                .orElseThrow(() -> new BusinessRuleException("O utilizador não pertence à empresa activa."));
     }
 
     private void audit(String action, String details) {

@@ -32,7 +32,7 @@ public class TreasuryOperationService {
         try {
             transactionType = TransactionType.valueOf(type == null ? "" : type.toUpperCase());
         } catch (IllegalArgumentException ex) {
-            throw new BusinessRuleException("Tipo de transação inválido: " + type);
+            throw new BusinessRuleException("Tipo de transacção inválido: " + type);
         }
 
         TreasuryAccount account = accountRepository.findByIdAndCompanyId(accountId, CurrentUserContext.getCurrentCompanyId())

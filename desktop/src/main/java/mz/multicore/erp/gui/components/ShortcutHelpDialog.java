@@ -58,7 +58,7 @@ public class ShortcutHelpDialog extends JDialog {
                 new ShortcutItem("Ctrl + N", "Acção principal do ecrã (Nova Cotação, Emitir…)"),
                 new ShortcutItem("F5", "Actualizar a lista do ecrã"),
                 new ShortcutItem("Ctrl + F", "Ir para a pesquisa dos filtros"),
-                new ShortcutItem("Espaço", "Espreitar Linha Selecionada (Quick-Peek)"),
+                new ShortcutItem("Espaço", "Espreitar Linha Seleccionada (Quick-Peek)"),
                 new ShortcutItem("F3", "Pesquisar Artigos no Catálogo de Produtos"),
                 new ShortcutItem("F11", "Alternar Modo Ecrã Completo (Fullscreen)"),
                 new ShortcutItem("Esc", "Limpar Pesquisas / Fechar Janelas e Menus")
@@ -67,10 +67,10 @@ public class ShortcutHelpDialog extends JDialog {
         List<ShortcutItem> posShortcuts = List.of(
                 new ShortcutItem("F2", "Pesquisar Artigo no Catálogo"),
                 new ShortcutItem("F3", "Focar Leitor de Código de Barras"),
-                new ShortcutItem("F4", "Selecionar ou Trocar Cliente"),
-                new ShortcutItem("F6", "Alterar Quantidade da Linha Selecionada"),
+                new ShortcutItem("F4", "Seleccionar ou Trocar Cliente"),
+                new ShortcutItem("F6", "Alterar Quantidade da Linha Seleccionada"),
                 new ShortcutItem("F10", "Finalizar Venda e Abrir Pagamento"),
-                new ShortcutItem("Delete", "Remover Artigo Selecionado do Carrinho")
+                new ShortcutItem("Delete", "Remover Artigo Seleccionado do Carrinho")
         );
 
         cardsPanel.add(buildCategoryCard("Sistema & Navegação", "fas-compass", UIHelper.ACCENT_BLUE, generalShortcuts));

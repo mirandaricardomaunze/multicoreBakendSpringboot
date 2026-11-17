@@ -23,9 +23,9 @@ class MovimentosServiceDecompositionHarnessTest {
         long collectorLines = Files.lines(COLLECTOR_FILE).count();
         long summarizerLines = Files.lines(SUMMARIZER_FILE).count();
 
-        assertTrue(serviceLines <= 100, "MovimentosService deve ter <= 100 linhas, atual: " + serviceLines);
-        assertTrue(collectorLines <= 205, "MovimentoCollector deve ter <= 205 linhas, atual: " + collectorLines);
-        assertTrue(summarizerLines <= 190, "MovimentoSummarizer deve ter <= 190 linhas, atual: " + summarizerLines);
+        assertTrue(serviceLines <= 100, "MovimentosService deve ter <= 100 linhas, actual: " + serviceLines);
+        assertTrue(collectorLines <= 205, "MovimentoCollector deve ter <= 205 linhas, actual: " + collectorLines);
+        assertTrue(summarizerLines <= 190, "MovimentoSummarizer deve ter <= 190 linhas, actual: " + summarizerLines);
     }
 
     @Test

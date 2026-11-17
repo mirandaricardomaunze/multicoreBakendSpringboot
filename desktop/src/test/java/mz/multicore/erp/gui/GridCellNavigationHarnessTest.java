@@ -44,7 +44,7 @@ class GridCellNavigationHarnessTest {
         AtomicBoolean addCalled = new AtomicBoolean(false);
         UIHelper.installCellNavigationKeys(table, () -> addCalled.set(true));
 
-        assertTrue(table.getActionMap().get("gridNavNext") != null, "Ação gridNavNext deve estar registrada");
-        assertTrue(table.getActionMap().get("gridNavPrev") != null, "Ação gridNavPrev deve estar registrada");
+        assertTrue(table.getActionMap().get("gridNavNext") != null, "Acção gridNavNext deve estar registrada");
+        assertTrue(table.getActionMap().get("gridNavPrev") != null, "Acção gridNavPrev deve estar registrada");
     }
 }

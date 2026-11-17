@@ -168,7 +168,7 @@ public class ApprovalLifecycleService {
         String role = CurrentUserContext.getRole();
         if (!"ADMIN".equalsIgnoreCase(role) && !("MANAGER".equalsIgnoreCase(role) && "MANAGER".equalsIgnoreCase(request.getRequiredRole()))) {
             throw new BusinessRuleException("Utilizador não autorizado" + action + ". Perfil requerido: "
-                    + request.getRequiredRole() + ", Perfil atual: " + role);
+                    + request.getRequiredRole() + ", Perfil actual: " + role);
         }
         return request;
     }

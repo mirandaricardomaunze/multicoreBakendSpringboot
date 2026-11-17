@@ -65,7 +65,7 @@ class StockTransferReceiptDiscrepancyUiHarnessTest {
     }
 
     @Test
-    @DisplayName("StockTransferReceivingDialog possui proteção contra paginação comprimida e regras canónicas")
+    @DisplayName("StockTransferReceivingDialog possui protecção contra paginação comprimida e regras canónicas")
     void dialogo_conferenciaDeRecepcao_estrutura() throws Exception {
         String dialog = source("StockTransferReceivingDialog.java");
 

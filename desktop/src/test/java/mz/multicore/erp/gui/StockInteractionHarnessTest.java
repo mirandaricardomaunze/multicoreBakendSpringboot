@@ -35,12 +35,12 @@ class StockInteractionHarnessTest {
                 .contains("stockTable.putClientProperty(\"noRowInspector\", Boolean.TRUE)");
 
         assertThat(content)
-                .as("StockPanel deve ter botão Atualizar no separador de níveis de stock")
+                .as("StockPanel deve ter botão Actualizar no separador de níveis de stock")
                 .contains("refreshLevelsBtn")
                 .contains("Actualizar saldos de stock e armazéns");
 
         assertThat(content)
-                .as("StockPanel deve ter botão Atualizar na barra superior")
+                .as("StockPanel deve ter botão Actualizar na barra superior")
                 .contains("refreshAllBtn")
                 .contains("Actualizar dados de stock e armazéns");
     }
@@ -52,7 +52,7 @@ class StockInteractionHarnessTest {
         String content = Files.readString(productActionsSource);
 
         assertThat(content)
-                .as("Modal de edição deve ter botão Atualizar")
+                .as("Modal de edição deve ter botão Actualizar")
                 .contains(".setConfirmButton(\"Actualizar\", \"fas-save\")");
 
         assertThat(content)

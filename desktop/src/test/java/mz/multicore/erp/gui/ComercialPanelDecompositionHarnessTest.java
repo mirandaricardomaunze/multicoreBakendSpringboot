@@ -57,19 +57,19 @@ class ComercialPanelDecompositionHarnessTest {
         int orderLines = Files.readAllLines(orderPath).size();
 
         assertThat(panelLines)
-                .as("ComercialPanel deve ter no máximo 450 linhas (atual: %d)", panelLines)
+                .as("ComercialPanel deve ter no máximo 450 linhas (actual: %d)", panelLines)
                 .isLessThanOrEqualTo(450);
 
         assertThat(metadataLines)
-                .as("CommercialMetadataCoordinator deve ter no máximo 150 linhas (atual: %d)", metadataLines)
+                .as("CommercialMetadataCoordinator deve ter no máximo 150 linhas (actual: %d)", metadataLines)
                 .isLessThanOrEqualTo(150);
 
         assertThat(invoiceLines)
-                .as("CommercialInvoiceOperations deve ter no máximo 250 linhas (atual: %d)", invoiceLines)
+                .as("CommercialInvoiceOperations deve ter no máximo 250 linhas (actual: %d)", invoiceLines)
                 .isLessThanOrEqualTo(250);
 
         assertThat(orderLines)
-                .as("CommercialOrderOperations deve ter no máximo 250 linhas (atual: %d)", orderLines)
+                .as("CommercialOrderOperations deve ter no máximo 250 linhas (actual: %d)", orderLines)
                 .isLessThanOrEqualTo(250);
     }
 

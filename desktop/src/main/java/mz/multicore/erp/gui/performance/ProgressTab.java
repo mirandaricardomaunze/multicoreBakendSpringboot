@@ -82,7 +82,7 @@ public class ProgressTab extends JPanel {
         if (progressList == null || progressList.isEmpty()) {
             JPanel emptyPanel = new ModernPanel();
             emptyPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 40));
-            JLabel lblEmpty = new JLabel("Nenhuma meta comercial ativa no momento.");
+            JLabel lblEmpty = new JLabel("Nenhuma meta comercial activa no momento.");
             lblEmpty.setFont(Typography.EMPHASIS_BOLD);
             lblEmpty.setForeground(UIHelper.TEXT_MUTED);
             emptyPanel.add(lblEmpty);
@@ -153,9 +153,9 @@ public class ProgressTab extends JPanel {
         JPanel statsRow = new JPanel(new GridLayout(1, 4, 10, 0));
         statsRow.setOpaque(false);
 
-        statsRow.add(createMiniStat("Receita Atual", formatMoney(p.currentRevenue()) + " / " + formatMoney(p.targetRevenue())));
+        statsRow.add(createMiniStat("Receita Actual", formatMoney(p.currentRevenue()) + " / " + formatMoney(p.targetRevenue())));
         statsRow.add(createMiniStat("Margem Bruta", formatMoney(p.currentMargin()) + " / " + formatMoney(p.targetMargin())));
-        statsRow.add(createMiniStat("Projeção Fim do Período", formatMoney(p.projectedRevenue()) + " MZN"));
+        statsRow.add(createMiniStat("Projecção Fim do Período", formatMoney(p.projectedRevenue()) + " MZN"));
         statsRow.add(createMiniStat("Prémio Estimado", formatMoney(p.bonusEstimate()) + " MZN"));
 
         centerPanel.add(statsRow);

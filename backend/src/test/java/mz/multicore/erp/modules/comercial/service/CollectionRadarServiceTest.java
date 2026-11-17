@@ -51,7 +51,7 @@ class CollectionRadarServiceTest {
     }
 
     @Test
-    @DisplayName("Garante agregação e consolidação correta do resumo do radar por horizontes temporais")
+    @DisplayName("Garante agregação e consolidação correcta do resumo do radar por horizontes temporais")
     void testRadarSummaryClassification() {
         LocalDate ref = LocalDate.of(2026, 10, 20);
         Client c = new Client();

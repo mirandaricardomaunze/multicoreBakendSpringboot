@@ -52,9 +52,9 @@ class BankReconciliationUnifiedHarnessTest {
         assertNotNull(card, "A tabela de movimentos deve residir dentro de um ModernPanel");
 
         assertTrue(isDescendant(card, panel.accountCombo),
-                "O combo de seleção de conta deve estar contido dentro do card da tabela");
+                "O combo de selecção de conta deve estar contido dentro do card da tabela");
         assertTrue(isDescendant(card, panel.statementCombo),
-                "O combo de seleção de extracto deve estar contido dentro do card da tabela");
+                "O combo de selecção de extracto deve estar contido dentro do card da tabela");
         assertTrue(isDescendant(card, panel.operationsMenu),
                 "O menu de operações deve estar contido dentro do card da tabela");
 
@@ -135,7 +135,7 @@ class BankReconciliationUnifiedHarnessTest {
     }
 
     @Test
-    @DisplayName("TRECON-04: KPIs interativos com drilldown e atualização de filtros")
+    @DisplayName("TRECON-04: KPIs interactivos com drilldown e actualização de filtros")
     void trecon04_interactiveKpiDrilldown() {
         BankReconciliationPanel panel = new BankReconciliationPanel(apiClient, financeApiClient);
 
@@ -160,7 +160,7 @@ class BankReconciliationUnifiedHarnessTest {
                     System.currentTimeMillis(), 0, 10, 10, 1, false, MouseEvent.BUTTON1));
         }
         assertEquals("PENDENTE", panel.statusFilter.getSelectedItem(),
-                "Clicar no KPI 'Movimentos Pendentes' deve ativar filtro PENDENTE");
+                "Clicar no KPI 'Movimentos Pendentes' deve activar filtro PENDENTE");
 
         // Clicar em Saldo no Extracto deve redefinir filtro para 'Todos os estados'
         for (MouseListener ml : cardBank.getMouseListeners()) {

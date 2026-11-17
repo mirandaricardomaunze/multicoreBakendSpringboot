@@ -61,7 +61,7 @@ class QualityEquipmentPrintServiceTest {
         Equipment equipment = new Equipment();
         equipment.setId(20L);
         equipment.setCode("EPI-BOT-01");
-        equipment.setName("Bota de Proteção Biqueira de Aço");
+        equipment.setName("Bota de Protecção Biqueira de Aço");
         equipment.setCategory(EquipmentCategory.PPE_PROTECTION);
         equipment.setPeriodValue(6);
         equipment.setPeriodUnit(PeriodUnit.MONTHS);

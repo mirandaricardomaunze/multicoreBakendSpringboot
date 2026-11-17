@@ -37,7 +37,7 @@ class CreditRiskPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "CreditRiskPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 165, "CreditRiskPanel.java deve possuir <= 165 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 165, "CreditRiskPanel.java deve possuir <= 165 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -121,7 +121,7 @@ class CreditRiskPanelDecompositionHarnessTest {
         }
         String content = Files.readString(path);
 
-        assertTrue(content.contains("UIHelper.tableCardTop(\"Matriz de Aging & Gestão de Risco\""),
+        assertTrue(content.contains("UIHelper.tableCardTop(\"Antiguidade de Saldos & Gestão de Risco\""),
                 "Deve conter cabeçalho canónico tableCardTop");
         assertTrue(content.contains("TableQuickPeekController.install(table"),
                 "Deve instalar TableQuickPeekController com tecla Espaço");

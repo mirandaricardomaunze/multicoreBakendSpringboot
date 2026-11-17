@@ -178,7 +178,7 @@ class PlatformSubscriptionPaymentsHarnessTest {
     }
 
     @Test
-    @DisplayName("PSP-06: Preservação estrita da ativação manual pelo SuperAdmin")
+    @DisplayName("PSP-06: Preservação estrita da activação manual pelo SuperAdmin")
     void testSuperAdminManualActivationPreserved() {
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
 

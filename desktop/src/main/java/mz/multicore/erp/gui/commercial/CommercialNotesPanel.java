@@ -315,7 +315,7 @@ public final class CommercialNotesPanel {
         content.add(form, BorderLayout.NORTH);
         content.add(lineScroll, BorderLayout.CENTER);
         if (!new ModernFormDialog(UIHelper.mainWindow, "Emitir Nota de Crédito", "fas-file-invoice-dollar",
-                "Crédito sobre fatura (devolução/correção)", content).setConfirmButton("Emitir", "fas-check").showDialog()) return;
+                "Crédito sobre fatura (devolução/correcção)", content).setConfirmButton("Emitir", "fas-check").showDialog()) return;
         if (lineTable.isEditing()) lineTable.getCellEditor().stopCellEditing();
         try {
             List<CreateCreditNoteLineRequest> requestedLines = new ArrayList<>();

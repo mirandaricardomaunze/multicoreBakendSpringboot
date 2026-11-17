@@ -44,7 +44,7 @@ public class SystemMonitoringTabsBuilder {
 
     public JPanel buildMultiTenantPanel() {
         ModernPanel panel = createTabCard("Integridade das Empresas & Inquilinos");
-        String[] cols = {"Empresa", "NUIT", "Estado Operacional", "Utilizadores", "Backup Automático", "Anomalias Pendentes"};
+        String[] cols = {"Empresa", "NUIT", "Estado Operacional", "Utilizadores", "Cópia Automática", "Anomalias Pendentes"};
         tenantsTableModel = createNonEditableModel(cols);
         JTable table = createDarkTable(tenantsTableModel);
         table.getColumnModel().getColumn(2).setCellRenderer(createStatusCellRenderer());

@@ -23,7 +23,7 @@ class RecurringContractsPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("RecurringContractsPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 230,
-                () -> "RecurringContractsPanel.java deve possuir <= 230 linhas. Atual: " + lines.size());
+                () -> "RecurringContractsPanel.java deve possuir <= 230 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -32,12 +32,12 @@ class RecurringContractsPanelDecompositionHarnessTest {
         Path formDialog = ROOT.resolve("RecurringContractFormDialog.java");
         List<String> formLines = Files.readAllLines(formDialog);
         assertTrue(formLines.size() <= 135,
-                () -> "RecurringContractFormDialog.java deve possuir <= 135 linhas. Atual: " + formLines.size());
+                () -> "RecurringContractFormDialog.java deve possuir <= 135 linhas. Actual: " + formLines.size());
 
         Path coord = ROOT.resolve("RecurringContractsOperationsCoordinator.java");
         List<String> coordLines = Files.readAllLines(coord);
         assertTrue(coordLines.size() <= 95,
-                () -> "RecurringContractsOperationsCoordinator.java deve possuir <= 95 linhas. Atual: " + coordLines.size());
+                () -> "RecurringContractsOperationsCoordinator.java deve possuir <= 95 linhas. Actual: " + coordLines.size());
     }
 
     @Test

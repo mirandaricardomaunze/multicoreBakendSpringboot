@@ -27,7 +27,7 @@ class UserManagementPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "UserManagementPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 150, "UserManagementPanel.java deve possuir <= 150 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 150, "UserManagementPanel.java deve possuir <= 150 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -40,7 +40,7 @@ class UserManagementPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "UserOperationsCoordinator.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 130, "UserOperationsCoordinator.java deve possuir <= 130 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 130, "UserOperationsCoordinator.java deve possuir <= 130 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -84,7 +84,7 @@ class UserManagementPanelDecompositionHarnessTest {
     }
 
     @Test
-    @DisplayName("UMP-05: Invariantes canónicas de layout e ações preservadas")
+    @DisplayName("UMP-05: Invariantes canónicas de layout e acções preservadas")
     void testCanonicalInvariants() throws IOException {
         Path path = Path.of("desktop/src/main/java/mz/multicore/erp/gui/users/UserManagementPanel.java");
         if (!Files.exists(path)) {

@@ -141,7 +141,7 @@ public class BarcodeScannerCollectorDialog {
 
         if (mode == CollectorMode.MANUFACTURING) {
             if (detailsCard.getMatchedBom() == null) {
-                feedback.show(FeedbackType.WARNING, "O produto selecionado não possui fórmula/BOM de fabrico.");
+                feedback.show(FeedbackType.WARNING, "O produto seleccionado não possui fórmula/BOM de fabrico.");
                 return;
             }
             detailsCard.setActionEnabled(false);

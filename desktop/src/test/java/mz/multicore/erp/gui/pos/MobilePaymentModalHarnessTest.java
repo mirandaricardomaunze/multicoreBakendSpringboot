@@ -41,7 +41,7 @@ class MobilePaymentModalHarnessTest {
     }
 
     @Test
-    @DisplayName("MPI-08: Integração de simulação e aprovação de transação móvel")
+    @DisplayName("MPI-08: Integração de simulação e aprovação de transacção móvel")
     void testSimulateApprovalWorkflow() {
         POSApiClient client = Mockito.mock(POSApiClient.class);
         when(client.simulateCompleteMobilePayment("TX-123", 1L, true)).thenReturn(

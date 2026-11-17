@@ -23,7 +23,7 @@ class HROverviewTabPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "HROverviewTabPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 110, "HROverviewTabPanel.java deve possuir <= 110 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 110, "HROverviewTabPanel.java deve possuir <= 110 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -36,7 +36,7 @@ class HROverviewTabPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "HROverviewMetricsCoordinator.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 115, "HROverviewMetricsCoordinator.java deve possuir <= 115 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 115, "HROverviewMetricsCoordinator.java deve possuir <= 115 linhas. Actual: " + lines.size());
     }
 
     @Test

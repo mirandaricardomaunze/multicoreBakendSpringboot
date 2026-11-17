@@ -76,7 +76,7 @@ public final class ManufacturingPanel extends JPanel {
         headerPanel.add(feedback);
 
         JPanel kpiGrid = KpiCard.createGrid(4);
-        kpiGrid.add(KpiCard.createCard("Ordens em Produção", kpiInProgress, "Ordens em fabrico ativo",
+        kpiGrid.add(KpiCard.createCard("Ordens em Produção", kpiInProgress, "Ordens em fabrico activo",
                 "fas-industry", UIHelper.ACCENT_BLUE));
         kpiGrid.add(KpiCard.createCard("Ordens Concluídas", kpiCompleted, "Transformações finalizadas",
                 "fas-check-circle", UIHelper.APPROVED_GREEN));

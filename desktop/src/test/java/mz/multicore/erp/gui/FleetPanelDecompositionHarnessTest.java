@@ -34,7 +34,7 @@ class FleetPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "FleetPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 240, "FleetPanel.java deve possuir <= 240 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 240, "FleetPanel.java deve possuir <= 240 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -47,7 +47,7 @@ class FleetPanelDecompositionHarnessTest {
         assertTrue(Files.exists(vehicleDialogPath), "VehicleFormDialog.java deve existir");
 
         List<String> vehicleLines = Files.readAllLines(vehicleDialogPath);
-        assertTrue(vehicleLines.size() <= 135, "VehicleFormDialog.java deve possuir <= 135 linhas. Atual: " + vehicleLines.size());
+        assertTrue(vehicleLines.size() <= 135, "VehicleFormDialog.java deve possuir <= 135 linhas. Actual: " + vehicleLines.size());
 
         Path fuelCoordPath = Path.of("desktop/src/main/java/mz/multicore/erp/gui/FuelOperationsCoordinator.java");
         if (!Files.exists(fuelCoordPath)) {
@@ -56,7 +56,7 @@ class FleetPanelDecompositionHarnessTest {
         assertTrue(Files.exists(fuelCoordPath), "FuelOperationsCoordinator.java deve existir");
 
         List<String> fuelLines = Files.readAllLines(fuelCoordPath);
-        assertTrue(fuelLines.size() <= 180, "FuelOperationsCoordinator.java deve possuir <= 180 linhas. Atual: " + fuelLines.size());
+        assertTrue(fuelLines.size() <= 180, "FuelOperationsCoordinator.java deve possuir <= 180 linhas. Actual: " + fuelLines.size());
     }
 
     @Test

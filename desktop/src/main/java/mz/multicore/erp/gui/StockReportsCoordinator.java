@@ -122,8 +122,8 @@ final class StockReportsCoordinator {
 
         prodCombo.setProducts(products);
         JPanel dialogPanel = UIHelper.createDialogForm(
-                "Selecionar Artigo:", prodCombo,
-                "Selecionar Armazém:", whCombo,
+                "Seleccionar Artigo:", prodCombo,
+                "Seleccionar Armazém:", whCombo,
                 "Quantidade contada:", countedField,
                 "Motivo / Descrição:", reasonField
         );

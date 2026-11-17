@@ -26,7 +26,7 @@ class SellerDashboardPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "SellerDashboardPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 130, "SellerDashboardPanel.java deve possuir <= 130 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 130, "SellerDashboardPanel.java deve possuir <= 130 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -39,7 +39,7 @@ class SellerDashboardPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "SellerDashboardViewCoordinator.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 95, "SellerDashboardViewCoordinator.java deve possuir <= 95 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 95, "SellerDashboardViewCoordinator.java deve possuir <= 95 linhas. Actual: " + lines.size());
     }
 
     @Test

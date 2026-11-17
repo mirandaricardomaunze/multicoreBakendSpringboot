@@ -118,7 +118,7 @@ public class ComercialInvoiceLifecycleService {
         Company company = companyLookup.require(request.companyId());
         Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+            throw new BusinessRuleException("O armazém não pertence à empresa activa.");
         }
         BusinessUnit restrictedBu = null;
         if (request.businessUnitId() != null && businessUnitLookup != null) {

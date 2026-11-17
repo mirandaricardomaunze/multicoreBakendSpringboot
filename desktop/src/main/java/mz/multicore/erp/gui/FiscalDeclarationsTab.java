@@ -33,7 +33,7 @@ final class FiscalDeclarationsTab {
         title.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel hint = new JLabel("<html>Estes documentos são exportados em PDF profissional, prontos para impressão e arquivo. " +
-                "Inclua todas as faturas aprovadas/pagas e compras não-canceladas do período selecionado.</html>");
+                "Inclua todas as faturas aprovadas/pagas e compras não-canceladas do período seleccionado.</html>");
         hint.setFont(Typography.BODY);
         hint.setForeground(UIHelper.TEXT_MUTED);
 

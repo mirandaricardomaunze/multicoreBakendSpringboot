@@ -35,10 +35,10 @@ class RecordDetailsDialogDecompositionHarnessTest {
         List<String> exporterLines = Files.readAllLines(exporterFile);
         List<String> tabBuilderLines = Files.readAllLines(tabBuilderFile);
 
-        assertTrue(dialogLines.size() <= 225, "RecordDetailsDialog deve ter <= 225 linhas (atual: " + dialogLines.size() + ")");
-        assertTrue(extractorLines.size() <= 170, "RecordDetailsPropertyExtractor deve ter <= 170 linhas (atual: " + extractorLines.size() + ")");
-        assertTrue(exporterLines.size() <= 150, "RecordDetailsExporter deve ter <= 150 linhas (atual: " + exporterLines.size() + ")");
-        assertTrue(tabBuilderLines.size() <= 95, "RecordDetailsTabBuilder deve ter <= 95 linhas (atual: " + tabBuilderLines.size() + ")");
+        assertTrue(dialogLines.size() <= 225, "RecordDetailsDialog deve ter <= 225 linhas (actual: " + dialogLines.size() + ")");
+        assertTrue(extractorLines.size() <= 170, "RecordDetailsPropertyExtractor deve ter <= 170 linhas (actual: " + extractorLines.size() + ")");
+        assertTrue(exporterLines.size() <= 150, "RecordDetailsExporter deve ter <= 150 linhas (actual: " + exporterLines.size() + ")");
+        assertTrue(tabBuilderLines.size() <= 95, "RecordDetailsTabBuilder deve ter <= 95 linhas (actual: " + tabBuilderLines.size() + ")");
     }
 
     @Test

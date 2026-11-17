@@ -23,7 +23,7 @@ class PurchaseSuppliersPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "PurchaseSuppliersPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 95, "PurchaseSuppliersPanel.java deve possuir <= 95 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 95, "PurchaseSuppliersPanel.java deve possuir <= 95 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -37,12 +37,12 @@ class PurchaseSuppliersPanelDecompositionHarnessTest {
         Path formPath = baseDir.resolve("SupplierFormDialog.java");
         assertTrue(Files.exists(formPath), "SupplierFormDialog.java deve existir");
         List<String> formLines = Files.readAllLines(formPath);
-        assertTrue(formLines.size() <= 75, "SupplierFormDialog.java deve possuir <= 75 linhas. Atual: " + formLines.size());
+        assertTrue(formLines.size() <= 75, "SupplierFormDialog.java deve possuir <= 75 linhas. Actual: " + formLines.size());
 
         Path coordPath = baseDir.resolve("PurchaseSuppliersViewCoordinator.java");
         assertTrue(Files.exists(coordPath), "PurchaseSuppliersViewCoordinator.java deve existir");
         List<String> coordLines = Files.readAllLines(coordPath);
-        assertTrue(coordLines.size() <= 80, "PurchaseSuppliersViewCoordinator.java deve possuir <= 80 linhas. Atual: " + coordLines.size());
+        assertTrue(coordLines.size() <= 80, "PurchaseSuppliersViewCoordinator.java deve possuir <= 80 linhas. Actual: " + coordLines.size());
     }
 
     @Test

@@ -143,7 +143,7 @@ class ComercialControllerIntegrationTest {
                     "saleType": "UNIT",
                     "stockTracked": true,
                     "taxRateId": %s,
-                    "description": "Atualizacao de teste",
+                    "description": "Actualizacao de teste",
                     "wholesalePrice": null,
                     "wholesaleMinQty": null,
                     "netUnitWeightKg": null,

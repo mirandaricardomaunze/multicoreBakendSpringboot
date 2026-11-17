@@ -57,7 +57,7 @@ public class PosCheckoutCoordinator {
                     "Venda a Cliente Não Cadastrado", "Introduza o nome do cliente:");
             if (walkInName == null || walkInName.isBlank()) {
                 owner.showPosNotice(FeedbackType.WARNING, "Nome do cliente obrigatório",
-                        "É obrigatório indicar o nome do cliente para efetuar a venda no POS.");
+                        "É obrigatório indicar o nome do cliente para efectuar a venda no POS.");
                 if (owner.clientSearchField != null) owner.clientSearchField.requestFocusInWindow();
                 return;
             }

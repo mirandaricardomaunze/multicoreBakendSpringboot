@@ -71,7 +71,7 @@ final class PurchaseInvoiceOperations {
         int whIdx = owner.warehouseCombo.getSelectedIndex();
         int accIdx = owner.accountCombo.getSelectedIndex();
         if (supIdx < 0 || supIdx >= owner.supplierComboList.size() || whIdx < 0) {
-            throw new RuntimeException("Selecione fornecedor e armazém.");
+            throw new RuntimeException("Seleccione fornecedor e armazém.");
         }
 
         SupplierDTO supplier = owner.supplierComboList.get(supIdx);

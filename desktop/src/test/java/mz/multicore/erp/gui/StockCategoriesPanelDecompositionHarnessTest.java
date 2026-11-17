@@ -23,7 +23,7 @@ class StockCategoriesPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "StockCategoriesPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 100, "StockCategoriesPanel.java deve possuir <= 100 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 100, "StockCategoriesPanel.java deve possuir <= 100 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -37,12 +37,12 @@ class StockCategoriesPanelDecompositionHarnessTest {
         Path formPath = baseDir.resolve("StockCategoryFormDialog.java");
         assertTrue(Files.exists(formPath), "StockCategoryFormDialog.java deve existir");
         List<String> formLines = Files.readAllLines(formPath);
-        assertTrue(formLines.size() <= 95, "StockCategoryFormDialog.java deve possuir <= 95 linhas. Atual: " + formLines.size());
+        assertTrue(formLines.size() <= 95, "StockCategoryFormDialog.java deve possuir <= 95 linhas. Actual: " + formLines.size());
 
         Path coordPath = baseDir.resolve("StockCategoriesViewCoordinator.java");
         assertTrue(Files.exists(coordPath), "StockCategoriesViewCoordinator.java deve existir");
         List<String> coordLines = Files.readAllLines(coordPath);
-        assertTrue(coordLines.size() <= 130, "StockCategoriesViewCoordinator.java deve possuir <= 130 linhas. Atual: " + coordLines.size());
+        assertTrue(coordLines.size() <= 130, "StockCategoriesViewCoordinator.java deve possuir <= 130 linhas. Actual: " + coordLines.size());
     }
 
     @Test

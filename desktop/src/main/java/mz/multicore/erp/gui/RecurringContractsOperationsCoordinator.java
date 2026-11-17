@@ -74,7 +74,7 @@ public final class RecurringContractsOperationsCoordinator {
                 SwingUtilities.getWindowAncestor(parent),
                 "Gestão do Contrato",
                 "fas-file-contract",
-                "Selecione a acção desejada para o contrato " + selected.contractNumber(),
+                "Seleccione a acção desejada para o contrato " + selected.contractNumber(),
                 form
         );
 

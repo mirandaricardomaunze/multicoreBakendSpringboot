@@ -70,7 +70,7 @@ public final class RecordDetailsTabBuilder {
         auditItems.add(new RecordDetailsDialog.PropertyItem("Empresa / Tenant", companyId != null ? "Empresa #" + companyId : "Multicore ERP Principal"));
         auditItems.add(new RecordDetailsDialog.PropertyItem("Carimbo de Data / Hora", LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))));
         auditItems.add(new RecordDetailsDialog.PropertyItem("Referência de Grelha", "Linha #" + (row + 1) + " de " + table.getRowCount() + " (" + table.getColumnCount() + " colunas)"));
-        auditItems.add(new RecordDetailsDialog.PropertyItem("Modo de Inspeção", "Estritamente Só-Leitura (Garantia de Integridade)"));
+        auditItems.add(new RecordDetailsDialog.PropertyItem("Modo de Inspecção", "Estritamente Só-Leitura (Garantia de Integridade)"));
         auditItems.add(new RecordDetailsDialog.PropertyItem("Motor Canónico", "RecordDetailsDialog Tier-1 Enterprise Inspector"));
 
         return RecordDetailsDialog.buildPropertySheet(auditItems);

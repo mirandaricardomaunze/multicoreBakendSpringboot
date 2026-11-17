@@ -137,7 +137,7 @@ class RadarAlertasProactivoHarnessTest {
     }
 
     @Test
-    @DisplayName("RAP-04: Mapeamento de ações rápidas no SmartAlertsDialog")
+    @DisplayName("RAP-04: Mapeamento de acções rápidas no SmartAlertsDialog")
     void testSmartAlertActionMapping() {
         NotificationFeed.NotificationItem creditItem = new NotificationFeed.NotificationItem(
                 "Risco de Crédito", "Risco Crítico", "Total mora", "Cobrança urgente", "risco_credito", 3);
@@ -175,7 +175,7 @@ class RadarAlertasProactivoHarnessTest {
     }
 
     @Test
-    @DisplayName("RAP-06: Seleção de sub-abas especializadas em ClientesPanel e StockPanel")
+    @DisplayName("RAP-06: Selecção de sub-abas especializadas em ClientesPanel e StockPanel")
     void testSubTabSelectionNavigation() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             CurrentUserContext.setCurrentUser("admin", "ADMIN");

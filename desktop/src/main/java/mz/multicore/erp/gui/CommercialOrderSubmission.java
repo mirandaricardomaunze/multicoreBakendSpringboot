@@ -121,7 +121,7 @@ final class CommercialOrderSubmission {
     /** Validação do rascunho. Lança {@link RuntimeException} em erro para manter o editor aberto. */
     private static CreateOrderRequest buildRequest(ComercialPanel owner) {
         if (owner.warehousesList.isEmpty()) {
-            throw new RuntimeException("Nenhum armazém disponível para a empresa atual.");
+            throw new RuntimeException("Nenhum armazém disponível para a empresa actual.");
         }
         if (owner.draftOrderLines.isEmpty()) {
             throw new RuntimeException("Adicione pelo menos um item à encomenda.");
@@ -130,7 +130,7 @@ final class CommercialOrderSubmission {
         int clientIdx = owner.orderClientCombo.getSelectedIndex();
         int whIdx = owner.orderWarehouseCombo.getSelectedIndex();
         if (whIdx < 0) {
-            throw new RuntimeException("Selecione o armazém.");
+            throw new RuntimeException("Seleccione o armazém.");
         }
 
         // O índice 0 do combo é "Consumidor Final"; índices >0 mapeiam para clientsList[idx-1].

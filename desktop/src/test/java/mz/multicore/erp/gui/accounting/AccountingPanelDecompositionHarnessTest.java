@@ -34,7 +34,7 @@ class AccountingPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "AccountingPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 120, "AccountingPanel.java deve possuir <= 120 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 120, "AccountingPanel.java deve possuir <= 120 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -57,7 +57,7 @@ class AccountingPanelDecompositionHarnessTest {
             Path filePath = baseDir.resolve(file);
             assertTrue(Files.exists(filePath), file + " deve existir");
             List<String> lines = Files.readAllLines(filePath);
-            assertTrue(lines.size() <= 160, file + " deve possuir <= 160 linhas. Atual: " + lines.size());
+            assertTrue(lines.size() <= 160, file + " deve possuir <= 160 linhas. Actual: " + lines.size());
         }
     }
 

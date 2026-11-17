@@ -39,7 +39,7 @@ public final class MobilePaymentModal extends JDialog implements MobilePaymentWo
 
     private MobilePaymentModal(Window owner, MobilePaymentProvider initialProvider,
                                BigDecimal totalAmount, POSApiClient client) {
-        super(owner, "Pagamento Móvel Push USSD", ModalityType.APPLICATION_MODAL);
+        super(owner, "Pagamento Móvel", ModalityType.APPLICATION_MODAL);
         this.amount = totalAmount != null ? totalAmount.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
         this.coordinator = new MobilePaymentWorkflowCoordinator(client, this);
 
@@ -48,7 +48,7 @@ public final class MobilePaymentModal extends JDialog implements MobilePaymentWo
         setSize(480, 540);
         setLocationRelativeTo(owner);
 
-        JPanel content = DialogChrome.frame("fas-mobile-alt", "Pagamento por Telemóvel (Push USSD)",
+        JPanel content = DialogChrome.frame("fas-mobile-alt", "Pagamento por Telemóvel",
                 "O cliente receberá uma solicitação no visor para digitar o PIN.", null, null);
 
         JPanel centerPanel = new JPanel();

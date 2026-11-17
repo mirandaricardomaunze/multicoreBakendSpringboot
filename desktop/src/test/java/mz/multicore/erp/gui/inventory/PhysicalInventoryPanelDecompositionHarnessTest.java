@@ -34,7 +34,7 @@ class PhysicalInventoryPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "PhysicalInventoryPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 240, "PhysicalInventoryPanel.java deve possuir <= 240 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 240, "PhysicalInventoryPanel.java deve possuir <= 240 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -46,7 +46,7 @@ class PhysicalInventoryPanelDecompositionHarnessTest {
         }
         assertTrue(Files.exists(coordPath), "PhysicalInventoryOperationsCoordinator.java deve existir");
         List<String> coordLines = Files.readAllLines(coordPath);
-        assertTrue(coordLines.size() <= 160, "PhysicalInventoryOperationsCoordinator.java deve possuir <= 160 linhas. Atual: " + coordLines.size());
+        assertTrue(coordLines.size() <= 160, "PhysicalInventoryOperationsCoordinator.java deve possuir <= 160 linhas. Actual: " + coordLines.size());
 
         Path tableHelperPath = Path.of("desktop/src/main/java/mz/multicore/erp/gui/inventory/PhysicalInventoryTableHelper.java");
         if (!Files.exists(tableHelperPath)) {
@@ -54,7 +54,7 @@ class PhysicalInventoryPanelDecompositionHarnessTest {
         }
         assertTrue(Files.exists(tableHelperPath), "PhysicalInventoryTableHelper.java deve existir");
         List<String> tableLines = Files.readAllLines(tableHelperPath);
-        assertTrue(tableLines.size() <= 120, "PhysicalInventoryTableHelper.java deve possuir <= 120 linhas. Atual: " + tableLines.size());
+        assertTrue(tableLines.size() <= 120, "PhysicalInventoryTableHelper.java deve possuir <= 120 linhas. Actual: " + tableLines.size());
 
         Path viewCoordPath = Path.of("desktop/src/main/java/mz/multicore/erp/gui/inventory/PhysicalInventoryViewCoordinator.java");
         if (!Files.exists(viewCoordPath)) {
@@ -62,7 +62,7 @@ class PhysicalInventoryPanelDecompositionHarnessTest {
         }
         assertTrue(Files.exists(viewCoordPath), "PhysicalInventoryViewCoordinator.java deve existir");
         List<String> viewLines = Files.readAllLines(viewCoordPath);
-        assertTrue(viewLines.size() <= 110, "PhysicalInventoryViewCoordinator.java deve possuir <= 110 linhas. Atual: " + viewLines.size());
+        assertTrue(viewLines.size() <= 110, "PhysicalInventoryViewCoordinator.java deve possuir <= 110 linhas. Actual: " + viewLines.size());
     }
 
     @Test

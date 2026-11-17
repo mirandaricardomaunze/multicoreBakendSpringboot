@@ -57,7 +57,7 @@ public class ForensicAuditPanelHarnessTest {
     }
 
     @Test
-    @DisplayName("AFF-07.2: Atualização de KPIs e linhas da tabela a partir do DTO de sumário")
+    @DisplayName("AFF-07.2: Actualização de KPIs e linhas da tabela a partir do DTO de sumário")
     void testRenderSummary() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             ForensicAuditApiClient client = Mockito.mock(ForensicAuditApiClient.class);
@@ -132,7 +132,7 @@ public class ForensicAuditPanelHarnessTest {
             assertFalse(line.contains("new Color("),
                     "Linha " + (i + 1) + " não pode instanciar new Color(...). Use tokens do UIHelper: " + line);
             assertFalse(line.toLowerCase().contains("atualizar"),
-                    "Linha " + (i + 1) + " não pode usar a palavra proibida 'atualizar'. Em Moçambique deve ser 'Actualizar': " + line);
+                    "Linha " + (i + 1) + " não pode usar a palavra proibida 'actualizar'. Em Moçambique deve ser 'Actualizar': " + line);
         }
     }
 }

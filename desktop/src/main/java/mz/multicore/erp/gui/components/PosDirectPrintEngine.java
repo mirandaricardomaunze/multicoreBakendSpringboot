@@ -48,7 +48,7 @@ public class PosDirectPrintEngine {
             ToastManager.show(parent, FeedbackType.SUCCESS, "Talão de venda enviado para a impressora.");
             return true;
         } catch (Exception e) {
-            ToastManager.show(parent, FeedbackType.ERROR, "Falha na impressão direta: " + e.getMessage());
+            ToastManager.show(parent, FeedbackType.ERROR, "Falha na impressão directa: " + e.getMessage());
             return false;
         }
     }

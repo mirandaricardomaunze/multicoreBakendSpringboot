@@ -25,7 +25,7 @@ public class BackupContentReader {
     Map<String, Object> read(File file) {
         String name = file.getName().toLowerCase(Locale.ROOT);
         if (!name.endsWith(".json") && !name.endsWith(ENCRYPTED_JSON)) {
-            throw new BusinessRuleException("O ficheiro selecionado não é um backup JSON válido.");
+            throw new BusinessRuleException("O ficheiro seleccionado não é um backup JSON válido.");
         }
         try {
             ObjectMapper mapper = new ObjectMapper();

@@ -156,26 +156,26 @@ public class StockWastePanelHarnessTest {
                 // Sem seleção na tabela
                 panel.wasteTable.clearSelection();
                 panel.updateApprovalButtonsState();
-                assertFalse(panel.approveBtn.isEnabled(), "Sem linha selecionada, aprovar deve estar inativo");
-                assertFalse(panel.rejectBtn.isEnabled(), "Sem linha selecionada, rejeitar deve estar inativo");
+                assertFalse(panel.approveBtn.isEnabled(), "Sem linha seleccionada, aprovar deve estar inactivo");
+                assertFalse(panel.rejectBtn.isEnabled(), "Sem linha seleccionada, rejeitar deve estar inactivo");
 
                 // Seleciona a linha 0 (PENDING_APPROVAL)
                 panel.wasteTable.setRowSelectionInterval(0, 0);
                 panel.updateApprovalButtonsState();
-                assertTrue(panel.approveBtn.isEnabled(), "Com quebra pendente, aprovar deve estar ativo");
-                assertTrue(panel.rejectBtn.isEnabled(), "Com quebra pendente, rejeitar deve estar ativo");
+                assertTrue(panel.approveBtn.isEnabled(), "Com quebra pendente, aprovar deve estar activo");
+                assertTrue(panel.rejectBtn.isEnabled(), "Com quebra pendente, rejeitar deve estar activo");
 
                 // Seleciona a linha 1 (APPROVED)
                 panel.wasteTable.setRowSelectionInterval(1, 1);
                 panel.updateApprovalButtonsState();
-                assertFalse(panel.approveBtn.isEnabled(), "Com quebra já aprovada, aprovar deve estar inativo");
-                assertFalse(panel.rejectBtn.isEnabled(), "Com quebra já aprovada, rejeitar deve estar inativo");
+                assertFalse(panel.approveBtn.isEnabled(), "Com quebra já aprovada, aprovar deve estar inactivo");
+                assertFalse(panel.rejectBtn.isEnabled(), "Com quebra já aprovada, rejeitar deve estar inactivo");
 
                 // Seleciona a linha 2 (REJECTED)
                 panel.wasteTable.setRowSelectionInterval(2, 2);
                 panel.updateApprovalButtonsState();
-                assertFalse(panel.approveBtn.isEnabled(), "Com quebra já rejeitada, aprovar deve estar inativo");
-                assertFalse(panel.rejectBtn.isEnabled(), "Com quebra já rejeitada, rejeitar deve estar inativo");
+                assertFalse(panel.approveBtn.isEnabled(), "Com quebra já rejeitada, aprovar deve estar inactivo");
+                assertFalse(panel.rejectBtn.isEnabled(), "Com quebra já rejeitada, rejeitar deve estar inactivo");
             } finally {
                 CurrentUserContext.clear();
             }

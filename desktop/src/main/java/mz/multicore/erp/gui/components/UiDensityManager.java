@@ -110,7 +110,7 @@ public class UiDensityManager {
                 }
             }
         } catch (Exception ex) {
-            LOGGER.log(Level.WARNING, "Falha ao atualizar janelas para nova densidade: " + ex.getMessage(), ex);
+            LOGGER.log(Level.WARNING, "Falha ao actualizar janelas para nova densidade: " + ex.getMessage(), ex);
         }
     }
 

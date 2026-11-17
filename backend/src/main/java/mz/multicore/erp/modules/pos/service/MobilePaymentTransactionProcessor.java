@@ -54,7 +54,7 @@ public class MobilePaymentTransactionProcessor {
 
         if (normalizedPhone.endsWith("000")) {
             tx.setStatus(MobilePaymentStatus.FAILED);
-            tx.setMessage("Saldo insuficiente ou PIN incorreto no telemóvel do cliente.");
+            tx.setMessage("Saldo insuficiente ou PIN incorrecto no telemóvel do cliente.");
         } else if (normalizedPhone.endsWith("999")) {
             tx.setStatus(MobilePaymentStatus.CANCELLED);
             tx.setMessage("Transacção cancelada pelo cliente.");

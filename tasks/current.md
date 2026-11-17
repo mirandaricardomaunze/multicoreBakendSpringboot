@@ -101,6 +101,12 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
     `un`/`kg` à direita e mostra datas ISO como dd/MM/yyyy. Regra 12, `TableValuesFormatHarnessTest`.
 52. **Galeria visual (2026-11-16):** `VisualGalleryTest` (só com `-Dgallery=true`) guarda uma imagem de cada ecrã,
     separador e diálogo nos três temas, para rever o sistema inteiro sem clicar. SPEC `docs/GALERIA_VISUAL_SPEC.md`.
+53. **Tabela vazia com o passo seguinte (2026-11-17):** "Sem cotações." + botão principal, derivados do cabeçalho do
+    cartão; com filtros, "Nenhum resultado com estes filtros.". SPEC `docs/ESTADO_VAZIO_SPEC.md`.
+54. **Ecrãs fora da regra (2026-11-17):** aparência com `SegmentedControl`, "Actualizar" nas listagens que não o tinham,
+    seta das listas sem quadrado cinzento, Fecho Cego em português. SPEC `docs/ECRAS_FORA_DA_REGRA_SPEC.md`.
+55. **Ortografia anterior ao Acordo (2026-11-17, decisão do responsável):** Actualizar, Seleccione, Activo; "Fatura" fica;
+    sem inglês visível. `CONVENTIONS.md` §1, SPEC `docs/ORTOGRAFIA_SPEC.md`, `OrthographyHarnessTest`.
 
 35. **Painel Executivo com Tema e Modais Próprios:**
     - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.

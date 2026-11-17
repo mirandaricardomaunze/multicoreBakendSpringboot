@@ -128,7 +128,7 @@ public class StockProductDetailDialog {
 
     public static void showFor(StockPanel owner, Long productId) {
         if (productId == null) {
-            owner.showStockNotice(FeedbackType.INFO, "Selecione um artigo", "Selecione um produto na tabela para ver a ficha detalhada.");
+            owner.showStockNotice(FeedbackType.INFO, "Seleccione um artigo", "Seleccione um produto na tabela para ver a ficha detalhada.");
             return;
         }
         ProductDTO product = null;

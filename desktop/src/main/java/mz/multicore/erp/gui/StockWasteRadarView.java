@@ -44,7 +44,7 @@ public class StockWasteRadarView extends JPanel {
         ModernButton wasteRadarBtn = UIHelper.createDangerButton("Registar Quebra deste Lote");
         wasteRadarBtn.setIcon(UIHelper.icon("fas-trash-alt", 14));
         wasteRadarBtn.setEnabled(false);
-        wasteRadarBtn.setToolTipText("Selecione um lote na tabela para registar quebra");
+        wasteRadarBtn.setToolTipText("Seleccione um lote na tabela para registar quebra");
         wasteRadarBtn.addActionListener(e -> triggerWasteFromSelected());
 
         ModernButton peekRadarBtn = UIHelper.createSecondaryButton("");
@@ -168,7 +168,7 @@ public class StockWasteRadarView extends JPanel {
     private void triggerWasteFromSelected() {
         ExpiringBatchAlertDTO alert = getSelectedAlert();
         if (alert == null) {
-            ToastManager.show(this, FeedbackType.INFO, "Selecione primeiro um lote na tabela do radar.");
+            ToastManager.show(this, FeedbackType.INFO, "Seleccione primeiro um lote na tabela do radar.");
             return;
         }
         if (onWasteFromBatch != null) onWasteFromBatch.accept(alert);

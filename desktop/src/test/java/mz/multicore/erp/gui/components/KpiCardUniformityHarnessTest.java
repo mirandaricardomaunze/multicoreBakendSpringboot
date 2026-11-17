@@ -77,7 +77,7 @@ class KpiCardUniformityHarnessTest {
     }
 
     @Test
-    @DisplayName("KPI-03: Cartão com TrendBadge reativo e cálculo percentual")
+    @DisplayName("KPI-03: Cartão com TrendBadge reactivo e cálculo percentual")
     void testTrendBadgeIntegration() {
         KpiCard.TrendBadge badge = new KpiCard.TrendBadge(new BigDecimal("12.5"), "vs mês anterior");
         assertTrue(badge.isPositive());

@@ -28,7 +28,7 @@ public class DatabaseBackupDialog extends JDialog {
     private JLabel resultSummaryLabel;
 
     public DatabaseBackupDialog(Window owner, BackupApiClient backupApiClient) {
-        super(owner, "Centro de Cópias de Segurança (Backup) e Integridade", ModalityType.APPLICATION_MODAL);
+        super(owner, "Cópias de Segurança e Integridade", ModalityType.APPLICATION_MODAL);
         this.backupApiClient = backupApiClient;
 
         setSize(720, 560);
@@ -58,7 +58,7 @@ public class DatabaseBackupDialog extends JDialog {
         statusLabel.setFont(Typography.EMPHASIS_BOLD);
         statusLabel.setForeground(UIHelper.TEXT_LIGHT);
 
-        lastRunLabel = new JLabel("Último Backup Automático: --");
+        lastRunLabel = new JLabel("Última cópia automática: --");
         lastRunLabel.setFont(Typography.BODY);
         lastRunLabel.setForeground(UIHelper.TEXT_MUTED);
 
@@ -67,7 +67,7 @@ public class DatabaseBackupDialog extends JDialog {
         statusBox.add(lastRunLabel);
         quickCard.add(statusBox, BorderLayout.CENTER);
 
-        generateBtn = ButtonStyles.main(UIHelper.createSuccessButton("Criar Backup Agora"));
+        generateBtn = ButtonStyles.main(UIHelper.createSuccessButton("Criar Cópia Agora"));
         generateBtn.setIcon(UIHelper.icon("fas-download", 14));
         generateBtn.addActionListener(e -> generateBackup());
         quickCard.add(generateBtn, BorderLayout.EAST);
@@ -101,7 +101,7 @@ public class DatabaseBackupDialog extends JDialog {
         JPanel tableActions = new JPanel(new BorderLayout(10, 0));
         tableActions.setOpaque(false);
 
-        resultSummaryLabel = new JLabel("Selecione um arquivo para verificar.");
+        resultSummaryLabel = new JLabel("Seleccione um arquivo para verificar.");
         resultSummaryLabel.setFont(Typography.BODY.deriveFont(Font.ITALIC));
         resultSummaryLabel.setForeground(UIHelper.TEXT_MUTED);
 
@@ -145,11 +145,11 @@ public class DatabaseBackupDialog extends JDialog {
             protected void done() {
                 setCursor(Cursor.getDefaultCursor());
                 if (status != null) {
-                    statusLabel.setText("Agendamento: " + (status.autoEnabled() ? "Ativo (Diário)" : "Inativo"));
+                    statusLabel.setText("Agendamento: " + (status.autoEnabled() ? "Activo (Diário)" : "Inactivo"));
                     statusLabel.setForeground(status.autoEnabled() ? UIHelper.APPROVED_GREEN : UIHelper.PENDING_YELLOW);
                     if (status.lastTime() != null) {
                         String ok = Boolean.TRUE.equals(status.lastSuccess()) ? "Sucesso" : "Falha";
-                        lastRunLabel.setText("Último Backup: " + status.lastTime().format(DT_FORMAT) + " (" + ok + ")");
+                        lastRunLabel.setText("Última cópia: " + status.lastTime().format(DT_FORMAT) + " (" + ok + ")");
                     }
                 }
 
@@ -185,13 +185,13 @@ public class DatabaseBackupDialog extends JDialog {
                     String path = get();
                     if (path != null) {
                         resultSummaryLabel.setIcon(UIHelper.icon("fas-check-circle", 14, UIHelper.APPROVED_GREEN));
-                        resultSummaryLabel.setText("Backup gerado com sucesso: " + path);
+                        resultSummaryLabel.setText("Cópia de segurança gerada com sucesso: " + path);
                         resultSummaryLabel.setForeground(UIHelper.APPROVED_GREEN);
                         loadData();
                     }
                 } catch (Exception e) {
                     resultSummaryLabel.setIcon(UIHelper.icon("fas-times-circle", 14, UIHelper.REJECTED_RED));
-                    resultSummaryLabel.setText("Falha ao gerar backup: " + e.getMessage());
+                    resultSummaryLabel.setText("Não foi possível gerar a cópia de segurança: " + e.getMessage());
                     resultSummaryLabel.setForeground(UIHelper.REJECTED_RED);
                 }
             }
@@ -202,7 +202,7 @@ public class DatabaseBackupDialog extends JDialog {
     private void verifySelectedBackup() {
         int row = TableFilter.selectedModelRow(filesTable);
         if (row < 0) {
-            ToastManager.show(this, FeedbackType.WARNING, "Por favor selecione um arquivo de backup na tabela.");
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione uma cópia de segurança na tabela.");
             return;
         }
 

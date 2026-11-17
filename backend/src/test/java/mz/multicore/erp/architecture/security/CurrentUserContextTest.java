@@ -42,7 +42,7 @@ class CurrentUserContextTest {
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 CurrentUserContext::getCurrentCompanyId);
 
-        assertEquals("Selecione uma empresa antes de continuar.", ex.getMessage());
+        assertEquals("Seleccione uma empresa antes de continuar.", ex.getMessage());
     }
 
     /** CF-04 — as variantes find* são para infra que legitimamente corre sem tenant: nunca lançam. */

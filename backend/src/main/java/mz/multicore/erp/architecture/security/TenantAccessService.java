@@ -34,7 +34,7 @@ public class TenantAccessService {
         }
         AppUser user = userLookup.requireByUsername(username);
         if (!user.isActive()) {
-            throw new BusinessRuleException("Utilizador inativo.");
+            throw new BusinessRuleException("Utilizador inactivo.");
         }
         return user;
     }
@@ -52,7 +52,7 @@ public class TenantAccessService {
     public AppUser requireAccess(String username, Long companyId) {
         AppUser user = requireActiveUser(username);
         if (!user.hasCompany(companyId)) {
-            throw new BusinessRuleException("O utilizador não tem acesso à empresa selecionada.");
+            throw new BusinessRuleException("O utilizador não tem acesso à empresa seleccionada.");
         }
         Company company = user.findCompanyAccess(companyId).orElseThrow().getCompany();
         if (!company.isActive() || (subscriptionService != null && !subscriptionService.allowsLogin(companyId))) {

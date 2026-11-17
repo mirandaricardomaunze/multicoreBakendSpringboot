@@ -19,7 +19,7 @@ class BackupFileLabelsTest {
     void resumoDoBackupFisicoNaoMostraEmpresaVazia() {
         var physical = new BackupVerificationDTO("m.dump.enc", null, "2026-11-03 18:29:02 UTC", 2,
                 Map.of("tabelas", 2, "indices", 1, "sequencias", 1));
-        assertEquals("Backup físico legível, criado em 2026-11-03 18:29:02 UTC: 2 tabelas, 1 índices, 1 sequências.",
+        assertEquals("Cópia física legível, criada em 2026-11-03 18:29:02 UTC: 2 tabelas, 1 índices, 1 sequências.",
                 BackupFileLabels.verificationSummary(physical));
     }
 }

@@ -35,7 +35,7 @@ final class ConfigBackupsPanel {
         consoleCard.setLayout(new BorderLayout(0, 15));
         consoleCard.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
-        JLabel desc = new JLabel("<html><body>O <b>backup lógico (.json)</b> é um snapshot de verificação por empresa (auditoria). Para recuperação use o <b>backup físico (BD)</b>, restaurável via pg_dump/pg_restore. O <b>backup automático</b> corre diariamente e apaga cópias antigas conforme retenção.</body></html>");
+        JLabel desc = new JLabel("<html><body>O <b>cópia lógica (.json)</b> é um retrato de verificação por empresa (auditoria). Para recuperação use a <b>cópia físico (BD)</b>, restaurável via pg_dump/pg_restore. O <b>backup automático</b> corre diariamente e apaga cópias antigas conforme retenção.</body></html>");
         desc.setFont(Typography.EMPHASIS);
         desc.setForeground(UIHelper.TEXT_MUTED);
 
@@ -57,10 +57,10 @@ final class ConfigBackupsPanel {
         backupLogArea.setMargin(new Insets(10, 10, 10, 10));
         consoleCard.add(new JScrollPane(backupLogArea), BorderLayout.CENTER);
 
-        ActionMenuButton createBackupBtn = UIHelper.createActionMenuButton("Criar backup")
-                .addAction("Backup lógico (.json)", UIHelper.icon("fas-file-code", 14), () -> ConfigBackupOperations.runManualBackup(owner, backupLogArea, backupFilesModel))
-                .addAction("Backup físico (BD)", UIHelper.icon("fas-database", 14), () -> ConfigBackupOperations.runPhysicalBackup(owner, backupLogArea))
-                .addAction("Backup automático agora", UIHelper.icon("fas-clock", 14), () -> ConfigBackupOperations.runAutoBackupNow(owner, backupLogArea, backupAutoStatus, backupFilesModel));
+        ActionMenuButton createBackupBtn = UIHelper.createActionMenuButton("Criar cópia")
+                .addAction("Cópia lógica (.json)", UIHelper.icon("fas-file-code", 14), () -> ConfigBackupOperations.runManualBackup(owner, backupLogArea, backupFilesModel))
+                .addAction("Cópia física (BD)", UIHelper.icon("fas-database", 14), () -> ConfigBackupOperations.runPhysicalBackup(owner, backupLogArea))
+                .addAction("Cópia automática agora", UIHelper.icon("fas-clock", 14), () -> ConfigBackupOperations.runAutoBackupNow(owner, backupLogArea, backupAutoStatus, backupFilesModel));
         JPanel backupActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         backupActions.setOpaque(false);
         backupActions.add(createBackupBtn);
@@ -83,7 +83,7 @@ final class ConfigBackupsPanel {
         JScrollPane archiveScroll = new JScrollPane(backupFilesTable);
         UIHelper.styleScrollPane(archiveScroll);
 
-        ModernButton verifyBackupBtn = UIHelper.createPrimaryButton("Verificar Backup");
+        ModernButton verifyBackupBtn = UIHelper.createPrimaryButton("Verificar Cópia");
         verifyBackupBtn.setIcon(UIHelper.icon("fas-shield-alt", 14));
         verifyBackupBtn.addActionListener(e -> ConfigBackupOperations.verifySelectedBackup(owner, backupLogArea, backupFilesTable, backupFilesModel));
 

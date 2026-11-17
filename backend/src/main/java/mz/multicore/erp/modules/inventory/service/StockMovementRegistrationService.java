@@ -186,7 +186,7 @@ public class StockMovementRegistrationService {
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
         if (!companyId.equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+            throw new BusinessRuleException("O armazém não pertence à empresa activa.");
         }
         StockMovementOperation operation = null;
         if (key != null) {

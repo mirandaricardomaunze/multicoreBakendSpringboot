@@ -158,7 +158,7 @@ public class NotificationFeed {
             int crit = s.criticalRiskCount(); int blk = s.blockedClientsCount(); int high = s.highRiskCount(); BigDecimal overdue = s.totalOverdue();
             if (crit > 0 || blk > 0) {
                 items.add(new NotificationItem("Risco de Crédito", String.format("Risco Crítico: %d cliente(s) bloqueado(s) ou em incumprimento", crit + blk),
-                        String.format("Total vencido em mora: %s. Ação de cobrança requerida.", formatMoney(overdue != null ? overdue : BigDecimal.ZERO)),
+                        String.format("Total vencido em mora: %s. Acção de cobrança requerida.", formatMoney(overdue != null ? overdue : BigDecimal.ZERO)),
                         "Cobrança urgente", "risco_credito", 3));
             } else if (high > 0 && overdue != null && overdue.signum() > 0) {
                 items.add(new NotificationItem("Risco de Crédito", String.format("Risco Elevado: %d cliente(s) com faturas em mora", high),

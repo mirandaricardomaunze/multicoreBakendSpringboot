@@ -11,6 +11,8 @@ Convenções diárias. Onde colidirem com [ARCHITECTURE.md](ARCHITECTURE.md), a 
 - **Tabelas SQL e colunas**: `snake_case` em inglês (`product_batches`, `expiration_date`).
 - **Comentários e Javadocs**: sempre em inglês profissional, tanto para regras de negócio como para mecanismos técnicos.
 - **Texto visível ao utilizador**: sempre em português de Moçambique; não confundir conteúdo funcional com comentários de código.
+- **Ortografia**: anterior ao Acordo de 1990 (Actualizar, Seleccione, Acção, Activo, Directo, Efectuar); "Fatura" fica
+  como está. Sem inglês no texto visível ("cópia de segurança", não "Backup"). Ver `docs/ORTOGRAFIA_SPEC.md`.
 
 ```java
 // ✅ correcto

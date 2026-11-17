@@ -40,7 +40,7 @@ class ManufacturingPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "ManufacturingPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 260, "ManufacturingPanel.java deve possuir <= 260 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 260, "ManufacturingPanel.java deve possuir <= 260 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -53,7 +53,7 @@ class ManufacturingPanelDecompositionHarnessTest {
         assertTrue(Files.exists(coordPath), "ProductionOrderOperationsCoordinator.java deve existir");
 
         List<String> coordLines = Files.readAllLines(coordPath);
-        assertTrue(coordLines.size() <= 260, "ProductionOrderOperationsCoordinator.java deve possuir <= 260 linhas. Atual: " + coordLines.size());
+        assertTrue(coordLines.size() <= 260, "ProductionOrderOperationsCoordinator.java deve possuir <= 260 linhas. Actual: " + coordLines.size());
 
         Path bomPath = Path.of("desktop/src/main/java/mz/multicore/erp/gui/BomFormDialog.java");
         if (!Files.exists(bomPath)) {
@@ -62,7 +62,7 @@ class ManufacturingPanelDecompositionHarnessTest {
         assertTrue(Files.exists(bomPath), "BomFormDialog.java deve existir");
 
         List<String> bomLines = Files.readAllLines(bomPath);
-        assertTrue(bomLines.size() <= 130, "BomFormDialog.java deve possuir <= 130 linhas. Atual: " + bomLines.size());
+        assertTrue(bomLines.size() <= 130, "BomFormDialog.java deve possuir <= 130 linhas. Actual: " + bomLines.size());
     }
 
     @Test

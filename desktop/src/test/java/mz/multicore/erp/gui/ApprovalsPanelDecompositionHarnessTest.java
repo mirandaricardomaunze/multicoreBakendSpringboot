@@ -26,7 +26,7 @@ class ApprovalsPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("ApprovalsPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 230,
-                () -> "ApprovalsPanel.java deve possuir <= 230 linhas. Atual: " + lines.size());
+                () -> "ApprovalsPanel.java deve possuir <= 230 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -35,12 +35,12 @@ class ApprovalsPanelDecompositionHarnessTest {
         Path history = ROOT.resolve("ApprovalsHistoryView.java");
         List<String> historyLines = Files.readAllLines(history);
         assertTrue(historyLines.size() <= 95,
-                () -> "ApprovalsHistoryView.java deve possuir <= 95 linhas. Atual: " + historyLines.size());
+                () -> "ApprovalsHistoryView.java deve possuir <= 95 linhas. Actual: " + historyLines.size());
 
         Path coord = ROOT.resolve("ApprovalsOperationsCoordinator.java");
         List<String> coordLines = Files.readAllLines(coord);
         assertTrue(coordLines.size() <= 85,
-                () -> "ApprovalsOperationsCoordinator.java deve possuir <= 85 linhas. Atual: " + coordLines.size());
+                () -> "ApprovalsOperationsCoordinator.java deve possuir <= 85 linhas. Actual: " + coordLines.size());
     }
 
     @Test

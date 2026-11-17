@@ -154,7 +154,7 @@ final class FiscalWithholdingsTab {
                 "", descForm,
                 "Categoria:", catCombo,
                 "Base (MT):", baseField,
-                "Taxa (fração, ex: 0.10):", rateField
+                "Taxa (fracção, ex: 0.10):", rateField
         );
 
         ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Registar Retenção na Fonte",

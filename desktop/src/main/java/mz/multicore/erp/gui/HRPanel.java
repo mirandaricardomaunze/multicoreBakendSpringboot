@@ -173,7 +173,7 @@ public class HRPanel extends JPanel {
         employeesTable = new JTable(employeesModel);
         UIHelper.styleTable(employeesTable);
         UIHelper.ensureHeadersFit(employeesTable);
-        employeesTable.setToolTipText("Selecione uma linha e use Ver Perfil para abrir a ficha completa");
+        employeesTable.setToolTipText("Seleccione uma linha e use Ver Perfil para abrir a ficha completa");
         employeesTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.role());
         employeesTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
         employeesTable.getColumnModel().getColumn(8).setCellRenderer(TableCellRenderers.money());

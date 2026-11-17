@@ -45,7 +45,7 @@ public class NotificationsPanel extends JPanel {
         setLayout(new BorderLayout(0, 16));
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
-        summaryLabel = new JLabel("Alertas operacionais da empresa ativa");
+        summaryLabel = new JLabel("Alertas operacionais da empresa activa");
         summaryLabel.setFont(Typography.EMPHASIS);
         summaryLabel.setForeground(UIHelper.TEXT_MUTED);
         add(feedback, BorderLayout.NORTH);

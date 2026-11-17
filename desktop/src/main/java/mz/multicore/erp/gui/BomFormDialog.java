@@ -66,7 +66,7 @@ public final class BomFormDialog {
                 throw FieldValidationException.of(nameField, "O nome da ficha é obrigatório.");
             }
             ProductDTO prod = (ProductDTO) productCombo.getSelectedItem();
-            if (prod == null) throw FieldValidationException.of(productCombo, "Selecione o produto final.");
+            if (prod == null) throw FieldValidationException.of(productCombo, "Seleccione o produto final.");
 
             BigDecimal baseQty;
             try {

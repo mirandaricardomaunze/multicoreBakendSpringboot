@@ -88,7 +88,7 @@ public final class MobilePaymentInitiationPanel extends JPanel {
         validationLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         add(validationLabel);
 
-        sendButton = UIHelper.createPrimaryButton("Enviar Pedido ao Telemóvel (Push USSD)");
+        sendButton = UIHelper.createPrimaryButton("Enviar Pedido ao Telemóvel");
         sendButton.setIcon(UIHelper.icon("fas-paper-plane", 13, Color.WHITE));
         sendButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         sendButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));

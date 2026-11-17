@@ -32,7 +32,7 @@ public class QualityEquipmentFormDialog extends JDialog {
     private final JSpinner periodValueSpinner = new JSpinner(new SpinnerNumberModel(6, 1, 365, 1));
     private final JComboBox<PeriodUnit> periodUnitCombo = new JComboBox<>(PeriodUnit.values());
     private final JSpinner warningDaysSpinner = new JSpinner(new SpinnerNumberModel(15, 1, 90, 1));
-    private final JCheckBox activeCheck = new JCheckBox("Equipamento ativo para novas atribuições", true);
+    private final JCheckBox activeCheck = new JCheckBox("Equipamento activo para novas atribuições", true);
     private final JTextArea descriptionArea = new JTextArea(3, 20);
 
     public QualityEquipmentFormDialog(Window owner, QualityApiClient qualityApiClient) {

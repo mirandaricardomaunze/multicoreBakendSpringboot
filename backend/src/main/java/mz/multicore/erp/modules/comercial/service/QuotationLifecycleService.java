@@ -86,7 +86,7 @@ public class QuotationLifecycleService {
         Company company = companyLookup.require(request.companyId());
         Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+            throw new BusinessRuleException("O armazém não pertence à empresa activa.");
         }
 
         Quotation quotation = new Quotation();
@@ -135,7 +135,7 @@ public class QuotationLifecycleService {
                     .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
         Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (warehouse.getCompany() == null || !companyId.equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+            throw new BusinessRuleException("O armazém não pertence à empresa activa.");
         }
 
         quotation.setClient(client);
