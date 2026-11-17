@@ -38,9 +38,9 @@ public final class SectorDesktopWiring {
         if (tabs == null) return false;
         if (tabs.indexOfTab(BULK_TAB) >= 0) return true;
         BulkStockPanel panel = new BulkStockPanel(bulkApi, inventoryApi, comercialApi);
-        tabs.addTab(BULK_TAB, mz.multicore.erp.gui.components.UIHelper.icon("fas-mountain", 16,
-                mz.multicore.erp.gui.components.UIHelper.ACCENT_ORANGE), panel);
-        tabs.setToolTipTextAt(tabs.getTabCount() - 1, "Areia, brita e pedra: inventário por medição do monte");
+        ActivityCapabilities.bindTab(tabs, panel, BULK_TAB, mz.multicore.erp.gui.components.UIHelper.icon("fas-mountain", 16,
+                mz.multicore.erp.gui.components.UIHelper.ACCENT_ORANGE), "Areia, brita e pedra: inventário por medição do monte",
+                ActivityCapabilities.BULK_STOCK);
         return true;
     }
 
@@ -54,6 +54,7 @@ public final class SectorDesktopWiring {
         for (JTable table : mz.multicore.erp.gui.CommercialDraftLineAccess.draftTables(comercialPanel)) {
             if (Boolean.TRUE.equals(table.getClientProperty(UNIT_ENTRY_KEY))) continue;
             Runnable action = () -> {
+                if (!ActivityCapabilities.enabled(ActivityCapabilities.MULTI_UNIT_SALES)) return;
                 Long productId = mz.multicore.erp.gui.CommercialDraftLineAccess.selectedProductId(comercialPanel, table);
                 if (productId == null) {
                     mz.multicore.erp.gui.components.ToastManager.show(table, mz.multicore.erp.gui.components.FeedbackType.INFO,
@@ -75,6 +76,7 @@ public final class SectorDesktopWiring {
             item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, java.awt.event.InputEvent.CTRL_DOWN_MASK));
             item.addActionListener(e -> action.run());
             menu.add(item);
+            ActivityCapabilities.bindVisible(item, ActivityCapabilities.MULTI_UNIT_SALES);
             table.setComponentPopupMenu(menu);
             String tip = table.getToolTipText();
             table.setToolTipText((tip == null || tip.isBlank() ? "" : tip + " · ") + "Ctrl+U: quantidade noutra unidade");
@@ -92,12 +94,15 @@ public final class SectorDesktopWiring {
                 java.awt.event.InputEvent.CTRL_DOWN_MASK | java.awt.event.InputEvent.ALT_DOWN_MASK);
         for (JTable table : mz.multicore.erp.gui.CommercialDraftLineAccess.draftTables(comercialPanel)) {
             if (Boolean.TRUE.equals(table.getClientProperty(FREIGHT_ENTRY_KEY))) continue;
-            Runnable action = () -> FreightZoneDialog.show(table, comercialApi, zone -> {
-                if (!mz.multicore.erp.gui.CommercialDraftLineAccess.addProduct(comercialPanel, table, zone)) {
-                    mz.multicore.erp.gui.components.ToastManager.show(table, mz.multicore.erp.gui.components.FeedbackType.WARNING,
-                            "Abra um documento em edição para adicionar o frete.");
-                }
-            });
+            Runnable action = () -> {
+                if (!ActivityCapabilities.enabled(ActivityCapabilities.DELIVERIES)) return;
+                FreightZoneDialog.show(table, comercialApi, zone -> {
+                    if (!mz.multicore.erp.gui.CommercialDraftLineAccess.addProduct(comercialPanel, table, zone)) {
+                        mz.multicore.erp.gui.components.ToastManager.show(table, mz.multicore.erp.gui.components.FeedbackType.WARNING,
+                                "Abra um documento em edição para adicionar o frete.");
+                    }
+                });
+            };
             table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(key, FREIGHT_ENTRY_KEY);
             table.getActionMap().put(FREIGHT_ENTRY_KEY, new AbstractAction() {
                 @Override public void actionPerformed(java.awt.event.ActionEvent e) { action.run(); }
@@ -108,6 +113,7 @@ public final class SectorDesktopWiring {
             item.setAccelerator(key);
             item.addActionListener(e -> action.run());
             menu.add(item);
+            ActivityCapabilities.bindVisible(item, ActivityCapabilities.DELIVERIES);
             table.setComponentPopupMenu(menu);
             table.putClientProperty(FREIGHT_ENTRY_KEY, Boolean.TRUE);
             installed++;
@@ -143,8 +149,12 @@ public final class SectorDesktopWiring {
             if (add != null && add.getParent() != null) {
                 Container bar = add.getParent();
                 int at = indexOf(bar, add);
-                bar.add(actionButton("Unidade", "fas-ruler-combined", "Quantidade noutra unidade: palete, saco… (Ctrl+U)", table, UNIT_ENTRY_KEY), at);
-                bar.add(actionButton("Frete", "fas-truck", "Adicionar frete por zona de entrega (Ctrl+Alt+F)", table, FREIGHT_ENTRY_KEY), at + 1);
+                JComponent unitBtn = actionButton("Unidade", "fas-ruler-combined", "Quantidade noutra unidade: palete, saco… (Ctrl+U)", table, UNIT_ENTRY_KEY);
+                JComponent freightBtn = actionButton("Frete", "fas-truck", "Adicionar frete por zona de entrega (Ctrl+Alt+F)", table, FREIGHT_ENTRY_KEY);
+                bar.add(unitBtn, at);
+                bar.add(freightBtn, at + 1);
+                ActivityCapabilities.bindVisible(unitBtn, ActivityCapabilities.MULTI_UNIT_SALES);
+                ActivityCapabilities.bindVisible(freightBtn, ActivityCapabilities.DELIVERIES);
                 bar.revalidate();
                 installTotalsBar(comercialPanel, table, card);
             }

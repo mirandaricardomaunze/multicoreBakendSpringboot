@@ -411,6 +411,7 @@ final class SectorModules {
 
     void applyCapabilities(List<String> capabilities) {
         Set<String> active = capabilities == null ? Set.of() : new HashSet<>(capabilities);
+        mz.multicore.erp.gui.sector.ActivityCapabilities.apply(active);
         sidebarItems.forEach((card, items) -> {
             String capability = CAPABILITIES.get(card);
             boolean visible = capability == null || active.isEmpty() || active.contains(capability);

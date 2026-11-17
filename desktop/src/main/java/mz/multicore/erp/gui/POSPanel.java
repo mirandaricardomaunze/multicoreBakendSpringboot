@@ -226,7 +226,7 @@ public class POSPanel extends JPanel {
         selectView(false);
 
         PosKeyboardShortcutsHandler.install(this);
-        applyScaleAccess();
+        mz.multicore.erp.gui.sector.ActivityCapabilities.onChange(this, this::applyScaleAccess);
         cartController.refreshCartActions();
         suspendedSaleActions.refreshButton();
     }

@@ -61,7 +61,8 @@ public class ExpiryPanel extends JPanel {
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
         tabs.addTab("Lotes por Vencer", UIHelper.icon("fas-hourglass-half", 15, UIHelper.PENDING_YELLOW), buildBoard());
-        tabs.addTab("Regras de Remarcação", UIHelper.icon("fas-percent", 15, UIHelper.ACCENT_PINK), buildRules());
+        ActivityCapabilities.bindTab(tabs, buildRules(), "Regras de Remarcação", UIHelper.icon("fas-percent", 15, UIHelper.ACCENT_PINK),
+                null, ActivityCapabilities.MARKDOWNS);
         add(tabs, BorderLayout.CENTER);
         updateActions();
     }
@@ -101,6 +102,9 @@ public class ExpiryPanel extends JPanel {
         applyBtn.setToolTipText("Remarca agora todos os lotes cuja janela de desconto já começou");
         applyBtn.addActionListener(e -> applyRules(false));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::reload);
+        // Markdown is its own capability (SA-C14): a pharmacy tracks expiry without discounting near-expiry lots.
+        ActivityCapabilities.bindVisible(applyBtn, ActivityCapabilities.MARKDOWNS);
+        ActivityCapabilities.bindVisible(markdownBtn, ActivityCapabilities.MARKDOWNS);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
