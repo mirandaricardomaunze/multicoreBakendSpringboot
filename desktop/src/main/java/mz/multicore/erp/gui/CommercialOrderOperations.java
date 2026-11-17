@@ -165,10 +165,8 @@ final class CommercialOrderOperations {
         owner.setCachedOrders(orders != null ? new ArrayList<>(orders) : new ArrayList<>());
         owner.ordersTableModel.setRowCount(0);
         for (OrderDTO order : owner.getCachedOrders()) {
-            String clientLabel = order.clientName();
-            if (order.walkInName() != null && !order.walkInName().isBlank()) {
-                clientLabel += " — " + order.walkInName();
-            }
+            String clientLabel = order.walkInName() != null && !order.walkInName().isBlank()
+                    ? order.walkInName() : order.clientName();
             String impressoes;
             if (order.printCount() <= 0) {
                 impressoes = "—";

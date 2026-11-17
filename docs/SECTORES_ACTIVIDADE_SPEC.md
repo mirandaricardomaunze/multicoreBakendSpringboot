@@ -20,13 +20,28 @@ Consequências:
   documentos, stock e tesouraria existentes (`MOVIMENTOS_COMERCIAIS.md`).
 - Desligar uma capacidade esconde a UI, **nunca apaga dados**.
 
+### Perfil no servidor (2026-11-17)
+
+- **Bloqueio:** `ActivityCapabilityPolicy` lista os pedidos que **iniciam** trabalho de uma capacidade (novo
+  adiantamento, nova consignação, primeira pesagem, nova desmancha, regras de remarcação, plano de produção,
+  obras, tabelas de preço, granel, unidades alternativas do produto, conta de levantamento…). Fora do perfil, a
+  resposta é 400 com «X» não está activo no perfil de actividade da empresa.
+- **Nunca bloqueado:** leituras e tudo o que conclui, liquida ou desfaz trabalho existente (reembolsar ou
+  aplicar adiantamento, levantar material pago, acertar consignação, segunda pesagem, fechar plano, cancelar
+  desmancha, aprovar medição, abater vencidos). Mudar de perfil não prende dinheiro nem stock.
+- **Empresa sem perfil guardado:** sem restrições, como antes do SA-C01.
+- **Categorias iniciais:** ao escolher um perfil pela primeira vez, a empresa recebe as categorias desse sector
+  (`ActivityProfileSeeds`; ex.: talho → carne de vaca, porco, aves, enchidos, miudezas). Só acrescenta; tirar
+  um perfil não apaga categorias. As unidades não precisam de semente: todas as do sector são de sistema.
+- Testes: `ActivityCapabilityPolicyTest` e `ActivityCapabilityHttpIntegrationTest`.
+
 ## 2. Catálogo de capacidades
 
 Estado: **Existe** · **Parcial** · **Falta**.
 
 | ID | Capacidade | Estado | O que já há / o que falta |
 |---|---|---|---|
-| SA-C01 | Perfil de Actividade da empresa | **Feito (F1)** | Um ou mais perfis por empresa em Configurações › Perfil de Actividade. Esconde os menus sectoriais e, desde 2026-11-16, as funcionalidades dentro dos ecrãs (`ActivityCapabilities`): Unidade/Ctrl+U (várias unidades), Frete/Ctrl+Alt+F (entregas), separador Granel (stock a granel), balança do POS (venda ao peso), regras e botões de remarcação. Sem perfil carregado, tudo fica disponível. Falta: verificação no backend e semear dados por perfil |
+| SA-C01 | Perfil de Actividade da empresa | **Feito (F1)** | Um ou mais perfis por empresa em Configurações › Perfil de Actividade. Esconde os menus sectoriais e, desde 2026-11-16, as funcionalidades dentro dos ecrãs (`ActivityCapabilities`): Unidade/Ctrl+U (várias unidades), Frete/Ctrl+Alt+F (entregas), separador Granel (stock a granel), balança do POS (venda ao peso), regras e botões de remarcação. Sem perfil carregado, tudo fica disponível. O servidor recusa o mesmo trabalho novo (`ActivityCapabilityPolicy`, ver "Perfil no servidor") e cada perfil novo traz as suas categorias iniciais |
 | SA-C02 | Unidades de medida e conversões por produto | **Feito (F1)** | Catálogo, unidade base e unidades alternativas por produto (`UNIDADES_MEDIDA_SPEC`). Na fatura e na encomenda: Ctrl+U "Quantidade noutra unidade" (o documento grava a unidade base). Falta: compras e POS |
 | SA-C03 | Tabelas de preço | **Feito (F1)** | Tabelas com escalões e validade, por cliente, aplicadas na fatura, encomenda e cotação (`TABELAS_PRECO_SPEC`). Falta (F2): preço por unidade alternativa e preço da tabela no carrinho do POS |
 | SA-C04 | Variantes de artigo | **Feito (F5)** · `VARIANTES_ARTIGO_SPEC` (família, grelha de stock; V130) | Tamanho/cor; espessura de varão; gramagem; sabor. Um artigo-pai, stock e preço por variante |

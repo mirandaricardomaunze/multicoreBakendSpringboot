@@ -11,6 +11,7 @@ import mz.multicore.erp.modules.activity.model.ActivityProfile;
 import mz.multicore.erp.modules.activity.model.CompanyActivityProfile;
 import mz.multicore.erp.modules.activity.repository.CompanyActivityProfileRepository;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
+import mz.multicore.erp.modules.comercial.service.ProductCategoryService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.stereotype.Service;
@@ -31,13 +32,16 @@ public class CompanyActivityService {
     private final CompanyActivityProfileRepository profileRepository;
     private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
+    private final ProductCategoryService categoryService;
 
     public CompanyActivityService(CompanyActivityProfileRepository profileRepository,
                                   CompanyLookup companyLookup,
-                                  AuditLogService auditLogService) {
+                                  AuditLogService auditLogService,
+                                  ProductCategoryService categoryService) {
         this.profileRepository = profileRepository;
         this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
+        this.categoryService = categoryService;
     }
 
     public ActivityCatalogDTO catalog() {
@@ -62,6 +66,17 @@ public class CompanyActivityService {
         return capabilitiesOf(effectiveProfiles(storedProfiles(companyId))).contains(capability);
     }
 
+    /**
+     * Refuses new work for a capability outside the company's chosen profiles. A company that never chose a
+     * profile is not restricted, so existing installations keep working exactly as before SA-C01.
+     */
+    @Transactional(readOnly = true)
+    public void requireCapability(Long companyId, ActivityCapability capability) {
+        List<ActivityProfile> stored = storedProfiles(companyId);
+        if (stored.isEmpty() || capabilitiesOf(stored).contains(capability)) return;
+        throw new BusinessRuleException(ActivityCapabilityPolicy.deniedMessage(capability));
+    }
+
     @Transactional
     public CompanyActivityDTO update(UpdateCompanyActivityRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
@@ -77,9 +92,26 @@ public class CompanyActivityService {
             profileRepository.save(row);
         }
         List<ActivityProfile> after = new ArrayList<>(requested);
+        int seeded = seedNewProfiles(company.getId(), before, requested);
         auditLogService.logCurrent("COMPANY_ACTIVITY_PROFILES_UPDATE",
-                "Perfis de actividade: " + labels(before) + " -> " + labels(after));
+                "Perfis de actividade: " + labels(before) + " -> " + labels(after)
+                        + (seeded > 0 ? " · categorias iniciais adicionadas: " + seeded : ""));
         return toDto(company.getId(), after);
+    }
+
+    /**
+     * Gives the company the starting categories of each profile it did not have before. Only adds: removing a
+     * profile never removes categories, and a category the company already has is left as it is.
+     */
+    private int seedNewProfiles(Long companyId, List<ActivityProfile> before, Set<ActivityProfile> requested) {
+        int added = 0;
+        for (ActivityProfile profile : requested) {
+            if (before.contains(profile)) continue;
+            for (ActivityProfileSeeds.CategorySeed seed : ActivityProfileSeeds.categories(profile)) {
+                if (categoryService.ensureForCompany(companyId, seed.code(), seed.name(), seed.colorHex())) added++;
+            }
+        }
+        return added;
     }
 
     static Set<ActivityProfile> parseProfiles(List<String> codes) {

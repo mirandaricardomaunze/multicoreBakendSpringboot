@@ -124,10 +124,7 @@ final class CommercialInvoiceOperations {
             String dateStr = invoice.createdAt() != null ? invoice.createdAt().format(INVOICE_DATE_FMT) : "—";
             String buLabel = invoice.businessUnitName() != null && !invoice.businessUnitName().isBlank()
                     ? invoice.businessUnitName() : "Misto";
-            String clientLabel = invoice.clientName();
-            if (invoice.customerName() != null && !invoice.customerName().isBlank()) {
-                clientLabel += " — " + invoice.customerName();
-            }
+            String clientLabel = invoice.buyerName();
             owner.invoicesTableModel.addRow(new Object[]{
                     invoice.id(),
                     invoice.invoiceNumber(),

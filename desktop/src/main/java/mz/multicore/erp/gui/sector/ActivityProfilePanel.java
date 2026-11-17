@@ -255,13 +255,17 @@ public class ActivityProfilePanel extends JPanel {
         Long companyId = CurrentUserContext.findCurrentCompanyId();
         if (companyId == null || selected.isEmpty()) return;
         List<String> chosen = List.copyOf(selected);
+        boolean addsSector = !saved.containsAll(selected);
         UIHelper.submitAsync(saveBtn, () -> activityApiClient.update(companyId, chosen), result -> {
             saved = Set.copyOf(result.profiles());
             onSaved.accept(result.capabilities());
             selected.clear();
             selected.addAll(result.profiles());
             refreshSelection();
-            ToastManager.success(this, "Perfil de actividade guardado.");
+            // The server adds each new sector's starting categories (SA-C01); say where to find them.
+            ToastManager.success(this, addsSector
+                    ? "Perfil guardado. As categorias do sector já estão disponíveis nos produtos."
+                    : "Perfil de actividade guardado.");
         }, error -> feedback.show(FeedbackType.ERROR, "Não foi possível guardar o perfil",
                 error.getMessage(), null, null));
     }
