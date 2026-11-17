@@ -48,8 +48,6 @@ public class RecentActivityWidget extends ModernPanel {
         titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
-        JLabel iconLabel = new JLabel(UIHelper.icon("fas-stream", 14, UIHelper.ACCENT_BLUE));
-        header.add(iconLabel, BorderLayout.WEST);
         header.add(titleLabel, BorderLayout.CENTER);
 
         add(header, BorderLayout.NORTH);

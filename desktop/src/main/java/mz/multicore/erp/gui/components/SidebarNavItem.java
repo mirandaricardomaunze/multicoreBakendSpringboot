@@ -236,6 +236,10 @@ public class SidebarNavItem extends JComponent {
         int iconY = (h - iconH) / 2;
 
         if (icon != null) {
+            // Calm menu: neutral glyphs at rest, the module colour only on the active or hovered item.
+            if (icon instanceof org.kordamp.ikonli.swing.FontIcon fontIcon) {
+                fontIcon.setIconColor(active || hover ? accent : textInactive());
+            }
             icon.paintIcon(this, g2, iconX, iconY);
             return;
         }

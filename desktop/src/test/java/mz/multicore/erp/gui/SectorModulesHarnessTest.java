@@ -4,6 +4,7 @@ import mz.multicore.erp.desktop.client.*;
 import mz.multicore.erp.gui.components.CollapsibleSidebar;
 import mz.multicore.erp.gui.components.SidebarNavItem;
 import mz.multicore.erp.gui.sector.ModulePage;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,13 @@ import static org.mockito.Mockito.mock;
 
 /** Sector modules as first-class screens: own cards, titles, sidebar entries and profile-driven menu. */
 class SectorModulesHarnessTest {
+
+    /** applyCapabilities feeds the app-wide ActivityCapabilities; clear it so later tests see no profile. */
+    @AfterEach
+    void clearActivityCapabilities() {
+        mz.multicore.erp.gui.sector.ActivityCapabilities.apply(List.of());
+    }
+
 
     private static SectorModules modules() {
         return SectorModules.create(null, null, null, mock(ComercialApiClient.class), mock(InventoryApiClient.class),

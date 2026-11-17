@@ -96,8 +96,10 @@ public class PosScaleLiveWidget extends ModernPanel {
         return simulationMode && role != null && SIMULATION_ROLES.contains(role);
     }
 
+    /** Shown when the station has a scale configured and the company's profile sells by weight (SA-C05). */
     public void applyAccess(boolean enabled, String role) {
-        setVisible(enabled);
+        setVisible(enabled && mz.multicore.erp.gui.sector.ActivityCapabilities.enabled(
+                mz.multicore.erp.gui.sector.ActivityCapabilities.WEIGHED_SALES));
         simulateButton.setVisible(canSimulate(scaleReader.isSimulationMode(), role));
     }
 

@@ -27,9 +27,9 @@ class OperationalPulseWidgetHarnessTest {
     void widgetAdheresToCanonicalDesignSystem() throws Exception {
         String widgetSource = Files.readString(ROOT.resolve("desktop/src/main/java/mz/multicore/erp/gui/components/OperationalPulseWidget.java"));
         assertThat(widgetSource)
-                .contains("COCKPIT OPERACIONAL & INDUSTRIAL", "MANUFATURA & PRODUÇÃO", "FROTAS & COMBUSTÍVEIS",
+                .contains("Operações e indústria", "MANUFATURA & PRODUÇÃO", "FROTAS & COMBUSTÍVEIS",
                         "CONTRATOS RECORRENTES", "PATRIMÓNIO & ATIVOS",
-                        "KpiCard.createHeroGrid(4, 12, 12)", "KpiCard.STANDARD_CARD_HEIGHT",
+                        "KpiCard.createHeroGrid(4, 12, 12)", "StrategicPulseCardFactory.createPillarCard(",
                         "Chão de Fábrica", "Gestão de Frotas", "Ver Contratos", "Activos Fixos")
                 .doesNotContain("JOptionPane", "printStackTrace");
     }

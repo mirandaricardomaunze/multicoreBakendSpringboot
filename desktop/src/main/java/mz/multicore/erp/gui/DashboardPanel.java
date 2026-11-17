@@ -35,7 +35,8 @@ public class DashboardPanel extends JPanel {
     private final OperationalPulseWidget operationalPulseWidget;
     private final ProfitAnalyticsWidget profitAnalyticsWidget;
 
-    private PeriodFilter currentPeriod = PeriodFilter.HOJE;
+    /** Opens on the month so the panel is meaningful before the first sale of the day (DASHBOARD_APRESENTACAO_SPEC). */
+    private PeriodFilter currentPeriod = PeriodFilter.ESTE_MES;
     private final DashboardPeriodBar periodBar = new DashboardPeriodBar(this::openExecutiveTvDashboard, this::selectPeriod);
     private JLabel welcomeLabel;
 

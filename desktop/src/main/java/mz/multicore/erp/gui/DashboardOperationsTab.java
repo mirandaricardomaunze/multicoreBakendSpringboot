@@ -37,17 +37,17 @@ final class DashboardOperationsTab {
 
         JPanel operationalKpiGrid = KpiCard.createHeroGrid(4, 10, 10);
 
-        approvalsValLabel = KpiCard.valueLabel("0 Pedidos");
+        approvalsValLabel = KpiCard.valueLabel("0 pedidos");
         operationalKpiGrid.add(buildKpiCard("APROVAÇÕES PENDENTES", "fas-clipboard-check", UIHelper.KPI_WARNING_SOFT,
                 approvalsValLabel, null, UIHelper.KPI_WARNING_DARK, UIHelper.KPI_WARNING_END,
                 "Clique para abrir Aprovações", "approvals"));
 
-        ticketsValLabel = KpiCard.valueLabel("0 Tickets");
+        ticketsValLabel = KpiCard.valueLabel("0 abertos");
         operationalKpiGrid.add(buildKpiCard("SUPORTE CRM / ASSISTÊNCIAS", "fas-headset", UIHelper.KPI_NEUTRAL_SOFT,
                 ticketsValLabel, null, UIHelper.KPI_NEUTRAL_DARK, UIHelper.KPI_NEUTRAL_END,
                 "Clique para abrir CRM & Assistência", "crm"));
 
-        stockAlertsLabel = KpiCard.valueLabel("0 Artigos");
+        stockAlertsLabel = KpiCard.valueLabel("0 artigos");
         JLabel stockAlertsSub = new JLabel("Qtd < 5 un no armazém");
         stockAlertsSub.setFont(Typography.CAPTION);
         stockAlertsSub.setForeground(UIHelper.KPI_DANGER_SOFT);
@@ -55,7 +55,7 @@ final class DashboardOperationsTab {
                 stockAlertsLabel, stockAlertsSub, UIHelper.KPI_DANGER_DARK, UIHelper.KPI_DANGER_END,
                 "Clique para abrir Gestão de Stock", "stock"));
 
-        expiryAlertsLabel = KpiCard.valueLabel("0 Lotes");
+        expiryAlertsLabel = KpiCard.valueLabel("0 lotes");
         expiryAlertsSub = new JLabel("Vencimento ≤ " + DashboardDataCoordinator.EXPIRY_ALERT_DAYS + " dias");
         expiryAlertsSub.setFont(Typography.CAPTION);
         expiryAlertsSub.setForeground(UIHelper.KPI_ORANGE_SOFT);
@@ -93,11 +93,16 @@ final class DashboardOperationsTab {
     }
 
     void applyData(DashboardDataCoordinator.DashboardData data) {
-        approvalsValLabel.setText(data.approvalCount() + " Pedidos");
-        ticketsValLabel.setText(data.ticketCount() + " Abertos");
-        stockAlertsLabel.setText(data.lowStockCount() + " Artigo" + (data.lowStockCount() == 1 ? "" : "s"));
-        expiryAlertsLabel.setText(data.expiringCount() + " Lote" + (data.expiringCount() == 1 ? "" : "s"));
+        approvalsValLabel.setText(count(data.approvalCount(), "pedido", "pedidos"));
+        ticketsValLabel.setText(count(data.ticketCount(), "aberto", "abertos"));
+        stockAlertsLabel.setText(count(data.lowStockCount(), "artigo", "artigos"));
+        expiryAlertsLabel.setText(count(data.expiringCount(), "lote", "lotes"));
         expiryAlertsSub.setText(String.format("%d vencido%s · %d a vencer",
                 data.expiredCount(), data.expiredCount() == 1 ? "" : "s", data.soonCount()));
+    }
+
+    /** "1 pedido", "3 pedidos": singular only for exactly one. */
+    static String count(long n, String singular, String plural) {
+        return n + " " + (n == 1 ? singular : plural);
     }
 }

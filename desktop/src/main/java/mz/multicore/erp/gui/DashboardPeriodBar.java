@@ -65,11 +65,19 @@ final class DashboardPeriodBar {
     void select(DashboardPanel.PeriodFilter current) {
         buttons.forEach((period, button) -> {
             if (period == current) {
-                button.setColors(UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
+                // Soft tint instead of a solid fill: the filter stays readable without competing with the page title.
+                button.setColors(activeBackground(), activeBackground());
+                button.setForeground(UIHelper.isLight() ? UIHelper.ACCENT_BLUE_HOVER : UIHelper.ACCENT_BLUE);
             } else {
                 button.setColors(idleBackground(), idleHover());
+                button.setForeground(UIHelper.TEXT_MUTED);
             }
         });
+    }
+
+    /** Background of the selected period: the accent blended lightly into the card colour. */
+    static Color activeBackground() {
+        return UIHelper.blendColors(UIHelper.BG_CARD, UIHelper.ACCENT_BLUE, UIHelper.isLight() ? 0.14f : 0.28f);
     }
 
     private static Color idleBackground() {
