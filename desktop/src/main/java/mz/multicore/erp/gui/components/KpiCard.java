@@ -101,14 +101,13 @@ public final class KpiCard {
             valueLabel.setForeground(pal.value);
         }
 
-        if (trendBadge != null) {
-            JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0)); // sem recuo: valor alinhado com os cartões sem pílula
+        if (valueLabel != null || trendBadge != null) {
+            // Same top-anchored row with or without a badge, so every card's value sits at the same height and indent.
+            JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
             centerPanel.setOpaque(false);
             if (valueLabel != null) centerPanel.add(valueLabel);
-            centerPanel.add(Box.createHorizontalStrut(8)); centerPanel.add(trendBadge);
+            if (trendBadge != null) { centerPanel.add(Box.createHorizontalStrut(8)); centerPanel.add(trendBadge); }
             card.add(centerPanel, BorderLayout.CENTER);
-        } else if (valueLabel != null) {
-            card.add(valueLabel, BorderLayout.CENTER);
         }
 
         if (subLabel != null) {

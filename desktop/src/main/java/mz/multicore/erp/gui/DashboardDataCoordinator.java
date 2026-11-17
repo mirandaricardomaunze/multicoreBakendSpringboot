@@ -150,7 +150,7 @@ final class DashboardDataCoordinator {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
         for (InvoiceDTO inv : invoices.stream().limit(4).toList()) {
             list.add(new RecentActivityWidget.ActivityEntry(
-                    "inv_" + (idx++), "Fatura " + inv.invoiceNumber() + " (" + inv.status() + ")",
+                    "inv_" + (idx++), "Fatura " + inv.invoiceNumber() + " · " + UIHelper.humanStatus(inv.status() != null ? inv.status().name() : null),
                     "Total: " + String.format("%,.2f MT", inv.totalAmount()) + " · " + (inv.buyerName() != null ? inv.buyerName() : "Consumidor"),
                     inv.createdAt() != null ? inv.createdAt().format(fmt) : "Hoje", "fas-file-invoice-dollar", UIHelper.ACCENT_BLUE));
         }

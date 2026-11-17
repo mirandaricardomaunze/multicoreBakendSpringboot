@@ -2,7 +2,13 @@
 **Código:** SPEC-ASO-001  
 **Módulo Principal:** `desktop` (`mz.multicore.erp.gui.components.ArrowScrollPanel`, `mz.multicore.erp.gui.DashboardPanel`)  
 **Data:** 2026-09-17  
-**Estado:** APROVADO / EM IMPLEMENTAÇÃO  
+**Estado:** REVISTO EM 2026-11-16 (calha de setas removida)  
+
+> **Revisão de 2026-11-16:** a calha de setas (R2: botões ▲/▼ e indicador azul) saiu a pedido do
+> responsável, por destoar do resto do sistema. `ArrowScrollPanel` mantém o nome, o R1 (sem overflow
+> horizontal), a roda do rato, Page Up/Down e Ctrl+Home/End, e mostra a `SlimScrollBarUI` de 6 px só
+> quando o conteúdo não cabe. `ArrowScrollPanelTest` cobre o comportamento novo. O resto deste
+> documento descreve a versão anterior.
 
 ---
 

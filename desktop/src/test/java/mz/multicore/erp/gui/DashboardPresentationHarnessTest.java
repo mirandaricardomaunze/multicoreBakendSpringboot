@@ -4,6 +4,7 @@ import mz.multicore.erp.desktop.client.*;
 import mz.multicore.erp.gui.components.DashboardTrendCalculator;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.SimpleBarChart;
+import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.StatusBar;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,14 +53,20 @@ class DashboardPresentationHarnessTest {
         SwingUtilities.invokeAndWait(() -> {
             DashboardOverviewTab tab = new DashboardOverviewTab(null);
             JPanel root = tab.buildTab();
-            List<SimpleBarChart> charts = new ArrayList<>();
-            collect(root, charts);
-
-            assertThat(charts.get(0).getEmptyMessage()).isEqualTo("Tudo em dia");
-            assertThat(charts.get(0).getEmptyIcon()).isNotNull();
+            // Pending work is the first block of the overview, ahead of every chart.
+            List<Component> blocks = new ArrayList<>();
+            collectBlocks(root, blocks);
+            assertThat(blocks.get(0)).isInstanceOf(DashboardPendingWork.class);
 
             tab.applyData(data(ZERO, ZERO));
             assertThat(tab.financialRow.isVisible()).isFalse();
+            assertThat(texts(root)).contains("Tudo em dia");
+
+            DashboardPendingWork pending = new DashboardPendingWork(null);
+            pending.setItems(List.of(
+                    new DashboardPendingWork.Item("Aprovações", "À espera", "fas-user-check", UIHelper.PENDING_YELLOW, 2, "approvals"),
+                    new DashboardPendingWork.Item("Stock baixo", "Abaixo do mínimo", "fas-box-open", UIHelper.REJECTED_RED, 0, "stock")));
+            assertThat(texts(pending)).contains("Aprovações", "2", "Stock baixo", "Nada por tratar").doesNotContain("Tudo em dia");
 
             tab.applyData(data(new BigDecimal("250.00"), ZERO));
             assertThat(tab.financialRow.isVisible()).isTrue();
@@ -124,10 +131,13 @@ class DashboardPresentationHarnessTest {
                 0L, 0, 0L, 0L, List.of(), List.of(), null);
     }
 
-    private static void collect(Container container, List<SimpleBarChart> charts) {
+    private static void collectBlocks(Container container, List<Component> blocks) {
         for (Component child : container.getComponents()) {
-            if (child instanceof SimpleBarChart chart) charts.add(chart);
-            if (child instanceof Container nested) collect(nested, charts);
+            if (child instanceof SimpleBarChart || child instanceof DashboardPendingWork) {
+                blocks.add(child);
+            } else if (child instanceof Container nested) {
+                collectBlocks(nested, blocks);
+            }
         }
     }
 

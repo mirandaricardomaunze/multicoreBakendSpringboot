@@ -27,7 +27,7 @@ final class DashboardOverviewTab {
     private JLabel taxDetailLabel;
 
     private SimpleBarChart financialChart;
-    private SimpleBarChart operationsChart;
+    private DashboardPendingWork pendingWork;
     private SimplePieChart salesChannelPieChart;
     private SimplePieChart financialStructurePieChart;
     JPanel financialRow;
@@ -88,10 +88,7 @@ final class DashboardOverviewTab {
 
         financialChart = new SimpleBarChart("Vendas, Compras e IVA");
         salesChannelPieChart = new SimplePieChart("Vendas por Canal (POS vs Faturas)", false);
-        operationsChart = new SimpleBarChart("Operações e Pendências");
-        operationsChart.setEmptyMessage(NO_PENDING_MESSAGE);
-        operationsChart.setEmptyHint("Sem aprovações, tickets ou stock baixo por tratar.");
-        operationsChart.setEmptyIcon(UIHelper.icon("fas-check-circle", 30, UIHelper.APPROVED_GREEN));
+        pendingWork = new DashboardPendingWork(navigationHandler);
         financialStructurePieChart = new SimplePieChart("Estrutura Financeira (Receita, Compras, IVA)", false);
         financialChart.setEmptyHint(NEXT_STEP_HINT);
         salesChannelPieChart.setEmptyHint(NEXT_STEP_HINT);
@@ -100,7 +97,7 @@ final class DashboardOverviewTab {
         // Pending items come first because they represent work the manager can resolve today.
         JPanel priorityRow = new JPanel(new GridLayout(1, 2, 12, 12));
         priorityRow.setOpaque(false);
-        priorityRow.add(createChartCard(operationsChart));
+        priorityRow.add(createChartCard(pendingWork));
         priorityRow.add(createChartCard(financialChart));
         tab1Center.add(priorityRow);
 
@@ -193,15 +190,13 @@ final class DashboardOverviewTab {
                 new Color[]{UIHelper.APPROVED_GREEN, UIHelper.ACCENT_BLUE}
         );
 
-        operationsChart.setData(
-                new String[]{"Aprovações", "Tickets", "Stock baixo"},
-                new BigDecimal[]{
-                        BigDecimal.valueOf(data.approvalCount()),
-                        BigDecimal.valueOf(data.ticketCount()),
-                        BigDecimal.valueOf(data.lowStockCount())
-                },
-                new Color[]{UIHelper.PENDING_YELLOW, UIHelper.ACCENT, UIHelper.REJECTED_RED}
-        );
+        pendingWork.setItems(java.util.List.of(
+                new DashboardPendingWork.Item("Aprovações", "À espera da sua decisão", "fas-user-check",
+                        UIHelper.PENDING_YELLOW, data.approvalCount(), "approvals"),
+                new DashboardPendingWork.Item("Tickets abertos", "Pedidos de clientes por responder", "fas-headset",
+                        UIHelper.ACCENT_BLUE, data.ticketCount(), "crm"),
+                new DashboardPendingWork.Item("Stock baixo", "Artigos abaixo do mínimo", "fas-box-open",
+                        UIHelper.REJECTED_RED, data.lowStockCount(), "stock")));
 
         financialStructurePieChart.setData(
                 new String[]{"Receitas Vendas", "Compras Stock", "IVA Líquido"},

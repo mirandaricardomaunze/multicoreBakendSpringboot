@@ -75,7 +75,10 @@ final class MainFrameCompanySelector {
                 setBackground(isSelected ? UIHelper.GRID : UIHelper.BG_CARD);
                 setForeground(UIHelper.TEXT_LIGHT);
                 setBorder(BorderFactory.createEmptyBorder(Spacing.XS, Spacing.SM, Spacing.XS, Spacing.SM));
-                if (value instanceof DesktopSession.CompanyAccess company) {
+                if (value instanceof DesktopSession.CompanyAccess company && index < 0) {
+                    // Closed combo: the role is cut off at this width and left a dangling "·"; the topbar already shows it.
+                    setText(company.name());
+                } else if (value instanceof DesktopSession.CompanyAccess company) {
                     String roleColor = isSelected ? "#E5E7EB" : "#9CA3AF";
                     setText("<html>" + company.name()
                             + " <font color='" + roleColor + "'>· " + UIHelper.humanRole(company.role())

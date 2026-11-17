@@ -46,8 +46,6 @@ public class TopProductsWidget extends ModernPanel {
         titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
-        JLabel iconLabel = new JLabel(UIHelper.icon("fas-award", 14, UIHelper.PENDING_YELLOW));
-        header.add(iconLabel, BorderLayout.WEST);
         header.add(titleLabel, BorderLayout.CENTER);
 
         add(header, BorderLayout.NORTH);

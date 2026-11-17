@@ -96,7 +96,7 @@ class DashboardReadabilityHarnessTest {
                     .filter(b -> !DashboardPeriodBar.TV_LABEL.equals(b.getText())).toList();
             assertThat(periods).hasSize(DashboardPanel.PeriodFilter.values().length);
             assertThat(periods.stream().map(Component::getParent).distinct()).hasSize(1);
-            assertThat(periods).filteredOn(b -> b.getBackground().equals(UIHelper.ACCENT_BLUE))
+            assertThat(periods).filteredOn(b -> b.getBackground().equals(DashboardPeriodBar.activeBackground()))
                     .extracting(ModernButton::getText).containsExactly("Este Mês");
         });
     }

@@ -1,20 +1,17 @@
 package mz.multicore.erp.gui.components;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
 /**
- * Painel de scroll moderno com navegação vertical por botões de seta (topo e fundo)
- * e eliminação integral de overflow horizontal através de tracking de viewport (SPEC-ASO-001).
+ * Vertical scroll container for dashboards and long panels (SPEC-ASO-001).
  *
- * Substitui barras de rolagem nativas cinzentas e intrusivas por dois botões elegantes
- * de seta estilizados no padrão do Multicore ERP, preservando suporte natural ao rato
- * (mouse wheel) e atalhos de teclado (Page Up / Page Down).
+ * <p>The content tracks the viewport width, so there is never a horizontal overflow. Scrolling uses
+ * the mouse wheel, Page Up / Page Down, Ctrl+Home / Ctrl+End and a slim scrollbar shown only when the
+ * content is taller than the viewport. The former up/down arrow rail was removed in 2026-11: it took
+ * space and looked foreign next to the rest of the design system.
  */
 public class ArrowScrollPanel extends JPanel {
 
@@ -24,16 +21,11 @@ public class ArrowScrollPanel extends JPanel {
 
     private final JScrollPane scrollPane;
     private final WidthTrackingContainer viewContainer;
-    private final ModernButton btnUp;
-    private final ModernButton btnDown;
-    private final ScrollIndicatorTrack indicatorTrack;
-    private final JPanel sideNav;
 
     public ArrowScrollPanel(JComponent content) {
-        super(new BorderLayout(8, 0));
+        super(new BorderLayout());
         setOpaque(false);
 
-        // Contentor com tracking estrito de largura da viewport
         this.viewContainer = new WidthTrackingContainer(content);
 
         this.scrollPane = new JScrollPane(viewContainer);
@@ -41,47 +33,14 @@ public class ArrowScrollPanel extends JPanel {
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(SCROLL_UNIT_INCREMENT);
-
-        // Botões de navegação por seta (Topo e Fundo)
-        Color navIconColor = ThemeColors.control();
-        this.btnUp = UIHelper.createSecondaryButton("");
-        btnUp.setIcon(UIHelper.icon("fas-chevron-up", 12, navIconColor));
-        btnUp.setRolloverIcon(UIHelper.icon("fas-chevron-up", 12, UIHelper.ACCENT_BLUE));
-        btnUp.setDisabledIcon(UIHelper.icon("fas-chevron-up", 12, UIHelper.TEXT_MUTED));
-        btnUp.setToolTipText("Rolar para cima (Page Up)");
-        btnUp.setPreferredSize(new Dimension(32, 32));
-        btnUp.addActionListener(e -> scrollSmoothly(-DEFAULT_SCROLL_STEP));
-
-        this.btnDown = UIHelper.createSecondaryButton("");
-        btnDown.setIcon(UIHelper.icon("fas-chevron-down", 12, navIconColor));
-        btnDown.setRolloverIcon(UIHelper.icon("fas-chevron-down", 12, UIHelper.ACCENT_BLUE));
-        btnDown.setDisabledIcon(UIHelper.icon("fas-chevron-down", 12, UIHelper.TEXT_MUTED));
-        btnDown.setToolTipText("Rolar para baixo (Page Down)");
-        btnDown.setPreferredSize(new Dimension(32, 32));
-        btnDown.addActionListener(e -> scrollSmoothly(DEFAULT_SCROLL_STEP));
-
-        // Indicador minimalista de posição e progresso no centro
-        this.indicatorTrack = new ScrollIndicatorTrack();
-
-        // Calha vertical de navegação
-        this.sideNav = new JPanel(new BorderLayout(0, 6));
-        sideNav.setOpaque(false);
-        sideNav.setPreferredSize(new Dimension(34, 0));
-        sideNav.setBorder(new EmptyBorder(Spacing.XS, 0, Spacing.XS, 0));
-        sideNav.add(btnUp, BorderLayout.NORTH);
-        sideNav.add(indicatorTrack, BorderLayout.CENTER);
-        sideNav.add(btnDown, BorderLayout.SOUTH);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        JScrollBar vertical = scrollPane.getVerticalScrollBar();
+        vertical.setUI(new SlimScrollBarUI());
+        vertical.setOpaque(false);
+        vertical.setUnitIncrement(SCROLL_UNIT_INCREMENT);
 
         add(scrollPane, BorderLayout.CENTER);
-        add(sideNav, BorderLayout.EAST);
-
-        // Sincronização do estado e limites da viewport
-        scrollPane.getViewport().addChangeListener(e -> updateNavigationState());
         setupKeyboardShortcuts();
-
-        SwingUtilities.invokeLater(this::updateNavigationState);
     }
 
     public void scrollSmoothly(int delta) {
@@ -101,11 +60,9 @@ public class ArrowScrollPanel extends JPanel {
             if (count[0] >= frames) {
                 vp.setViewPosition(new Point(p.x, targetY));
                 timer.stop();
-                updateNavigationState();
             } else {
                 int nextY = Math.max(0, Math.min(p.y + step, getMaxScrollY()));
                 vp.setViewPosition(new Point(p.x, nextY));
-                updateNavigationState();
             }
         });
         timer.start();
@@ -113,12 +70,10 @@ public class ArrowScrollPanel extends JPanel {
 
     public void scrollToTop() {
         scrollPane.getViewport().setViewPosition(new Point(0, 0));
-        updateNavigationState();
     }
 
     public void scrollToBottom() {
         scrollPane.getViewport().setViewPosition(new Point(0, getMaxScrollY()));
-        updateNavigationState();
     }
 
     public int getMaxScrollY() {
@@ -130,17 +85,6 @@ public class ArrowScrollPanel extends JPanel {
             vpHeight = Math.max(scrollPane.getHeight(), getHeight());
         }
         return Math.max(0, viewHeight - vpHeight);
-    }
-
-    public void updateNavigationState() {
-        JViewport vp = scrollPane.getViewport();
-        int y = vp.getViewPosition().y;
-        int max = getMaxScrollY();
-
-        boolean canScroll = max > 0;
-        btnUp.setEnabled(canScroll && y > 0);
-        btnDown.setEnabled(canScroll && y < max);
-        indicatorTrack.repaint();
     }
 
     private void setupKeyboardShortcuts() {
@@ -180,14 +124,6 @@ public class ArrowScrollPanel extends JPanel {
         return scrollPane;
     }
 
-    public ModernButton getBtnUp() {
-        return btnUp;
-    }
-
-    public ModernButton getBtnDown() {
-        return btnDown;
-    }
-
     /**
      * Contentor que implementa {@link Scrollable} e força a largura exacta da viewport,
      * impedindo qualquer overflow horizontal.
@@ -223,69 +159,6 @@ public class ArrowScrollPanel extends JPanel {
         @Override
         public boolean getScrollableTracksViewportHeight() {
             return false;
-        }
-    }
-
-    /**
-     * Barra fina indicadora de progresso do scroll com clique rápido para posicionamento.
-     */
-    private class ScrollIndicatorTrack extends JComponent {
-
-        public ScrollIndicatorTrack() {
-            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            addMouseListener(new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    jumpToMouse(e.getY());
-                }
-            });
-        }
-
-        private void jumpToMouse(int mouseY) {
-            int trackH = getHeight();
-            if (trackH <= 0) return;
-            float ratio = (float) mouseY / (float) trackH;
-            int max = getMaxScrollY();
-            int targetY = Math.round(ratio * max);
-            scrollPane.getViewport().setViewPosition(new Point(0, Math.max(0, Math.min(targetY, max))));
-            updateNavigationState();
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            int w = getWidth();
-            int h = getHeight();
-            if (h <= 0 || w <= 0) return;
-
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            int trackW = 4;
-            int trackX = (w - trackW) / 2;
-
-            // Linha vertical de fundo
-            g2.setColor(UIHelper.GRID);
-            g2.fillRoundRect(trackX, 4, trackW, Math.max(0, h - 8), trackW, trackW);
-
-            // Cápsula indicadora proporcional
-            int max = getMaxScrollY();
-            int currentY = scrollPane.getViewport().getViewPosition().y;
-            int vpHeight = scrollPane.getViewport().getHeight();
-            Component view = scrollPane.getViewport().getView();
-            int totalHeight = view != null ? view.getHeight() : vpHeight;
-
-            if (totalHeight > 0 && max > 0) {
-                float visibleRatio = Math.min(1.0f, (float) vpHeight / (float) totalHeight);
-                int thumbH = Math.max(20, Math.round(visibleRatio * (h - 8)));
-                float scrollRatio = (float) currentY / (float) max;
-                int thumbY = 4 + Math.round(scrollRatio * (h - 8 - thumbH));
-
-                g2.setColor(UIHelper.ACCENT_BLUE);
-                g2.fillRoundRect(trackX - 1, thumbY, trackW + 2, thumbH, trackW + 2, trackW + 2);
-            }
-
-            g2.dispose();
         }
     }
 }
