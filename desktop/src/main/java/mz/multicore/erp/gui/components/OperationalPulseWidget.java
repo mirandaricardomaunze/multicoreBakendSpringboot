@@ -73,138 +73,46 @@ public class OperationalPulseWidget extends ModernPanel {
     }
 
     private void buildHeader() {
-        JPanel header = new JPanel(new BorderLayout(10, 0));
-        header.setOpaque(false);
-
-        JPanel titleBox = new JPanel();
-        titleBox.setOpaque(false);
-        titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
-
-        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        titleRow.setOpaque(false);
-        JLabel icon = new JLabel(UIHelper.icon("fas-cogs", 18, UIHelper.ACCENT_BLUE));
-        JLabel title = new JLabel("COCKPIT OPERACIONAL & INDUSTRIAL (GESTÃO 360°)");
-        title.setFont(Typography.EMPHASIS_BOLD);
-        title.setForeground(UIHelper.TEXT_LIGHT);
-        titleRow.add(icon);
-        titleRow.add(title);
-        titleBox.add(titleRow);
-
-        JLabel sub = new JLabel("Produção fabril, logística de viaturas, carteira de contratos e imobilizado corporativo.");
-        sub.setFont(Typography.CAPTION);
-        sub.setForeground(UIHelper.TEXT_MUTED);
-        sub.setBorder(new EmptyBorder(Spacing.XXS, Spacing.XL, 0, 0));
-        titleBox.add(sub);
-
-        header.add(titleBox, BorderLayout.WEST);
-
-        ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadData);
-        refreshBtn.setFont(Typography.BODY_BOLD);
-        refreshBtn.setPreferredSize(new Dimension(135, 28));
-        header.add(refreshBtn, BorderLayout.EAST);
-
-        add(header, BorderLayout.NORTH);
+        add(StrategicPulseCardFactory.buildHeader("fas-cogs", "Operações e indústria",
+                "Produção, frota, contratos recorrentes e imobilizado.", this::loadData), BorderLayout.NORTH);
     }
 
     private void buildCards() {
         JPanel grid = KpiCard.createHeroGrid(4, 12, 12);
 
-        grid.add(createPillarCard(
+        grid.add(StrategicPulseCardFactory.createPillarCard(
                 "MANUFATURA & PRODUÇÃO",
                 "fas-industry",
                 UIHelper.ACCENT_BLUE,
                 manufacturingValLabel,
                 manufacturingSubLabel,
-                manufacturingNavBtn,
-                "fas-tools"
-        ));
+                manufacturingNavBtn));
 
-        grid.add(createPillarCard(
+        grid.add(StrategicPulseCardFactory.createPillarCard(
                 "FROTAS & COMBUSTÍVEIS",
                 "fas-truck",
                 UIHelper.ACCENT_ORANGE,
                 fleetValLabel,
                 fleetSubLabel,
-                fleetNavBtn,
-                "fas-gas-pump"
-        ));
+                fleetNavBtn));
 
-        grid.add(createPillarCard(
+        grid.add(StrategicPulseCardFactory.createPillarCard(
                 "CONTRATOS RECORRENTES",
                 "fas-file-signature",
                 UIHelper.APPROVED_GREEN,
                 recurringValLabel,
                 recurringSubLabel,
-                recurringNavBtn,
-                "fas-calendar-check"
-        ));
+                recurringNavBtn));
 
-        grid.add(createPillarCard(
+        grid.add(StrategicPulseCardFactory.createPillarCard(
                 "PATRIMÓNIO & ATIVOS",
                 "fas-landmark",
                 UIHelper.KPI_PURPLE_SOFT,
                 assetsValLabel,
                 assetsSubLabel,
-                assetsNavBtn,
-                "fas-boxes"
-        ));
+                assetsNavBtn));
 
         add(grid, BorderLayout.CENTER);
-    }
-
-    private ModernPanel createPillarCard(
-            String title,
-            String iconCode,
-            Color accentColor,
-            JLabel valueLabel,
-            JLabel subLabel,
-            ModernButton actionBtn,
-            String actionIcon
-    ) {
-        KpiCard.KpiPalette pal = KpiCard.resolvePalette(accentColor);
-
-        ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, pal.bg);
-        card.putClientProperty("card.border", pal.border);
-        card.putClientProperty("kpi.accent", pal.accent);
-        card.setLayout(new BorderLayout(0, 8));
-        card.setBorder(new EmptyBorder(Spacing.MD, Spacing.LG, Spacing.MD, Spacing.LG));
-        card.setPreferredSize(new Dimension(card.getPreferredSize().width, KpiCard.STANDARD_CARD_HEIGHT));
-        card.setMinimumSize(new Dimension(KpiCard.STANDARD_CARD_MIN_WIDTH, KpiCard.STANDARD_CARD_HEIGHT));
-
-        JPanel cardHeader = new JPanel(new BorderLayout(6, 0));
-        cardHeader.setOpaque(false);
-        JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(Typography.CAPTION_BOLD);
-        titleLbl.setForeground(pal.title);
-
-        JLabel iconLbl = new JLabel(UIHelper.icon(iconCode, 14, pal.accent));
-        cardHeader.add(iconLbl, BorderLayout.WEST);
-        cardHeader.add(titleLbl, BorderLayout.CENTER);
-        card.add(cardHeader, BorderLayout.NORTH);
-
-        JPanel content = new JPanel();
-        content.setOpaque(false);
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-
-        valueLabel.setFont(Typography.TITLE);
-        valueLabel.setForeground(pal.value);
-        valueLabel.setAlignmentX(0.0f);
-
-        subLabel.setFont(Typography.CAPTION);
-        subLabel.setForeground(pal.subtitle);
-        subLabel.setAlignmentX(0.0f);
-
-        content.add(valueLabel);
-        content.add(Box.createVerticalStrut(3));
-        content.add(subLabel);
-        card.add(content, BorderLayout.CENTER);
-
-        actionBtn.setIcon(UIHelper.icon(actionIcon, 11));
-        actionBtn.setPreferredSize(new Dimension(0, 26));
-        actionBtn.setFont(Typography.CAPTION);
-        card.add(actionBtn, BorderLayout.SOUTH);
-
-        return card;
     }
 
     private void wireActions() {

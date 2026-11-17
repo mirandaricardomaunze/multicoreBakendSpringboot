@@ -72,16 +72,16 @@ public class StrategicPulseWidget extends ModernPanel {
         JPanel grid = KpiCard.createHeroGrid(4, 12, 12);
         grid.add(StrategicPulseCardFactory.createPillarCard(
                 "COMPLIANCE & FRAUDE", "fas-shield-alt", UIHelper.REJECTED_RED,
-                forensicScoreLabel, forensicSubLabel, forensicNavBtn, "fas-file-alt"));
+                forensicScoreLabel, forensicSubLabel, forensicNavBtn));
         grid.add(StrategicPulseCardFactory.createPillarCard(
                 "LIQUIDEZ PREVISIONAL 30D", "fas-chart-line", UIHelper.ACCENT_BLUE,
-                liquidityValLabel, liquiditySubLabel, liquidityNavBtn, "fas-coins"));
+                liquidityValLabel, liquiditySubLabel, liquidityNavBtn));
         grid.add(StrategicPulseCardFactory.createPillarCard(
                 "RISCO DE CRÉDITO EM MORA", "fas-user-shield", UIHelper.PENDING_YELLOW,
-                creditRiskValLabel, creditRiskSubLabel, creditRiskNavBtn, "fas-search-dollar"));
+                creditRiskValLabel, creditRiskSubLabel, creditRiskNavBtn));
         grid.add(StrategicPulseCardFactory.createPillarCard(
                 "METAS COMERCIAIS", "fas-bullseye", UIHelper.ACCENT,
-                performanceValLabel, performanceSubLabel, performanceNavBtn, "fas-trophy"));
+                performanceValLabel, performanceSubLabel, performanceNavBtn));
         add(grid, BorderLayout.CENTER);
     }
 
