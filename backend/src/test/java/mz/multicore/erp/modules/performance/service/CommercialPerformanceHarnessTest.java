@@ -262,7 +262,7 @@ class CommercialPerformanceHarnessTest {
         when(salesGoalRepository.findById(10L)).thenReturn(Optional.of(goal));
 
         UpdateSalesGoalRequest update = new UpdateSalesGoalRequest(
-                "Meta Outubro Atualizada", new BigDecimal("70000.00"), null, null, null, null, null, null, null
+                "Meta Outubro Actualizada", new BigDecimal("70000.00"), null, null, null, null, null, null, null
         );
 
         salesGoalService.updateGoal(10L, update);

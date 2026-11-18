@@ -23,7 +23,7 @@ public final class CrmViewCoordinator {
         if (model == null || row < 0 || row >= model.getRowCount()) return;
         peek.setHeaderIcon("fas-headset", UIHelper.ACCENT_BLUE);
         peek.setTitle(String.valueOf(model.getValueAt(row, 3)));
-        peek.setSubtitle("Ticket #" + model.getValueAt(row, 0) + " • " + model.getValueAt(row, 2));
+        peek.setSubtitle("Pedido #" + model.getValueAt(row, 0) + " • " + model.getValueAt(row, 2));
         peek.setStatus(String.valueOf(model.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
 
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();

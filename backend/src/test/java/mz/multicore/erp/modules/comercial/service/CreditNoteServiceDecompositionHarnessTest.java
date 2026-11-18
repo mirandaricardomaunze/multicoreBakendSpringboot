@@ -25,10 +25,10 @@ class CreditNoteServiceDecompositionHarnessTest {
         long lifecycleLines = Files.lines(LIFECYCLE_FILE).count();
         long queryLines = Files.lines(QUERY_FILE).count();
 
-        assertTrue(serviceLines <= 105, "CreditNoteService deve ter <= 105 linhas, atual: " + serviceLines);
-        assertTrue(creationLines <= 175, "CreditNoteCreationService deve ter <= 175 linhas, atual: " + creationLines);
-        assertTrue(lifecycleLines <= 165, "CreditNoteLifecycleService deve ter <= 165 linhas, atual: " + lifecycleLines);
-        assertTrue(queryLines <= 145, "CreditNoteQueryService deve ter <= 145 linhas, atual: " + queryLines);
+        assertTrue(serviceLines <= 105, "CreditNoteService deve ter <= 105 linhas, actual: " + serviceLines);
+        assertTrue(creationLines <= 175, "CreditNoteCreationService deve ter <= 175 linhas, actual: " + creationLines);
+        assertTrue(lifecycleLines <= 165, "CreditNoteLifecycleService deve ter <= 165 linhas, actual: " + lifecycleLines);
+        assertTrue(queryLines <= 145, "CreditNoteQueryService deve ter <= 145 linhas, actual: " + queryLines);
     }
 
     @Test

@@ -67,14 +67,14 @@ public class PurchaseOrderLifecycleService {
         Supplier supplier = supplierRepository.findById(request.supplierId())
                 .orElseThrow(() -> new BusinessRuleException("Fornecedor não encontrado."));
         if (supplier.getCompany() == null || !request.companyId().equals(supplier.getCompany().getId())) {
-            throw new BusinessRuleException("O fornecedor não pertence à empresa ativa.");
+            throw new BusinessRuleException("O fornecedor não pertence à empresa activa.");
         }
         if (!supplier.isActive()) {
             throw new BusinessRuleException("Fornecedor inactivo não pode receber encomendas.");
         }
         Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (warehouse.getCompany() == null || !request.companyId().equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+            throw new BusinessRuleException("O armazém não pertence à empresa activa.");
         }
         Company company = companyLookup.require(request.companyId());
 
@@ -140,14 +140,14 @@ public class PurchaseOrderLifecycleService {
         Supplier supplier = supplierRepository.findById(request.supplierId())
                 .orElseThrow(() -> new BusinessRuleException("Fornecedor não encontrado."));
         if (supplier.getCompany() == null || !companyId.equals(supplier.getCompany().getId())) {
-            throw new BusinessRuleException("O fornecedor não pertence à empresa ativa.");
+            throw new BusinessRuleException("O fornecedor não pertence à empresa activa.");
         }
         if (!supplier.isActive()) {
             throw new BusinessRuleException("Fornecedor inactivo não pode receber encomendas.");
         }
         Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (warehouse.getCompany() == null || !companyId.equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+            throw new BusinessRuleException("O armazém não pertence à empresa activa.");
         }
 
         order.setSupplier(supplier);

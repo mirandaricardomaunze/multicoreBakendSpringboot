@@ -93,7 +93,7 @@ public class PayrollBonusCalculationService {
     public Long currentCompanyId() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         if (companyId == null) {
-            throw new BusinessRuleException("Selecione uma empresa ativa.");
+            throw new BusinessRuleException("Seleccione uma empresa activa.");
         }
         return companyId;
     }

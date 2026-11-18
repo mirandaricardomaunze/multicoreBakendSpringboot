@@ -23,7 +23,7 @@ class ConfigSupportPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "ConfigSupportPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 105, "ConfigSupportPanel.java deve possuir <= 105 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 105, "ConfigSupportPanel.java deve possuir <= 105 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -36,7 +36,7 @@ class ConfigSupportPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "ConfigSupportTicketDialog.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 90, "ConfigSupportTicketDialog.java deve possuir <= 90 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 90, "ConfigSupportTicketDialog.java deve possuir <= 90 linhas. Actual: " + lines.size());
     }
 
     @Test

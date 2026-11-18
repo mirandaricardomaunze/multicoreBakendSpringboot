@@ -106,7 +106,7 @@ public class QualityCatalogTab extends JPanel {
                         eq.categoryLabel(),
                         eq.periodValue() + " " + eq.periodUnitLabel(),
                         eq.warningDaysBefore() + " dias",
-                        eq.active() ? "Ativo" : "Inativo"
+                        eq.active() ? "Activo" : "Inactivo"
                 });
             }
             if (equipmentsPager != null) {
@@ -124,7 +124,7 @@ public class QualityCatalogTab extends JPanel {
     private void editSelectedEquipment() {
         int row = equipmentsTable.getSelectedRow();
         if (row < 0) {
-            ToastManager.show(this, FeedbackType.INFO, "Por favor selecione um equipamento da tabela para editar.");
+            ToastManager.show(this, FeedbackType.INFO, "Por favor seleccione um equipamento da tabela para editar.");
             return;
         }
         int modelRow = equipmentsTable.convertRowIndexToModel(row);

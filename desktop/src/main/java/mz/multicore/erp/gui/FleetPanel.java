@@ -40,7 +40,7 @@ public final class FleetPanel extends JPanel {
     private List<VehicleDTO> currentVehicles = new ArrayList<>();
 
     private final JTextField searchField = TableFilter.searchField("Pesquisar por matrícula, marca, modelo ou condutor...");
-    private final JComboBox<String> fuelFilterCombo = TableFilter.combo("Todos os Combustíveis", "Gasóleo (Diesel)", "Gasolina", "Híbrido", "Elétrico");
+    private final JComboBox<String> fuelFilterCombo = TableFilter.combo("Todos os Combustíveis", "Gasóleo (Diesel)", "Gasolina", "Híbrido", "Eléctrico");
     private final JComboBox<String> statusFilterCombo = TableFilter.combo("Todos os Estados", "Operacional", "Manutenção", "Inspecção", "Fora de serviço", "Vendido");
 
     public FleetPanel(FleetApiClient fleetApiClient) {

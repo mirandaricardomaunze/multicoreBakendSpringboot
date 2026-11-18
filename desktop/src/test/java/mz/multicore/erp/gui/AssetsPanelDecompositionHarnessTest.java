@@ -26,7 +26,7 @@ class AssetsPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("AssetsPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 250,
-                () -> "AssetsPanel.java deve possuir <= 250 linhas. Atual: " + lines.size());
+                () -> "AssetsPanel.java deve possuir <= 250 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -35,12 +35,12 @@ class AssetsPanelDecompositionHarnessTest {
         Path form = ROOT.resolve("AssetFormDialog.java");
         List<String> formLines = Files.readAllLines(form);
         assertTrue(formLines.size() <= 125,
-                () -> "AssetFormDialog.java deve possuir <= 125 linhas. Atual: " + formLines.size());
+                () -> "AssetFormDialog.java deve possuir <= 125 linhas. Actual: " + formLines.size());
 
         Path dep = ROOT.resolve("AssetDepreciationCoordinator.java");
         List<String> depLines = Files.readAllLines(dep);
         assertTrue(depLines.size() <= 100,
-                () -> "AssetDepreciationCoordinator.java deve possuir <= 100 linhas. Atual: " + depLines.size());
+                () -> "AssetDepreciationCoordinator.java deve possuir <= 100 linhas. Actual: " + depLines.size());
     }
 
     @Test

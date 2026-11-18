@@ -73,16 +73,16 @@ class FormDraftAutoSaveHarnessTest {
     }
 
     @Test
-    @DisplayName("DFRT-03: Sobrescrita e Atualização de Rascunho Existente")
+    @DisplayName("DFRT-03: Sobrescrita e Actualização de Rascunho Existente")
     void testOverwriteAndTimestampUpdate() {
         manager.saveDraft("QUOTATION_NEW", "Cotação A", Map.of("total", "1000"));
         FormDraft d1 = manager.getDraft("QUOTATION_NEW");
 
-        manager.saveDraft("QUOTATION_NEW", "Cotação A Atualizada", Map.of("total", "2500", "discount", "10%"));
+        manager.saveDraft("QUOTATION_NEW", "Cotação A Actualizada", Map.of("total", "2500", "discount", "10%"));
         FormDraft d2 = manager.getDraft("QUOTATION_NEW");
 
         assertEquals(1, manager.listAllDrafts().size(), "Não deve duplicar rascunhos com a mesma chave");
-        assertEquals("Cotação A Atualizada", d2.title());
+        assertEquals("Cotação A Actualizada", d2.title());
         assertEquals("2500", d2.payload().get("total"));
         assertEquals("10%", d2.payload().get("discount"));
         assertTrue(d2.timestampMillis() >= d1.timestampMillis());
@@ -174,7 +174,7 @@ class FormDraftAutoSaveHarnessTest {
             assertTrue(f.exists(), "Ficheiro deve existir: " + relPath);
             long lineCount = Files.lines(f.toPath()).count();
             assertTrue(lineCount <= 1000 || f.getName().equals("UIHelper.java"),
-                    "A classe " + f.getName() + " ultrapassou o limite estrito de 1000 linhas! Atual: " + lineCount);
+                    "A classe " + f.getName() + " ultrapassou o limite estrito de 1000 linhas! Actual: " + lineCount);
         }
     }
 

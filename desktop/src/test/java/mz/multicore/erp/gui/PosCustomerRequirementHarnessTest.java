@@ -42,7 +42,7 @@ public class PosCustomerRequirementHarnessTest {
 
         String posServiceSource = Files.readString(Path.of("..", "backend", "src", "main", "java", "mz", "multicore", "erp", "modules", "pos", "service", "POSService.java"))
                 + Files.readString(Path.of("..", "backend", "src", "main", "java", "mz", "multicore", "erp", "modules", "pos", "service", "PosCheckoutAndPaymentService.java"));
-        assertTrue(posServiceSource.contains("É obrigatório indicar o nome do cliente para efetuar a venda no POS"),
+        assertTrue(posServiceSource.contains("É obrigatório indicar o nome do cliente para efectuar a venda no POS"),
                 "POSService deve lançar BusinessRuleException quando a venda for avulsa sem nome");
     }
 

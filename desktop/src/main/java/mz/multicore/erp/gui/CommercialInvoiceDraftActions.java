@@ -262,7 +262,7 @@ final class CommercialInvoiceDraftActions {
         int clientIdx = panel.clientCombo.getSelectedIndex();
         int whIdx = panel.warehouseCombo.getSelectedIndex();
         if (whIdx < 0) {
-            throw new RuntimeException("Selecione o armazém.");
+            throw new RuntimeException("Seleccione o armazém.");
         }
         Long clientId = null;
         String customerName = null;

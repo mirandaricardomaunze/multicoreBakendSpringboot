@@ -22,7 +22,7 @@ class PurchaseReorderPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("PurchaseReorderPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 190,
-                () -> "PurchaseReorderPanel.java deve possuir <= 190 linhas. Atual: " + lines.size());
+                () -> "PurchaseReorderPanel.java deve possuir <= 190 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -31,12 +31,12 @@ class PurchaseReorderPanelDecompositionHarnessTest {
         Path coord = ROOT.resolve("PurchaseReorderOperationsCoordinator.java");
         List<String> coordLines = Files.readAllLines(coord);
         assertTrue(coordLines.size() <= 85,
-                () -> "PurchaseReorderOperationsCoordinator.java deve possuir <= 85 linhas. Atual: " + coordLines.size());
+                () -> "PurchaseReorderOperationsCoordinator.java deve possuir <= 85 linhas. Actual: " + coordLines.size());
 
         Path data = ROOT.resolve("PurchaseReorderDataCoordinator.java");
         List<String> dataLines = Files.readAllLines(data);
         assertTrue(dataLines.size() <= 115,
-                () -> "PurchaseReorderDataCoordinator.java deve possuir <= 115 linhas. Atual: " + dataLines.size());
+                () -> "PurchaseReorderDataCoordinator.java deve possuir <= 115 linhas. Actual: " + dataLines.size());
     }
 
     @Test

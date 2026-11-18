@@ -85,7 +85,7 @@ class RecentItemsHistoryHarnessTest {
     }
 
     @Test
-    @DisplayName("RHIS-04: Imutabilidade e Proteção da Lista Exposta")
+    @DisplayName("RHIS-04: Imutabilidade e Protecção da Lista Exposta")
     void testListImmutability() {
         manager.record("Fatura", 501L, "FAT-2026/001", "Total: 15.000 MT", "comercial", "fas-file-invoice");
         List<RecentItem> items = manager.getRecentItems();
@@ -158,7 +158,7 @@ class RecentItemsHistoryHarnessTest {
             assertTrue(f.exists(), "Ficheiro deve existir: " + relPath);
             long lineCount = Files.lines(f.toPath()).count();
             assertTrue(lineCount <= 1000,
-                    "A classe " + f.getName() + " ultrapassou o limite estrito de 1000 linhas! Atual: " + lineCount);
+                    "A classe " + f.getName() + " ultrapassou o limite estrito de 1000 linhas! Actual: " + lineCount);
         }
     }
 }

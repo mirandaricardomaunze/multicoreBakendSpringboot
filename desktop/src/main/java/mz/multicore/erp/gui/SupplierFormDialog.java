@@ -30,7 +30,7 @@ public final class SupplierFormDialog {
                 "NUIT / NIF (9 dígitos):", taxIdField,
                 "Telefone:", phoneField,
                 "Pessoa de Contacto:", contactField,
-                "Correio Eletrónico:", emailField,
+                "Correio Electrónico:", emailField,
                 "Endereço:", addressField
         );
 

@@ -131,7 +131,7 @@ final class HRDeductionsPanel {
     private void deactivate() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
-            owner.showNotice(FeedbackType.WARNING, "Seleccione um desconto", "Selecione um desconto na tabela.");
+            owner.showNotice(FeedbackType.WARNING, "Seleccione um desconto", "Seleccione um desconto na tabela.");
             return;
         }
         PayrollDeductionDTO sel = deductions.get(row);

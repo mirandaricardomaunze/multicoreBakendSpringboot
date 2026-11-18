@@ -36,7 +36,7 @@ class QuotationsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "QuotationsPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 270, "QuotationsPanel.java deve possuir <= 270 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 270, "QuotationsPanel.java deve possuir <= 270 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -50,12 +50,12 @@ class QuotationsPanelDecompositionHarnessTest {
         Path opsPath = basePath.resolve("QuotationOperationsCoordinator.java");
         assertTrue(Files.exists(opsPath), "QuotationOperationsCoordinator.java deve existir");
         List<String> opsLines = Files.readAllLines(opsPath);
-        assertTrue(opsLines.size() <= 230, "QuotationOperationsCoordinator.java deve possuir <= 230 linhas. Atual: " + opsLines.size());
+        assertTrue(opsLines.size() <= 230, "QuotationOperationsCoordinator.java deve possuir <= 230 linhas. Actual: " + opsLines.size());
 
         Path viewPath = basePath.resolve("QuotationViewCoordinator.java");
         assertTrue(Files.exists(viewPath), "QuotationViewCoordinator.java deve existir");
         List<String> viewLines = Files.readAllLines(viewPath);
-        assertTrue(viewLines.size() <= 110, "QuotationViewCoordinator.java deve possuir <= 110 linhas. Atual: " + viewLines.size());
+        assertTrue(viewLines.size() <= 110, "QuotationViewCoordinator.java deve possuir <= 110 linhas. Actual: " + viewLines.size());
     }
 
     @Test
@@ -84,7 +84,7 @@ class QuotationsPanelDecompositionHarnessTest {
     }
 
     @Test
-    @DisplayName("QD-04: Construtores preservados e ações canónicas de conversão presentes")
+    @DisplayName("QD-04: Construtores preservados e acções canónicas de conversão presentes")
     void testConstructorsAndConversionActions() {
         QuotationsPanel panel5Args = new QuotationsPanel(
                 comercialApiClient, List::of, List::of, List::of, () -> {}

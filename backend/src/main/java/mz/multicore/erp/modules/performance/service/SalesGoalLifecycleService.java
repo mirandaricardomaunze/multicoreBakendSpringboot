@@ -178,7 +178,7 @@ public class SalesGoalLifecycleService {
         }
         if (scope == GoalScope.EMPLOYEE) {
             if (scopeRefId == null) {
-                throw new BusinessRuleException("Para meta com escopo de colaborador, é obrigatório selecionar o trabalhador.");
+                throw new BusinessRuleException("Para meta com escopo de colaborador, é obrigatório seleccionar o trabalhador.");
             }
             Employee emp = employeeLookup.require(scopeRefId);
             if (!emp.getCompany().getId().equals(companyId)) {

@@ -59,7 +59,7 @@ public class CurrencyExchangeDialog extends JDialog {
 
         // Seletor de Moeda
         gbc.gridy = 0;
-        card.add(createFieldTitle("Selecionar Moeda Estrangeira:"), gbc);
+        card.add(createFieldTitle("Seleccionar Moeda Estrangeira:"), gbc);
 
         gbc.gridy = 1;
         currencyCombo = new JComboBox<>(new Currency[]{Currency.USD, Currency.ZAR, Currency.EUR});
@@ -79,7 +79,7 @@ public class CurrencyExchangeDialog extends JDialog {
         // Total Convertido
         gbc.gridy = 3;
         gbc.insets = new Insets(12, 4, 4, 4);
-        card.add(createFieldTitle("Valor a Pagar na Moeda Selecionada:"), gbc);
+        card.add(createFieldTitle("Valor a Pagar na Moeda Seleccionada:"), gbc);
 
         gbc.gridy = 4;
         gbc.insets = new Insets(2, 4, 12, 4);

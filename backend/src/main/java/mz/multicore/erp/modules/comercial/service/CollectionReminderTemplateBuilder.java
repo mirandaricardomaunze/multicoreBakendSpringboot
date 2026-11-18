@@ -85,7 +85,7 @@ public class CollectionReminderTemplateBuilder {
         if ("WHATSAPP".equals(channel)) {
             return String.format("Olá, *%s*! Esperamos que esteja tudo bem.\n\n"
                             + "Lembramos cordialmente que a fatura *%s* no valor de *%s* tem vencimento agendado para hoje (*%s*).\n\n"
-                            + "Caso já tenha efetuado o pagamento, agradecemos o envio do comprovativo. Obrigado!",
+                            + "Caso já tenha efectuado o pagamento, agradecemos o envio do comprovativo. Obrigado!",
                     clientName, invoiceNum, balanceStr, dueStr);
         }
         return String.format("Exmo.(a) Sr.(a) %s,\n\n"

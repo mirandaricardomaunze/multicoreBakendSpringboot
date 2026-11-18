@@ -122,7 +122,7 @@ public class WasteReportDocumentRenderer {
         }
 
         if (records.isEmpty()) {
-            PdfPCell empty = new PdfPCell(new Phrase("Nenhum registo de quebra no período selecionado.", PdfTheme.bodyFont()));
+            PdfPCell empty = new PdfPCell(new Phrase("Nenhum registo de quebra no período seleccionado.", PdfTheme.bodyFont()));
             empty.setColspan(7);
             empty.setPadding(10f);
             empty.setHorizontalAlignment(Element.ALIGN_CENTER);

@@ -112,7 +112,7 @@ class TableQuickPeekHarnessTest {
     }
 
     @Test
-    @DisplayName("PEEK-04: Navegação Reativa por Setas (UP / DOWN) atualiza os dados em tempo real")
+    @DisplayName("PEEK-04: Navegação Reactiva por Setas (UP / DOWN) actualiza os dados em tempo real")
     void testReactiveRowNavigationUpdatesDrawer() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             JTable table = createSampleTable();
@@ -134,7 +134,7 @@ class TableQuickPeekHarnessTest {
     }
 
     @Test
-    @DisplayName("PEEK-05: Fallback Gracioso sem seleção seleciona linha 0 automaticamente")
+    @DisplayName("PEEK-05: Fallback Gracioso sem selecção selecciona linha 0 automaticamente")
     void testGracefulFallbackWhenNoRowSelected() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             JTable table = createSampleTable();
@@ -146,13 +146,13 @@ class TableQuickPeekHarnessTest {
 
             controller.toggle();
             assertTrue(controller.isOpen());
-            assertEquals(0, table.getSelectedRow(), "Deve ter auto-selecionado a primeira linha");
+            assertEquals(0, table.getSelectedRow(), "Deve ter auto-seleccionado a primeira linha");
             assertEquals("FT 2026/001", controller.getPeekPanel().getTitleLabel().getText());
         });
     }
 
     @Test
-    @DisplayName("PEEK-06: Botão Ver Completo dispara callback com o índice correto de modelo")
+    @DisplayName("PEEK-06: Botão Ver Completo dispara callback com o índice correcto de modelo")
     void testOpenFullButtonCallback() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             JTable table = createSampleTable();

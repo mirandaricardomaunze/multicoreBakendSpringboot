@@ -54,7 +54,7 @@ public class BackupEncryption {
             throw new BusinessRuleException("Restaurar substitui os dados actuais. Confirme a operação para continuar.");
         }
         if (path == null || path.isBlank()) {
-            throw new BusinessRuleException("Selecione um ficheiro de backup para restaurar.");
+            throw new BusinessRuleException("Seleccione um ficheiro de backup para restaurar.");
         }
         File file = new File(path);
         if (!file.exists() || !file.isFile()) {
@@ -62,7 +62,7 @@ public class BackupEncryption {
         }
         String name = file.getName().toLowerCase(Locale.ROOT);
         if (!name.endsWith(".dump") && !name.endsWith(".dump" + BackupFileCipher.ENCRYPTED_SUFFIX)) {
-            throw new BusinessRuleException("O ficheiro selecionado não é um backup físico (.dump) válido.");
+            throw new BusinessRuleException("O ficheiro seleccionado não é um backup físico (.dump) válido.");
         }
         return file;
     }

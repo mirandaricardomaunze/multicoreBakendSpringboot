@@ -29,12 +29,12 @@ final class BackupFileLabels {
     static String verificationSummary(BackupVerificationDTO verification) {
         if (verification.companyId() == null) {
             Map<String, Integer> counts = verification.itemCounts();
-            return "Backup físico legível, criado em " + verification.generatedAt() + ": "
+            return "Cópia física legível, criada em " + verification.generatedAt() + ": "
                     + counts.getOrDefault("tabelas", 0) + " tabelas, "
                     + counts.getOrDefault("indices", 0) + " índices, "
                     + counts.getOrDefault("sequencias", 0) + " sequências.";
         }
-        return "Backup lógico válido da empresa " + verification.companyId()
+        return "Cópia lógica válida da empresa " + verification.companyId()
                 + ", gerado em " + verification.generatedAt() + ".";
     }
 }

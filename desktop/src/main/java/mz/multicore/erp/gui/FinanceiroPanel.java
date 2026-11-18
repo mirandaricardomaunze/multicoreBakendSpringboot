@@ -68,7 +68,7 @@ public class FinanceiroPanel extends JPanel {
         tabbedPane.addTab("Reconciliação Bancária", UIHelper.icon("fas-university", 16, UIHelper.ACCENT), reconciliationPanel);
         if (forecastApiClient != null) {
             this.forecastPanel = new CashFlowForecastPanel(forecastApiClient);
-            tabbedPane.addTab("Projeção Previsional", UIHelper.icon("fas-chart-line", 16, UIHelper.ACCENT_CYAN), forecastPanel);
+            tabbedPane.addTab("Projecção Previsional", UIHelper.icon("fas-chart-line", 16, UIHelper.ACCENT_CYAN), forecastPanel);
         } else {
             this.forecastPanel = null;
         }
@@ -84,7 +84,7 @@ public class FinanceiroPanel extends JPanel {
         accountsCard.setLayout(new BorderLayout());
         accountsCard.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
 
-        String[] accountCols = {"Conta de Tesouraria", "Tipo", "IBAN / Nº Conta", "Saldo Atual"};
+        String[] accountCols = {"Conta de Tesouraria", "Tipo", "IBAN / Nº Conta", "Saldo Actual"};
         accountsModel = new DefaultTableModel(accountCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -100,7 +100,8 @@ public class FinanceiroPanel extends JPanel {
         TableFilter.install(accountsTable, aSearch);
         JPanel aBar = TableFilter.bar(aSearch);
         aBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
-        accountsCard.add(UIHelper.tableCardTop("Contas de Tesouraria & Saldos", aBar), BorderLayout.NORTH);
+        accountsCard.add(UIHelper.tableCardTop("Contas de Tesouraria & Saldos", aBar,
+                UIHelper.createRefreshButton(this::refreshData)), BorderLayout.NORTH);
         accountsCard.add(accScroll, BorderLayout.CENTER);
         TableQuickPeekController.install(accountsTable, accountsCard, (peek, row) ->
                 TreasuryOperationsCoordinator.populateAccountsPeek(peek, accountsModel, row));
@@ -146,7 +147,7 @@ public class FinanceiroPanel extends JPanel {
                 TableFilter.label("Data:", "fas-calendar-alt"), mPeriodo);
         mBar.setBorder(new EmptyBorder(0, 0, Spacing.SM, 0));
 
-        movementsCard.add(UIHelper.tableCardTop("Histórico de Fluxo de Caixa", mBar, payBtn), BorderLayout.NORTH);
+        movementsCard.add(UIHelper.tableCardTop("Histórico de Fluxo de Caixa", mBar, UIHelper.createRefreshButton(this::refreshData), payBtn), BorderLayout.NORTH);
         movementsCard.add(movScroll, BorderLayout.CENTER);
         movementsTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         movementsPager = new TablePager(this::loadTransactionsPage);
@@ -174,7 +175,7 @@ public class FinanceiroPanel extends JPanel {
         UIHelper.loadAsync(this,
                 () -> financeApiClient.getTransactionsPage(page, size),
                 this::applyTransactionsPage,
-                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar transações",
+                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar transacções",
                         error.getMessage(), "Tentar novamente", () -> {
                             if (movementsPager != null) movementsPager.reload();
                         }));

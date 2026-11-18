@@ -478,7 +478,7 @@ public class ComercialOrderLifecycleService {
                 .orElseThrow(() -> new BusinessRuleException(label + " não encontrado."));
         String lower = label.toLowerCase(Locale.ROOT);
         if (!companyId.equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O " + lower + " não pertence à empresa ativa.");
+            throw new BusinessRuleException("O " + lower + " não pertence à empresa activa.");
         }
         if (!warehouse.isActive()) {
             throw new BusinessRuleException("O " + lower + " " + warehouse.getName() + " está inactivo e não recebe encomendas.");

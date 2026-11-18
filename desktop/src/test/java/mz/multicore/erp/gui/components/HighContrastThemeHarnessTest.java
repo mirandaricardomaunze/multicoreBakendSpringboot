@@ -42,7 +42,7 @@ class HighContrastThemeHarnessTest {
         assertFalse(hc.isDark());
 
         Color[] palette = hc.palette();
-        assertEquals(10, palette.length, "A paleta canónica de Theme deve conter exatamente 10 slots");
+        assertEquals(10, palette.length, "A paleta canónica de Theme deve conter exactamente 10 slots");
         for (int i = 0; i < palette.length; i++) {
             assertNotNull(palette[i], "Slot " + i + " da paleta não pode ser nulo");
         }
@@ -74,9 +74,9 @@ class HighContrastThemeHarnessTest {
         double ratioBg = UIHelper.contrastRatio(hc.textPrimary, hc.bg);
         double ratioCard = UIHelper.contrastRatio(hc.textPrimary, hc.card);
 
-        assertTrue(ratioBg >= 7.0, "Texto primário sobre bg deve cumprir WCAG AAA (>= 7.0). Atual: " + ratioBg);
-        assertTrue(ratioCard >= 7.0, "Texto primário sobre card deve cumprir WCAG AAA (>= 7.0). Atual: " + ratioCard);
-        assertTrue(ratioBg >= 20.0, "Texto branco sobre fundo preto puro atinge contraste quase máximo (~21:1). Atual: " + ratioBg);
+        assertTrue(ratioBg >= 7.0, "Texto primário sobre bg deve cumprir WCAG AAA (>= 7.0). Actual: " + ratioBg);
+        assertTrue(ratioCard >= 7.0, "Texto primário sobre card deve cumprir WCAG AAA (>= 7.0). Actual: " + ratioCard);
+        assertTrue(ratioBg >= 20.0, "Texto branco sobre fundo preto puro atinge contraste quase máximo (~21:1). Actual: " + ratioBg);
 
         assertTrue(UIHelper.meetsWcagAaa(hc.textPrimary, hc.bg));
         assertTrue(UIHelper.meetsWcagAaa(hc.textPrimary, hc.card));
@@ -89,9 +89,9 @@ class HighContrastThemeHarnessTest {
         double ratioBg = UIHelper.contrastRatio(hc.textMuted, hc.bg);
         double ratioCard = UIHelper.contrastRatio(hc.textMuted, hc.card);
 
-        assertTrue(ratioBg >= 7.0, "Texto secundário sobre bg deve cumprir WCAG AAA (>= 7.0). Atual: " + ratioBg);
-        assertTrue(ratioCard >= 7.0, "Texto secundário sobre card deve cumprir WCAG AAA (>= 7.0). Atual: " + ratioCard);
-        assertTrue(ratioBg >= 15.0, "Texto secundário prateado (#E0E0E0) oferece visibilidade ultra-nítida (>15:1). Atual: " + ratioBg);
+        assertTrue(ratioBg >= 7.0, "Texto secundário sobre bg deve cumprir WCAG AAA (>= 7.0). Actual: " + ratioBg);
+        assertTrue(ratioCard >= 7.0, "Texto secundário sobre card deve cumprir WCAG AAA (>= 7.0). Actual: " + ratioCard);
+        assertTrue(ratioBg >= 15.0, "Texto secundário prateado (#E0E0E0) oferece visibilidade ultra-nítida (>15:1). Actual: " + ratioBg);
 
         assertTrue(UIHelper.meetsWcagAaa(hc.textMuted, hc.bg));
         assertTrue(UIHelper.meetsWcagAaa(hc.textMuted, hc.card));
@@ -105,7 +105,7 @@ class HighContrastThemeHarnessTest {
             Color fg = UIHelper.readableTextOn(surface);
             assertNotNull(fg);
             double ratio = UIHelper.contrastRatio(surface, fg);
-            assertTrue(ratio >= 4.5, "Superfície " + surface + " deve ter contraste legível (>= 4.5). Atual: " + ratio);
+            assertTrue(ratio >= 4.5, "Superfície " + surface + " deve ter contraste legível (>= 4.5). Actual: " + ratio);
         }
     }
 
@@ -135,7 +135,7 @@ class HighContrastThemeHarnessTest {
     }
 
     @Test
-    @DisplayName("HCON-07: Aplicação de Slots em UIHelper ao ativar HIGH_CONTRAST")
+    @DisplayName("HCON-07: Aplicação de Slots em UIHelper ao activar HIGH_CONTRAST")
     void testApplyThemeSlots() {
         UIHelper.applyTheme(Theme.HIGH_CONTRAST);
         assertTrue(UIHelper.isHighContrast());
@@ -163,7 +163,7 @@ class HighContrastThemeHarnessTest {
             assertTrue(f.exists(), "Ficheiro deve existir: " + relPath);
             long lineCount = Files.lines(f.toPath()).count();
             assertTrue(lineCount <= 1000,
-                    "A classe " + f.getName() + " ultrapassou o limite estrito de 1000 linhas! Atual: " + lineCount);
+                    "A classe " + f.getName() + " ultrapassou o limite estrito de 1000 linhas! Actual: " + lineCount);
         }
     }
 }

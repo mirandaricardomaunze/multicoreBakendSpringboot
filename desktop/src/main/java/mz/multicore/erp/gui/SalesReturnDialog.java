@@ -129,7 +129,7 @@ public class SalesReturnDialog {
             }
         });
 
-        tableCard.add(UIHelper.tableCardTop("Linhas da Fatura e Seleção de Devolução", totalCreditLbl), BorderLayout.NORTH);
+        tableCard.add(UIHelper.tableCardTop("Linhas da Fatura e Selecção de Devolução", totalCreditLbl), BorderLayout.NORTH);
         tableCard.add(scroll, BorderLayout.CENTER);
 
         // 3. Opções e Motivo

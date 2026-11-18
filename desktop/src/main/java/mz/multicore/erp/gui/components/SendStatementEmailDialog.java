@@ -84,7 +84,7 @@ public class SendStatementEmailDialog {
         messageArea = new JTextArea(4, 30);
         messageArea.setLineWrap(true);
         messageArea.setWrapStyleWord(true);
-        messageArea.setText("Exmo.(a) Cliente,\nSegue em anexo o extrato atualizado da sua conta corrente para reconciliação e conferência.");
+        messageArea.setText("Exmo.(a) Cliente,\nSegue em anexo o extrato actualizado da sua conta corrente para reconciliação e conferência.");
         messageArea.setBackground(UIHelper.FIELD_BG);
         messageArea.setForeground(UIHelper.TEXT_LIGHT);
         messageArea.setCaretColor(UIHelper.TEXT_LIGHT);
@@ -114,7 +114,7 @@ public class SendStatementEmailDialog {
         dlg.setOnSaveAsync(() -> () -> {
             String email = emailField.getText() != null ? emailField.getText().trim() : "";
             if (email.isBlank() || !email.contains("@")) {
-                throw FieldValidationException.of(emailField, "Por favor, introduza um endereço de correio eletrónico válido.");
+                throw FieldValidationException.of(emailField, "Por favor, introduza um endereço de correio electrónico válido.");
             }
             SendStatementEmailRequest req = new SendStatementEmailRequest(
                     clientId,

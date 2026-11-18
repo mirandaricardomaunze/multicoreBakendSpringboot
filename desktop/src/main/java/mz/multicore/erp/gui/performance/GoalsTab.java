@@ -54,7 +54,7 @@ public class GoalsTab extends JPanel {
         JPanel filtersLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         filtersLeft.setOpaque(false);
 
-        statusFilter = PerformanceControls.createSelect(new String[]{"Todas", "Ativas", "Atingidas", "Não Atingidas", "Canceladas"}, PerformanceControls.FILTER_SELECT_WIDTH);
+        statusFilter = PerformanceControls.createSelect(new String[]{"Todas", "Activas", "Atingidas", "Não Atingidas", "Canceladas"}, PerformanceControls.FILTER_SELECT_WIDTH);
         statusFilter.addActionListener(e -> reload());
         filtersLeft.add(PerformanceControls.createFilterGroup("Estado:", statusFilter));
 
@@ -147,12 +147,12 @@ public class GoalsTab extends JPanel {
     private void cancelSelectedGoal() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0 || row >= loadedGoals.size()) {
-            feedbackPanel.show(FeedbackType.WARNING, "Selecione uma meta na tabela para cancelar.");
+            feedbackPanel.show(FeedbackType.WARNING, "Seleccione uma meta na tabela para cancelar.");
             return;
         }
         SalesGoalDTO goal = loadedGoals.get(row);
         if (goal.status() == GoalStatus.CANCELLED) {
-            feedbackPanel.show(FeedbackType.INFO, "A meta selecionada já está cancelada.");
+            feedbackPanel.show(FeedbackType.INFO, "A meta seleccionada já está cancelada.");
             return;
         }
 
@@ -173,7 +173,7 @@ public class GoalsTab extends JPanel {
     private String humanStatus(GoalStatus status) {
         if (status == null) return "-";
         return switch (status) {
-            case ACTIVE -> "Ativa"; case ACHIEVED -> "Atingida";
+            case ACTIVE -> "Activa"; case ACHIEVED -> "Atingida";
             case MISSED -> "Não Atingida"; case CANCELLED -> "Cancelada";
         };
     }

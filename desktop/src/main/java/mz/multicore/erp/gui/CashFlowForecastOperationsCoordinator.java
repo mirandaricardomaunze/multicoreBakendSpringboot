@@ -40,7 +40,7 @@ public final class CashFlowForecastOperationsCoordinator {
                     if (data != null) {
                         if (onLoaded != null) onLoaded.accept(data);
                     } else {
-                        ToastManager.show(parent, FeedbackType.WARNING, "Não foi possível carregar a projeção de tesouraria.");
+                        ToastManager.show(parent, FeedbackType.WARNING, "Não foi possível carregar a projecção de tesouraria.");
                     }
                 } catch (Exception ignored) {}
             }

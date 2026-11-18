@@ -46,7 +46,7 @@ public final class OutstandingPaymentDialog {
         info.setForeground(UIHelper.TEXT_LIGHT);
         JPanel form = UIHelper.createDialogForm("Resumo:", info, "Método:", method,
                 "Conta de Tesouraria:", account, "Valor a Receber (MT):", amount,
-                "Referência (Nº recibo/transação):", reference);
+                "Referência (Nº recibo/transacção):", reference);
         if (!new ModernFormDialog(UIHelper.mainWindow, "Receber Pagamento — " + invoice.invoiceNumber(),
                 "fas-money-bill-wave", "Liquidação de fatura em dívida", form)
                 .setConfirmButton("Receber", "fas-money-bill-wave").showDialog()) return;

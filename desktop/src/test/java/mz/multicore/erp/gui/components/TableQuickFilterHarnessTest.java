@@ -77,16 +77,16 @@ public class TableQuickFilterHarnessTest {
     void testTblf04_ClearFilterRestoresAllRows() {
         filterBar.setFilterText("Beira");
         assertEquals(1, filterBar.getFilteredCount());
-        assertTrue(filterBar.getClearButton().isEnabled(), "O botão limpar deve estar ativo quando há texto");
+        assertTrue(filterBar.getClearButton().isEnabled(), "O botão limpar deve estar activo quando há texto");
 
         filterBar.clearFilter();
         assertEquals("", filterBar.getFilterText(), "O campo de texto deve ser limpo");
         assertEquals(4, filterBar.getFilteredCount(), "Todas as 4 linhas devem voltar a estar visíveis");
-        assertFalse(filterBar.getClearButton().isEnabled(), "O botão limpar deve estar inativo quando o campo está vazio");
+        assertFalse(filterBar.getClearButton().isEnabled(), "O botão limpar deve estar inactivo quando o campo está vazio");
     }
 
     @Test
-    @DisplayName("TBLF-05: Métricas precisas do contador reativo")
+    @DisplayName("TBLF-05: Métricas precisas do contador reactivo")
     void testTblf05_ReactiveCounterMetrics() {
         filterBar.setFilterText("");
         assertTrue(filterBar.getCountLabel().getText().contains("Total: 4 registos"),
@@ -102,10 +102,10 @@ public class TableQuickFilterHarnessTest {
     }
 
     @Test
-    @DisplayName("TBLF-06: Reatividade a mutações dinâmicas no TableModel")
+    @DisplayName("TBLF-06: Reactividade a mutações dinâmicas no TableModel")
     void testTblf06_ReactivityToTableModelMutations() {
         model.addRow(new Object[]{"Tete", "Minas", "2026"});
-        assertEquals(5, filterBar.getTotalCount(), "O total de registos deve atualizar para 5");
+        assertEquals(5, filterBar.getTotalCount(), "O total de registos deve actualizar para 5");
 
         filterBar.setFilterText("minas");
         assertEquals(1, filterBar.getFilteredCount(), "Deve encontrar o novo registo adicionado");
@@ -123,7 +123,7 @@ public class TableQuickFilterHarnessTest {
         Object escapeActionKey = filterBar.getFilterField().getInputMap(JComponent.WHEN_FOCUSED).get(escapeKey);
         assertNotNull(escapeActionKey, "O atalho Escape deve estar registado no filterField");
         assertNotNull(filterBar.getFilterField().getActionMap().get(escapeActionKey),
-                "A ação de Escape deve estar configurada no ActionMap");
+                "A acção de Escape deve estar configurada no ActionMap");
 
         // Atalho Ctrl+F na Tabela
         int mask = java.awt.event.InputEvent.CTRL_DOWN_MASK;

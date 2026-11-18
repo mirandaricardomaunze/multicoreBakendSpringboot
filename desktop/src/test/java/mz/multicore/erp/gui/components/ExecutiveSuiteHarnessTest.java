@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ExecutiveSuiteHarnessTest {
 
     @Test
-    @DisplayName("EX-01: SmartAlerts categoriza criticidade e gera ações proativas")
+    @DisplayName("EX-01: SmartAlerts categoriza criticidade e gera acções proativas")
     void ex01_smartAlertsClassification() {
         NotificationItem critItem = new NotificationItem("Validades", "Lote vencido: Paracetamol", "Lote 123", "01/01/2026", "stock", 3);
         SmartAlert alert1 = SmartAlert.fromNotification(critItem);
@@ -47,7 +47,7 @@ class ExecutiveSuiteHarnessTest {
     }
 
     @Test
-    @DisplayName("EX-02: PosDirectPrintEngine controla preferência de impressão direta e valida payload")
+    @DisplayName("EX-02: PosDirectPrintEngine controla preferência de impressão directa e valida payload")
     void ex02_posDirectPrintEngine() {
         assertFalse(PosDirectPrintEngine.isDirectPrintEnabled());
         PosDirectPrintEngine.setDirectPrintEnabled(true);

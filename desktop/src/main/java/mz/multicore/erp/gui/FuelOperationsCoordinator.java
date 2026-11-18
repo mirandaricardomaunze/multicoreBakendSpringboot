@@ -78,7 +78,7 @@ public final class FuelOperationsCoordinator {
 
         dialog.setOnSave(() -> {
             VehicleDTO v = (VehicleDTO) vehicleCombo.getSelectedItem();
-            if (v == null) throw FieldValidationException.of(vehicleCombo, "Selecione a viatura.");
+            if (v == null) throw FieldValidationException.of(vehicleCombo, "Seleccione a viatura.");
 
             BigDecimal odo;
             try {

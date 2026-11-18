@@ -44,7 +44,7 @@ public class RecentActivityWidget extends ModernPanel {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("Atividade Recente");
+        JLabel titleLabel = new JLabel("Actividade Recente");
         titleLabel.setFont(Typography.EMPHASIS_BOLD);
         titleLabel.setForeground(UIHelper.TEXT_LIGHT);
 
@@ -80,7 +80,7 @@ public class RecentActivityWidget extends ModernPanel {
     private void render() {
         listContainer.removeAll();
         if (entries.isEmpty()) {
-            JLabel empty = new JLabel("Sem atividade recente registada.");
+            JLabel empty = new JLabel("Sem actividade recente registada.");
             empty.setFont(Typography.BODY);
             empty.setForeground(UIHelper.TEXT_MUTED);
             empty.setBorder(BorderFactory.createEmptyBorder(Spacing.XL, Spacing.SM, Spacing.XL, Spacing.SM));

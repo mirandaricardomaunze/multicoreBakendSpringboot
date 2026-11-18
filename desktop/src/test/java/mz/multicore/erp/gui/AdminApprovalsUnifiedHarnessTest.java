@@ -56,7 +56,7 @@ class AdminApprovalsUnifiedHarnessTest {
         assertThat(clientes).contains("TableQuickPeekController.install(table");
 
         String risk = source("CreditRiskPanel.java");
-        assertThat(risk).contains("UIHelper.tableCardTop(\"Matriz de Aging & Gestão de Risco\"");
+        assertThat(risk).contains("UIHelper.tableCardTop(\"Antiguidade de Saldos & Gestão de Risco\"");
         assertThat(risk).contains("ClientTablePagination.install(table)");
         assertThat(risk).contains("KpiCard.createGrid(4)");
 

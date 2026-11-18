@@ -129,7 +129,7 @@ public class QualityExpiredRadarTab extends JPanel {
     private void renewSelectedFromRadar() {
         int row = expiredTable.getSelectedRow();
         if (row < 0) {
-            ToastManager.show(this, FeedbackType.INFO, "Por favor selecione um registo do radar para renovar.");
+            ToastManager.show(this, FeedbackType.INFO, "Por favor seleccione um registo do radar para renovar.");
             return;
         }
         int modelRow = expiredTable.convertRowIndexToModel(row);
@@ -141,7 +141,7 @@ public class QualityExpiredRadarTab extends JPanel {
     private void printSelectedDeliverySheet() {
         int row = expiredTable.getSelectedRow();
         if (row < 0) {
-            ToastManager.show(this, FeedbackType.INFO, "Por favor selecione uma linha para imprimir o Termo de Entrega.");
+            ToastManager.show(this, FeedbackType.INFO, "Por favor seleccione uma linha para imprimir o Termo de Entrega.");
             return;
         }
         int modelRow = expiredTable.convertRowIndexToModel(row);

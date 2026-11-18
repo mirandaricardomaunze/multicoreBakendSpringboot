@@ -61,7 +61,7 @@ public final class NuitValidator {
      */
     public static int calculateCheckDigit(String first8Digits) {
         if (first8Digits == null || first8Digits.length() != 8 || !first8Digits.matches("^\\d{8}$")) {
-            throw new IllegalArgumentException("Necessários exatamente 8 dígitos numéricos");
+            throw new IllegalArgumentException("Necessários exactamente 8 dígitos numéricos");
         }
         int sum = 0;
         int[] weights = {9, 8, 7, 6, 5, 4, 3, 2};

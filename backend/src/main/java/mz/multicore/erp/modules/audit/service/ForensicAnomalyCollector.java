@@ -87,7 +87,7 @@ public class ForensicAnomalyCollector {
                         out.add(new ForensicAnomalyDTO(inv.getId(), eventTime, "Comercial",
                                 ForensicCategory.EXCESSIVE_DISCOUNT, ForensicCategory.EXCESSIVE_DISCOUNT.getLabel(),
                                 sev, docRef, discVal, details, "Desconto manual em linha de venda",
-                                "Confrontar autorização de desconto com a tabela de alçadas da direção comercial."));
+                                "Confrontar autorização de desconto com a tabela de alçadas da direcção comercial."));
                     }
                 }
             }

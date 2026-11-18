@@ -56,8 +56,8 @@ final class CustomerOrderFulfillmentActions {
 
         if (kindOf(owner, row).usesSeparationFlow() || "AWAITING_SEPARATION".equals(status) || "IN_SEPARATION".equals(status)) {
             int chosen = ModernMessageDialog.choose(owner, FeedbackType.INFO, "Imprimir Guia de Separação",
-                    "Selecione o formato de impressão da guia de separação:",
-                    "Folha de Encomenda A4", "Talão Térmico 80mm", "Folha de Separação A4 (Picking List)");
+                    "Seleccione o formato de impressão da guia de separação:",
+                    "Folha de Encomenda A4", "Talão Térmico 80mm", "Folha de Separação A4");
             if (chosen == 2) {
                 UIHelper.runWithProgress(owner, "A gerar guia A4 de separação…",
                         () -> api.printPickingA4(id, terminalName()),

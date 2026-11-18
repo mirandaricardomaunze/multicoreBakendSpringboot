@@ -106,7 +106,7 @@ public final class OrderDetailsDialog {
         dialog.addKpi("Peso Bruto", totalWeight + " kg", "Massa total estimada", UIHelper.ACCENT_ORANGE, "fas-weight-hanging");
 
         String originText = (order.quotationNumber() != null && !order.quotationNumber().isBlank())
-                ? "Cotação " + order.quotationNumber() : "Venda Direta";
+                ? "Cotação " + order.quotationNumber() : "Venda Directa";
         dialog.addKpi("Origem / Termos", originText, order.paymentTerms() != null ? order.paymentTerms() : "Pronto Pagamento", UIHelper.ACCENT_CYAN, "fas-file-contract");
 
         // 3. Abas
@@ -172,7 +172,7 @@ public final class OrderDetailsDialog {
                 ? order.walkInName() : "Não aplicável";
 
         String quotation = (order.quotationNumber() != null && !order.quotationNumber().isBlank())
-                ? order.quotationNumber() : "Venda Direta";
+                ? order.quotationNumber() : "Venda Directa";
 
         java.util.List<RecordDetailsDialog.PropertyItem> items = java.util.List.of(
                 new RecordDetailsDialog.PropertyItem("Termos de Pagamento", order.paymentTerms() != null ? order.paymentTerms() : "Pronto Pagamento"),

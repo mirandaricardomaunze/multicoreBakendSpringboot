@@ -46,17 +46,17 @@ public class CustomerStatementMailService {
 
     public EmailDispatchResultDTO sendStatementEmail(SendStatementEmailRequest request) {
         if (request == null || request.clientId() == null) {
-            throw new BusinessRuleException("Cliente é obrigatório para envio de extrato por correio eletrónico.");
+            throw new BusinessRuleException("Cliente é obrigatório para envio de extrato por correio electrónico.");
         }
 
         String email = request.recipientEmail() != null ? request.recipientEmail().trim() : "";
         if (email.isBlank() || !EMAIL_PATTERN.matcher(email).matches()) {
-            throw new BusinessRuleException("O endereço de correio eletrónico informado é inválido: " + email);
+            throw new BusinessRuleException("O endereço de correio electrónico informado é inválido: " + email);
         }
 
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), companyId)
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado para a empresa ativa."));
+                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado para a empresa activa."));
 
         // Renderizar o documento oficial em PDF
         byte[] pdfBytes = printService.render(companyId, request.clientId(), request.startDate(), request.endDate());
@@ -71,7 +71,7 @@ public class CustomerStatementMailService {
 
         String note = request.messageNote() != null && !request.messageNote().isBlank()
                 ? request.messageNote().trim()
-                : "Em anexo enviamos o extrato atualizado da sua conta corrente para conferência e reconciliação.";
+                : "Em anexo enviamos o extrato actualizado da sua conta corrente para conferência e reconciliação.";
 
         String body = "Exmo.(a) " + clientName + ",\n\n"
                 + note + "\n\n"
@@ -92,7 +92,7 @@ public class CustomerStatementMailService {
                 helper.addAttachment("extrato_conta_corrente.pdf", new ByteArrayResource(pdfBytes), "application/pdf");
 
                 mailSender.send(message);
-                log.info("Extrato enviado com sucesso por correio eletrónico para {} (ID: {})", email, messageId);
+                log.info("Extrato enviado com sucesso por correio electrónico para {} (ID: {})", email, messageId);
 
                 return new EmailDispatchResultDTO(
                         true,
@@ -101,7 +101,7 @@ public class CustomerStatementMailService {
                         messageId
                 );
             } catch (Exception ex) {
-                log.warn("Erro no envio SMTP direto para {}, acionando modo de simulação resiliente: {}", email, ex.getMessage());
+                log.warn("Erro no envio SMTP directo para {}, acionando modo de simulação resiliente: {}", email, ex.getMessage());
                 return new EmailDispatchResultDTO(
                         true,
                         "Extrato processado com sucesso (regime resiliente/contingência): " + email,
@@ -110,7 +110,7 @@ public class CustomerStatementMailService {
                 );
             }
         } else {
-            log.info("Modo de simulação SMTP ativo: Extrato de {} para {} gerado com sucesso (tamanho: {} bytes)",
+            log.info("Modo de simulação SMTP activo: Extrato de {} para {} gerado com sucesso (tamanho: {} bytes)",
                     clientName, email, pdfBytes.length);
             return new EmailDispatchResultDTO(
                     true,

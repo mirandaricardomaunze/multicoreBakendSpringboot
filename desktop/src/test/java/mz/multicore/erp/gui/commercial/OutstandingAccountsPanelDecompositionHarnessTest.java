@@ -27,7 +27,7 @@ class OutstandingAccountsPanelDecompositionHarnessTest {
                 .isLessThanOrEqualTo(90);
 
         assertThat(Files.lines(coordinator).count())
-                .as("OutstandingAccountsOperationsCoordinator coordena ações e visual sem inflar")
+                .as("OutstandingAccountsOperationsCoordinator coordena acções e visual sem inflar")
                 .isLessThanOrEqualTo(115);
     }
 

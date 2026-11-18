@@ -46,7 +46,7 @@ public class RecordSubscriptionPaymentDialog {
         });
 
         JTextField referenceField = new JTextField();
-        referenceField.setToolTipText("Ex: Nº talão de depósito, ID de transação M-Pesa/e-Mola, Nº de recibo...");
+        referenceField.setToolTipText("Ex: Nº talão de depósito, ID de transacção M-Pesa/e-Mola, Nº de recibo...");
         UIHelper.styleTextField(referenceField);
 
         JComboBox<String> bankCombo = new JComboBox<>(new String[]{

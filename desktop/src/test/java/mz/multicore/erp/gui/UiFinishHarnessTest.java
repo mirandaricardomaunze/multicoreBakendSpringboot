@@ -29,7 +29,7 @@ class UiFinishHarnessTest {
 
     private static final Path SOURCES = Path.of("src/main/java");
     private static final Pattern MENU = Pattern.compile("createActionMenuButton\\(\"([^\"]+)\"\\)");
-    private static final Set<String> VAGUE = Set.of("Operações", "Decisão", "Ações", "Acções", "Opções");
+    private static final Set<String> VAGUE = Set.of("Operações", "Decisão", "Acções", "Opções");
 
     @Test
     @DisplayName("UA-01: Nenhum menu tem nome genérico")

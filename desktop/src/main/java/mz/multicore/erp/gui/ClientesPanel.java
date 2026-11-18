@@ -59,7 +59,7 @@ public class ClientesPanel extends JPanel {
 
         tabs.addTab("Directório de Clientes", UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), buildDirectoryTab());
         if (creditRiskPanel != null) {
-            tabs.addTab("Risco de Crédito & Cobrança (Aging)", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.PENDING_YELLOW), creditRiskPanel);
+            tabs.addTab("Risco de Crédito & Cobrança (Antiguidade)", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.PENDING_YELLOW), creditRiskPanel);
         }
         if (customerStatementPanel != null) {
             tabs.addTab("Conta Corrente & Reconciliação", UIHelper.icon("fas-file-invoice", 16, UIHelper.ACCENT), customerStatementPanel);

@@ -105,7 +105,7 @@ class ProductionServiceTest {
     }
 
     @Test
-    @DisplayName("Cria Ficha Técnica (BOM) com cálculo correto de estimativas")
+    @DisplayName("Cria Ficha Técnica (BOM) com cálculo correcto de estimativas")
     void testCreateBom() {
         when(bomRepository.existsByCompanyIdAndBomCode(1L, "BOM-001")).thenReturn(false);
         when(bomRepository.save(any(BillOfMaterials.class))).thenAnswer(inv -> {

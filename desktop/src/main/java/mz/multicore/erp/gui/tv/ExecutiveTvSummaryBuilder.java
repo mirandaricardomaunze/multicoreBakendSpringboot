@@ -111,7 +111,7 @@ public final class ExecutiveTvSummaryBuilder {
     private static JPanel buildKpiGrid(ExecutiveTvMetrics m, boolean lightMode) {
         JPanel row = ExecutiveTvComponents.transparent(new GridLayout(2, 2, ExecutiveTvComponents.GAP, ExecutiveTvComponents.GAP));
         row.add(ExecutiveTvComponents.kpiTile("fas-file-invoice", "Faturas", String.valueOf(m.invoiceCount()),
-                "Ticket médio " + money(m.averageTicket()), UIHelper.ACCENT_BLUE, lightMode));
+                "Valor médio por venda " + money(m.averageTicket()), UIHelper.ACCENT_BLUE, lightMode));
         row.add(ExecutiveTvComponents.kpiTile("fas-tachometer-alt", "Ritmo diário", money(m.dailyRate()),
                 m.elapsedDays() == 1 ? "Hoje" : "Média de " + m.elapsedDays() + " dias", UIHelper.ACCENT_CYAN, lightMode));
         row.add(ExecutiveTvComponents.kpiTile("fas-chart-line", "Previsão de fecho", money(m.projection()),

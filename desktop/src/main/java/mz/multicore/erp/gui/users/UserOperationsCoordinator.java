@@ -66,7 +66,7 @@ public final class UserOperationsCoordinator {
     public static AppUserDTO getSelectedUser(JTable usersTable, List<AppUserDTO> loadedUsers, Component parent) {
         int row = TableFilter.selectedModelRow(usersTable);
         if (row < 0 || loadedUsers.isEmpty() || row >= loadedUsers.size()) {
-            ToastManager.show(parent, FeedbackType.WARNING, "Selecione um utilizador na tabela.");
+            ToastManager.show(parent, FeedbackType.WARNING, "Seleccione um utilizador na tabela.");
             return null;
         }
         return loadedUsers.get(row);

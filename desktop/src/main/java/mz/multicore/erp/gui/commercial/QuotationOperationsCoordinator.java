@@ -110,7 +110,7 @@ final class QuotationOperationsCoordinator {
                 new String[]{"Folha A4 Oficial", "Talão Térmico (80mm)"}, value -> value);
         JPanel form = UIHelper.createDialogForm("Formato de Impressão:", formatCombo);
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Imprimir Cotação " + number,
-                "fas-print", "Selecione o formato de impressão da cotação", form)
+                "fas-print", "Seleccione o formato de impressão da cotação", form)
                 .setConfirmButton("Imprimir", "fas-print")
                 .showDialog();
         if (!confirmed) return;

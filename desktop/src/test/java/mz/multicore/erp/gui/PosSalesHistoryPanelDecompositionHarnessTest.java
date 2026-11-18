@@ -22,7 +22,7 @@ class PosSalesHistoryPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("PosSalesHistoryPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 165,
-                () -> "PosSalesHistoryPanel.java deve possuir <= 165 linhas. Atual: " + lines.size());
+                () -> "PosSalesHistoryPanel.java deve possuir <= 165 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -31,7 +31,7 @@ class PosSalesHistoryPanelDecompositionHarnessTest {
         Path coord = ROOT.resolve("PosSalesHistoryViewCoordinator.java");
         List<String> lines = Files.readAllLines(coord);
         assertTrue(lines.size() <= 135,
-                () -> "PosSalesHistoryViewCoordinator.java deve possuir <= 135 linhas. Atual: " + lines.size());
+                () -> "PosSalesHistoryViewCoordinator.java deve possuir <= 135 linhas. Actual: " + lines.size());
     }
 
     @Test

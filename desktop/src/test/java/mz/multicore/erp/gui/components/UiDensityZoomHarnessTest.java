@@ -88,7 +88,7 @@ class UiDensityZoomHarnessTest {
     }
 
     @Test
-    @DisplayName("DENS-04: Atualização das Propriedades de UIManager")
+    @DisplayName("DENS-04: Actualização das Propriedades de UIManager")
     void testUIManagerUpdate() {
         UiDensityManager manager = UiDensityManager.getInstance();
 
@@ -110,12 +110,12 @@ class UiDensityZoomHarnessTest {
         manager.setDensity(UiDensity.COMPACT);
         JTable table = new JTable(new DefaultTableModel(new Object[][]{{"A"}}, new Object[]{"Col"}));
         UIHelper.styleTable(table);
-        assertEquals(28, table.getRowHeight(), "A tabela deve adotar a altura de linha da densidade compacta (28 px)");
+        assertEquals(28, table.getRowHeight(), "A tabela deve adoptar a altura de linha da densidade compacta (28 px)");
 
         manager.setDensity(UiDensity.COMFORTABLE);
         JTable tableLarge = new JTable(new DefaultTableModel(new Object[][]{{"A"}}, new Object[]{"Col"}));
         UIHelper.styleTable(tableLarge);
-        assertEquals(44, tableLarge.getRowHeight(), "A tabela deve adotar a altura de linha da densidade confortável (44 px)");
+        assertEquals(44, tableLarge.getRowHeight(), "A tabela deve adoptar a altura de linha da densidade confortável (44 px)");
     }
 
     @Test
@@ -167,7 +167,7 @@ class UiDensityZoomHarnessTest {
             assertTrue(f.exists(), "Ficheiro deve existir: " + relPath);
             long lineCount = Files.lines(f.toPath()).count();
             assertTrue(lineCount <= 1000,
-                    "A classe " + f.getName() + " ultrapassou o limite estrito de 1000 linhas! Atual: " + lineCount);
+                    "A classe " + f.getName() + " ultrapassou o limite estrito de 1000 linhas! Actual: " + lineCount);
         }
     }
 }

@@ -85,7 +85,7 @@ class MainFrameDecompositionHarnessTest {
                 .contains("new MainFrameNotificationCoordinator(");
 
         assertThat(mainFrame)
-                .as("MainFrame deve delegar atualização de badge para MainFrameNotificationCoordinator")
+                .as("MainFrame deve delegar actualização de badge para MainFrameNotificationCoordinator")
                 .contains("notificationCoordinator.updateNotificationBadge(");
     }
 

@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class PosErgonomicsHarnessTest {
 
     @Test
-    @DisplayName("POS-01: A aba de venda ativa do POS não possui cartões KPI volumosos no topo")
+    @DisplayName("POS-01: A aba de venda activa do POS não possui cartões KPI volumosos no topo")
     void testSalesTabHeaderIsCompactWithoutKpis() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             CurrentUserContext.setCurrentUser("ana", "ADMIN");
@@ -57,19 +57,19 @@ public class PosErgonomicsHarnessTest {
                 ActionMap actionMap = pos.getActionMap();
 
                 assertNotNull(inputMap.get(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)), "F2 deve estar registado");
-                assertNotNull(actionMap.get("posProductSearch"), "Ação posProductSearch deve existir");
+                assertNotNull(actionMap.get("posProductSearch"), "Acção posProductSearch deve existir");
 
                 assertNotNull(inputMap.get(KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0)), "F3 deve estar registado");
-                assertNotNull(actionMap.get("posBarcodeSearch"), "Ação posBarcodeSearch deve existir");
+                assertNotNull(actionMap.get("posBarcodeSearch"), "Acção posBarcodeSearch deve existir");
 
                 assertNotNull(inputMap.get(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0)), "F4 deve estar registado");
-                assertNotNull(actionMap.get("posClientSearch"), "Ação posClientSearch deve existir");
+                assertNotNull(actionMap.get("posClientSearch"), "Acção posClientSearch deve existir");
 
                 assertNotNull(inputMap.get(KeyStroke.getKeyStroke(KeyEvent.VK_F6, 0)), "F6 deve estar registado");
-                assertNotNull(actionMap.get("posEditQuantity"), "Ação posEditQuantity deve existir");
+                assertNotNull(actionMap.get("posEditQuantity"), "Acção posEditQuantity deve existir");
 
                 assertNotNull(inputMap.get(KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0)), "F9 deve estar registado");
-                assertNotNull(actionMap.get("posCheckout"), "Ação posCheckout deve existir");
+                assertNotNull(actionMap.get("posCheckout"), "Acção posCheckout deve existir");
             } finally {
                 CurrentUserContext.clear();
             }

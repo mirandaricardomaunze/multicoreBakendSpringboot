@@ -105,7 +105,7 @@ class DashboardPanelDecompositionHarnessTest {
     }
 
     @Test
-    @DisplayName("DECOMP-04: Construtores sobrecarregados e interatividade dos cartões de KPI")
+    @DisplayName("DECOMP-04: Construtores sobrecarregados e interactividade dos cartões de KPI")
     void decomp04_constructorsAndKpiCards() {
         ComercialApiClient comercialApi = Mockito.mock(ComercialApiClient.class);
         FinanceApiClient financeApi = Mockito.mock(FinanceApiClient.class);

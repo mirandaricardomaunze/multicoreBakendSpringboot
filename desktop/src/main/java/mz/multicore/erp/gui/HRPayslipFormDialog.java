@@ -90,7 +90,7 @@ final class HRPayslipFormDialog {
         JPanel form = UIHelper.createDialogForm("Ano:", year, "Mês:", month);
 
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Processar Folha Salarial",
-                "fas-calculator", "Gera os recibos de todos os colaboradores ativos do período", form)
+                "fas-calculator", "Gera os recibos de todos os colaboradores activos do período", form)
                 .setConfirmButton("Processar", "fas-cogs")
                 .showDialog();
         if (!confirmed) return;

@@ -32,19 +32,19 @@ public final class PosShortcutHelpDialog {
                 {"F5", "Aplicar Desconto de Linha"},
                 {"F6", "Alterar Quantidade da Linha"},
                 {"+ / -", "Aumentar / Diminuir Quantidade"},
-                {"DELETE", "Remover Artigo Selecionado"}
+                {"DELETE", "Remover Artigo Seleccionado"}
         }));
 
         cardsPanel.add(buildCategoryCard("Caixa & Operações", "fas-cash-register", UIHelper.APPROVED_GREEN, new String[][]{
                 {"F8", "Devoluções & Vales de Compras"},
                 {"F9", "Movimentos de Caixa (Sangria/Suprimento)"},
                 {"F10", "Finalizar Venda / Pagamento"},
-                {"F12", "Fecho Cego de Caixa (Blind Drop)"}
+                {"F12", "Fecho Cego de Caixa"}
         }));
 
         cardsPanel.add(buildCategoryCard("Geral & Navegação", "fas-desktop", UIHelper.ACCENT, new String[][]{
                 {"F1", "Abrir este Guia de Atalhos"},
-                {"F4", "Pesquisar / Selecionar Cliente"},
+                {"F4", "Pesquisar / Seleccionar Cliente"},
                 {"F7", "Importar Cotação / Pró-forma no Carrinho"},
                 {"F11", "Alternar Venda / Histórico"},
                 {"ESC", "Cancelar / Limpar Carrinho"},

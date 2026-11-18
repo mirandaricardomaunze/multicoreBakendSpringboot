@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TableHorizontalScrollSupportTest {
 
     @Test
-    @DisplayName("HORIZ-01: Tabela com muitas colunas ativa AUTO_RESIZE_OFF quando excede o viewport")
+    @DisplayName("HORIZ-01: Tabela com muitas colunas activa AUTO_RESIZE_OFF quando excede o viewport")
     void testManyColumnsEnablesHorizontalScrollWhenExceedsViewport() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             String[] cols = {"Tipo", "Nº", "Cliente / Destino", "Artigos", "Qtd", "Armazém", "Data", "Estado", "Total"};

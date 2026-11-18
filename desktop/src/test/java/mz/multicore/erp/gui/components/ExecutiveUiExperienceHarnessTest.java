@@ -180,7 +180,7 @@ class ExecutiveUiExperienceHarnessTest {
             Runnable action = (Runnable) pill.getClientProperty("search.action");
             assertNotNull(action);
             action.run();
-            assertTrue(clicked.get(), "O clique no pill deve invocar a ação de pesquisa configurada");
+            assertTrue(clicked.get(), "O clique no pill deve invocar a acção de pesquisa configurada");
         });
     }
 

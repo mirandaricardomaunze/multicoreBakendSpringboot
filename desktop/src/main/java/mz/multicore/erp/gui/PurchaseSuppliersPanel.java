@@ -38,7 +38,7 @@ final class PurchaseSuppliersPanel {
         listCard.setLayout(new BorderLayout(0, 6));
         listCard.setBorder(new EmptyBorder(Spacing.SM, Spacing.MD, Spacing.SM, Spacing.MD));
 
-        String[] supCols = {"Nome do Fornecedor", "NUIT/NIF", "Telefone", "Contacto", "Correio Eletrónico", "Endereço", "Estado"};
+        String[] supCols = {"Nome do Fornecedor", "NUIT/NIF", "Telefone", "Contacto", "Correio Electrónico", "Endereço", "Estado"};
         owner.suppliersModel = new DefaultTableModel(supCols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };

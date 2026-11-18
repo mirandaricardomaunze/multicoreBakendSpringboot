@@ -25,7 +25,7 @@ class HRDeductionsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "HRDeductionsPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 165, "HRDeductionsPanel.java deve possuir <= 165 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 165, "HRDeductionsPanel.java deve possuir <= 165 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -38,7 +38,7 @@ class HRDeductionsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "HrDeductionFormDialog.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 140, "HrDeductionFormDialog.java deve possuir <= 140 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 140, "HrDeductionFormDialog.java deve possuir <= 140 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -75,7 +75,7 @@ class HRDeductionsPanelDecompositionHarnessTest {
     }
 
     @Test
-    @DisplayName("DP-05: Invariantes canónicas de layout e ações preservadas")
+    @DisplayName("DP-05: Invariantes canónicas de layout e acções preservadas")
     void testCanonicalInvariants() throws IOException {
         Path path = Path.of("desktop/src/main/java/mz/multicore/erp/gui/HRDeductionsPanel.java");
         if (!Files.exists(path)) {

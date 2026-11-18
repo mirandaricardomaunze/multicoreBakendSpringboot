@@ -53,10 +53,10 @@ public class WorkerEquipmentAssignmentService {
             throw new BusinessRuleException("Empresa obrigatória para atribuir equipamento.");
         }
         if (req.equipmentId() == null) {
-            throw new BusinessRuleException("Selecione o equipamento a atribuir.");
+            throw new BusinessRuleException("Seleccione o equipamento a atribuir.");
         }
         if (req.employeeId() == null) {
-            throw new BusinessRuleException("Selecione o colaborador que receberá o equipamento.");
+            throw new BusinessRuleException("Seleccione o colaborador que receberá o equipamento.");
         }
         if (req.quantity() <= 0) {
             throw new BusinessRuleException("A quantidade deve ser superior a zero.");

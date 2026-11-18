@@ -105,7 +105,7 @@ class DocumentPaginationHarnessTest {
         for (int index = 0; index < lines; index++) {
             Product product = new Product();
             product.setId((long) index);
-            product.setName("Arroz Agulha Longo Extra Selecionado Importado Saco de 25 Kilogramas #" + index);
+            product.setName("Arroz Agulha Longo Extra Seleccionado Importado Saco de 25 Kilogramas #" + index);
             product.setReference("REF-" + index);
             product.setBarcode("690000000000" + index);
             InvoiceLine line = new InvoiceLine();

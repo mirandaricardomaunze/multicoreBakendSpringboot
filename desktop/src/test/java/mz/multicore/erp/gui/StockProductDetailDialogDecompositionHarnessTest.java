@@ -30,9 +30,9 @@ class StockProductDetailDialogDecompositionHarnessTest {
         List<String> heroLines = Files.readAllLines(heroFile);
         List<String> tabsLines = Files.readAllLines(tabsFile);
 
-        assertTrue(dialogLines.size() <= 190, "StockProductDetailDialog deve ter <= 190 linhas (atual: " + dialogLines.size() + ")");
-        assertTrue(heroLines.size() <= 140, "StockProductDetailHeroBuilder deve ter <= 140 linhas (atual: " + heroLines.size() + ")");
-        assertTrue(tabsLines.size() <= 145, "StockProductDetailTabsBuilder deve ter <= 145 linhas (atual: " + tabsLines.size() + ")");
+        assertTrue(dialogLines.size() <= 190, "StockProductDetailDialog deve ter <= 190 linhas (actual: " + dialogLines.size() + ")");
+        assertTrue(heroLines.size() <= 140, "StockProductDetailHeroBuilder deve ter <= 140 linhas (actual: " + heroLines.size() + ")");
+        assertTrue(tabsLines.size() <= 145, "StockProductDetailTabsBuilder deve ter <= 145 linhas (actual: " + tabsLines.size() + ")");
     }
 
     @Test

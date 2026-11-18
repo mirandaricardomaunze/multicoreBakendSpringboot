@@ -100,7 +100,7 @@ class GlobalSearchShortcutsHarnessTest {
         AtomicBoolean actionExecuted = new AtomicBoolean(false);
         SwingUtilities.invokeAndWait(() -> {
             GlobalSearchDialog.SearchItem item = new GlobalSearchDialog.SearchItem(
-                    "act_test", "Executar Ação", "Testes", null,
+                    "act_test", "Executar Acção", "Testes", null,
                     UIHelper.icon("fas-play", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE,
                     () -> actionExecuted.set(true), List.of("teste")
             );
@@ -114,7 +114,7 @@ class GlobalSearchShortcutsHarnessTest {
 
         // Aguarda execução do runnable no EDT
         Thread.sleep(100);
-        assertTrue(actionExecuted.get(), "Ação deve ter sido executada no EDT");
+        assertTrue(actionExecuted.get(), "Acção deve ter sido executada no EDT");
     }
 
     @Test

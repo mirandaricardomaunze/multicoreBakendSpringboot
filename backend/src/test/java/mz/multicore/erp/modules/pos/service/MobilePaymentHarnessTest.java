@@ -50,7 +50,7 @@ class MobilePaymentHarnessTest {
     }
 
     @Test
-    @DisplayName("MPI-03: Rejeição de número incompatível com a operadora selecionada")
+    @DisplayName("MPI-03: Rejeição de número incompatível com a operadora seleccionada")
     void testProviderPhoneMismatch() {
         // Número Movitel (86) passado para M-Pesa
         BusinessRuleException ex1 = assertThrows(BusinessRuleException.class, () ->
@@ -64,7 +64,7 @@ class MobilePaymentHarnessTest {
     }
 
     @Test
-    @DisplayName("MPI-04: Iniciação de transação e geração de ID único com status PENDING")
+    @DisplayName("MPI-04: Iniciação de transacção e geração de ID único com status PENDING")
     void testInitiatePaymentSuccess() {
         when(repository.save(any(MobilePaymentTransaction.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -115,7 +115,7 @@ class MobilePaymentHarnessTest {
     }
 
     @Test
-    @DisplayName("MPI-06: Isolamento Multi-Tenant da transação")
+    @DisplayName("MPI-06: Isolamento Multi-Tenant da transacção")
     void testMultiTenantIsolation() {
         MobilePaymentTransaction tx = new MobilePaymentTransaction();
         tx.setCompanyId(2L);

@@ -23,7 +23,7 @@ class ConfigDocumentColumnsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "ConfigDocumentColumnsPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 125, "ConfigDocumentColumnsPanel.java deve possuir <= 125 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 125, "ConfigDocumentColumnsPanel.java deve possuir <= 125 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -36,7 +36,7 @@ class ConfigDocumentColumnsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "ConfigDocumentColumnsOperations.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 105, "ConfigDocumentColumnsOperations.java deve possuir <= 105 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 105, "ConfigDocumentColumnsOperations.java deve possuir <= 105 linhas. Actual: " + lines.size());
     }
 
     @Test

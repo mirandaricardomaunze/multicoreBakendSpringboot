@@ -51,7 +51,7 @@ class ExecutiveDetailDialogHarnessTest {
         p2.add(new JLabel("Aba 2"));
         dialog.addTab("Histórico", "fas-history", UIHelper.ACCENT_CYAN, p2);
 
-        dialog.addRightAction(new ModernButton("Ação Teste", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.darker()));
+        dialog.addRightAction(new ModernButton("Acção Teste", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.darker()));
 
         assertNotNull(dialog);
         if (dialog.getDialog() != null) {
@@ -61,7 +61,7 @@ class ExecutiveDetailDialogHarnessTest {
     }
 
     @Test
-    @DisplayName("D-02: Todas as severidades de Badge funcionam corretamente")
+    @DisplayName("D-02: Todas as severidades de Badge funcionam correctamente")
     void testBadgeSeverities() {
         ExecutiveDetailDialog dialog = new ExecutiveDetailDialog(null, "Badge Test");
 

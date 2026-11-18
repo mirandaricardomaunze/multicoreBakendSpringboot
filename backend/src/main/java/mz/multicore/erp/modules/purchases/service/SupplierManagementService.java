@@ -113,7 +113,7 @@ public class SupplierManagementService {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new BusinessRuleException("Fornecedor não encontrado."));
         if (supplier.getCompany() == null || !companyId.equals(supplier.getCompany().getId())) {
-            throw new BusinessRuleException("O fornecedor não pertence à empresa ativa.");
+            throw new BusinessRuleException("O fornecedor não pertence à empresa activa.");
         }
         return supplier;
     }

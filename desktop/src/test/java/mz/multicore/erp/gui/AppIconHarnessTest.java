@@ -51,7 +51,7 @@ class AppIconHarnessTest {
         assertThat(Files.size(desktopIco)).isGreaterThan(10_000);
 
         Path installerIco = Path.of("..", "installer", "app-icon.ico");
-        assertThat(installerIco).as("app-icon.ico no diretório do instalador").exists();
+        assertThat(installerIco).as("app-icon.ico no directório do instalador").exists();
         assertThat(Files.size(installerIco)).isGreaterThan(10_000);
 
         Path installerScript = Path.of("..", "scripts", "build-windows-installer.ps1");

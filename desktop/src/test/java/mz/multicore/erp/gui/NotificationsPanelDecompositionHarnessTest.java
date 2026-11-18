@@ -27,7 +27,7 @@ class NotificationsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "NotificationsPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 180, "NotificationsPanel.java deve possuir <= 180 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 180, "NotificationsPanel.java deve possuir <= 180 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -40,7 +40,7 @@ class NotificationsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "NotificationsViewCoordinator.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 110, "NotificationsViewCoordinator.java deve possuir <= 110 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 110, "NotificationsViewCoordinator.java deve possuir <= 110 linhas. Actual: " + lines.size());
     }
 
     @Test

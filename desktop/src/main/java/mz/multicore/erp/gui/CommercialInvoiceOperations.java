@@ -179,7 +179,7 @@ final class CommercialInvoiceOperations {
         UIHelper.styleComboBox(formatCombo);
         JPanel form = UIHelper.createDialogForm("Formato de Impressão:", formatCombo);
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Imprimir Fatura " + invoiceNum,
-                "fas-print", "Selecione o formato de impressão da fatura", form)
+                "fas-print", "Seleccione o formato de impressão da fatura", form)
                 .setConfirmButton("Imprimir", "fas-print")
                 .showDialog();
         if (!confirmed) return;

@@ -64,7 +64,7 @@ public final class GoalCreateDialog {
         UIHelper.styleComboBox(cbBusinessUnit);
         JPanel buRow = new JPanel(new GridLayout(1, 1));
         buRow.setOpaque(false);
-        buRow.add(new FormField("Unidade de Negócio / Módulo", cbBusinessUnit, false, "Selecione o negócio associado"));
+        buRow.add(new FormField("Unidade de Negócio / Módulo", cbBusinessUnit, false, "Seleccione o negócio associado"));
         form.add(buRow, gc);
 
         gc.gridy++;
@@ -166,7 +166,7 @@ public final class GoalCreateDialog {
 
             if (scope == GoalScope.BUSINESS_UNIT) {
                 if (selectedBu == null || selectedBu.id() == null) {
-                    throw new IllegalArgumentException("Por favor selecione uma Unidade de Negócio para este escopo.");
+                    throw new IllegalArgumentException("Por favor seleccione uma Unidade de Negócio para este escopo.");
                 }
                 scopeRefId = selectedBu.id();
                 scopeLabel = "Negócio: " + selectedBu.name();

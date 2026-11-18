@@ -219,10 +219,10 @@ public class BankReconciliationPanel extends JPanel {
                     } else if (itemsModel.getColumnCount() > 5 && itemsModel.getValueAt(modelRow, 5) != null) {
                         linkedTx = String.valueOf(itemsModel.getValueAt(modelRow, 5));
                     }
-                    peekItems.add(new QuickPeekPanel.PeekItem("Transação Vinculada", linkedTx, false));
+                    peekItems.add(new QuickPeekPanel.PeekItem("Transacção Vinculada", linkedTx, false));
                     peek.setOnOpenFullAction(ignored -> unmatchSelectedItem());
                 } else {
-                    peekItems.add(new QuickPeekPanel.PeekItem("Transação Vinculada", "Nenhuma (Pendente)", false));
+                    peekItems.add(new QuickPeekPanel.PeekItem("Transacção Vinculada", "Nenhuma (Pendente)", false));
                     peek.setOnOpenFullAction(ignored -> openManualMatchDialog());
                 }
                 peek.setItems(peekItems);

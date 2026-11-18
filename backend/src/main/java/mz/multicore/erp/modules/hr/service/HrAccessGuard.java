@@ -39,7 +39,7 @@ public class HrAccessGuard {
     public Long currentCompanyId() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         if (companyId == null) {
-            throw new BusinessRuleException("Selecione uma empresa ativa.");
+            throw new BusinessRuleException("Seleccione uma empresa activa.");
         }
         return companyId;
     }
@@ -72,13 +72,13 @@ public class HrAccessGuard {
 
     public Employee findEmployee(Long id) {
         return employeeRepository.findByIdAndCompanyId(id, currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Colaborador não encontrado na empresa ativa."));
+                .orElseThrow(() -> new BusinessRuleException("Colaborador não encontrado na empresa activa."));
     }
 
     public Employee findActiveEmployee(Long id) {
         Employee employee = findEmployee(id);
         if (!"ACTIVE".equals(employee.getStatus())) {
-            throw new BusinessRuleException("O colaborador não está ativo.");
+            throw new BusinessRuleException("O colaborador não está activo.");
         }
         return employee;
     }

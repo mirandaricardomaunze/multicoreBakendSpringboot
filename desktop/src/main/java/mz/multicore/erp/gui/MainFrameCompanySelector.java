@@ -60,7 +60,7 @@ final class MainFrameCompanySelector {
         });
 
         UIHelper.styleComboBox(combo);
-        combo.setToolTipText("Empresa ativa");
+        combo.setToolTipText("Empresa activa");
         combo.setPreferredSize(new Dimension(210, 32));
         applyCompanyRenderer(combo);
 

@@ -115,7 +115,7 @@ final class StockTransferActions {
         if (selected == null) return;
         if (!"AWAITING_SEPARATION".equals(selected.status()) && !"IN_SEPARATION".equals(selected.status())) {
             owner.showStockNotice(FeedbackType.INFO, "Estado incompatível",
-                    "Apenas transferências a aguardar ou em separação podem ser concluídas. Estado atual: " + selected.status());
+                    "Apenas transferências a aguardar ou em separação podem ser concluídas. Estado actual: " + selected.status());
             return;
         }
         boolean confirm = ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(owner), FeedbackType.INFO,
@@ -226,7 +226,7 @@ final class StockTransferActions {
         if (selected == null) return;
         if (!"IN_TRANSIT".equals(selected.status())) {
             owner.showStockNotice(FeedbackType.WARNING, "Estado incompatível",
-                    "Apenas transferências com mercadoria em trânsito podem ter a recepção confirmada no destino.\nEstado atual: " + UIHelper.humanStatus(selected.status()));
+                    "Apenas transferências com mercadoria em trânsito podem ter a recepção confirmada no destino.\nEstado actual: " + UIHelper.humanStatus(selected.status()));
             return;
         }
         StockTransferReceivingDialog.show(SwingUtilities.getWindowAncestor(owner), selected, (notes, lines) -> {

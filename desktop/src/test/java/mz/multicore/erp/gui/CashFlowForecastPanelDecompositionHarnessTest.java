@@ -23,7 +23,7 @@ class CashFlowForecastPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("CashFlowForecastPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 230,
-                () -> "CashFlowForecastPanel.java deve possuir <= 230 linhas. Atual: " + lines.size());
+                () -> "CashFlowForecastPanel.java deve possuir <= 230 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -32,17 +32,17 @@ class CashFlowForecastPanelDecompositionHarnessTest {
         Path coord = ROOT.resolve("CashFlowForecastOperationsCoordinator.java");
         List<String> coordLines = Files.readAllLines(coord);
         assertTrue(coordLines.size() <= 85,
-                () -> "CashFlowForecastOperationsCoordinator.java deve possuir <= 85 linhas. Atual: " + coordLines.size());
+                () -> "CashFlowForecastOperationsCoordinator.java deve possuir <= 85 linhas. Actual: " + coordLines.size());
 
         Path details = ROOT.resolve("CashFlowForecastDetailsPanel.java");
         List<String> detailsLines = Files.readAllLines(details);
         assertTrue(detailsLines.size() <= 95,
-                () -> "CashFlowForecastDetailsPanel.java deve possuir <= 95 linhas. Atual: " + detailsLines.size());
+                () -> "CashFlowForecastDetailsPanel.java deve possuir <= 95 linhas. Actual: " + detailsLines.size());
 
         Path renderer = ROOT.resolve("CashFlowMoneyCellRenderer.java");
         List<String> rendererLines = Files.readAllLines(renderer);
         assertTrue(rendererLines.size() <= 45,
-                () -> "CashFlowMoneyCellRenderer.java deve possuir <= 45 linhas. Atual: " + rendererLines.size());
+                () -> "CashFlowMoneyCellRenderer.java deve possuir <= 45 linhas. Actual: " + rendererLines.size());
     }
 
     @Test

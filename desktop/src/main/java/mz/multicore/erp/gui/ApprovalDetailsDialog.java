@@ -90,7 +90,7 @@ public final class ApprovalDetailsDialog extends JDialog {
         descA.setEditable(false); descA.setLineWrap(true); descA.setWrapStyleWord(true); descA.setFont(Typography.EMPHASIS);
         UIHelper.styleTextArea(descA);
         JScrollPane scroll = new JScrollPane(descA); scroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1));
-        card.add(UIHelper.tableCardTop("Descrição do Solicitante e Parecer do Workflow", null), BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Descrição do Solicitante e Parecer do Circuito de Aprovação", null), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER); panel.add(card, BorderLayout.CENTER);
         return panel;
     }

@@ -58,10 +58,10 @@ public class CashFlowForecastDocumentRenderer {
         table.setWidthPercentage(100f);
         try { table.setWidths(new float[]{25f, 25f, 25f, 25f}); } catch (Exception ignored) {}
 
-        table.addCell(metricCard("Disponível Atual (Caixa+Banco)", forecast.totalAvailableLiquidity(), new Color(240, 246, 255)));
+        table.addCell(metricCard("Disponível Actual (Caixa+Banco)", forecast.totalAvailableLiquidity(), new Color(240, 246, 255)));
         table.addCell(metricCard("Total a Receber (Clientes)", forecast.totalReceivables(), new Color(240, 253, 244)));
         table.addCell(metricCard("Total a Pagar (Fornecedores)", forecast.totalPayables(), new Color(254, 242, 242)));
-        table.addCell(metricCard("Posição Projetada Líquida", forecast.netProjectedPosition(), new Color(245, 245, 247)));
+        table.addCell(metricCard("Posição Projectada Líquida", forecast.netProjectedPosition(), new Color(245, 245, 247)));
         return table;
     }
 
@@ -199,7 +199,7 @@ public class CashFlowForecastDocumentRenderer {
         c2.setBorder(0);
         c2.setPaddingTop(25f);
         c2.addElement(new Paragraph("____________________________________________", PdfTheme.smallFont()));
-        c2.addElement(new Paragraph("Direção Financeira / Gerência", PdfTheme.bodyFont()));
+        c2.addElement(new Paragraph("Direcção Financeira / Gerência", PdfTheme.bodyFont()));
         table.addCell(c2);
         return table;
     }

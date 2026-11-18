@@ -31,7 +31,7 @@ public class ClientesOperationsCoordinator {
     public void deleteClient(Component parent, ClientDTO client, InlineFeedbackPanel feedback, Runnable onSuccess) {
         if (client == null) return;
         boolean confirmed = UIHelper.confirm(parent,
-                "Eliminar o cliente '" + client.name() + "'? Esta ação não pode ser revertida.",
+                "Eliminar o cliente '" + client.name() + "'? Esta acção não pode ser revertida.",
                 "Confirmar Eliminação");
         if (!confirmed) return;
 

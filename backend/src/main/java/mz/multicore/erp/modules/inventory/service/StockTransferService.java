@@ -150,7 +150,7 @@ public class StockTransferService {
         StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
         if (transfer.getStatus() != TransferStatus.AWAITING_SEPARATION && transfer.getStatus() != TransferStatus.IN_SEPARATION) {
-            throw new BusinessRuleException("Apenas guias a aguardar ou em separação podem ser marcadas como separadas. Estado atual: " + transfer.getStatus().getLabel());
+            throw new BusinessRuleException("Apenas guias a aguardar ou em separação podem ser marcadas como separadas. Estado actual: " + transfer.getStatus().getLabel());
         }
         validator.validateAvailability(transfer);
         transfer.setStatus(TransferStatus.SEPARATED);
@@ -166,7 +166,7 @@ public class StockTransferService {
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
         validator.requireApproverRole();
         if (!transfer.getStatus().isSeparatedOrPending()) {
-            throw new BusinessRuleException("Apenas guias com separação concluída podem ser aprovadas. Estado atual: " + transfer.getStatus().getLabel());
+            throw new BusinessRuleException("Apenas guias com separação concluída podem ser aprovadas. Estado actual: " + transfer.getStatus().getLabel());
         }
 
         movementExecutor.dispatchOrMove(transfer, CurrentUserContext.getUsername(), transitService);
@@ -177,7 +177,7 @@ public class StockTransferService {
         transfer.setApprovedAt(LocalDateTime.now());
         StockTransfer saved = transferRepository.save(transfer);
         if (approvalService != null) {
-            approvalService.cancelPendingForDocument("STOCK_TRANSFER", id, "Aprovada diretamente na gestão de stock.");
+            approvalService.cancelPendingForDocument("STOCK_TRANSFER", id, "Aprovada directamente na gestão de stock.");
         }
         auditLogService.logCurrent("STOCK_TRANSFER_APPROVE", "Guia " + saved.getTransferNumber() + " aprovada.");
         workflowCoordinator.announce(saved, StockTransferResolvedEvent.Outcome.APPROVED);
@@ -241,7 +241,7 @@ public class StockTransferService {
         validator.requireApproverRole();
         if (transfer.getStatus() != TransferStatus.AWAITING_SEPARATION && transfer.getStatus() != TransferStatus.IN_SEPARATION
                 && transfer.getStatus() != TransferStatus.SEPARATED && transfer.getStatus() != TransferStatus.PENDING_APPROVAL) {
-            throw new BusinessRuleException("Apenas guias em separação ou pendentes podem ser rejeitadas. Estado atual: " + transfer.getStatus().getLabel());
+            throw new BusinessRuleException("Apenas guias em separação ou pendentes podem ser rejeitadas. Estado actual: " + transfer.getStatus().getLabel());
         }
         if (rejectionReason == null || rejectionReason.isBlank()) {
             throw new BusinessRuleException("É obrigatório indicar o motivo da rejeição.");
@@ -266,7 +266,7 @@ public class StockTransferService {
         if (transfer.getStatus() != TransferStatus.DRAFT && transfer.getStatus() != TransferStatus.AWAITING_SEPARATION
                 && transfer.getStatus() != TransferStatus.IN_SEPARATION && transfer.getStatus() != TransferStatus.SEPARATED
                 && transfer.getStatus() != TransferStatus.PENDING_APPROVAL) {
-            throw new BusinessRuleException("Apenas guias em rascunho, em separação ou pendentes podem ser canceladas. Estado atual: " + transfer.getStatus().getLabel());
+            throw new BusinessRuleException("Apenas guias em rascunho, em separação ou pendentes podem ser canceladas. Estado actual: " + transfer.getStatus().getLabel());
         }
         transfer.setStatus(TransferStatus.CANCELLED);
         StockTransfer saved = transferRepository.save(transfer);

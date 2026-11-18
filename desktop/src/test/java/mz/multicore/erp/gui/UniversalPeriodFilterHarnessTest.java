@@ -23,7 +23,7 @@ public class UniversalPeriodFilterHarnessTest {
     private static final LocalDate REF_DATE = LocalDate.of(2026, 9, 15); // Uma terça-feira
 
     @Test
-    @DisplayName("UFP-01: 'Hoje' inclui apenas a data exata de referência")
+    @DisplayName("UFP-01: 'Hoje' inclui apenas a data exacta de referência")
     void testTodaySelection() {
         assertTrue(TableFilter.matchesPeriod(REF_DATE, "Hoje", REF_DATE));
         assertFalse(TableFilter.matchesPeriod(REF_DATE.minusDays(1), "Hoje", REF_DATE));
@@ -32,7 +32,7 @@ public class UniversalPeriodFilterHarnessTest {
     }
 
     @Test
-    @DisplayName("UFP-02: 'Ontem' inclui exatamente today - 1 dia")
+    @DisplayName("UFP-02: 'Ontem' inclui exactamente today - 1 dia")
     void testYesterdaySelection() {
         LocalDate yesterday = REF_DATE.minusDays(1);
         assertTrue(TableFilter.matchesPeriod(yesterday, "Ontem", REF_DATE));

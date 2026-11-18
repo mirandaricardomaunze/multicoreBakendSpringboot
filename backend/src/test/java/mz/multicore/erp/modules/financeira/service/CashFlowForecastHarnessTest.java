@@ -74,7 +74,7 @@ class CashFlowForecastHarnessTest {
     }
 
     @Test
-    @DisplayName("TFC-01: Cálculo da Posição Atual de Tesouraria (Caixa + Banco)")
+    @DisplayName("TFC-01: Cálculo da Posição Actual de Tesouraria (Caixa + Banco)")
     void tfc01_calculoPosicaoAtual() {
         TreasuryAccount cash = new TreasuryAccount();
         cash.setName("Caixa Principal");
@@ -161,7 +161,7 @@ class CashFlowForecastHarnessTest {
     }
 
     @Test
-    @DisplayName("TFC-05: Deteção de Rutura de Caixa e Alerta Crítico")
+    @DisplayName("TFC-05: Detecção de Rutura de Caixa e Alerta Crítico")
     void tfc05_deteccaoRuturaCaixa() {
         TreasuryAccount cash = new TreasuryAccount();
         cash.setAccountType(TreasuryAccountType.CASH);

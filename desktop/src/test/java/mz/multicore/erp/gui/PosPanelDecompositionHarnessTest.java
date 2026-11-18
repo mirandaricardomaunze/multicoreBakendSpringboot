@@ -76,7 +76,7 @@ public class PosPanelDecompositionHarnessTest {
     }
 
     @Test
-    @DisplayName("DECOMP-04: Cálculo de Imposto Efetivo e Suporte de Fallback")
+    @DisplayName("DECOMP-04: Cálculo de Imposto Efectivo e Suporte de Fallback")
     void testEffectiveTaxRateFallback() {
         assertEquals(TaxRates.STANDARD_VAT, POSPanel.effectiveTaxRate(null));
         assertEquals(new BigDecimal("0.05"), POSPanel.effectiveTaxRate(new BigDecimal("0.05")));

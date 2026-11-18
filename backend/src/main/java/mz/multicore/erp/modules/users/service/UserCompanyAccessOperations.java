@@ -43,7 +43,7 @@ final class UserCompanyAccessOperations {
     AppUser updateRole(AppUser user, Long companyId, String role) {
         String normalizedRole = UserRole.normalize(role);
         AppUserCompanyAccess access = user.findCompanyAccess(companyId)
-                .orElseThrow(() -> new BusinessRuleException("O utilizador não pertence à empresa ativa."));
+                .orElseThrow(() -> new BusinessRuleException("O utilizador não pertence à empresa activa."));
         boolean removingAdmin = "ADMIN".equalsIgnoreCase(access.getRole())
                 && !"ADMIN".equals(normalizedRole);
         if (removingAdmin && companyAccessRepository.countActiveByCompanyIdAndRole(companyId, "ADMIN") <= 1) {

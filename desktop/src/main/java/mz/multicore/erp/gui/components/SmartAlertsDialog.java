@@ -83,7 +83,7 @@ public class SmartAlertsDialog extends JDialog {
 
     private void initComponents() {
         JPanel root = DialogChrome.frame("fas-bell", "Alertas Inteligentes & Acções Proativas",
-                "Situações operacionais que exigem atenção com ações diretas.", null, null);
+                "Situações operacionais que exigem atenção com acções directas.", null, null);
 
         // Barra de Filtros
         JPanel filterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -135,7 +135,7 @@ public class SmartAlertsDialog extends JDialog {
                 .toList();
 
         if (filtered.isEmpty()) {
-            JLabel empty = new JLabel("Nenhum alerta para a categoria selecionada.");
+            JLabel empty = new JLabel("Nenhum alerta para a categoria seleccionada.");
             empty.setFont(Typography.EMPHASIS.deriveFont(Font.ITALIC));
             empty.setForeground(UIHelper.TEXT_MUTED);
             empty.setBorder(new EmptyBorder(Spacing.XXL, Spacing.SM, Spacing.SM, Spacing.SM));

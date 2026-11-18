@@ -66,7 +66,7 @@ public class ForensicAuditPanel extends JPanel {
         titles.setOpaque(false);
 
         JLabel title = UIHelper.createHeading("Central de Auditoria Forense & Controlo de Fraude");
-        JLabel subtitle = new JLabel("Deteção analítica de faturas canceladas, quebras anormais, desvios e concessão de descontos");
+        JLabel subtitle = new JLabel("Detecção analítica de faturas canceladas, quebras anormais, desvios e concessão de descontos");
         subtitle.setFont(Typography.BODY);
         subtitle.setForeground(UIHelper.TEXT_MUTED);
 

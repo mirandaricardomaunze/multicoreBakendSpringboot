@@ -89,7 +89,7 @@ public class ApprovalsPanel extends JPanel {
             if (!e.getValueIsAdjusting()) {
                 boolean hasSel = pendingTable.getSelectedRow() >= 0;
                 openBtn.setEnabled(hasSel);
-                openBtn.setToolTipText(hasSel ? "Decidir pedido selecionado" : "Selecione um pedido pendente para decidir");
+                openBtn.setToolTipText(hasSel ? "Decidir pedido seleccionado" : "Seleccione um pedido pendente para decidir");
             }
         });
         pendingTable.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -115,7 +115,7 @@ public class ApprovalsPanel extends JPanel {
         openBtn = UIHelper.createPrimaryButton("Abrir / Decidir");
         openBtn.setIcon(UIHelper.icon("fas-gavel", 14));
         openBtn.setEnabled(false);
-        openBtn.setToolTipText("Selecione um pedido pendente para decidir");
+        openBtn.setToolTipText("Seleccione um pedido pendente para decidir");
         openBtn.addActionListener(e -> openDecisionForSelected());
 
         ModernPanel pendingCard = new ModernPanel(16);
@@ -189,7 +189,7 @@ public class ApprovalsPanel extends JPanel {
 
         if (openBtn != null) {
             openBtn.setEnabled(false);
-            openBtn.setToolTipText("Selecione um pedido pendente para decidir");
+            openBtn.setToolTipText("Seleccione um pedido pendente para decidir");
             pendingTable.clearSelection();
         }
     }

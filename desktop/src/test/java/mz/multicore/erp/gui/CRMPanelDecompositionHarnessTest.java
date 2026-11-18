@@ -22,7 +22,7 @@ class CRMPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("CRMPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 205,
-                () -> "CRMPanel.java deve possuir <= 205 linhas. Atual: " + lines.size());
+                () -> "CRMPanel.java deve possuir <= 205 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -31,7 +31,7 @@ class CRMPanelDecompositionHarnessTest {
         Path coord = ROOT.resolve("CrmViewCoordinator.java");
         List<String> lines = Files.readAllLines(coord);
         assertTrue(lines.size() <= 110,
-                () -> "CrmViewCoordinator.java deve possuir <= 110 linhas. Atual: " + lines.size());
+                () -> "CrmViewCoordinator.java deve possuir <= 110 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -43,7 +43,7 @@ class CRMPanelDecompositionHarnessTest {
         assertTrue(content.contains("UIHelper.tableCardTop(\"Pedidos dos Clientes\""),
                 "Falta UIHelper.tableCardTop com título Pedidos dos Clientes");
         assertTrue(content.contains("UIHelper.tableCardTop(\"Folhas de Obra Registadas\", wsBar,\n                moreBtn, billBtn, newWsBtn)"),
-                "Falta UIHelper.tableCardTop com formato exato para Folhas de Obra Registadas");
+                "Falta UIHelper.tableCardTop com formato exacto para Folhas de Obra Registadas");
         assertTrue(content.contains("Acções da Folha"), "Falta ActionMenuButton Acções da Folha");
         assertTrue(content.contains("TableQuickPeekController.install(ticketsTable"), "Falta TableQuickPeekController.install(ticketsTable");
         assertTrue(content.contains("UIHelper.ensureHeadersFit(ticketsTable)"), "Falta UIHelper.ensureHeadersFit(ticketsTable)");

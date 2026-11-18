@@ -52,7 +52,7 @@ class QualityModuleUiHarnessTest {
                 102L, "Maria Cossa", "Laboratório", "Técnica de Laboratório",
                 0, 1,
                 List.of(new ExpiredWorkerAlertDTO.ExpiredEquipmentItemDTO(
-                        11L, 2L, "EPI-002", "Óculos de Proteção UV",
+                        11L, 2L, "EPI-002", "Óculos de Protecção UV",
                         LocalDate.now().minusMonths(5), LocalDate.now().plusDays(3), 3L,
                         AssignmentStatus.EXPIRING_SOON, "A Expirar"
                 ))

@@ -136,7 +136,7 @@ class DashboardCommercialKpiHarnessTest {
     }
 
     @Test
-    @DisplayName("DKPI-06: Componente visual TrendBadge com atualização dinâmica e sem caracteres quebrados")
+    @DisplayName("DKPI-06: Componente visual TrendBadge com actualização dinâmica e sem caracteres quebrados")
     void dkpi06_trendBadgeDynamicUpdates() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             KpiCard.TrendBadge badge = new KpiCard.TrendBadge();

@@ -67,7 +67,7 @@ class QualityPanelDecompositionHarnessTest {
                 }
             }
         }
-        assertEquals(4, modernPanels, "Deve possuir exatamente 4 cartões ModernPanel de KPI");
+        assertEquals(4, modernPanels, "Deve possuir exactamente 4 cartões ModernPanel de KPI");
     }
 
     @Test
@@ -80,12 +80,12 @@ class QualityPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "QualityPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 130, "QualityPanel.java deve possuir <= 130 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 130, "QualityPanel.java deve possuir <= 130 linhas. Actual: " + lines.size());
 
         QualityPanel panel = new QualityPanel(qualityApiClient, hrApiClient, printApiClient);
         JTabbedPane tabbedPane = findComponent(panel, JTabbedPane.class);
         assertNotNull(tabbedPane, "Painel deve conter JTabbedPane corporativo");
-        assertEquals(3, tabbedPane.getTabCount(), "Deve conter exatamente 3 abas");
+        assertEquals(3, tabbedPane.getTabCount(), "Deve conter exactamente 3 abas");
         assertTrue(tabbedPane.getTitleAt(0).contains("Atribuições a Colaboradores"));
         assertTrue(tabbedPane.getTitleAt(1).contains("Radar de Validades Expiradas"));
         assertTrue(tabbedPane.getTitleAt(2).contains("Catálogo de Equipamentos"));
@@ -134,7 +134,7 @@ class QualityPanelDecompositionHarnessTest {
     }
 
     @Test
-    @DisplayName("QD-05: onPanelSelected e refreshAll delegam sem exceções")
+    @DisplayName("QD-05: onPanelSelected e refreshAll delegam sem excepções")
     void testRefreshDelegation() {
         QualityPanel panel = new QualityPanel(qualityApiClient, hrApiClient, printApiClient);
         assertDoesNotThrow(panel::refreshAll, "refreshAll deve executar sem erros");

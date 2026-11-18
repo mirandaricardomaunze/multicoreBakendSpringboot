@@ -63,7 +63,7 @@ public class DirectPurchaseRegistrationService {
         Supplier supplier = supplierRepository.findById(request.supplierId())
                 .orElseThrow(() -> new BusinessRuleException("Fornecedor não encontrado."));
         if (!request.companyId().equals(supplier.getCompany().getId())) {
-            throw new BusinessRuleException("O fornecedor não pertence à empresa ativa.");
+            throw new BusinessRuleException("O fornecedor não pertence à empresa activa.");
         }
         if (!supplier.isActive()) {
             throw new BusinessRuleException("Fornecedor inactivo não pode ser usado em compras.");
@@ -71,7 +71,7 @@ public class DirectPurchaseRegistrationService {
 
         Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+            throw new BusinessRuleException("O armazém não pertence à empresa activa.");
         }
 
         Company company = companyLookup.require(request.companyId());

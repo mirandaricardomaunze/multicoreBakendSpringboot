@@ -25,7 +25,7 @@ class FeedbackAutoCloseAndManualDismissHarnessTest {
         });
 
         assertTrue(panel.isVisible(), "Mensagem de feedback deve aparecer inicialmente");
-        assertNotNull(panel.getAutoCloseTimer(), "Temporizador de fecho automático deve estar ativo");
+        assertNotNull(panel.getAutoCloseTimer(), "Temporizador de fecho automático deve estar activo");
 
         // Aguardar o disparo do temporizador de fecho automático
         Thread.sleep(130);
@@ -99,7 +99,7 @@ class FeedbackAutoCloseAndManualDismissHarnessTest {
     }
 
     @Test
-    @DisplayName("FDB-05: Possibilidade de desativar fecho automático para mensagens críticas permanentes")
+    @DisplayName("FDB-05: Possibilidade de desactivar fecho automático para mensagens críticas permanentes")
     void testDisablingAutoCloseKeepsMessagePersistent() throws Exception {
         InlineFeedbackPanel panel = new InlineFeedbackPanel();
         panel.setAutoCloseEnabled(false);

@@ -144,7 +144,7 @@ public class BankReconciliationMatcher {
                 .orElseThrow(() -> new BusinessRuleException("Linha do extracto não encontrada."));
 
         TreasuryTransaction tx = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new BusinessRuleException("Transação de tesouraria não encontrada: " + transactionId));
+                .orElseThrow(() -> new BusinessRuleException("Transacção de tesouraria não encontrada: " + transactionId));
 
         item.setStatus(BankStatementItemStatus.MATCHED);
         item.setMatchedTransaction(tx);
@@ -197,7 +197,7 @@ public class BankReconciliationMatcher {
         );
 
         TreasuryTransaction tx = transactionRepository.findById(createdTx.id())
-                .orElseThrow(() -> new BusinessRuleException("Falha ao recuperar a transação criada."));
+                .orElseThrow(() -> new BusinessRuleException("Falha ao recuperar a transacção criada."));
 
         item.setStatus(BankStatementItemStatus.MATCHED);
         item.setMatchedTransaction(tx);

@@ -196,7 +196,7 @@ public class ComercialService {
         Invoice invoice = invoiceRepository.lockByIdAndCompanyId(invoiceId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
         if (!invoice.getStatus().isCollectable()) {
-            throw new BusinessRuleException("Apenas faturas por cobrar podem ter recibo. Estado atual: " + invoice.getStatus());
+            throw new BusinessRuleException("Apenas faturas por cobrar podem ter recibo. Estado actual: " + invoice.getStatus());
         }
         if (amountPaid == null || amountPaid.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessRuleException("O valor do recibo tem de ser positivo.");

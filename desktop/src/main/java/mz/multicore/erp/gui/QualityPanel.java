@@ -24,7 +24,7 @@ public class QualityPanel extends JPanel {
     private final JLabel expiredVal = new JLabel("0");
     private final JLabel totalEquipmentsVal = new JLabel("0");
 
-    private final ModernPanel activeAssignmentsKpi = KpiCard.createMetricCard("Atribuições Ativas", activeAssignmentsVal, "EPIs e ferramentas em uso", "fas-clipboard-check", UIHelper.ACCENT_BLUE);
+    private final ModernPanel activeAssignmentsKpi = KpiCard.createMetricCard("Atribuições Activas", activeAssignmentsVal, "EPIs e ferramentas em uso", "fas-clipboard-check", UIHelper.ACCENT_BLUE);
     private final ModernPanel expiringSoonKpi = KpiCard.createMetricCard("A Expirar em 30d", expiringSoonVal, "Exigem renovação próxima", "fas-exclamation-circle", UIHelper.PENDING_YELLOW);
     private final ModernPanel expiredKpi = KpiCard.createMetricCard("Validade Expirada", expiredVal, "Situação irregular", "fas-exclamation-triangle", UIHelper.REJECTED_RED);
     private final ModernPanel totalEquipmentsKpi = KpiCard.createMetricCard("Equipamentos", totalEquipmentsVal, "Cadastrados no catálogo", "fas-boxes", UIHelper.APPROVED_GREEN);

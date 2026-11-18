@@ -73,7 +73,7 @@ public class CashFlowForecastPanel extends JPanel {
         JPanel bar = new JPanel(new BorderLayout(10, 0));
         bar.setOpaque(false);
 
-        JLabel title = new JLabel("Projeção de Fluxo de Caixa Previsional (Cash Flow Forecast)");
+        JLabel title = new JLabel("Previsão do Fluxo de Caixa");
         title.setFont(Typography.TITLE);
         title.setForeground(UIHelper.TEXT_LIGHT);
         bar.add(title, BorderLayout.WEST);
@@ -101,7 +101,7 @@ public class CashFlowForecastPanel extends JPanel {
         grid.add(KpiCard.createCard("Disponível Imediato", lblLiquidityVal, "fas-wallet", UIHelper.ACCENT_BLUE));
         grid.add(KpiCard.createCard("Contas a Receber", lblReceivablesVal, "fas-arrow-circle-down", UIHelper.APPROVED_GREEN));
         grid.add(KpiCard.createCard("Contas a Pagar", lblPayablesVal, "fas-arrow-circle-up", UIHelper.REJECTED_RED));
-        grid.add(KpiCard.createCard("Saldo Projetado Líquido", lblNetVal, "fas-chart-line", UIHelper.TEXT_LIGHT));
+        grid.add(KpiCard.createCard("Saldo Projectado Líquido", lblNetVal, "fas-chart-line", UIHelper.TEXT_LIGHT));
         return grid;
     }
 
@@ -131,7 +131,7 @@ public class CashFlowForecastPanel extends JPanel {
         title.setForeground(UIHelper.TEXT_LIGHT);
         card.add(title, BorderLayout.NORTH);
 
-        String[] cols = {"Período Temporal", "Entradas Previstas (+)", "Saídas Previstas (-)", "Movimento Líquido", "Saldo Projetado Cumulativo"};
+        String[] cols = {"Período Temporal", "Entradas Previstas (+)", "Saídas Previstas (-)", "Movimento Líquido", "Saldo Projectado Cumulativo"};
         bucketsTableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };

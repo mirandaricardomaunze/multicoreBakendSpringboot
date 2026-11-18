@@ -135,7 +135,7 @@ final class FiscalTaxRatesTab {
                 "", codeForm,
                 "", nameForm,
                 "Tipo:", typeCombo,
-                "Taxa (fração, ex: 0.16 para 16%):", rateField,
+                "Taxa (fracção, ex: 0.16 para 16%):", rateField,
                 "Base Legal:", legalField
         );
 

@@ -23,7 +23,7 @@ class HRVacationsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "HRVacationsPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 110, "HRVacationsPanel.java deve possuir <= 110 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 110, "HRVacationsPanel.java deve possuir <= 110 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -37,12 +37,12 @@ class HRVacationsPanelDecompositionHarnessTest {
         Path dialogPath = baseDir.resolve("HrVacationFormDialog.java");
         assertTrue(Files.exists(dialogPath), "HrVacationFormDialog.java deve existir");
         List<String> dialogLines = Files.readAllLines(dialogPath);
-        assertTrue(dialogLines.size() <= 90, "HrVacationFormDialog.java deve possuir <= 90 linhas. Atual: " + dialogLines.size());
+        assertTrue(dialogLines.size() <= 90, "HrVacationFormDialog.java deve possuir <= 90 linhas. Actual: " + dialogLines.size());
 
         Path coordPath = baseDir.resolve("HrVacationsViewCoordinator.java");
         assertTrue(Files.exists(coordPath), "HrVacationsViewCoordinator.java deve existir");
         List<String> coordLines = Files.readAllLines(coordPath);
-        assertTrue(coordLines.size() <= 90, "HrVacationsViewCoordinator.java deve possuir <= 90 linhas. Atual: " + coordLines.size());
+        assertTrue(coordLines.size() <= 90, "HrVacationsViewCoordinator.java deve possuir <= 90 linhas. Actual: " + coordLines.size());
     }
 
     @Test

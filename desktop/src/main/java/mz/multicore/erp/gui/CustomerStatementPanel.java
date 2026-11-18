@@ -181,7 +181,7 @@ public class CustomerStatementPanel extends JPanel {
     }
 
     private void emitStatementEmail() {
-        ClientComboItem sel = getSelectedClient("Selecione um cliente para enviar o extrato por correio eletrónico.");
+        ClientComboItem sel = getSelectedClient("Seleccione um cliente para enviar o extrato por correio electrónico.");
         if (sel != null) CustomerStatementOperationsCoordinator.emitStatementEmail(this, statementApiClient, sel.id(), sel.name(), getStartDate(), getEndDate());
     }
 

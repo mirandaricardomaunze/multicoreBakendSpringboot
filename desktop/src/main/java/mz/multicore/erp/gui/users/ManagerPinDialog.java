@@ -75,7 +75,7 @@ public class ManagerPinDialog {
         confirmBtn.addActionListener(e -> {
             String pin = new String(pinField.getPassword()).trim();
             if (pin.length() != 4) {
-                feedbackLabel.setText("O PIN deve conter exatamente 4 dígitos.");
+                feedbackLabel.setText("O PIN deve conter exactamente 4 dígitos.");
                 return;
             }
             try {
@@ -85,7 +85,7 @@ public class ManagerPinDialog {
                     managerName = res.managerName();
                     dialog.dispose();
                 } else {
-                    feedbackLabel.setText(res != null ? res.message() : "PIN incorreto ou sem autorização.");
+                    feedbackLabel.setText(res != null ? res.message() : "PIN incorrecto ou sem autorização.");
                 }
             } catch (Exception ex) {
                 feedbackLabel.setText("Erro ao validar PIN: " + ex.getMessage());

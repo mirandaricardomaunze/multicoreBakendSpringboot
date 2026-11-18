@@ -68,7 +68,7 @@ final class PosCashBreakdownPanel {
         JLabel lblMode = new JLabel("Método de Contagem:"); lblMode.setFont(Typography.BODY_BOLD); lblMode.setForeground(UIHelper.TEXT_LIGHT);
         rbBreakdown = new JRadioButton("Contagem Física por Notas e Moedas (Recomendado)", true);
         rbBreakdown.setFont(Typography.BODY); rbBreakdown.setForeground(UIHelper.TEXT_LIGHT); rbBreakdown.setOpaque(false);
-        rbDirectAmount = new JRadioButton("Introdução Direta de Montante Global");
+        rbDirectAmount = new JRadioButton("Introdução Directa de Montante Global");
         rbDirectAmount.setFont(Typography.BODY); rbDirectAmount.setForeground(UIHelper.TEXT_LIGHT); rbDirectAmount.setOpaque(false);
         ButtonGroup group = new ButtonGroup(); group.add(rbBreakdown); group.add(rbDirectAmount);
         rbBreakdown.addActionListener(e -> switchMode(true)); rbDirectAmount.addActionListener(e -> switchMode(false));

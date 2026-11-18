@@ -71,6 +71,12 @@ final class TableCardTop {
         }
         if (tables.size() != 1) return;
         javax.swing.JTable table = tables.get(0);
+        String heading = top.getComponentCount() > 0 && top.getComponent(0) instanceof JLabel label
+                ? (String) label.getClientProperty(HEADING) : null;
+        if (table.getClientProperty("emptyText") == null) {
+            String empty = EmptyWording.fromTitle(heading);
+            if (empty != null) table.putClientProperty("emptyText", empty);
+        }
         if (main != null) table.putClientProperty(TableEmptyState.EMPTY_ACTION, main);
         if (filters != null) table.putClientProperty(TableEmptyState.EMPTY_FILTERS, filters);
     }

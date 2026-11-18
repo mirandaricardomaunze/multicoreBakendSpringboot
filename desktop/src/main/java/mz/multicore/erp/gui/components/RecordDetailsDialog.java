@@ -67,7 +67,7 @@ public final class RecordDetailsDialog {
     private static void showInternal(JTable table) {
         int selectedRow = table.getSelectedRow();
         String mainTitle = "Detalhes do Registo";
-        String mainSubtitle = "Inspeção de dados da grelha (Linha #" + (selectedRow + 1) + " de " + table.getRowCount() + ")";
+        String mainSubtitle = "Inspecção de dados da grelha (Linha #" + (selectedRow + 1) + " de " + table.getRowCount() + ")";
 
         ProductDTO product = findProduct(table, selectedRow);
         ClientDTO client = findClient(table, selectedRow);

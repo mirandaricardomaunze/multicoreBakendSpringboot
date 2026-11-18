@@ -60,7 +60,7 @@ final class ConfigSupportPanel {
                     msgs = String.valueOf(owner.supportModel.getValueAt(row, 4));
             peek.setHeaderIcon("fas-headset", UIHelper.ACCENT_CYAN);
             peek.setTitle(subj);
-            peek.setSubtitle("Ticket #" + id);
+            peek.setSubtitle("Pedido #" + id);
             peek.setStatus(status, UIHelper.ACCENT_BLUE);
             peek.setItems(List.of(new QuickPeekPanel.PeekItem("Prioridade", prio, false), new QuickPeekPanel.PeekItem("Mensagens", msgs, false)));
             peek.getOpenFullButton().setText("Ver / Responder");
@@ -93,7 +93,7 @@ final class ConfigSupportPanel {
     private void viewSupportTicket() {
         int row = TableFilter.selectedModelRow(owner.supportTable);
         if (row < 0 || row >= owner.supportTickets.size()) {
-            ToastManager.show(owner, FeedbackType.WARNING, "Selecione um pedido.");
+            ToastManager.show(owner, FeedbackType.WARNING, "Seleccione um pedido.");
             return;
         }
         ConfigSupportTicketDialog.viewTicket(owner, owner.supportTickets.get(row), this::refresh);

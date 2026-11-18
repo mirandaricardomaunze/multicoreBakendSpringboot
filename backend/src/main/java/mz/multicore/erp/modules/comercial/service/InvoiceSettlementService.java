@@ -42,7 +42,7 @@ public class InvoiceSettlementService {
         Invoice invoice = invoiceRepository.lockByIdAndCompanyId(invoiceId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
         if (!invoice.getStatus().isCollectable()) {
-            throw new BusinessRuleException("Apenas faturas por cobrar podem ser liquidadas. Estado atual: " + invoice.getStatus());
+            throw new BusinessRuleException("Apenas faturas por cobrar podem ser liquidadas. Estado actual: " + invoice.getStatus());
         }
         BigDecimal value = amount == null ? invoice.outstandingAmount() : amount;
         String method = financeService.accountType(accountId) == TreasuryAccountType.CASH ? "CASH" : "BANK_TRANSFER";

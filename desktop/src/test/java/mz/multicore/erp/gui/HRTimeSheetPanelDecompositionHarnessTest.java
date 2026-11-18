@@ -22,7 +22,7 @@ class HRTimeSheetPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("HRTimeSheetPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 165,
-                () -> "HRTimeSheetPanel.java deve possuir <= 165 linhas. Atual: " + lines.size());
+                () -> "HRTimeSheetPanel.java deve possuir <= 165 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -31,12 +31,12 @@ class HRTimeSheetPanelDecompositionHarnessTest {
         Path entry = ROOT.resolve("HrTimeEntryDialog.java");
         List<String> entryLines = Files.readAllLines(entry);
         assertTrue(entryLines.size() <= 90,
-                () -> "HrTimeEntryDialog.java deve possuir <= 90 linhas. Atual: " + entryLines.size());
+                () -> "HrTimeEntryDialog.java deve possuir <= 90 linhas. Actual: " + entryLines.size());
 
         Path overtime = ROOT.resolve("HrOvertimeRatesDialog.java");
         List<String> overtimeLines = Files.readAllLines(overtime);
         assertTrue(overtimeLines.size() <= 110,
-                () -> "HrOvertimeRatesDialog.java deve possuir <= 110 linhas. Atual: " + overtimeLines.size());
+                () -> "HrOvertimeRatesDialog.java deve possuir <= 110 linhas. Actual: " + overtimeLines.size());
     }
 
     @Test
@@ -46,7 +46,7 @@ class HRTimeSheetPanelDecompositionHarnessTest {
 
         assertTrue(content.contains("new ModernPanel(16)"), "Falta new ModernPanel(16)");
         assertTrue(content.contains("UIHelper.tableCardTop(\"Folha de Ponto\", filters,\n                moreBtn, closeBtn, entryBtn)"),
-                "Falta UIHelper.tableCardTop com formatação exata para Folha de Ponto");
+                "Falta UIHelper.tableCardTop com formatação exacta para Folha de Ponto");
         assertTrue(content.contains("TableFilter.bar(search, refreshBtn)"), "Falta TableFilter.bar(search, refreshBtn)");
         assertTrue(content.contains("UIHelper.ensureHeadersFit(table)"), "Falta UIHelper.ensureHeadersFit(table)");
         assertTrue(content.contains("TableQuickPeekController.install(table, card"),

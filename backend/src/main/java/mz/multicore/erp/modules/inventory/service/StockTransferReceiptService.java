@@ -66,7 +66,7 @@ public class StockTransferReceiptService {
         }
         if (transfer.getStatus() != TransferStatus.IN_TRANSIT) {
             throw new BusinessRuleException(
-                    "Só guias em trânsito podem ter a recepção confirmada. Estado atual: "
+                    "Só guias em trânsito podem ter a recepção confirmada. Estado actual: "
                             + transfer.getStatus().getLabel());
         }
 

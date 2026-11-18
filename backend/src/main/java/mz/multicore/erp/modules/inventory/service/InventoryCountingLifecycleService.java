@@ -118,7 +118,7 @@ public class InventoryCountingLifecycleService {
             item = itemRepository.findBySessionIdAndBarcode(sessionId, request.barcode().trim()).orElse(null);
         }
         if (item == null) {
-            throw new BusinessRuleException("Item de inventário não encontrado para atualização.");
+            throw new BusinessRuleException("Item de inventário não encontrado para actualização.");
         }
 
         BigDecimal newCount = request.countedQuantity() != null ? request.countedQuantity() : BigDecimal.ZERO;

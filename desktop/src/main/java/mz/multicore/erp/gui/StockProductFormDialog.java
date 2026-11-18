@@ -168,7 +168,7 @@ final class StockProductFormDialog {
 
         dialog.setOnSaveAsync(() -> {
             ProductDTO selected = productCombo.selectedProduct();
-            if (selected == null) throw new BusinessRuleException("Selecione um produto válido.");
+            if (selected == null) throw new BusinessRuleException("Seleccione um produto válido.");
             ProductFormData data = StockProductFormValidator.validateForm(
                     null, referenceField, barcodeField, nameField, salesPriceField, purchasePriceField,
                     minStockField, packagesPerBoxField, unitsPerPackageField, descField, wholesalePriceField,

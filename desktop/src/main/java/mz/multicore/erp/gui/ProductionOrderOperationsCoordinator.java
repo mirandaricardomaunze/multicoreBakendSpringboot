@@ -93,7 +93,7 @@ public final class ProductionOrderOperationsCoordinator {
 
         dialog.setOnSave(() -> {
             BillOfMaterialsDTO selectedBom = (BillOfMaterialsDTO) bomCombo.getSelectedItem();
-            if (selectedBom == null) throw FieldValidationException.of(bomCombo, "Selecione a ficha técnica.");
+            if (selectedBom == null) throw FieldValidationException.of(bomCombo, "Seleccione a ficha técnica.");
 
             BigDecimal qty;
             try {
@@ -106,7 +106,7 @@ public final class ProductionOrderOperationsCoordinator {
             WarehouseDTO srcWh = (WarehouseDTO) sourceWhCombo.getSelectedItem();
             WarehouseDTO tgtWh = (WarehouseDTO) targetWhCombo.getSelectedItem();
             if (srcWh == null || tgtWh == null) {
-                throw new IllegalArgumentException("Selecione os armazéns de origem e destino.");
+                throw new IllegalArgumentException("Seleccione os armazéns de origem e destino.");
             }
 
             LocalDate endDate = null;

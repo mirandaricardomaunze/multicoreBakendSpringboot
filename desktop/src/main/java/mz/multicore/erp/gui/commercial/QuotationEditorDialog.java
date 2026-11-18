@@ -298,7 +298,7 @@ public final class QuotationEditorDialog {
         }
         int whIdx = warehouseCombo.getSelectedIndex();
         if (whIdx < 0) {
-            throw new RuntimeException("Selecione o armazém.");
+            throw new RuntimeException("Seleccione o armazém.");
         }
         int validity;
         try {

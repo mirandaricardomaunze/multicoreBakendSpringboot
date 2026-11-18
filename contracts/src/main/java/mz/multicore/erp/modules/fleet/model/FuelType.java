@@ -7,7 +7,7 @@ public enum FuelType {
     DIESEL("Gasóleo (Diesel)"),
     PETROL("Gasolina"),
     HYBRID("Híbrido"),
-    ELECTRIC("Elétrico");
+    ELECTRIC("Eléctrico");
 
     private final String label;
 

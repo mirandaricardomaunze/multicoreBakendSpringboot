@@ -91,7 +91,7 @@ public class CreditRiskPanel extends JPanel {
         filterBar.add(filterInputs, BorderLayout.WEST);
         filterBar.add(peekToggleBtn, BorderLayout.EAST);
 
-        card.add(UIHelper.tableCardTop("Matriz de Aging & Gestão de Risco", filterBar,
+        card.add(UIHelper.tableCardTop("Antiguidade de Saldos & Gestão de Risco", filterBar,
                 busyBar, refreshBtn, pdfBtn, exceptionBtn), BorderLayout.NORTH);
 
         String[] cols = {"ID", "Cliente", "NUIT", "Limite (MT)", "Dívida Total", "Disponível", "Corrente", "1-30d", "31-60d", "61-90d", ">90d", "Total em Mora", "Atraso", "Nível Risco", "Situação"};

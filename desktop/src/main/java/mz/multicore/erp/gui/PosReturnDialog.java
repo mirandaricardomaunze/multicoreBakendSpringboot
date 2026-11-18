@@ -61,7 +61,7 @@ final class PosReturnDialog {
             invoice = owner.salesHistoryList.get(invoiceCombo.getSelectedIndex());
         } else {
             owner.showPosNotice(FeedbackType.WARNING, "Sem histórico de vendas",
-                    "Não foram encontradas vendas recentes para efetuar a devolução.");
+                    "Não foram encontradas vendas recentes para efectuar a devolução.");
             return;
         }
 

@@ -75,7 +75,7 @@ class PosContingencyManagerTest {
     }
 
     @Test
-    @DisplayName("Deteção de erros de conectividade para acionamento de contingência")
+    @DisplayName("Detecção de erros de conectividade para acionamento de contingência")
     void testConnectivityErrorDetection() {
         assertTrue(manager.isConnectivityError(new ConnectException("Connection refused")));
         assertTrue(manager.isConnectivityError(new SocketTimeoutException("Read timed out")));
@@ -88,7 +88,7 @@ class PosContingencyManagerTest {
     }
 
     @Test
-    @DisplayName("Sincronização com sucesso atualiza status para SYNCED e número da fatura")
+    @DisplayName("Sincronização com sucesso actualiza status para SYNCED e número da fatura")
     void testSyncPendingSalesSuccess() {
         POSCheckoutRequest req = createSampleRequest("Operador 1");
         manager.enqueue(req, new BigDecimal("250.00"));

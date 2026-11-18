@@ -280,19 +280,19 @@ public class QualityAssignmentDialog extends JDialog {
         EquipmentDTO eq = (EquipmentDTO) equipmentCombo.getSelectedItem();
 
         if (emp == null) {
-            ToastManager.show(this, FeedbackType.WARNING, "Por favor selecione um colaborador.");
+            ToastManager.show(this, FeedbackType.WARNING, "Por favor seleccione um colaborador.");
             employeeCombo.requestFocus();
             return;
         }
         if (eq == null) {
-            ToastManager.show(this, FeedbackType.WARNING, "Por favor selecione o equipamento a atribuir.");
+            ToastManager.show(this, FeedbackType.WARNING, "Por favor seleccione o equipamento a atribuir.");
             equipmentCombo.requestFocus();
             return;
         }
 
         LocalDate delivery = assignedDateField.getDate();
         if (delivery == null) {
-            ToastManager.show(this, FeedbackType.WARNING, "Selecione uma data de entrega válida no calendário.");
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione uma data de entrega válida no calendário.");
             assignedDateField.requestFocus();
             return;
         }

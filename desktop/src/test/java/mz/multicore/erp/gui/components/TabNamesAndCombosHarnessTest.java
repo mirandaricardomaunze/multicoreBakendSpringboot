@@ -55,14 +55,14 @@ class TabNamesAndCombosHarnessTest {
         Assumptions.assumeTrue("Segoe UI".equals(font.getFamily()), "larguras validadas só com a fonte do Windows");
         FontMetrics metrics = new JPanel().getFontMetrics(font);
         List<List<String>> strips = List.of(
-                List.of("Log de Auditoria Geral", "Cópias de Segurança & Backups", "Utilizadores & Permissões",
+                List.of("Log de Auditoria Geral", "Cópias de Segurança e Integridade", "Utilizadores & Permissões",
                         "Colunas dos Documentos", "Suporte à Plataforma", "A Minha Assinatura", "Perfil de Actividade",
                         "Balança deste Posto", "Gaveta deste Posto"),
                 List.of("Faturas de Compra (V/FT)", "Reposição", "Encomendas a Fornecedor (EC-F)", "Contas a Pagar",
                         "Gestão de Fornecedores", "Gestão de Negócios", "Conta Corrente & Reconciliação"),
                 List.of("Níveis de Stock", "Alertas", "Lotes & Validades", "Movimentos & Rastreabilidade",
                         "Transferências entre Armazéns", "Quebras & Desperdício", "Inventário Físico", "Granel"),
-                List.of("Directório de Clientes", "Risco de Crédito & Cobrança (Aging)", "Conta Corrente & Reconciliação"));
+                List.of("Directório de Clientes", "Risco de Crédito & Cobrança (Antiguidade)", "Conta Corrente & Reconciliação"));
         for (List<String> strip : strips) {
             int total = strip.stream().mapToInt(t -> metrics.stringWidth(TabShortNames.of(t)) + TAB_CHROME).sum();
             assertThat(total).as("barra %s", strip.get(0)).isLessThanOrEqualTo(VALIDATED_WIDTH);

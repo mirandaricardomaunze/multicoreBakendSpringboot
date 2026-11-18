@@ -56,7 +56,7 @@ public class PosHeaderLayoutHarnessTest {
     }
 
     @Test
-    @DisplayName("OVERLAP-02: ActionMenuButton agrega Cotação, Fidelidade, Fechos Z, Sangria e Turno com <= 5 ações")
+    @DisplayName("OVERLAP-02: ActionMenuButton agrega Cotação, Fidelidade, Fechos Z, Sangria e Turno com <= 5 acções")
     void testOperationsMenuGroupsSecondaryActions() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             CurrentUserContext.setCurrentUser("operador.pos", "CAIXA");

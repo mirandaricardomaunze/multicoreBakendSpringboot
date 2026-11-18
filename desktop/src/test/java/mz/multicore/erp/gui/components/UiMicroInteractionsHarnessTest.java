@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("Harness de Micro-Interações e Transições Visuais")
+@DisplayName("Harness de Micro-Interacções e Transições Visuais")
 class UiMicroInteractionsHarnessTest {
 
     @Test

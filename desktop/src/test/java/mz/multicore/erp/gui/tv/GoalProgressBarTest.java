@@ -52,7 +52,7 @@ class GoalProgressBarTest {
     }
 
     @Test
-    @DisplayName("BusinessUnitGoalManager armazena seleção modular de unidades incluídas")
+    @DisplayName("BusinessUnitGoalManager armazena selecção modular de unidades incluídas")
     void businessUnitGoalManager_unitInclusionSelection() {
         Long testUnitId = 8888L;
         // Padrão é true

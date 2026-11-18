@@ -96,7 +96,7 @@ class ConfigPanelDecompositionHarnessTest {
         assertNotNull(tabbedPane, "JTabbedPane deve ser instanciado em ConfigPanel");
         assertEquals(6, tabbedPane.getTabCount(), "Todas as 6 abas de configuração devem estar presentes");
         assertEquals("Log de Auditoria Geral", tabbedPane.getTitleAt(0));
-        assertEquals("Cópias de Segurança & Backups", tabbedPane.getTitleAt(1));
+        assertEquals("Cópias de Segurança e Integridade", tabbedPane.getTitleAt(1));
         assertEquals("Utilizadores & Permissões", tabbedPane.getTitleAt(2));
         assertEquals("Colunas dos Documentos", tabbedPane.getTitleAt(3));
         assertEquals("Suporte à Plataforma", tabbedPane.getTitleAt(4));
@@ -123,19 +123,18 @@ class ConfigPanelDecompositionHarnessTest {
         for (java.awt.Component c : panel.getComponents()) {
             if (c instanceof JPanel bar && bar.getComponentCount() > 0) {
                 for (java.awt.Component child : bar.getComponents()) {
-                    if (child instanceof JButton btn) {
-                        String text = btn.getText();
-                        if (text != null) {
-                            if (text.contains("Diagnóstico & Saúde")) foundMonitor = true;
-                            if (text.contains("Tema:")) foundTheme = true;
-                            if (text.contains("Densidade:")) foundDensity = true;
-                        }
+                    if (child instanceof JButton btn && btn.getText() != null
+                            && btn.getText().contains("Diagnóstico e Saúde")) foundMonitor = true;
+                    if (child instanceof mz.multicore.erp.gui.components.SegmentedControl choice) {
+                        String name = choice.getAccessibleContext().getAccessibleName();
+                        if ("Tema".equals(name)) foundTheme = true;
+                        if ("Densidade".equals(name)) foundDensity = true;
                     }
                 }
             }
         }
 
-        assertTrue(foundMonitor, "Botão de Diagnóstico & Saúde deve existir na barra de aparência");
+        assertTrue(foundMonitor, "Botão de Diagnóstico e Saúde deve existir na barra de aparência");
         assertTrue(foundTheme, "Botão de alternância de Tema deve existir na barra de aparência");
         assertTrue(foundDensity, "Botão de alternância de Densidade deve existir na barra de aparência");
     }

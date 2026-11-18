@@ -41,7 +41,7 @@ final class StrategicPulseDataPresenter {
             int crit = forensic.criticalCount();
             int susp = forensic.suspiciousCount();
             if (crit == 0 && susp == 0) {
-                subLabel.setText("Nenhuma anomalia detetada");
+                subLabel.setText("Nenhuma anomalia detectada");
                 subLabel.setForeground(UIHelper.APPROVED_GREEN);
             } else {
                 subLabel.setText(crit + " críticas · " + susp + " suspeitas");
@@ -50,7 +50,7 @@ final class StrategicPulseDataPresenter {
         } else {
             scoreLabel.setText("100.0%");
             scoreLabel.setForeground(UIHelper.APPROVED_GREEN);
-            subLabel.setText("Sem anomalias ativas");
+            subLabel.setText("Sem anomalias activas");
             subLabel.setForeground(UIHelper.TEXT_MUTED);
         }
     }
@@ -71,7 +71,7 @@ final class StrategicPulseDataPresenter {
         } else {
             valLabel.setText("0,00 MT");
             valLabel.setForeground(UIHelper.TEXT_LIGHT);
-            subLabel.setText("Sem projeção disponível");
+            subLabel.setText("Sem projecção disponível");
             subLabel.setForeground(UIHelper.TEXT_MUTED);
         }
     }
@@ -110,7 +110,7 @@ final class StrategicPulseDataPresenter {
         } else {
             valLabel.setText("100.0%");
             valLabel.setForeground(UIHelper.APPROVED_GREEN);
-            subLabel.setText("Sem metas ativas no ciclo");
+            subLabel.setText("Sem metas activas no ciclo");
             subLabel.setForeground(UIHelper.TEXT_MUTED);
         }
     }

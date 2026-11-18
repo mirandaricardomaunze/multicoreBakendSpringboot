@@ -25,7 +25,7 @@ public final class ConfigBackupOperations {
 
     public static void applyAutoBackupStatus(JLabel statusLabel, BackupStatusDTO st) {
         if (statusLabel == null) return;
-        String base = st.autoEnabled() ? "Backup automático: ACTIVO (diário)" : "Backup automático: desativado";
+        String base = st.autoEnabled() ? "Cópia automática: activa (diária)" : "Cópia automática: desactivada";
         if (st.lastTime() == null) {
             statusLabel.setText(base + " — ainda sem execução nesta sessão.");
             statusLabel.setForeground(UIHelper.TEXT_MUTED);
@@ -39,7 +39,7 @@ public final class ConfigBackupOperations {
     public static void refreshAutoBackupStatus(ConfigPanel owner, JLabel statusLabel) {
         if (statusLabel == null) return;
         UIHelper.loadAsync(owner, owner.backupApiClient::status, st -> applyAutoBackupStatus(statusLabel, st),
-                error -> owner.showConfigError("estado do backup", error));
+                error -> owner.showConfigError("consultar o estado da cópia de segurança", error));
     }
 
     public static void loadBackupFilesList(ConfigPanel owner, DefaultTableModel filesModel) {
@@ -56,8 +56,8 @@ public final class ConfigBackupOperations {
     }
 
     public static void runAutoBackupNow(ConfigPanel owner, JTextArea logArea, JLabel statusLabel, DefaultTableModel filesModel) {
-        if (!SignedInUser.isAdmin()) { ToastManager.show(owner, FeedbackType.WARNING, "Apenas administradores podem executar o backup."); return; }
-        UIHelper.runWithProgress(owner, "A executar backup automático…", () -> owner.backupApiClient.runAuto(), res -> {
+        if (!SignedInUser.isAdmin()) { ToastManager.show(owner, FeedbackType.WARNING, "Apenas administradores podem fazer cópias de segurança."); return; }
+        UIHelper.runWithProgress(owner, "A executar a cópia automática…", () -> owner.backupApiClient.runAuto(), res -> {
             appendLog(logArea, (res.success() ? "[OK] " : "[FALHA] ") + res.message());
             refreshAutoBackupStatus(owner, statusLabel);
             loadBackupFilesList(owner, filesModel);
@@ -66,9 +66,9 @@ public final class ConfigBackupOperations {
 
     public static void runManualBackup(ConfigPanel owner, JTextArea logArea, DefaultTableModel filesModel) {
         if (!SignedInUser.isAdmin()) { ToastManager.show(owner, FeedbackType.ERROR, "Apenas administradores podem iniciar cópias manuais."); return; }
-        appendLog(logArea, ">> A iniciar backup manual (" + CurrentUserContext.getUsername() + ")...");
+        appendLog(logArea, ">> A iniciar cópia manual (" + CurrentUserContext.getUsername() + ")...");
         UIHelper.runWithProgress(owner, "A efectuar cópia de segurança…", owner.backupApiClient::executeBackup, path -> {
-            appendLog(logArea, ">> Backup concluído com sucesso!\n>> Destino: " + path);
+            appendLog(logArea, ">> Cópia concluída com sucesso!\n>> Destino: " + path);
             ToastManager.success(owner, "Cópia de segurança gravada com sucesso em: " + path);
             loadBackupFilesList(owner, filesModel);
             owner.loadAuditLogs();
@@ -80,30 +80,30 @@ public final class ConfigBackupOperations {
 
     public static void runPhysicalBackup(ConfigPanel owner, JTextArea logArea) {
         if (!SignedInUser.isAdmin()) { ToastManager.show(owner, FeedbackType.ERROR, "Apenas administradores podem gerar backups físicos."); return; }
-        appendLog(logArea, ">> A iniciar backup físico da base de dados (" + CurrentUserContext.getUsername() + ")...");
-        UIHelper.runWithProgress(owner, "A gerar backup físico da base de dados…", owner.backupApiClient::executePhysical, result -> {
-            appendLog(logArea, ">> Backup físico concluído!\n>> Destino: " + result.filePath() + "\n>> Base de dados: " + result.database() + " (" + (result.sizeBytes() / 1024) + " KB)");
-            ToastManager.success(owner, "Backup físico restaurável gravado em: " + result.filePath());
+        appendLog(logArea, ">> A iniciar cópia física da base de dados (" + CurrentUserContext.getUsername() + ")...");
+        UIHelper.runWithProgress(owner, "A gerar cópia física da base de dados…", owner.backupApiClient::executePhysical, result -> {
+            appendLog(logArea, ">> Cópia física concluída!\n>> Destino: " + result.filePath() + "\n>> Base de dados: " + result.database() + " (" + (result.sizeBytes() / 1024) + " KB)");
+            ToastManager.success(owner, "Cópia física restaurável gravada em: " + result.filePath());
             owner.loadAuditLogs();
         }, error -> {
             appendLog(logArea, ">> ERRO: " + error.getMessage());
-            mz.multicore.erp.gui.components.UserErrors.toast(owner, "gerar backup físico", error);
+            mz.multicore.erp.gui.components.UserErrors.toast(owner, "gerar a cópia física", error);
         });
     }
 
     public static void verifySelectedBackup(ConfigPanel owner, JTextArea logArea, JTable table, DefaultTableModel model) {
         if (!SignedInUser.isAdmin()) { ToastManager.show(owner, FeedbackType.ERROR, "Apenas administradores podem verificar cópias."); return; }
         int row = table != null ? mz.multicore.erp.gui.components.TableFilter.selectedModelRow(table) : -1;
-        if (row < 0) { ToastManager.show(owner, FeedbackType.WARNING, "Seleccione um ficheiro de backup no arquivo."); return; }
+        if (row < 0) { ToastManager.show(owner, FeedbackType.WARNING, "Seleccione uma cópia no arquivo."); return; }
         String fileName = String.valueOf(model.getValueAt(row, 0));
-        appendLog(logArea, ">> A verificar backup: " + fileName);
+        appendLog(logArea, ">> A verificar cópia: " + fileName);
         UIHelper.runWithProgress(owner, "A verificar cópia de segurança…", () -> owner.backupApiClient.verify(fileName), verification -> {
             appendLog(logArea, ">> " + BackupFileLabels.verificationSummary(verification));
-            ToastManager.success(owner, "Backup verificado com sucesso. Ficheiro: " + verification.fileName());
+            ToastManager.success(owner, "Cópia verificada com sucesso. Ficheiro: " + verification.fileName());
             owner.loadAuditLogs();
         }, error -> {
             appendLog(logArea, ">> ERRO DE VERIFICAÇÃO: " + error.getMessage());
-            owner.showConfigError("verificação do backup", error);
+            owner.showConfigError("verificar a cópia de segurança", error);
         });
     }
 

@@ -299,10 +299,10 @@ final class UiThemeAndWindowSupport {
             UIManager.put("ComboBox.borderColor", UIHelper.BORDER);
             UIManager.put("ComboBox.focusedBorderColor", UIHelper.ACCENT);
             UIManager.put("ComboBox.buttonStyle", "none");
-            UIManager.put("ComboBox.arrowType", "chevron");
+            UIManager.put("ComboBox.arrowType", "chevron"); // the arrow sits on the field colour in every theme (no grey box)
+            for (String k : new String[]{"ComboBox.buttonBackground", "ComboBox.buttonEditableBackground", "ComboBox.buttonSeparatorColor"}) UIManager.put(k, UIHelper.FIELD_BG);
             UIManager.put("Spinner.borderColor", UIHelper.BORDER);
             UIManager.put("Spinner.focusedBorderColor", UIHelper.ACCENT);
-
             UIManager.put("ScrollBar.showButtons", false);
             UIManager.put("ScrollBar.width", 10);
             UIManager.put("ScrollBar.thumbArc", 10);

@@ -79,7 +79,7 @@ final class HRAbsenceFormDialog {
                 SwingUtilities.getWindowAncestor(owner),
                 FeedbackType.WARNING,
                 "Eliminar Falta",
-                "Tem certeza que deseja eliminar a falta selecionada?",
+                "Tem certeza que deseja eliminar a falta seleccionada?",
                 "Eliminar");
         if (!confirmed) return;
         UIHelper.runWithProgress(owner, "A eliminar falta…", () -> {

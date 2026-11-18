@@ -22,7 +22,7 @@ class StockBatchesPanelDecompositionHarnessTest {
         Path path = ROOT.resolve("StockBatchesPanel.java");
         List<String> lines = Files.readAllLines(path);
         assertTrue(lines.size() <= 165,
-                () -> "StockBatchesPanel.java deve possuir <= 165 linhas. Atual: " + lines.size());
+                () -> "StockBatchesPanel.java deve possuir <= 165 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -31,7 +31,7 @@ class StockBatchesPanelDecompositionHarnessTest {
         Path coord = ROOT.resolve("StockBatchesViewCoordinator.java");
         List<String> lines = Files.readAllLines(coord);
         assertTrue(lines.size() <= 140,
-                () -> "StockBatchesViewCoordinator.java deve possuir <= 140 linhas. Atual: " + lines.size());
+                () -> "StockBatchesViewCoordinator.java deve possuir <= 140 linhas. Actual: " + lines.size());
     }
 
     @Test

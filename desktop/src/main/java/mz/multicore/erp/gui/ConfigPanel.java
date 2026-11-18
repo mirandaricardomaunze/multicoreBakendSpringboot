@@ -84,7 +84,7 @@ public class ConfigPanel extends JPanel {
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
 
         tabbedPane.addTab("Log de Auditoria Geral", UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE), createAuditTab());
-        tabbedPane.addTab("Cópias de Segurança & Backups", UIHelper.icon("fas-database", 16, UIHelper.ACCENT_CYAN), backupsPanel.buildPanel());
+        tabbedPane.addTab("Cópias de Segurança e Integridade", UIHelper.icon("fas-database", 16, UIHelper.ACCENT_CYAN), backupsPanel.buildPanel());
         tabbedPane.addTab("Utilizadores & Permissões", UIHelper.icon("fas-user-shield", 16, UIHelper.ACCENT), createUsersTab());
         tabbedPane.addTab("Colunas dos Documentos", UIHelper.icon("fas-table", 16, UIHelper.PENDING_YELLOW), columnsPanel.buildPanel());
         tabbedPane.addTab("Suporte à Plataforma", UIHelper.icon("fas-headset", 16, UIHelper.ACCENT_SKY), supportPanel.buildPanel());
@@ -101,49 +101,33 @@ public class ConfigPanel extends JPanel {
     }
 
     private JPanel buildAppearanceBar() {
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, Spacing.SM, Spacing.XS));
         bar.setOpaque(false);
 
-        JLabel label = new JLabel("Aparência:");
-        label.setForeground(UIHelper.TEXT_LIGHT);
-        bar.add(label);
-
-        ModernButton monitorBtn = new ModernButton("Diagnóstico & Saúde", UIHelper.ACCENT_CYAN, UIHelper.ACCENT_CYAN.darker());
-        monitorBtn.setIcon(UIHelper.icon("fas-heartbeat", 14, Color.WHITE));
+        ModernButton monitorBtn = UIHelper.createSecondaryButton("Diagnóstico e Saúde");
+        monitorBtn.setIcon(UIHelper.icon("fas-heartbeat", 14));
         monitorBtn.addActionListener(e -> new SystemMonitoringDialog(SwingUtilities.getWindowAncestor(this), monitoringApiClient).show());
         bar.add(monitorBtn);
 
-        ModernButton themeBtn = UIHelper.createSecondaryButton(themeButtonLabel());
-        themeBtn.setIcon(UIHelper.icon(themeButtonIcon(), 14));
-        themeBtn.addActionListener(e -> {
-            UIHelper.cycleTheme();
-            themeBtn.setText(themeButtonLabel());
-            themeBtn.setIcon(UIHelper.icon(themeButtonIcon(), 14));
-        });
-        bar.add(themeBtn);
+        // Every choice visible and picked directly (docs/ECRAS_FORA_DA_REGRA_SPEC.md); both rebuild the window.
+        Theme[] themes = {Theme.LIGHT, Theme.DARK, Theme.HIGH_CONTRAST};
+        bar.add(caption("Tema:"));
+        bar.add(SegmentedControl.of("Tema", new String[]{"Claro", "Escuro", "Alto contraste"},
+                java.util.Arrays.asList(themes).indexOf(UIHelper.currentTheme()), i -> UIHelper.setTheme(themes[i])));
 
-        ModernButton densityBtn = UIHelper.createSecondaryButton(densityButtonLabel());
-        densityBtn.setIcon(UIHelper.icon("fas-text-height", 14));
-        densityBtn.addActionListener(e -> {
-            UiDensityManager.getInstance().cycleDensity();
-            densityBtn.setText(densityButtonLabel());
-        });
-        bar.add(densityBtn);
+        UiDensity[] densities = {UiDensity.COMPACT, UiDensity.STANDARD, UiDensity.COMFORTABLE};
+        bar.add(caption("Densidade:"));
+        bar.add(SegmentedControl.of("Densidade", new String[]{"Compacto", "Padrão", "Confortável"},
+                java.util.Arrays.asList(densities).indexOf(UiDensityManager.getInstance().getDensity()),
+                i -> UiDensityManager.getInstance().setDensity(densities[i])));
         return bar;
     }
 
-    private String densityButtonLabel() {
-        return "Densidade: " + UiDensityManager.getInstance().getDensity().getLabel().split(" ")[0];
-    }
-
-    private String themeButtonLabel() {
-        if (UIHelper.isHighContrast()) return "Tema: Alto Contraste (Clique p/ Escuro)";
-        return UIHelper.isLight() ? "Tema: Claro (Clique p/ Alto Contraste)" : "Tema: Escuro (Clique p/ Claro)";
-    }
-
-    private String themeButtonIcon() {
-        if (UIHelper.isHighContrast()) return "fas-adjust";
-        return UIHelper.isLight() ? "fas-moon" : "fas-sun";
+    private static JLabel caption(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(Typography.BODY_BOLD);
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
     }
 
     private JPanel createAuditTab() {
@@ -155,7 +139,7 @@ public class ConfigPanel extends JPanel {
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(Spacing.XL, Spacing.XL, Spacing.XL, Spacing.XL));
 
-        String[] cols = {"Data/Hora", "Utilizador", "Ação", "Detalhes do Evento"};
+        String[] cols = {"Data/Hora", "Utilizador", "Acção", "Detalhes do Evento"};
         auditTableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -165,7 +149,7 @@ public class ConfigPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(auditTable);
         UIHelper.styleScrollPane(scroll);
 
-        JTextField auditSearch = TableFilter.searchField("Utilizador, ação ou detalhe…");
+        JTextField auditSearch = TableFilter.searchField("Utilizador, acção ou detalhe…");
         JComboBox<String> auditPeriodo = TableFilter.periodCombo();
         TableFilter.install(auditTable, auditSearch,
                 List.of(),

@@ -100,7 +100,7 @@ public class CashFlowProjectionCalculator {
         if (firstDeficitBucket == null) {
             return new CashFlowAlertDTO(
                     "HEALTHY",
-                    "Posição de liquidez saudável sem projeção de défice no horizonte de 60 dias.",
+                    "Posição de liquidez saudável sem projecção de défice no horizonte de 60 dias.",
                     null,
                     BigDecimal.ZERO,
                     "Manter ritmo corrente de cobranças e conciliações bancárias periódicas."
@@ -109,7 +109,7 @@ public class CashFlowProjectionCalculator {
         boolean isImmediate = "Vencido".equals(firstDeficitBucket) || "Hoje".equals(firstDeficitBucket)
                 || "1-7 Dias".equals(firstDeficitBucket) || "8-15 Dias".equals(firstDeficitBucket);
         String status = isImmediate ? "CRITICAL" : "WARNING";
-        String msg = String.format(DisplayLocale.NUMBERS, "Atenção: Projeção de défice de caixa de %,.2f MT com início no período '%s'.",
+        String msg = String.format(DisplayLocale.NUMBERS, "Atenção: Projecção de défice de caixa de %,.2f MT com início no período '%s'.",
                 maxDeficit, firstDeficitBucket);
         String rec = isImmediate
                 ? "Acelerar cobrança urgente de faturas vencidas e renegociar pagamentos imediatos a fornecedores."

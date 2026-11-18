@@ -23,7 +23,7 @@ class StockAlertsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "StockAlertsPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 165, "StockAlertsPanel.java deve possuir <= 165 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 165, "StockAlertsPanel.java deve possuir <= 165 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -36,7 +36,7 @@ class StockAlertsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "StockAlertsViewCoordinator.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 130, "StockAlertsViewCoordinator.java deve possuir <= 130 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 130, "StockAlertsViewCoordinator.java deve possuir <= 130 linhas. Actual: " + lines.size());
     }
 
     @Test

@@ -42,7 +42,7 @@ public class CashFlowForecastService {
 
     @Transactional(readOnly = true)
     public CashFlowForecastDTO generateForecastForCompany(Long companyId, LocalDate referenceDate) {
-        PermissionGuard.requireManagerOrAdmin("consultar projeção previsional de fluxo de caixa");
+        PermissionGuard.requireManagerOrAdmin("consultar projecção previsional de fluxo de caixa");
         LocalDate today = referenceDate != null ? referenceDate : LocalDate.now();
         return projectionCalculator.calculate(today, dataCollector.collect(companyId, today));
     }

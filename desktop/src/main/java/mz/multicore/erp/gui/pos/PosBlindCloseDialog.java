@@ -21,7 +21,7 @@ import java.awt.*;
 import java.math.BigDecimal;
 
 /**
- * Diálogo modal para fecho cego de caixa (Blind Drop), contagem física discriminada
+ * Diálogo modal para fecho cego de caixa, contagem física discriminada
  * por notas e moedas de Meticais (MZN), apuramento de divergência e emissão do Relatório Z.
  * Delega contagem para {@link PosCashBreakdownPanel} e resultado para {@link PosBlindCloseResultPanel}.
  */
@@ -59,7 +59,7 @@ public class PosBlindCloseDialog extends JDialog {
                 session.operator() != null ? session.operator() : "—",
                 session.id(),
                 session.openingBalance() != null ? session.openingBalance() : BigDecimal.ZERO);
-        setContentPane(DialogChrome.frame("fas-cash-register", "Fecho Cego de Caixa (Blind Drop)", subtitle,
+        setContentPane(DialogChrome.frame("fas-cash-register", "Fecho Cego de Caixa", subtitle,
                 createContentPanel(), createFooterPanel()));
 
         breakdownPanel.recalculate();
@@ -122,8 +122,7 @@ public class PosBlindCloseDialog extends JDialog {
         btnConfirm.setIcon(UIHelper.icon("fas-lock", 13));
         btnConfirm.addActionListener(e -> executeClose());
 
-        btnCancel = ButtonStyles.secondary(UIHelper.createDangerButton("Cancelar / Voltar"));
-        btnCancel.setIcon(UIHelper.icon("fas-times", 13));
+        btnCancel = ButtonStyles.cancelButton();
         btnCancel.addActionListener(e -> dispose());
 
         return DialogChrome.footer(btnCancel, btnPrintZ, btnConfirm);

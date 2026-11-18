@@ -43,7 +43,7 @@ public class UserManagementPanel extends JPanel {
         JPanel kpiGrid = KpiCard.createGrid(4);
         kpiGrid.add(KpiCard.createCard("Total Utilizadores", totalUsersKpi = new JLabel("0"), "Operadores registados", "fas-users", UIHelper.ACCENT_BLUE));
         kpiGrid.add(KpiCard.createCard("Gestores / Admin", totalManagersKpi = new JLabel("0"), "Com alçadas elevadas", "fas-user-tie", UIHelper.ACCENT_CYAN));
-        kpiGrid.add(KpiCard.createCard("Utilizadores Ativos", activeUsersKpi = new JLabel("0"), "Contas em operação", "fas-user-check", UIHelper.APPROVED_GREEN));
+        kpiGrid.add(KpiCard.createCard("Utilizadores Activos", activeUsersKpi = new JLabel("0"), "Contas em operação", "fas-user-check", UIHelper.APPROVED_GREEN));
         kpiGrid.add(KpiCard.createCard("PINs de Gestor", pinsConfiguredKpi = new JLabel("0"), "Para autorização rápida", "fas-key", UIHelper.ACCENT_ORANGE));
         add(kpiGrid, BorderLayout.NORTH);
 
@@ -63,7 +63,7 @@ public class UserManagementPanel extends JPanel {
                 .addAction("Editar", UIHelper.icon("fas-user-edit", 14), () -> UserOperationsCoordinator.openEditDialog(this, userApiClient, getSelectedUser(), this::refreshDataAsync))
                 .addAction("PIN Gestor", UIHelper.icon("fas-key", 14), () -> UserOperationsCoordinator.openSetPinDialog(this, userApiClient, getSelectedUser(), this::refreshDataAsync))
                 .addAction("Redefinir Senha", UIHelper.icon("fas-lock", 14), () -> UserOperationsCoordinator.openResetPassword(this, userApiClient, getSelectedUser(), this::refreshDataAsync))
-                .addAction("Ativar / Desativar", UIHelper.icon("fas-power-off", 14), () -> UserOperationsCoordinator.toggleStatus(this, userApiClient, getSelectedUser(), this::refreshDataAsync));
+                .addAction("Activar / Desactivar", UIHelper.icon("fas-power-off", 14), () -> UserOperationsCoordinator.toggleStatus(this, userApiClient, getSelectedUser(), this::refreshDataAsync));
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshDataAsync);
 

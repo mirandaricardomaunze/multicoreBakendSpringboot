@@ -23,7 +23,7 @@ class ConfigBackupsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "ConfigBackupsPanel.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 115, "ConfigBackupsPanel.java deve possuir <= 115 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 115, "ConfigBackupsPanel.java deve possuir <= 115 linhas. Actual: " + lines.size());
     }
 
     @Test
@@ -36,7 +36,7 @@ class ConfigBackupsPanelDecompositionHarnessTest {
         assertTrue(Files.exists(path), "ConfigBackupOperations.java deve existir");
 
         List<String> lines = Files.readAllLines(path);
-        assertTrue(lines.size() <= 125, "ConfigBackupOperations.java deve possuir <= 125 linhas. Atual: " + lines.size());
+        assertTrue(lines.size() <= 125, "ConfigBackupOperations.java deve possuir <= 125 linhas. Actual: " + lines.size());
     }
 
     @Test

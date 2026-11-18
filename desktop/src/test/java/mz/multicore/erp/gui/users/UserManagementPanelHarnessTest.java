@@ -22,7 +22,7 @@ class UserManagementPanelHarnessTest {
     }
 
     @Test
-    @DisplayName("GUP-07: UserManagementPanel instancia componentes e tabela sem exceções em headless")
+    @DisplayName("GUP-07: UserManagementPanel instancia componentes e tabela sem excepções em headless")
     void testUserManagementPanelHeadlessInstantiation() {
         UserApiClient userApiClient = Mockito.mock(UserApiClient.class);
         when(userApiClient.getAllUsers()).thenReturn(List.of(

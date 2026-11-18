@@ -13,7 +13,7 @@ public final class TabShortNames {
     private static final Map<String, String> SHORT = Map.ofEntries(
             // Configurações
             Map.entry("Log de Auditoria Geral", "Auditoria"),
-            Map.entry("Cópias de Segurança & Backups", "Cópias de Segurança"),
+            Map.entry("Cópias de Segurança e Integridade", "Cópias de Segurança"),
             Map.entry("Utilizadores & Permissões", "Utilizadores"),
             Map.entry("Colunas dos Documentos", "Documentos"),
             Map.entry("Suporte à Plataforma", "Suporte"),
@@ -37,10 +37,10 @@ public final class TabShortNames {
             Map.entry("Validade (expirados / a expirar)", "Validade"),
             // Clientes
             Map.entry("Directório de Clientes", "Directório"),
-            Map.entry("Risco de Crédito & Cobrança (Aging)", "Risco & Cobrança"),
+            Map.entry("Risco de Crédito & Cobrança (Antiguidade)", "Risco & Cobrança"),
             // Tesouraria
             Map.entry("Reconciliação Bancária", "Reconciliação"),
-            Map.entry("Projeção Previsional", "Previsão"),
+            Map.entry("Projecção Previsional", "Previsão"),
             // Plataforma
             Map.entry("Assinaturas & Pagamentos", "Assinaturas"),
             Map.entry("Versões dos Clientes", "Versões"),

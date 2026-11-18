@@ -108,10 +108,10 @@ public class PosCheckoutAndPaymentService {
 
         if (priceGuard != null) priceGuard.requireAuthorized(request);
         TillSession session = sessionAndShiftService.getActiveSession(request.operator(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Deverá abrir uma sessão de caixa antes de efetuar vendas no POS."));
+                .orElseThrow(() -> new BusinessRuleException("Deverá abrir uma sessão de caixa antes de efectuar vendas no POS."));
         Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+            throw new BusinessRuleException("O armazém não pertence à empresa activa.");
         }
         Company company = companyLookup.require(request.companyId());
 
@@ -121,7 +121,7 @@ public class PosCheckoutAndPaymentService {
             client = clientLookup.requireForCompany(request.clientId(), request.companyId());
         } else {
             if (request.walkInName() == null || request.walkInName().trim().isBlank()) {
-                throw new BusinessRuleException("É obrigatório indicar o nome do cliente para efetuar a venda no POS.");
+                throw new BusinessRuleException("É obrigatório indicar o nome do cliente para efectuar a venda no POS.");
             }
             client = walkInClientProvider.getOrCreate();
             walkInLabel = request.walkInName().trim();
@@ -135,7 +135,7 @@ public class PosCheckoutAndPaymentService {
         invoice.setClient(client);
         String resolvedCustomerName = walkInLabel != null ? walkInLabel : client.getName();
         if (resolvedCustomerName == null || resolvedCustomerName.trim().isBlank()) {
-            throw new BusinessRuleException("É obrigatório indicar o nome do cliente para efetuar a venda no POS.");
+            throw new BusinessRuleException("É obrigatório indicar o nome do cliente para efectuar a venda no POS.");
         }
         invoice.setCustomerName(resolvedCustomerName.trim());
         invoice.setCompany(company);

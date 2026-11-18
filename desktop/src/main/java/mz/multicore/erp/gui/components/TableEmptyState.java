@@ -37,6 +37,7 @@ public final class TableEmptyState {
     static final String EMPTY_FILTERS = "emptyState.filters";
     static final String CLEAR_FILTERS = "Limpar filtros";
     static final String LOADING_TEXT = "A carregar…";
+    static final String FILTERED_TEXT = "Nenhum resultado com estes filtros.";
 
     private TableEmptyState() {}
 
@@ -73,6 +74,10 @@ public final class TableEmptyState {
         };
         table.getModel().addTableModelListener(e -> refreshAfterSwingUpdate.run());
         table.addPropertyChangeListener(TableLoadingState.COUNT, e -> refresh.run());
+        // The card header links its action, filters and wording after the table first painted: show them at once.
+        for (String key : new String[]{EMPTY_ACTION, EMPTY_FILTERS, EMPTY_TEXT, EMPTY_SUBTEXT}) {
+            table.addPropertyChangeListener(key, e -> refresh.run());
+        }
         table.addPropertyChangeListener("model", e -> {
             table.getModel().addTableModelListener(ev -> refreshAfterSwingUpdate.run());
             refreshAfterSwingUpdate.run();
@@ -224,6 +229,7 @@ public final class TableEmptyState {
 
     /** Título do estado vazio: client-property {@code emptyText} da tabela, ou "Sem registos.". */
     static String resolveText(JTable table) {
+        if (table.getModel().getRowCount() > 0) return FILTERED_TEXT; // rows exist, the filters hide them all
         Object v = table.getClientProperty(EMPTY_TEXT);
         return (v instanceof String s && !s.isBlank()) ? s : "Sem registos.";
     }

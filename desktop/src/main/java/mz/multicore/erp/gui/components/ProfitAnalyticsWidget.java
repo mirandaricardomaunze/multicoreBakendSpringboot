@@ -76,7 +76,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         posBox.add(posLabel, BorderLayout.NORTH);
         posBox.add(posBar, BorderLayout.CENTER);
 
-        invoiceLabel = new JLabel("Faturação Direta: 0,00 MT (0%)");
+        invoiceLabel = new JLabel("Faturação Directa: 0,00 MT (0%)");
         invoiceLabel.setFont(Typography.CAPTION);
         invoiceLabel.setForeground(UIHelper.TEXT_MUTED);
         invoiceBar = createProgressBar(new Color(139, 92, 246));
@@ -131,7 +131,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         posLabel.setText(String.format("Vendas POS Balcão: %,.2f MT (%d%%)", metrics.posRevenue(), posPct));
 
         invoiceBar.setValue(invPct);
-        invoiceLabel.setText(String.format("Faturação Direta: %,.2f MT (%d%%)", metrics.invoiceRevenue(), invPct));
+        invoiceLabel.setText(String.format("Faturação Directa: %,.2f MT (%d%%)", metrics.invoiceRevenue(), invPct));
     }
 
     private void styleMarginBadge(boolean healthy) {
