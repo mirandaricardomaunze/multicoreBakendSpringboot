@@ -62,7 +62,7 @@ class StockInTransitOverdueAlertHarnessTest {
         assertEquals("Stock em Trânsito", alert.type());
         assertTrue(alert.title().contains("TRF-2026/02"));
         assertTrue(alert.title().contains("2 dias"));
-        assertTrue(alert.detail().contains("Depósito Central → Loja Matola"));
+        assertTrue(alert.detail().contains("Depósito Central › Loja Matola"));
         assertTrue(alert.detail().contains("Carlos Motorista"));
         assertEquals(2, alert.priority(), "Atraso de 2 dias deve ter prioridade 2 (Atenção).");
 
