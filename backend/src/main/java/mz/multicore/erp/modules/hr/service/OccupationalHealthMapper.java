@@ -6,6 +6,9 @@ import mz.multicore.erp.modules.hr.model.OccupationalHealthExam;
 
 import java.time.LocalDate;
 
+/**
+ * Maps occupational health exams to their DTOs and derives the status and provider description shown on screen.
+ */
 final class OccupationalHealthMapper {
 
     private OccupationalHealthMapper() {}

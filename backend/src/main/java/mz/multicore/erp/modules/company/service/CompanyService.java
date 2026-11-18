@@ -10,6 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Company records and the switch of the active company, which checks the user's access to the target company
+ * first.
+ */
 @Service
 public class CompanyService {
 

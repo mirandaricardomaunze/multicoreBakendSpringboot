@@ -23,6 +23,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Supplier payables and their payment through treasury. A payment needs a treasury account and a positive amount
+ * within the open balance; cancelled or fully paid purchases accept no payment.
+ */
 @Service
 public class SupplierPaymentService {
     private final PurchaseRepository purchaseRepository;

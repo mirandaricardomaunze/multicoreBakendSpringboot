@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.accounting.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,8 +22,8 @@ class AccountingReportServiceDecompositionHarnessTest {
         assertFalse(facade.contains("AccountNature.DEVEDORA"));
         assertTrue(ledger.contains("totalDebit.compareTo(totalCredit) == 0"));
         assertTrue(statements.contains("totalAssets.compareTo(totalEquityAndLiabilities) == 0"));
-        assertTrue(Files.readAllLines(DIR.resolve("AccountingReportService.java")).size() <= 65);
-        assertTrue(Files.readAllLines(DIR.resolve("LedgerAndTrialBalanceCalculator.java")).size() <= 145);
-        assertTrue(Files.readAllLines(DIR.resolve("FinancialStatementBuilder.java")).size() <= 90);
+        assertTrue(SourceLines.code(DIR.resolve("AccountingReportService.java")) <= 65);
+        assertTrue(SourceLines.code(DIR.resolve("LedgerAndTrialBalanceCalculator.java")) <= 145);
+        assertTrue(SourceLines.code(DIR.resolve("FinancialStatementBuilder.java")) <= 90);
     }
 }

@@ -42,6 +42,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
+/**
+ * Issues and cancels invoices: resolves prices, takes the stock out of the warehouse, numbers the document and
+ * publishes the sale for treasury and accounting. Line discounts must be between 0 and 100 percent and an
+ * invoice restricted to a business line only accepts that line's products. Cancelling an invoice billed from a
+ * delivery guide does not return stock, because the goods were already delivered.
+ */
 @Component
 public class ComercialInvoiceLifecycleService {
 

@@ -16,6 +16,11 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Runs the periodic billing of the active company's due contracts: records a billing log entry with a reference
+ * number, moves the next billing date forward and expires contracts past their end that do not auto-renew. A
+ * failing contract is reported without stopping the batch. It does not issue an invoice document.
+ */
 @Component
 public class RecurringBatchBillingProcessor {
 

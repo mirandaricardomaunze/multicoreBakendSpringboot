@@ -33,6 +33,11 @@ import java.util.Set;
 import static mz.multicore.erp.modules.comercial.service.DeliveryGuideQueryService.blankToNull;
 import static mz.multicore.erp.modules.comercial.service.DeliveryGuideQueryService.toDTO;
 
+/**
+ * Issues delivery guides ("guias de remessa"), standalone or from an order. A guide needs the carrier and the
+ * vehicle, at least one product with a positive quantity and no repeated products; the order is locked so a
+ * guide and an invoice cannot both take the same unbilled quantities.
+ */
 @Service
 public class DeliveryGuideCreationService {
     private final DeliveryGuideRepository guideRepository;

@@ -12,6 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Single entry point for invoice installments: plans are built by {@link InstallmentPlanGenerator} and payments
+ * allocated by {@link InstallmentPaymentAmortizer}.
+ */
 @Service
 public class InvoiceInstallmentService {
 

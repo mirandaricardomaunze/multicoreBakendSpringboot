@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.pos.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
@@ -44,11 +46,11 @@ class POSServiceDecompositionHarnessTest {
         verify(zReportCalculator).buildZReport(5L);
 
         Path base = findModuleRoot().resolve("src/main/java/mz/multicore/erp/modules/pos/service");
-        int facadeLines = Files.readAllLines(base.resolve("POSService.java")).size();
-        int sessionLines = Files.readAllLines(base.resolve("PosSessionAndShiftService.java")).size();
-        int zReportLines = Files.readAllLines(base.resolve("PosZReportCalculator.java")).size();
-        int checkoutLines = Files.readAllLines(base.resolve("PosCheckoutAndPaymentService.java")).size();
-        int returnLines = Files.readAllLines(base.resolve("PosReturnAndVoucherService.java")).size();
+        int facadeLines = SourceLines.code(base.resolve("POSService.java"));
+        int sessionLines = SourceLines.code(base.resolve("PosSessionAndShiftService.java"));
+        int zReportLines = SourceLines.code(base.resolve("PosZReportCalculator.java"));
+        int checkoutLines = SourceLines.code(base.resolve("PosCheckoutAndPaymentService.java"));
+        int returnLines = SourceLines.code(base.resolve("PosReturnAndVoucherService.java"));
 
         assertTrue(facadeLines <= 280, "POSService deve ter <= 280 linhas, mas tem " + facadeLines);
         assertTrue(sessionLines <= 225, "PosSessionAndShiftService deve ter <= 225 linhas, mas tem " + sessionLines);

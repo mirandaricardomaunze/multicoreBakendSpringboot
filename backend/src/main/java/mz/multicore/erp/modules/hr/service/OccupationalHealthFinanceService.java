@@ -28,6 +28,10 @@ import java.util.Map;
 import static mz.multicore.erp.modules.hr.service.OccupationalHealthMapper.describeProvider;
 import static mz.multicore.erp.modules.hr.service.OccupationalHealthMapper.toDTO;
 
+/**
+ * Money side of occupational health exams: the providers that can be paid, paying an exam through treasury and
+ * the cost report for a period.
+ */
 @Service
 public class OccupationalHealthFinanceService {
     private final OccupationalHealthExamRepository repository;

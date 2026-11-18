@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.crm.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +54,6 @@ class CRMServiceDecompositionHarnessTest {
     }
 
     private long countLines(Path path) throws IOException {
-        List<String> lines = Files.readAllLines(path);
-        return lines.size();
+        return SourceLines.code(path);
     }
 }

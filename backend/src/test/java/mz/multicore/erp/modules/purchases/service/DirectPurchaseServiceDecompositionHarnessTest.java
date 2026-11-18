@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.purchases.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,8 +22,8 @@ class DirectPurchaseServiceDecompositionHarnessTest {
         assertFalse(facade.contains("PurchaseRegisteredEvent"));
         assertTrue(registration.contains("PurchaseRegisteredEvent"));
         assertTrue(query.contains("new PurchaseDTO("));
-        assertTrue(Files.readAllLines(DIR.resolve("DirectPurchaseService.java")).size() <= 85);
-        assertTrue(Files.readAllLines(DIR.resolve("DirectPurchaseRegistrationService.java")).size() <= 145);
-        assertTrue(Files.readAllLines(DIR.resolve("DirectPurchaseQueryService.java")).size() <= 75);
+        assertTrue(SourceLines.code(DIR.resolve("DirectPurchaseService.java")) <= 85);
+        assertTrue(SourceLines.code(DIR.resolve("DirectPurchaseRegistrationService.java")) <= 145);
+        assertTrue(SourceLines.code(DIR.resolve("DirectPurchaseQueryService.java")) <= 75);
     }
 }

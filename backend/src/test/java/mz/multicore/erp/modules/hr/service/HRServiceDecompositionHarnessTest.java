@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -36,11 +38,11 @@ class HRServiceDecompositionHarnessTest {
         verify(absenceVacationService).getAllAbsences();
 
         Path base = findModuleRoot().resolve("src/main/java/mz/multicore/erp/modules/hr/service");
-        int facadeLines = Files.readAllLines(base.resolve("HRService.java")).size();
-        int empLines = Files.readAllLines(base.resolve("HrEmployeeManagementService.java")).size();
-        int issuanceLines = Files.readAllLines(base.resolve("HrPayslipIssuanceService.java")).size();
-        int lifecycleLines = Files.readAllLines(base.resolve("HrPayslipLifecycleService.java")).size();
-        int absVacLines = Files.readAllLines(base.resolve("HrAbsenceAndVacationService.java")).size();
+        int facadeLines = SourceLines.code(base.resolve("HRService.java"));
+        int empLines = SourceLines.code(base.resolve("HrEmployeeManagementService.java"));
+        int issuanceLines = SourceLines.code(base.resolve("HrPayslipIssuanceService.java"));
+        int lifecycleLines = SourceLines.code(base.resolve("HrPayslipLifecycleService.java"));
+        int absVacLines = SourceLines.code(base.resolve("HrAbsenceAndVacationService.java"));
 
         assertTrue(facadeLines <= 170, "HRService deve ter <= 170 linhas, mas tem " + facadeLines);
         assertTrue(empLines <= 230, "HrEmployeeManagementService deve ter <= 230 linhas, mas tem " + empLines);

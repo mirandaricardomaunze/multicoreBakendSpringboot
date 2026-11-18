@@ -32,6 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Single entry point for HR used by the controllers: employees and expenses, payslip issuance, the payslip
+ * lifecycle, and absences and vacations are delegated to dedicated services.
+ */
 @Service
 public class HRService {
 

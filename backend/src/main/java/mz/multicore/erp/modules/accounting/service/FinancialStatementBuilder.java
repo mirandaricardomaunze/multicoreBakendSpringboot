@@ -14,6 +14,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Builds the income statement for a period and the balance sheet at a date from the same per-account totals as
+ * the trial balance, so the statements always agree with the ledger.
+ */
 @Component
 public class FinancialStatementBuilder {
 

@@ -20,6 +20,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
+/**
+ * Ranks employees by realised sales revenue in a period and attaches each employee's progress on their active
+ * sales goal.
+ */
 @Service
 public class EmployeeRankingService {
 

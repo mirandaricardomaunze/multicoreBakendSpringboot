@@ -15,6 +15,9 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Dashboard figures for a company's production orders and vehicle fleet.
+ */
 @Component
 public class IndustrialAndFleetPulseCalculator {
 

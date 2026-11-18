@@ -14,6 +14,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Gathers the inputs of the reorder suggestions for a company: current stock, units sold in the last 30 days and
+ * the latest supplier and price paid per product.
+ */
 @Component
 public class ReorderDataCollector {
 

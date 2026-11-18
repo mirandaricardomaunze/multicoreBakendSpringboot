@@ -17,6 +17,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Splits an invoice of the active company into a plan of one or more installments. An invoice with a zero total
+ * cannot have a plan.
+ */
 @Component
 public class InstallmentPlanGenerator {
 

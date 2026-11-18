@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * On startup, gives every company without a payroll tax configuration the default one; companies that already
+ * have one are left untouched.
+ */
 @Component
 @Order(2)
 public class PayrollTaxConfigSeeder implements CommandLineRunner {

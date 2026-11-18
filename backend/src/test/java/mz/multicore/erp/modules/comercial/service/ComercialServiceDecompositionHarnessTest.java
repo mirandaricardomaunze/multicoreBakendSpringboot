@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
@@ -67,11 +69,11 @@ class ComercialServiceDecompositionHarnessTest {
         verify(orderService).getOrdersByCompany(1L);
 
         Path base = findModuleRoot().resolve("src/main/java/mz/multicore/erp/modules/comercial/service");
-        int facadeLines = Files.readAllLines(base.resolve("ComercialService.java")).size();
-        int clientLines = Files.readAllLines(base.resolve("ComercialClientAndCreditService.java")).size();
-        int productLines = Files.readAllLines(base.resolve("ComercialProductCatalogService.java")).size();
-        int invoiceLines = Files.readAllLines(base.resolve("ComercialInvoiceLifecycleService.java")).size();
-        int orderLines = Files.readAllLines(base.resolve("ComercialOrderLifecycleService.java")).size();
+        int facadeLines = SourceLines.code(base.resolve("ComercialService.java"));
+        int clientLines = SourceLines.code(base.resolve("ComercialClientAndCreditService.java"));
+        int productLines = SourceLines.code(base.resolve("ComercialProductCatalogService.java"));
+        int invoiceLines = SourceLines.code(base.resolve("ComercialInvoiceLifecycleService.java"));
+        int orderLines = SourceLines.code(base.resolve("ComercialOrderLifecycleService.java"));
 
         assertTrue(facadeLines <= 565, "ComercialService deve ter <= 565 linhas, mas tem " + facadeLines);
         assertTrue(clientLines <= 235, "ComercialClientAndCreditService deve ter <= 235 linhas, mas tem " + clientLines);

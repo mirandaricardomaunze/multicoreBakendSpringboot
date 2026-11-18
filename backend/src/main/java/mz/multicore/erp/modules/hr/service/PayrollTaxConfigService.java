@@ -13,6 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Payroll tax configurations (IRPS brackets and contribution rates) of the active company. Only administrators
+ * can change them, and every bracket must have a valid upper limit.
+ */
 @Service
 public class PayrollTaxConfigService {
     private final PayrollTaxConfigRepository repository;

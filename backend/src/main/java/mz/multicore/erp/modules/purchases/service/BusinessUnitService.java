@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Single entry point for business lines: changes in {@link BusinessUnitMutationService}, reads and the product
+ * restriction in {@link BusinessUnitQueryAndPolicyService}.
+ */
 @Service
 public class BusinessUnitService {
 

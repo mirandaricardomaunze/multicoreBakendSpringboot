@@ -20,6 +20,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Entry point for CRM reads and settings: support tickets, work sheets and the option lists the screens offer.
+ */
 @Service
 public class CRMQueryService {
 

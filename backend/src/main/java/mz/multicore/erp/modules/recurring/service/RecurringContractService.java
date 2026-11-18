@@ -15,6 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Single entry point for recurring contracts: lifecycle in {@link RecurringContractLifecycleService}, periodic
+ * billing in {@link RecurringBatchBillingProcessor}.
+ */
 @Service
 public class RecurringContractService {
 

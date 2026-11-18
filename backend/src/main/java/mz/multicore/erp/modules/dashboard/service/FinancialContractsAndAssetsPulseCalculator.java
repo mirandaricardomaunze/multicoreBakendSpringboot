@@ -15,6 +15,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Dashboard figures for a company's recurring contracts and fixed assets.
+ */
 @Component
 public class FinancialContractsAndAssetsPulseCalculator {
 

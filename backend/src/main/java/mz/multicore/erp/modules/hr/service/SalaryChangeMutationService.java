@@ -18,6 +18,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
+/**
+ * Records salary changes with their reason and effective date, and answers which salary applied to an employee
+ * on a given date.
+ */
 @Component
 public class SalaryChangeMutationService {
 

@@ -18,6 +18,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Pays the thirteenth month and vacation allowances through treasury, refusing to pay the same vacation
+ * allowance twice.
+ */
 @Component
 public class PayrollBonusPaymentService {
 

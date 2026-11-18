@@ -28,6 +28,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
+/**
+ * Registers a direct purchase: the supplier must be active and belong to the active company, the goods enter the
+ * chosen warehouse of that company, and the document is numbered and published for treasury and accounting.
+ */
 @Component
 public class DirectPurchaseRegistrationService {
 

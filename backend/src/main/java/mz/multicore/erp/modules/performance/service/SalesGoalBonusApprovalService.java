@@ -14,6 +14,10 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Lists, approves and adjusts sales-goal bonuses. A paid bonus can no longer change, and an adjustment needs a
+ * valid amount and a written justification.
+ */
 @Component
 public class SalesGoalBonusApprovalService {
 

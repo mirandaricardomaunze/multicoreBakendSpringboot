@@ -15,6 +15,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Write side of the chart of accounts: seeds the default chart for each company and creates new accounts,
+ * refusing a blank or already used account code.
+ */
 @Component
 public class ChartOfAccountsMutationService {
 

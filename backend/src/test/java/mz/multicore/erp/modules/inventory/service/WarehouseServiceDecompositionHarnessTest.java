@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.inventory.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -30,9 +32,9 @@ class WarehouseServiceDecompositionHarnessTest {
         assertTrue(lifecycleSource.contains("WAREHOUSE_UPDATE"));
         assertTrue(querySource.contains("new WarehouseDTO("));
 
-        int serviceLines = Files.readAllLines(SERVICE_FILE).size();
-        int lifecycleLines = Files.readAllLines(LIFECYCLE_FILE).size();
-        int queryLines = Files.readAllLines(QUERY_FILE).size();
+        int serviceLines = SourceLines.code(SERVICE_FILE);
+        int lifecycleLines = SourceLines.code(LIFECYCLE_FILE);
+        int queryLines = SourceLines.code(QUERY_FILE);
 
         assertTrue(serviceLines <= 135, "WarehouseService deve ter <= 135 linhas, mas tem " + serviceLines);
         assertTrue(lifecycleLines <= 125, "WarehouseLifecycleService deve ter <= 125 linhas, mas tem " + lifecycleLines);

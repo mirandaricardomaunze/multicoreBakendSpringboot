@@ -13,6 +13,10 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
+/**
+ * Creates, edits, activates and deactivates warehouses, and locks a company's stock movements while a physical
+ * count is in progress.
+ */
 @Component
 public class WarehouseLifecycleService {
 

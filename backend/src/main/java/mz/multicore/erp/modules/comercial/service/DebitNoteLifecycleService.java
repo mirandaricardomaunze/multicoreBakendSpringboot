@@ -19,6 +19,10 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
+/**
+ * Creates debit notes against an invoice and moves them through approval: only draft or pending notes can be
+ * approved, and an approved note can no longer be rejected.
+ */
 @Component
 public class DebitNoteLifecycleService {
 

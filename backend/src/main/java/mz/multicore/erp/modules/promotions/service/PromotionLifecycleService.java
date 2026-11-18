@@ -18,6 +18,10 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Creates, activates and deactivates promotions. A promotion targets exactly one product or one category of the
+ * active company, its discount is between 0 and 100 percent and its end cannot precede its start.
+ */
 @Component
 public class PromotionLifecycleService {
 

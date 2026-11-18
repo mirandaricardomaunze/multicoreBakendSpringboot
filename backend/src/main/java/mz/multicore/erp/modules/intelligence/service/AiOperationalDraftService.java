@@ -12,6 +12,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Turns a free-text request into a draft outline for the right module (quotation, purchase, order, collection,
+ * replenishment or proposal). It never saves or issues anything: the user completes the document in that module.
+ */
 @Service
 public class AiOperationalDraftService {
     private final AuditLogService auditLogService;

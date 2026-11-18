@@ -31,6 +31,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Customer orders from creation to billing: risk evaluation and approval, protection against two terminals
+ * editing the same order, cancellation, and billing of the whole order or of the quantities already picked.
+ */
 @Component
 public class ComercialOrderLifecycleService {
 

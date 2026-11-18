@@ -19,6 +19,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Runs the monthly depreciation of a company's fixed assets and keeps each asset's depreciation history. An
+ * asset only depreciates from the month it was acquired.
+ */
 @Component
 public class AssetDepreciationBatchService {
 

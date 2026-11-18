@@ -10,6 +10,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Read side of product batches: by company or warehouse, about to expire, total quantity and the next batch FEFO
+ * would consume.
+ */
 @Component
 public class ProductBatchQueryService {
 

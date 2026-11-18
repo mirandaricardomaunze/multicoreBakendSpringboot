@@ -13,6 +13,9 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Registers a company's vehicles and changes their status. Number plates are unique per company.
+ */
 @Component
 public class FleetVehicleManagementService {
 

@@ -11,6 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Suggests what to reorder from the daily sales rate over the last 30 days against current stock, rounded up to
+ * whole boxes and priced with the last purchase.
+ */
 @Component
 public class ReorderSuggestionCalculator {
 

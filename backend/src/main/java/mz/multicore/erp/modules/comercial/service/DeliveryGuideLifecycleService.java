@@ -21,6 +21,10 @@ import java.time.LocalDateTime;
 import static mz.multicore.erp.modules.comercial.service.DeliveryGuideQueryService.clientLabel;
 import static mz.multicore.erp.modules.comercial.service.DeliveryGuideQueryService.toDTO;
 
+/**
+ * Approves, rejects and cancels delivery guides. Approval takes the stock out under a lock so two managers
+ * cannot issue it twice; an approved guide can no longer be cancelled and a rejection requires a reason.
+ */
 @Service
 public class DeliveryGuideLifecycleService {
     private final DeliveryGuideRepository guideRepository;

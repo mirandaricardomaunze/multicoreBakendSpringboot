@@ -26,6 +26,10 @@ import java.util.Set;
 import static mz.multicore.erp.modules.hr.service.OccupationalHealthMapper.toDTO;
 import static mz.multicore.erp.modules.hr.service.OccupationalHealthMapper.toSummary;
 
+/**
+ * Read side of occupational health: an employee's summary and history, exams about to expire, employees missing
+ * an exam, and the decrypted scanned certificate. Every read of an employee's health data is audited.
+ */
 @Service
 public class OccupationalHealthQueryService {
     private final OccupationalHealthExamRepository repository;

@@ -12,6 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Product categories of the active company, with codes unique per company. {@link #ensureForCompany} only adds a
+ * category whose code is missing, which is how activity profiles seed their starting categories without touching
+ * existing ones.
+ */
 @Service
 public class ProductCategoryService {
 

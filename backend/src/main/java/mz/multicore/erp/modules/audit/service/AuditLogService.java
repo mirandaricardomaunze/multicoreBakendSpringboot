@@ -9,6 +9,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Records the audit trail of who did what, in which company and from which address. The {@code logCurrent}
+ * variants take the user and company from the current request.
+ */
 @Service
 public class AuditLogService {
 

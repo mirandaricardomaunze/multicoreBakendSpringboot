@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import mz.multicore.erp.modules.hr.dto.SalaryChangeDTO;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.model.SalaryChangeReason;
@@ -41,8 +43,8 @@ class SalaryHistoryServiceDecompositionHarnessTest {
         assertSame(expected, service.record(emp, BigDecimal.TEN, today, reason, "Dev", "IT", null));
 
         Path base = findModuleRoot().resolve("src/main/java/mz/multicore/erp/modules/hr/service");
-        int facadeLines = Files.readAllLines(base.resolve("SalaryHistoryService.java")).size();
-        int mutationLines = Files.readAllLines(base.resolve("SalaryChangeMutationService.java")).size();
+        int facadeLines = SourceLines.code(base.resolve("SalaryHistoryService.java"));
+        int mutationLines = SourceLines.code(base.resolve("SalaryChangeMutationService.java"));
 
         assertTrue(facadeLines <= 75, "SalaryHistoryService deve ter <= 75 linhas, mas tem " + facadeLines);
         assertTrue(mutationLines <= 135, "SalaryChangeMutationService deve ter <= 135 linhas, mas tem " + mutationLines);

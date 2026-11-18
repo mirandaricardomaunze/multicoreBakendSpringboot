@@ -41,6 +41,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Entry point of the commercial module. Clients, catalogue, invoices and orders are delegated to dedicated
+ * services; receipts are handled here: only outstanding invoices accept a receipt, its amount must be positive
+ * and within what is still owed, and cancelling one requires a reason.
+ */
 @Service
 public class ComercialService {
 

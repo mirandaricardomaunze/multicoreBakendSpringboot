@@ -17,6 +17,10 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
+/**
+ * Creates recurring contracts and changes their status. Contract numbers are unique per company and the start
+ * date is mandatory.
+ */
 @Component
 public class RecurringContractLifecycleService {
 

@@ -28,6 +28,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Issues payslips one at a time or as a monthly payroll run, combining salary history, contract, time sheets,
+ * overtime, deductions, taxes and sales-goal bonuses. An employee gets at most one payslip per period.
+ */
 @Component
 public class HrPayslipIssuanceService {
 

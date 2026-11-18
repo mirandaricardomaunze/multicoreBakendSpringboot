@@ -10,6 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
+/**
+ * Finishes an invoice that waited for approval. On approval it takes the stock out and publishes the sale
+ * exactly like a direct invoice; on rejection it marks the invoice rejected with the reason given.
+ */
 @Component
 public class InvoiceApprovalCallback implements ApprovalCallback {
 

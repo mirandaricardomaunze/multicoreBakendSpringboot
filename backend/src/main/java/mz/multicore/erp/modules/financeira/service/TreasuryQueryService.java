@@ -15,6 +15,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Read side of treasury: accounts, transactions and paged transaction history of the active company.
+ */
 @Component
 public class TreasuryQueryService {
 

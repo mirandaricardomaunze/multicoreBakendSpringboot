@@ -10,6 +10,10 @@ import mz.multicore.erp.modules.users.service.AppUserCommandService;
 import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.stereotype.Component;
 
+/**
+ * Grants and revokes a user's access to companies on behalf of the platform administrator. A company must always
+ * keep at least one administrator.
+ */
 @Component
 public class PlatformUserAccessService {
 

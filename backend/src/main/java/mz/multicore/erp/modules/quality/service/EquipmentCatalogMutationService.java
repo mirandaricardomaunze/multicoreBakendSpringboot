@@ -11,6 +11,10 @@ import mz.multicore.erp.modules.quality.model.Equipment;
 import mz.multicore.erp.modules.quality.repository.EquipmentRepository;
 import org.springframework.stereotype.Component;
 
+/**
+ * Creates and edits quality-control equipment. Name and code are mandatory, codes are unique per company and the
+ * validity period must be positive.
+ */
 @Component
 public class EquipmentCatalogMutationService {
 

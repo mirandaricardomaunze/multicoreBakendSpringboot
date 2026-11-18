@@ -17,6 +17,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Approves, pays and cancels payslips. Only draft payslips can be approved, paying one records the treasury
+ * outflow and the payroll liabilities, and a paid payslip can no longer be cancelled.
+ */
 @Component
 public class HrPayslipLifecycleService {
 

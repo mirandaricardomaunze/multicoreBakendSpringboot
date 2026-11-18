@@ -14,6 +14,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Adds stock to batches and consumes it first-expired-first-out (FEFO). Stock that predates batch tracking is
+ * turned into a legacy batch so it can be consumed the same way.
+ */
 @Component
 public class ProductBatchMutationService {
 

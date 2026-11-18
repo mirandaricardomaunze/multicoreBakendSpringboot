@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.accounting.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -29,9 +31,9 @@ class ChartOfAccountsServiceDecompositionHarnessTest {
         assertTrue(service.hasChart(1L));
 
         Path base = findModuleRoot().resolve("src/main/java/mz/multicore/erp/modules/accounting/service");
-        int facadeLines = Files.readAllLines(base.resolve("ChartOfAccountsService.java")).size();
-        int mutationLines = Files.readAllLines(base.resolve("ChartOfAccountsMutationService.java")).size();
-        int queryLines = Files.readAllLines(base.resolve("ChartOfAccountsQueryService.java")).size();
+        int facadeLines = SourceLines.code(base.resolve("ChartOfAccountsService.java"));
+        int mutationLines = SourceLines.code(base.resolve("ChartOfAccountsMutationService.java"));
+        int queryLines = SourceLines.code(base.resolve("ChartOfAccountsQueryService.java"));
 
         assertTrue(facadeLines <= 85, "ChartOfAccountsService deve ter <= 85 linhas, mas tem " + facadeLines);
         assertTrue(mutationLines <= 85, "ChartOfAccountsMutationService deve ter <= 85 linhas, mas tem " + mutationLines);

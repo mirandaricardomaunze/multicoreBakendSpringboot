@@ -27,6 +27,10 @@ import static mz.multicore.erp.modules.hr.service.OccupationalHealthMapper.blank
 import static mz.multicore.erp.modules.hr.service.OccupationalHealthMapper.describeProvider;
 import static mz.multicore.erp.modules.hr.service.OccupationalHealthMapper.toDTO;
 
+/**
+ * Registers occupational health exams. The validity cannot precede the exam date, a restricted fitness result
+ * must state the restrictions, the cost cannot be negative and the scanned certificate is stored encrypted.
+ */
 @Service
 public class OccupationalHealthRegistrationService {
     private static final Set<String> RESULTS = Set.of("FIT", "FIT_WITH_RESTRICTIONS", "UNFIT");

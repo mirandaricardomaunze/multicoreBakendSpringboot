@@ -9,6 +9,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Read side of the chart of accounts. {@link #requirePostableAccount} is the check journal posting relies on to
+ * refuse account codes the company cannot post to.
+ */
 @Component
 public class ChartOfAccountsQueryService {
 

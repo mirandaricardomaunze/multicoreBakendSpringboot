@@ -11,6 +11,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Read side of direct purchases of a company.
+ */
 @Component
 public class DirectPurchaseQueryService {
 

@@ -7,6 +7,10 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+/**
+ * Calculates the bonus earned on a sales goal from the revenue and margin achieved, capped at the goal's bonus
+ * limit when one is set.
+ */
 @Service
 public class BonusCalculatorEngine {
 

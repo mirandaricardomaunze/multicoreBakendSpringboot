@@ -21,6 +21,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Absences and vacation requests. Date ranges cannot end before they start, an absence needs a type and
+ * justifying one requires a reason.
+ */
 @Component
 public class HrAbsenceAndVacationService {
 

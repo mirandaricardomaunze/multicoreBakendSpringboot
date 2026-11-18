@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Read side of stock counts, plus the checks the lifecycle relies on: the count belongs to the active company
+ * and is still a draft.
+ */
 @Component
 public class InventoryCountQueryService {
 

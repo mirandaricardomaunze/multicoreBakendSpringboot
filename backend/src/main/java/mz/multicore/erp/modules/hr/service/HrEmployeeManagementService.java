@@ -22,6 +22,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Employee records and expense claims. The internal number and the email are unique, the contract end cannot
+ * precede admission, and expense claims go through the approval workflow.
+ */
 @Component
 public class HrEmployeeManagementService {
 

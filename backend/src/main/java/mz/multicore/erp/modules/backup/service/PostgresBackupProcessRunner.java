@@ -9,6 +9,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Runs the PostgreSQL backup tools as child processes with a time limit, passing the database password through
+ * {@code PGPASSWORD} instead of the command line, and fails with the tool's output when it exits with an error.
+ */
 @Component
 public class PostgresBackupProcessRunner {
 

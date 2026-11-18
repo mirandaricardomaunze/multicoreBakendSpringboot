@@ -19,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Single entry point for direct purchases: registration in {@link DirectPurchaseRegistrationService}, reads in
+ * {@link DirectPurchaseQueryService}.
+ */
 @Service
 public class DirectPurchaseService {
 

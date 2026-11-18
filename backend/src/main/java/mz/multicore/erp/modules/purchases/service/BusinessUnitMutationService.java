@@ -14,6 +14,10 @@ import mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
 import org.springframework.stereotype.Component;
 
+/**
+ * Creates, edits and toggles business lines ("linhas de negócio"). Codes are unique per company and an
+ * associated supplier must exist.
+ */
 @Component
 public class BusinessUnitMutationService {
 

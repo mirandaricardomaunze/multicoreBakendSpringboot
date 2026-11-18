@@ -21,6 +21,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+/**
+ * Versioned documents written with the AI assistant and their review: draft, submitted, approved, rejected and
+ * archived. New versions require taking the document out of review or archive, and a rejection requires a
+ * reason.
+ */
 @Service
 public class AiDocumentLifecycleService {
     private final AiManagedDocumentRepository documentRepository;

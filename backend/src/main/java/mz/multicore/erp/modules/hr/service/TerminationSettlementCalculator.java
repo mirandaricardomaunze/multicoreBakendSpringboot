@@ -23,6 +23,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Calculates the final settlement of an employee from the termination reason, contract, salary on the exit date,
+ * untaken vacation, HR policy and pending deductions, both for the preview and for the real termination.
+ */
 @Service
 public class TerminationSettlementCalculator {
     public static final BigDecimal MONTHLY_DIVISOR = BigDecimal.valueOf(30);

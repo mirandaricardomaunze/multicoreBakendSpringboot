@@ -9,6 +9,10 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Spreads payments over an invoice's installments in installment order, and re-spreads the total paid after a
+ * receipt is issued or cancelled so installment balances always match the invoice.
+ */
 @Component
 public class InstallmentPaymentAmortizer {
 

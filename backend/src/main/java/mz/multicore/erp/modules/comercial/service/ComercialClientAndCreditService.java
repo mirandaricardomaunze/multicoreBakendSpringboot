@@ -25,6 +25,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * Client register and credit rules: a tax number (NUIT/NIF) belongs to a single client, payment terms are
+ * checked against the client's credit eligibility and due dates follow from those terms. The walk-in customer
+ * ("Consumidor Final") may only buy with prompt payment.
+ */
 @Component
 public class ComercialClientAndCreditService {
 

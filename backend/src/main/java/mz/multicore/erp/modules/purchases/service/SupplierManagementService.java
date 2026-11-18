@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Supplier register of the active company: creation, edits, activation and search, always checking the supplier
+ * belongs to that company.
+ */
 @Service
 public class SupplierManagementService {
     private final SupplierRepository supplierRepository;

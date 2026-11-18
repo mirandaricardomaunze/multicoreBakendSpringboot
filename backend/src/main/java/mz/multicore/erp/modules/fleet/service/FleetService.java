@@ -15,6 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Single entry point for the fleet: vehicles live in {@link FleetVehicleManagementService} and refuelling in
+ * {@link FleetFuelLogService}.
+ */
 @Service
 public class FleetService {
 

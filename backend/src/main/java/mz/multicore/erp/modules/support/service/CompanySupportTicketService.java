@@ -14,6 +14,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Company side of support requests to the platform: opening a request and exchanging messages. A company only
+ * sees its own requests and cannot write on a closed one.
+ */
 @Component
 public class CompanySupportTicketService {
 
