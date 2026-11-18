@@ -95,7 +95,7 @@ public class HrAbsenceAndVacationService {
 
         Absence saved = absenceRepository.save(absence);
         auditLogService.logCurrent("ABSENCE_JUSTIFY", String.format(
-                "Falta de %s em %s: %s → %s. Motivo: %s%s",
+                "Falta de %s em %s: %s para %s. Motivo: %s%s",
                 saved.getEmployee().getName(), saved.getStartDate(), previousType,
                 saved.getAbsenceType(), saved.getReason(),
                 hasDocument ? " (com documento)" : ""));

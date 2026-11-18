@@ -332,7 +332,7 @@ public class BulkStockPanel extends JPanel {
         boolean even = m.difference().signum() == 0;
         result.setForeground(even ? UIHelper.APPROVED_GREEN : m.withinTolerance() ? UIHelper.PENDING_YELLOW : UIHelper.REJECTED_RED);
         result.setText("<html>" + volume + "Medido <b>" + ProductUnitsPanel.plain(m.measuredQuantity()) + " " + unit + "</b>"
-                + " − por levantar " + ProductUnitsPanel.plain(m.pendingPickup()) + " − sistema "
+                + " - por levantar " + ProductUnitsPanel.plain(m.pendingPickup()) + " - sistema "
                 + ProductUnitsPanel.plain(m.systemQuantity()) + " = <b>" + ProductUnitsPanel.plain(m.difference()) + " " + unit
                 + "</b> (" + ProductUnitsPanel.plain(m.differencePercent()) + " %, tolerância "
                 + ProductUnitsPanel.plain(m.tolerancePercent()) + " %)</html>");

@@ -145,7 +145,7 @@ public class MovimentoCollector {
         if (stockTransferLookup == null) return;
         for (StockTransfer t : stockTransferLookup.listForCompany(companyId)) {
             String route = (t.getOriginWarehouse() != null ? t.getOriginWarehouse().getName() : "-")
-                    + " → " + (t.getDestinationWarehouse() != null ? t.getDestinationWarehouse().getName() : "-");
+                    + " › " + (t.getDestinationWarehouse() != null ? t.getDestinationWarehouse().getName() : "-");
             out.add(new MovimentoDTO(MovimentoTipo.TRANSFERENCIA, t.getId(), t.getTransferNumber(), route, t.getTransferDate(),
                     statusName(t.getStatus()), BigDecimal.ZERO, summarizeTransfer(t), sumTransferQty(t), route));
         }

@@ -189,7 +189,7 @@ class MovimentosServiceTest {
         assertTrue(r.stream().anyMatch(m -> m.tipo() == MovimentoTipo.VENDA_POS && "VD-1".equals(m.numero())));
         assertTrue(r.stream().anyMatch(m -> m.tipo() == MovimentoTipo.RECIBO && "RC-1".equals(m.numero())));
         assertTrue(r.stream().anyMatch(m -> m.tipo() == MovimentoTipo.TRANSFERENCIA && "TRF-1".equals(m.numero())
-                && m.cliente().contains("Armazém Central → Loja Baixa")));
+                && m.cliente().contains("Armazém Central › Loja Baixa")));
     }
 
     // ---- builders ----

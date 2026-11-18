@@ -156,7 +156,7 @@ public class OrderRiskEvaluator {
         // ─── DECISÃO CONSOLIDADA ───────────────────────────────────────────────
         if (triggers.isEmpty()) {
             return OrderRiskAssessment.greenLane(String.format(
-                    "Auto-aprovado pela Matriz Comercial (Green Lane: Valor %s MT ≤ 50.000 MT, sem mora, crédito em dia e sem descontos fora de alçada).",
+                    "Auto-aprovado pela Matriz Comercial (Green Lane: Valor %s MT até 50.000 MT, sem mora, crédito em dia e sem descontos fora de alçada).",
                     total.setScale(2, RoundingMode.HALF_UP).toPlainString()));
         }
 

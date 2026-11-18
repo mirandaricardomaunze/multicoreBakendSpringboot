@@ -49,7 +49,7 @@ public class StockTransitLedger {
         movement.setBatch(batch);
         movement.setDescription("Transferência " + transfer.getTransferNumber()
                 + " — " + transfer.getOriginWarehouse().getName()
-                + " → " + transfer.getDestinationWarehouse().getName() + " (" + leg + ")");
+                + " › " + transfer.getDestinationWarehouse().getName() + " (" + leg + ")");
         movement.setMovementDate(LocalDateTime.now());
         movement.setCreatedBy(CurrentUserContext.getUsername());
         stockMovementRepository.save(movement);

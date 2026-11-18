@@ -77,7 +77,7 @@ public final class HrTerminationFormDialog {
         detail.append("<html><b>").append(preview.employeeName()).append("</b> — saída a ")
                 .append(preview.terminationDate().format(DATE_FMT)).append("<br><br>");
         for (TerminationDTO.TerminationLineDTO line : preview.lines()) {
-            detail.append(line.earning() ? "+ " : "− ").append(line.description()).append(" — ")
+            detail.append(line.earning() ? "+ " : "- ").append(line.description()).append(" — ")
                     .append(String.format("%,.2f MT", line.amount())).append("<br>");
         }
         detail.append("<br><b>").append(preview.netAmount().signum() < 0

@@ -106,7 +106,7 @@ public class OvertimeValuationService {
                 .findFirst()
                 .orElseThrow(() -> new BusinessRuleException(
                         "Há horas extra apuradas mas não existe configuração de acréscimos em vigor. "
-                                + "Configure os multiplicadores em RH → Acréscimos de Hora Extra "
+                                + "Configure os multiplicadores em RH › Acréscimos de Hora Extra "
                                 + "(os valores devem ser confirmados com o contabilista da empresa)."));
     }
 }

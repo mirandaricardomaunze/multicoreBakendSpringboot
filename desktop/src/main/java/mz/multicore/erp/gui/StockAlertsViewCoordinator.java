@@ -95,7 +95,7 @@ public final class StockAlertsViewCoordinator {
             } else {
                 owner.alertsSummary.setForeground(expired > 0 ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
                 syncCombo(expBusinessUnitCombo, expBus);
-                owner.alertsSummary.setText(String.format("%d lote(s) expirado(s)  ·  %d a expirar em ≤ 30 dias", expired, soon));
+                owner.alertsSummary.setText(String.format("%d lote(s) expirado(s)  ·  %d a expirar em até 30 dias", expired, soon));
             }
         }
 

@@ -64,7 +64,7 @@ final class InternalReplenishmentActions {
         if (!dialog.showDialog() || created[0] == null) return;
         owner.loadOrdersTable();
         owner.showCommercialSuccess("Transferência " + created[0].transferNumber() + " criada a partir de "
-                + order.orderNumber() + "; reveja e submeta o rascunho em Stock → Transferências entre Armazéns.");
+                + order.orderNumber() + "; reveja e submeta o rascunho em Stock › Transferências entre Armazéns.");
     }
 
     private static String route(OrderDTO order) {

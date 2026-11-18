@@ -89,7 +89,7 @@ public class SalaryChangeMutationService {
         applyToEmployeeCardIfCurrent(employee, saved);
 
         auditLogService.logCurrent("SALARY_CHANGE", String.format(
-                "Salário de %s: %s → %s com efeito a %s (%s)%s",
+                "Salário de %s: %s para %s com efeito a %s (%s)%s",
                 employee.getName(), previous == null ? "sem registo" : previous, newSalary,
                 effectiveDate, reason.getLabel(), notes == null ? "" : ". " + notes));
         return toDTO(saved);

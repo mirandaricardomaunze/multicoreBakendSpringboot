@@ -132,7 +132,7 @@ final class AboutDialogTabBuilder {
 
         grid.add(createModuleCard("Faturação & Vendas", "Faturas, cotações, guias de transporte e comunicação AT.", "fas-file-invoice", UIHelper.APPROVED_GREEN));
         grid.add(createModuleCard("POS & Frente de Caixa", "Vendas balcão, caixa cego, sangria, talhões e múltiplos meios.", "fas-cash-register", UIHelper.ACCENT_BLUE));
-        grid.add(createModuleCard("Gestão de Stock", "Estrutura Caixa → Embalagem → Unidade, lotes e armazéns.", "fas-boxes", UIHelper.MODULE_STOCK));
+        grid.add(createModuleCard("Gestão de Stock", "Estrutura Caixa › Embalagem › Unidade, lotes e armazéns.", "fas-boxes", UIHelper.MODULE_STOCK));
         grid.add(createModuleCard("Financeiro & Bancos", "Contas a pagar/receber, conciliação bancária e extratos.", "fas-university", UIHelper.MODULE_FINANCEIRO));
         grid.add(createModuleCard("Contabilidade & Razão", "Plano de contas geral, diários, balancetes e fecho de exercício.", "fas-calculator", UIHelper.MODULE_ACCOUNTING));
         grid.add(createModuleCard("Crédito & Cobrança", "Plafonds por cliente, prazos médios, scoring e risco financeiro.", "fas-balance-scale", UIHelper.PENDING_YELLOW));

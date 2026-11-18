@@ -173,7 +173,7 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
         vol.setFont(new Font("Arial", Font.BOLD, 19));
         vol.setForeground(UIHelper.ACCENT_BLUE);
 
-        JLabel route = new JLabel(transfer.originWarehouseName() + " → " + transfer.destinationWarehouseName());
+        JLabel route = new JLabel(transfer.originWarehouseName() + " › " + transfer.destinationWarehouseName());
         route.setFont(new Font("Arial", Font.BOLD, 12));
         route.setForeground(UIHelper.TEXT_MUTED);
 

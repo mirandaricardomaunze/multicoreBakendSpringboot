@@ -167,7 +167,7 @@ public class HrEmployeeManagementService {
                 && employee.getBaseSalary().compareTo(request.baseSalary()) != 0) {
             throw new BusinessRuleException(
                     "O salário não se altera na ficha do colaborador. Registe uma alteração salarial "
-                            + "com data de efeito e motivo, em RH → Evolução Salarial.");
+                            + "com data de efeito e motivo, em RH › Evolução Salarial.");
         }
         if (employee.getBaseSalary() == null) {
             employee.setBaseSalary(request.baseSalary());

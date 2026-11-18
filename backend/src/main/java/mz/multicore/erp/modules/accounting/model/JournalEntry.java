@@ -99,7 +99,7 @@ public class JournalEntry extends BaseEntity {
         }
         if (!isBalanced()) {
             throw new BusinessRuleException(String.format(
-                    "Lançamento desequilibrado: débito %s ≠ crédito %s.",
+                    "Lançamento desequilibrado: débito %s diferente do crédito %s.",
                     DisplayNumbers.money(totalDebit()),
                     DisplayNumbers.money(totalCredit())));
         }
