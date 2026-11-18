@@ -46,7 +46,7 @@ public final class RecurringContractFormDialog {
                 "Descrição do Serviço *:", descField,
                 "Periodicidade *:", freqCombo,
                 "Dia de Cobrança (1-31) *:", dayCombo,
-                "Valor Fixo (MT) *:", amountField,
+                "Valor Fixo sem IVA (MT) *:", amountField,
                 "Data de Início (DD/MM/AAAA) *:", startDateField,
                 "Data de Término (Opcional):", endDateField,
                 "", autoRenewCheck

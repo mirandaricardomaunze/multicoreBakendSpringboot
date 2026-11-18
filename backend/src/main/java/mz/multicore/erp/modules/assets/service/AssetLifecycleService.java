@@ -13,6 +13,10 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Registers and reads the fixed assets of the active company. Asset codes are unique per company and the
+ * residual value must stay below the acquisition cost.
+ */
 @Component
 public class AssetLifecycleService {
 

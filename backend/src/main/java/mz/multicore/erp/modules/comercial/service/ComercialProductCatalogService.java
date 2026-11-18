@@ -34,6 +34,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Product master data and the POS catalogue. SKU, reference and barcode are each unique within a company, and
+ * product images are size-checked before they are stored.
+ */
 @Component
 public class ComercialProductCatalogService {
 

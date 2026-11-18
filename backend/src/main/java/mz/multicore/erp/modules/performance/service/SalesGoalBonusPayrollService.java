@@ -21,6 +21,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
+/**
+ * Creates bonuses when a sales goal is achieved and moves approved bonuses into an employee's payslip. Only
+ * approved bonuses tied to an employee can be integrated, and never into a payslip that was already paid.
+ */
 @Component
 public class SalesGoalBonusPayrollService {
 

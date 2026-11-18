@@ -17,6 +17,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Builds a supplier's statement for a period from its purchases and payments, with the opening balance and the
+ * running balance per movement.
+ */
 @Component
 public class SupplierStatementMovementBuilder {
 

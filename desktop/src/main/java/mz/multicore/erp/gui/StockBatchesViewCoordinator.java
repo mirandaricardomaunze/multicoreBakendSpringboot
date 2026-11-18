@@ -58,7 +58,7 @@ final class StockBatchesViewCoordinator {
             owner.batchesSummary.setText("Sem lotes vencidos ou a vencer em breve.");
         } else {
             owner.batchesSummary.setForeground(expired > 0 ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
-            owner.batchesSummary.setText(String.format("%d lote%s vencido%s · %d a vencer em ≤ %d dias",
+            owner.batchesSummary.setText(String.format("%d lote%s vencido%s · %d a vencer em até %d dias",
                     expired, expired == 1 ? "" : "s", expired == 1 ? "" : "s", soon, owner.EXPIRY_SOON_DAYS));
         }
     }

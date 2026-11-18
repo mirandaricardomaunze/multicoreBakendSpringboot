@@ -18,6 +18,11 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
 
+/**
+ * Serves the current licence terms with their SHA-256 fingerprint and records each acceptance. The person
+ * accepting must confirm they can represent the company, and an acceptance of an outdated text is refused so
+ * nobody agrees to terms they did not read.
+ */
 @Service
 public class LicenseAcceptanceService {
 

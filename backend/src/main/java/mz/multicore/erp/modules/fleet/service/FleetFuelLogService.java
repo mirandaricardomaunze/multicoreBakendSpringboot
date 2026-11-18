@@ -16,6 +16,9 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Records refuelling for a company's vehicles; the odometer reading cannot go backwards.
+ */
 @Component
 public class FleetFuelLogService {
 

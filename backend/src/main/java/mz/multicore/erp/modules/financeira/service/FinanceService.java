@@ -13,6 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Treasury entry point used across modules: account and transaction reads come from {@link
+ * TreasuryQueryService}, and movements and automatic payouts from {@link TreasuryOperationService}.
+ */
 @Service
 public class FinanceService {
 

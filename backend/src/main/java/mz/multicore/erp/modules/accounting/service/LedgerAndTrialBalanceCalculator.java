@@ -22,6 +22,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Aggregates posted journal lines into per-account debit and credit totals, feeding the trial balance, the
+ * ledger of a single account and the financial statements.
+ */
 @Component
 public class LedgerAndTrialBalanceCalculator {
 

@@ -20,6 +20,10 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Builds the Z report of a till session (sales by payment method, cash movements, shift handovers and expected
+ * versus counted cash) and the history of closed sessions.
+ */
 @Component
 public class PosZReportCalculator {
 

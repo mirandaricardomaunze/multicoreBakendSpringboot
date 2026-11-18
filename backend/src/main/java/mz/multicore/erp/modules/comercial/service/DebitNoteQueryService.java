@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Read side of debit notes for lists, detail and printing.
+ */
 @Component
 public class DebitNoteQueryService {
 

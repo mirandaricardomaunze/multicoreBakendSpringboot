@@ -9,6 +9,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Optional;
 
+/**
+ * Picks the promotion that gives a product line the largest discount for its quantity, among the promotions
+ * active for that product or its category.
+ */
 @Component
 public class PromotionDiscountCalculator {
 

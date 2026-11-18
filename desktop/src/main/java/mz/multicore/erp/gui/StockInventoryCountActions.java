@@ -212,7 +212,7 @@ final class StockInventoryCountActions {
                 applied++;
                 BigDecimal d = line.difference();
                 if (d != null && d.signum() != 0) {
-                    diffs.append(String.format("• %s: sistema %s → contado %s (%s%s)%n",
+                    diffs.append(String.format("• %s: sistema %s, contado %s (%s%s)%n",
                             line.name(),
                             line.systemQuantity() == null ? "?" : line.systemQuantity().stripTrailingZeros().toPlainString(),
                             line.countedQuantity().stripTrailingZeros().toPlainString(),

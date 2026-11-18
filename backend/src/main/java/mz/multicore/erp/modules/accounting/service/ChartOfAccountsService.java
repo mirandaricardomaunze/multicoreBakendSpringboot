@@ -14,6 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Single entry point for the chart of accounts; reads live in {@link ChartOfAccountsQueryService} and writes in
+ * {@link ChartOfAccountsMutationService}.
+ */
 @Service
 public class ChartOfAccountsService {
 

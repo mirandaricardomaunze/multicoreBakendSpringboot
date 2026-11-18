@@ -1,45 +1,31 @@
 package mz.multicore.erp.modules.recurring.service;
 
-import mz.multicore.erp.modules.comercial.service.ClientLookup;
-import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.recurring.dto.BatchBillingResultDTO;
 import mz.multicore.erp.modules.recurring.dto.CreateRecurringContractRequest;
 import mz.multicore.erp.modules.recurring.dto.RecurringContractDTO;
 import mz.multicore.erp.modules.recurring.model.ContractStatus;
-import mz.multicore.erp.modules.recurring.repository.RecurringBillingLogRepository;
-import mz.multicore.erp.modules.recurring.repository.RecurringContractRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Single entry point for recurring contracts: lifecycle in {@link RecurringContractLifecycleService}, periodic
+ * billing in {@link RecurringBatchBillingProcessor}.
+ */
 @Service
 public class RecurringContractService {
 
     private final RecurringContractLifecycleService lifecycleService;
     private final RecurringBatchBillingProcessor batchBillingProcessor;
 
-    @Autowired
     public RecurringContractService(
             RecurringContractLifecycleService lifecycleService,
             RecurringBatchBillingProcessor batchBillingProcessor
     ) {
         this.lifecycleService = lifecycleService;
         this.batchBillingProcessor = batchBillingProcessor;
-    }
-
-    public RecurringContractService(
-            RecurringContractRepository contractRepository,
-            RecurringBillingLogRepository billingLogRepository,
-            CompanyLookup companyLookup,
-            ClientLookup clientLookup
-    ) {
-        this(
-                new RecurringContractLifecycleService(contractRepository, companyLookup, clientLookup),
-                new RecurringBatchBillingProcessor(contractRepository, billingLogRepository)
-        );
     }
 
     @Transactional(readOnly = true)
@@ -62,7 +48,7 @@ public class RecurringContractService {
         return lifecycleService.updateStatus(companyId, id, newStatus);
     }
 
-    @Transactional
+    /** Not transactional on purpose: the processor gives every billed period its own transaction. */
     public BatchBillingResultDTO processBatchBilling(Long companyId, LocalDate referenceDate) {
         return batchBillingProcessor.processBatchBilling(companyId, referenceDate);
     }

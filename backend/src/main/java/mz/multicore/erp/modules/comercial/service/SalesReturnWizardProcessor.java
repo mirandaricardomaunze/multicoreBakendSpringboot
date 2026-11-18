@@ -21,6 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Turns the sales-return wizard selection into a credit note. Every selected line must belong to the invoice and
+ * at least one positive quantity must be returned.
+ */
 @Component
 public class SalesReturnWizardProcessor {
 

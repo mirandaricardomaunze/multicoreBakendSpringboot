@@ -51,6 +51,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Single entry point for the POS. Opening and closing till sessions is handled here (one open session per
+ * operator, a closed session stays closed); checkout, returns, cash movements and the Z report are delegated to
+ * dedicated services.
+ */
 @Service
 public class POSService {
 

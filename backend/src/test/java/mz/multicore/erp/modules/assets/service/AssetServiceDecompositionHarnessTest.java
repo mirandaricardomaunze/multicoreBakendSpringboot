@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.assets.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,8 +22,8 @@ class AssetServiceDecompositionHarnessTest {
         assertFalse(facade.contains("AssetDepreciatedEvent"));
         assertTrue(lifecycle.contains("existsByCompanyIdAndAssetCode"));
         assertTrue(batch.contains("AssetDepreciatedEvent"));
-        assertTrue(Files.readAllLines(DIR.resolve("AssetService.java")).size() <= 80);
-        assertTrue(Files.readAllLines(DIR.resolve("AssetLifecycleService.java")).size() <= 125);
-        assertTrue(Files.readAllLines(DIR.resolve("AssetDepreciationBatchService.java")).size() <= 125);
+        assertTrue(SourceLines.code(DIR.resolve("AssetService.java")) <= 80);
+        assertTrue(SourceLines.code(DIR.resolve("AssetLifecycleService.java")) <= 125);
+        assertTrue(SourceLines.code(DIR.resolve("AssetDepreciationBatchService.java")) <= 125);
     }
 }

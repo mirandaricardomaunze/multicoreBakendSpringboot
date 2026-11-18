@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.backup.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,8 +30,8 @@ class DatabaseBackupServiceDecompositionHarnessTest {
         assertEquals(5432, conn.port());
         assertEquals("multicore", conn.database());
 
-        assertTrue(Files.readAllLines(DIR.resolve("DatabaseBackupService.java")).size() <= 115);
-        assertTrue(Files.readAllLines(DIR.resolve("PostgresBackupCommandBuilder.java")).size() <= 90);
-        assertTrue(Files.readAllLines(DIR.resolve("PostgresBackupProcessRunner.java")).size() <= 55);
+        assertTrue(SourceLines.code(DIR.resolve("DatabaseBackupService.java")) <= 115);
+        assertTrue(SourceLines.code(DIR.resolve("PostgresBackupCommandBuilder.java")) <= 90);
+        assertTrue(SourceLines.code(DIR.resolve("PostgresBackupProcessRunner.java")) <= 55);
     }
 }

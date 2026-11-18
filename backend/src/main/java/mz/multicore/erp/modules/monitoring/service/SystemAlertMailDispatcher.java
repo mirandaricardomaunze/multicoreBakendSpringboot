@@ -16,6 +16,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+/**
+ * Emails critical system alerts to the administrators, with a cooldown per incident so the same failure does not
+ * flood the inbox; also sends the test alert used to check the mail settings.
+ */
 @Component
 public class SystemAlertMailDispatcher {
 

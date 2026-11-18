@@ -8,6 +8,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
+/**
+ * Normalises and checks phone numbers for mobile payments: nine digits, starting with 84 or 85 for M-Pesa
+ * (Vodacom) and 86 or 87 for e-Mola (Movitel). Also generates the transaction and financial references.
+ */
 @Component
 public class MobilePaymentPhoneValidator {
 

@@ -19,6 +19,10 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+/**
+ * Measures a sales goal's progress at a date from realised sales only, using each line's historical cost for the
+ * margin, and projects the bonus it would earn.
+ */
 @Service
 public class GoalProgressEngine {
 

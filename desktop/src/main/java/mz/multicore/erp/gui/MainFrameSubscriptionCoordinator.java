@@ -59,7 +59,7 @@ final class MainFrameSubscriptionCoordinator {
         JLabel chip = new JLabel(text, UIHelper.icon("fas-exclamation-triangle", 14, color), JLabel.LEFT);
         chip.setFont(Typography.BODY_BOLD);
         chip.setForeground(color);
-        chip.setToolTipText("Veja Configurações → A Minha Assinatura, ou contacte o suporte.");
+        chip.setToolTipText("Veja Configurações › A Minha Assinatura, ou contacte o suporte.");
         chip.setBorder(new EmptyBorder(0, Spacing.XS, 0, Spacing.XS));
         return chip;
     }

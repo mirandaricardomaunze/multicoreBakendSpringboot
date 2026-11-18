@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +44,6 @@ class DeliveryGuideServiceDecompositionHarnessTest {
     }
 
     private long countLines(Path path) throws IOException {
-        return Files.lines(path).count();
+        return SourceLines.code(path);
     }
 }

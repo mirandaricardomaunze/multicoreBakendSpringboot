@@ -12,6 +12,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Combines sales-goal progress and the employee ranking into the performance report for a period.
+ */
 @Service
 public class PerformanceReportService {
 

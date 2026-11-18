@@ -14,6 +14,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Single entry point for product batches: changes in {@link ProductBatchMutationService}, reads in {@link
+ * ProductBatchQueryService}.
+ */
 @Service
 public class ProductBatchService {
 

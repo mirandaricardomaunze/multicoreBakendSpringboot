@@ -24,6 +24,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Answers management questions with the AI gateway using the active company's sales, stock and supplier data,
+ * and audits every question asked.
+ */
 @Service
 public class AiManagementAssistantService {
 

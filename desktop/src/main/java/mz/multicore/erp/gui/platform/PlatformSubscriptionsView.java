@@ -70,7 +70,7 @@ public class PlatformSubscriptionsView extends JPanel {
 
         kpiGrid.add(KpiCard.createMetricCard("Receita Recorrente (MRR)", subMrrLabel, "Faturação mensal das assinaturas", "fas-money-bill-wave", UIHelper.APPROVED_GREEN));
         kpiGrid.add(KpiCard.createMetricCard("Assinaturas Activas", subActiveLabel, "Empresas regularizadas", "fas-check-circle", UIHelper.ACCENT_BLUE));
-        kpiGrid.add(KpiCard.createMetricCard("Em Risco / Expiradas", subRiskLabel, "≤ 7 dias ou vencidas", "fas-exclamation-triangle", UIHelper.REJECTED_RED));
+        kpiGrid.add(KpiCard.createMetricCard("Em Risco / Expiradas", subRiskLabel, "Até 7 dias ou vencidas", "fas-exclamation-triangle", UIHelper.REJECTED_RED));
         kpiGrid.add(KpiCard.createMetricCard("Pagamentos Registados", subPaymentsLabel, "Histórico liquidado", "fas-receipt", UIHelper.PENDING_YELLOW));
 
         add(kpiGrid, BorderLayout.NORTH);

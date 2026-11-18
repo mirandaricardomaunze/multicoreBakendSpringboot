@@ -26,6 +26,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+/**
+ * Exports a company's sales for a date range to the fiscal XML file; the range is mandatory and its end cannot
+ * precede its start.
+ */
 @Service
 public class FiscalSalesExportService {
 

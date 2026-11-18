@@ -56,7 +56,7 @@ final class DashboardOperationsTab {
                 "Clique para abrir Gestão de Stock", "stock"));
 
         expiryAlertsLabel = KpiCard.valueLabel("0 lotes");
-        expiryAlertsSub = new JLabel("Vencimento ≤ " + DashboardDataCoordinator.EXPIRY_ALERT_DAYS + " dias");
+        expiryAlertsSub = new JLabel("Vencimento até " + DashboardDataCoordinator.EXPIRY_ALERT_DAYS + " dias");
         expiryAlertsSub.setFont(Typography.CAPTION);
         expiryAlertsSub.setForeground(UIHelper.KPI_ORANGE_SOFT);
         operationalKpiGrid.add(buildKpiCard("ALERTAS DE VALIDADE", "fas-calendar-times", UIHelper.KPI_ORANGE_SOFT,

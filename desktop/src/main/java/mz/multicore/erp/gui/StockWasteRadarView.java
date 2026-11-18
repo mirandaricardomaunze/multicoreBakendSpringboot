@@ -30,7 +30,7 @@ public class StockWasteRadarView extends JPanel {
         setOpaque(false);
         setBorder(new EmptyBorder(Spacing.XXS, 0, 0, 0));
 
-        urgencyFilterCombo = new JComboBox<>(new String[]{"Todas as Urgências", "Vencidos", "Crítico (≤ 3 dias)", "Alto (≤ 7 dias)", "Médio (≤ 15 dias)", "Atenção (≤ 30 dias)"});
+        urgencyFilterCombo = new JComboBox<>(new String[]{"Todas as Urgências", "Vencidos", "Crítico (até 3 dias)", "Alto (até 7 dias)", "Médio (até 15 dias)", "Atenção (até 30 dias)"});
         UIHelper.styleComboBox(urgencyFilterCombo);
         urgencyFilterCombo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
         urgencyFilterCombo.addActionListener(e -> applyRadarFilters());
@@ -134,10 +134,10 @@ public class StockWasteRadarView extends JPanel {
 
         for (ExpiringBatchAlertDTO b : currentRadarList) {
             if ("Vencidos".equals(urgencySel) && b.daysUntilExpiration() >= 0) continue;
-            if ("Crítico (≤ 3 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 3)) continue;
-            if ("Alto (≤ 7 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 7)) continue;
-            if ("Médio (≤ 15 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 15)) continue;
-            if ("Atenção (≤ 30 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 30)) continue;
+            if ("Crítico (até 3 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 3)) continue;
+            if ("Alto (até 7 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 7)) continue;
+            if ("Médio (até 15 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 15)) continue;
+            if ("Atenção (até 30 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 30)) continue;
 
             if (!query.isEmpty()) {
                 boolean match = (b.batchNumber() != null && b.batchNumber().toLowerCase().contains(query))

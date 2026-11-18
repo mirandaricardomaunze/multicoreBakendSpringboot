@@ -13,6 +13,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Writes the fiscal sales XML from a company's invoices, escaping text and rounding amounts and rates to the
+ * scale the file expects.
+ */
 @Component
 public class FiscalSalesXmlBuilder {
 

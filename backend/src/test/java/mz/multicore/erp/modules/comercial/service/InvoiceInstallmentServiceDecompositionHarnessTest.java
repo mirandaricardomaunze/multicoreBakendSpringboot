@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import mz.multicore.erp.modules.comercial.dto.CreateInstallmentPlanRequest;
 import mz.multicore.erp.modules.comercial.dto.InvoiceInstallmentDTO;
 import org.junit.jupiter.api.Test;
@@ -36,9 +38,9 @@ class InvoiceInstallmentServiceDecompositionHarnessTest {
         verify(amortizer).applyPaymentToInvoiceInstallments(1L, 10L, BigDecimal.TEN);
 
         Path base = findModuleRoot().resolve("src/main/java/mz/multicore/erp/modules/comercial/service");
-        int facadeLines = Files.readAllLines(base.resolve("InvoiceInstallmentService.java")).size();
-        int generatorLines = Files.readAllLines(base.resolve("InstallmentPlanGenerator.java")).size();
-        int amortizerLines = Files.readAllLines(base.resolve("InstallmentPaymentAmortizer.java")).size();
+        int facadeLines = SourceLines.code(base.resolve("InvoiceInstallmentService.java"));
+        int generatorLines = SourceLines.code(base.resolve("InstallmentPlanGenerator.java"));
+        int amortizerLines = SourceLines.code(base.resolve("InstallmentPaymentAmortizer.java"));
 
         assertTrue(facadeLines <= 65, "InvoiceInstallmentService deve ter <= 65 linhas, mas tem " + facadeLines);
         assertTrue(generatorLines <= 135, "InstallmentPlanGenerator deve ter <= 135 linhas, mas tem " + generatorLines);

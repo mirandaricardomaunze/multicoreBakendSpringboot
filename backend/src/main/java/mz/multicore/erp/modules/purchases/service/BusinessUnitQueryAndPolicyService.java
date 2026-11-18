@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Read side of business lines and the restriction policy: a document restricted to a business line only accepts
+ * that line's products.
+ */
 @Component
 public class BusinessUnitQueryAndPolicyService {
 

@@ -15,6 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Read side of final settlements: lists, loading for print and mapping to DTOs, including the preview shown
+ * before confirming.
+ */
 @Service
 public class TerminationQueryService {
     private final TerminationRepository terminationRepository;

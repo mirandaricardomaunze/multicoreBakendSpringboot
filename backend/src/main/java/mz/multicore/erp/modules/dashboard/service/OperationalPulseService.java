@@ -10,6 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Assembles the operations pulse shown on the dashboard for the active company from the industrial, fleet,
+ * contract and asset calculators.
+ */
 @Service
 public class OperationalPulseService {
 

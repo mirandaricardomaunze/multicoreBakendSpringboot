@@ -32,6 +32,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Work sheets recorded against support tickets, and their billing. No work can be added to a cancelled ticket; a
+ * sheet is billed only once, never after being voided, and only when it has labour hours or parts, which are
+ * invoiced through internal service products.
+ */
 @Service
 public class WorkSheetService {
 

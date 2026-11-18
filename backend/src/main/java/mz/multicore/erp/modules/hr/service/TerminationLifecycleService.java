@@ -23,6 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Ends an employment: computes the final settlement, numbers the document and later pays it through treasury.
+ * The exit date cannot precede the admission date.
+ */
 @Service
 public class TerminationLifecycleService {
     private final TerminationRepository terminationRepository;

@@ -18,6 +18,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Calculates an employee's payroll taxes for a month from the configuration in force, and the monthly fiscal
+ * summary. Fails when no IRPS bracket covers the income instead of guessing.
+ */
 @Service
 public class PayrollTaxService {
     private final PayrollTaxConfigRepository configRepository;

@@ -31,6 +31,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * POS checkout and later payment of a POS sale. A sale needs an open till session and a warehouse of the active
+ * company; the idempotency key stops a retried request from billing twice, and a reused key with different data
+ * is refused.
+ */
 @Component
 public class PosCheckoutAndPaymentService {
 

@@ -14,6 +14,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 
+/**
+ * Starts mobile payments and reports their status. Amounts must be positive, the operator is mandatory, a
+ * company can only see its own transactions, and completion can only be simulated when the simulation policy
+ * allows it.
+ */
 @Component
 public class MobilePaymentTransactionProcessor {
 

@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.performance.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,8 +22,8 @@ class SalesGoalBonusServiceDecompositionHarnessTest {
         assertFalse(facade.contains("BONUS_PAID_IN_PAYSLIP"));
         assertTrue(approval.contains("BONUS_APPROVED"));
         assertTrue(payroll.contains("BONUS_PAID_IN_PAYSLIP"));
-        assertTrue(Files.readAllLines(DIR.resolve("SalesGoalBonusService.java")).size() <= 90);
-        assertTrue(Files.readAllLines(DIR.resolve("SalesGoalBonusApprovalService.java")).size() <= 125);
-        assertTrue(Files.readAllLines(DIR.resolve("SalesGoalBonusPayrollService.java")).size() <= 130);
+        assertTrue(SourceLines.code(DIR.resolve("SalesGoalBonusService.java")) <= 90);
+        assertTrue(SourceLines.code(DIR.resolve("SalesGoalBonusApprovalService.java")) <= 125);
+        assertTrue(SourceLines.code(DIR.resolve("SalesGoalBonusPayrollService.java")) <= 130);
     }
 }

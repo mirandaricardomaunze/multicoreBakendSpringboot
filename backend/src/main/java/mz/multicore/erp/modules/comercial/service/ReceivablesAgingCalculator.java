@@ -20,6 +20,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Groups each client's open invoice balances into overdue-age buckets as of a reference date, for the
+ * receivables aging report.
+ */
 @Component
 public class ReceivablesAgingCalculator {
 

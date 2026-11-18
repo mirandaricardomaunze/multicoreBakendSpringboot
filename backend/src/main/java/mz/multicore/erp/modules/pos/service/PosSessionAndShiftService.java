@@ -23,6 +23,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Till sessions, cash movements and shift handovers. Movements need an open session, a cash withdrawal cannot
+ * exceed the cash in the till, and counter receipts enter through the receipt itself rather than as a manual
+ * movement.
+ */
 @Component
 public class PosSessionAndShiftService {
 

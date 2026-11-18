@@ -19,6 +19,10 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Physical stock counts: opening a count for a warehouse, saving counted quantities, applying the count as stock
+ * adjustments, or cancelling it.
+ */
 @Component
 public class InventoryCountLifecycleService {
 

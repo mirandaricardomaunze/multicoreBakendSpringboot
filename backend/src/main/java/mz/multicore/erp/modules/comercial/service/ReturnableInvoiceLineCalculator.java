@@ -16,6 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Works out, for each invoice line, the quantity that can still be returned after the credit notes already
+ * issued against it.
+ */
 @Component
 public class ReturnableInvoiceLineCalculator {
 

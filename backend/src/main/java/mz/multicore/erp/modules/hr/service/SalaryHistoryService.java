@@ -19,6 +19,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Single entry point for salary history: reads here, changes in {@link SalaryChangeMutationService}.
+ */
 @Service
 public class SalaryHistoryService {
 

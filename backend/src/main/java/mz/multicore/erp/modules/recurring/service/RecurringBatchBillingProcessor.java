@@ -2,83 +2,60 @@ package mz.multicore.erp.modules.recurring.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.recurring.dto.BatchBillingResultDTO;
-import mz.multicore.erp.modules.recurring.model.BillingFrequency;
 import mz.multicore.erp.modules.recurring.model.ContractStatus;
-import mz.multicore.erp.modules.recurring.model.RecurringBillingLog;
-import mz.multicore.erp.modules.recurring.model.RecurringContract;
-import mz.multicore.erp.modules.recurring.repository.RecurringBillingLogRepository;
 import mz.multicore.erp.modules.recurring.repository.RecurringContractRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Runs the periodic billing of the active company's due contracts. Every overdue period of a contract gets its own
+ * commercial invoice, issued by {@link RecurringPeriodBiller} in its own transaction: a failing period is logged
+ * and reported without undoing the periods already billed or stopping the other contracts.
+ */
 @Component
 public class RecurringBatchBillingProcessor {
 
-    private final RecurringContractRepository contractRepository;
-    private final RecurringBillingLogRepository billingLogRepository;
+    /** Upper bound on the periods one run catches up per contract, so a wrong start date cannot flood invoices. */
+    static final int MAX_PERIODS_PER_RUN = 24;
 
-    public RecurringBatchBillingProcessor(
-            RecurringContractRepository contractRepository,
-            RecurringBillingLogRepository billingLogRepository
-    ) {
+    private final RecurringContractRepository contractRepository;
+    private final RecurringPeriodBiller periodBiller;
+    private final TransactionOperations transactions;
+
+    public RecurringBatchBillingProcessor(RecurringContractRepository contractRepository,
+                                          RecurringPeriodBiller periodBiller, TransactionOperations transactions) {
         this.contractRepository = contractRepository;
-        this.billingLogRepository = billingLogRepository;
+        this.periodBiller = periodBiller;
+        this.transactions = transactions;
     }
 
     public BatchBillingResultDTO processBatchBilling(Long companyId, LocalDate referenceDate) {
         if (companyId == null) throw new BusinessRuleException("A empresa activa é obrigatória.");
-        LocalDate effectiveRef = (referenceDate != null) ? referenceDate : LocalDate.now();
+        LocalDate ref = referenceDate != null ? referenceDate : LocalDate.now();
+        List<Long> due = contractRepository.findDueContractIds(companyId, ContractStatus.ACTIVE, ref);
 
-        List<RecurringContract> dueContracts = contractRepository.findDueContracts(
-                companyId, ContractStatus.ACTIVE, effectiveRef);
-
-        List<String> generatedInvoices = new ArrayList<>();
+        List<String> invoices = new ArrayList<>();
         List<String> errors = new ArrayList<>();
-        BigDecimal totalBilled = BigDecimal.ZERO;
-        int processedCount = 0;
-
-        for (RecurringContract contract : dueContracts) {
-            try {
-                processedCount++;
-                String invoiceNumber = "FT-" + contract.getContractNumber() + "-" + effectiveRef.toString().replace("-", "");
-
-                RecurringBillingLog log = new RecurringBillingLog();
-                log.setContract(contract);
-                log.setBillingDate(effectiveRef);
-                log.setBilledAmount(contract.getFixedAmount());
-                log.setInvoiceNumber(invoiceNumber);
-                log.setStatus("SUCCESS");
-                log.setNotes("Facturação periódica emitida para o contrato " + contract.getContractNumber());
-                billingLogRepository.save(log);
-
-                contract.setLastBilledDate(effectiveRef);
-                LocalDate nextDate = computeNextBillingDate(
-                        contract.getNextBillingDate(), contract.getFrequency(), contract.getBillingDayOfMonth());
-
-                if (contract.getEndDate() != null && nextDate.isAfter(contract.getEndDate()) && !contract.isAutoRenew()) {
-                    contract.setStatus(ContractStatus.EXPIRED);
+        BigDecimal total = BigDecimal.ZERO;
+        for (Long contractId : due) {
+            for (int period = 0; period < MAX_PERIODS_PER_RUN; period++) {
+                RecurringPeriodBiller.Billed billed;
+                try {
+                    billed = transactions.execute(status -> periodBiller.billNextPeriod(companyId, contractId, ref));
+                } catch (RuntimeException e) {
+                    errors.add(transactions.execute(status -> periodBiller.recordFailure(companyId, contractId, e)));
+                    break;
                 }
-                contract.setNextBillingDate(nextDate);
-                contractRepository.save(contract);
-
-                totalBilled = totalBilled.add(contract.getFixedAmount());
-                generatedInvoices.add(invoiceNumber + " (" + contract.getClient().getName() + " - " + contract.getFixedAmount() + " MT)");
-            } catch (Exception e) {
-                errors.add("Erro no contrato " + contract.getContractNumber() + ": " + e.getMessage());
+                if (billed == null) break;
+                invoices.add(billed.label());
+                total = total.add(billed.amount());
             }
         }
-
-        return new BatchBillingResultDTO(effectiveRef, processedCount, generatedInvoices.size(), totalBilled, generatedInvoices, errors);
-    }
-
-    private LocalDate computeNextBillingDate(LocalDate currentDate, BillingFrequency frequency, int targetDay) {
-        int months = frequency != null ? frequency.monthsInterval() : 1;
-        YearMonth nextYm = YearMonth.from(currentDate).plusMonths(months);
-        return nextYm.atDay(Math.min(targetDay, nextYm.lengthOfMonth()));
+        return new BatchBillingResultDTO(ref, due.size(), invoices.size(), total, invoices, errors);
     }
 }

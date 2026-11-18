@@ -8,6 +8,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Builds the pg_dump, listing and pg_restore command lines from the JDBC URL. Physical backups are only
+ * supported on PostgreSQL; the password is never part of the command (see {@link PostgresBackupProcessRunner}).
+ */
 @Component
 public class PostgresBackupCommandBuilder {
 

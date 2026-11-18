@@ -20,6 +20,10 @@ import org.springframework.stereotype.Component;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Platform-wide user accounts: creation, edits, activation and password resets, all audited. The platform
+ * administrator and a company's only administrator cannot be deactivated.
+ */
 @Component
 public class PlatformUserAccountService {
 

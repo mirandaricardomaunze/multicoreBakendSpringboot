@@ -8,6 +8,10 @@ import mz.multicore.erp.modules.hr.repository.ExpenseClaimRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Finishes an employee expense claim when its approval request is decided: approval records the reimbursement as
+ * a treasury outflow, rejection keeps the reason given.
+ */
 @Component
 public class ExpenseApprovalCallback implements ApprovalCallback {
 

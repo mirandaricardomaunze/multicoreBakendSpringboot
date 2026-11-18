@@ -13,6 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * VAT and other tax rates of the active company. Codes are unique per company and rates are deactivated rather
+ * than deleted.
+ */
 @Service
 public class TaxRateService {
 

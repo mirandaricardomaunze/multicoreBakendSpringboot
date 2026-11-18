@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Read side of warehouses, including which ones sell, the company check on a warehouse and whether stock is
+ * locked for a count.
+ */
 @Component
 public class WarehouseQueryService {
     private final WarehouseRepository warehouseRepository;

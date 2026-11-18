@@ -16,6 +16,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Withholding tax records and their delivery to the tax authority. A record can be marked delivered only once,
+ * and a delivered record can no longer be deleted.
+ */
 @Service
 public class WithholdingService {
 

@@ -16,6 +16,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Platform administrator side of support requests: all companies' requests, replies and status changes. Closed
+ * requests accept no new messages and messages cannot be empty.
+ */
 @Component
 public class PlatformSupportAdminService {
 

@@ -2,7 +2,9 @@ package mz.multicore.erp.modules.recurring.repository;
 
 import mz.multicore.erp.modules.recurring.model.ContractStatus;
 import mz.multicore.erp.modules.recurring.model.RecurringContract;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -24,9 +26,15 @@ public interface RecurringContractRepository extends JpaRepository<RecurringCont
 
     List<RecurringContract> findByCompanyIdAndStatus(Long companyId, ContractStatus status);
 
-    @Query("SELECT c FROM RecurringContract c JOIN FETCH c.client WHERE c.company.id = :companyId AND c.status = :status AND c.nextBillingDate <= :referenceDate")
-    List<RecurringContract> findDueContracts(
+    @Query("SELECT c.id FROM RecurringContract c WHERE c.company.id = :companyId AND c.status = :status "
+            + "AND c.nextBillingDate <= :referenceDate ORDER BY c.contractNumber ASC")
+    List<Long> findDueContractIds(
             @Param("companyId") Long companyId,
             @Param("status") ContractStatus status,
             @Param("referenceDate") LocalDate referenceDate);
+
+    /** Locks the contract while one billing period is issued, so two simultaneous runs cannot bill it twice. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM RecurringContract c JOIN FETCH c.client WHERE c.company.id = :companyId AND c.id = :id")
+    Optional<RecurringContract> lockForBilling(@Param("companyId") Long companyId, @Param("id") Long id);
 }

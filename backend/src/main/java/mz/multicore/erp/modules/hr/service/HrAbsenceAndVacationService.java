@@ -21,6 +21,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Absences and vacation requests. Date ranges cannot end before they start, an absence needs a type and
+ * justifying one requires a reason.
+ */
 @Component
 public class HrAbsenceAndVacationService {
 
@@ -91,7 +95,7 @@ public class HrAbsenceAndVacationService {
 
         Absence saved = absenceRepository.save(absence);
         auditLogService.logCurrent("ABSENCE_JUSTIFY", String.format(
-                "Falta de %s em %s: %s → %s. Motivo: %s%s",
+                "Falta de %s em %s: %s para %s. Motivo: %s%s",
                 saved.getEmployee().getName(), saved.getStartDate(), previousType,
                 saved.getAbsenceType(), saved.getReason(),
                 hasDocument ? " (com documento)" : ""));

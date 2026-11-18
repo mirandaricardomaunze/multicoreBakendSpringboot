@@ -13,6 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Single entry point for fixed assets: registration lives in {@link AssetLifecycleService} and monthly
+ * depreciation in {@link AssetDepreciationBatchService}.
+ */
 @Service
 public class AssetService {
 

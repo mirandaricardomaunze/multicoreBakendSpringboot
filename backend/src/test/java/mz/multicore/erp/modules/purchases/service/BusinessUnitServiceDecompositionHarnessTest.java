@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.purchases.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import mz.multicore.erp.modules.comercial.model.Product;
 import org.junit.jupiter.api.Test;
 
@@ -24,9 +26,9 @@ class BusinessUnitServiceDecompositionHarnessTest {
         verify(queryAndPolicyService).validateProductRestriction(3L, product);
 
         Path base = findModuleRoot().resolve("src/main/java/mz/multicore/erp/modules/purchases/service");
-        int facadeLines = Files.readAllLines(base.resolve("BusinessUnitService.java")).size();
-        int mutationLines = Files.readAllLines(base.resolve("BusinessUnitMutationService.java")).size();
-        int queryLines = Files.readAllLines(base.resolve("BusinessUnitQueryAndPolicyService.java")).size();
+        int facadeLines = SourceLines.code(base.resolve("BusinessUnitService.java"));
+        int mutationLines = SourceLines.code(base.resolve("BusinessUnitMutationService.java"));
+        int queryLines = SourceLines.code(base.resolve("BusinessUnitQueryAndPolicyService.java"));
 
         assertTrue(facadeLines <= 85, "BusinessUnitService deve ter <= 85 linhas, mas tem " + facadeLines);
         assertTrue(mutationLines <= 110, "BusinessUnitMutationService deve ter <= 110 linhas, mas tem " + mutationLines);

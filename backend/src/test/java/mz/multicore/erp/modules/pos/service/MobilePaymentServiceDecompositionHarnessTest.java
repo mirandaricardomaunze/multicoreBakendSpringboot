@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.pos.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -30,9 +32,9 @@ class MobilePaymentServiceDecompositionHarnessTest {
         assertTrue(processorSource.contains("Solicitação USSD enviada ao cliente"));
         assertTrue(validatorSource.contains("Número incompatível com M-Pesa"));
 
-        int serviceLines = Files.readAllLines(SERVICE_FILE).size();
-        int processorLines = Files.readAllLines(PROCESSOR_FILE).size();
-        int validatorLines = Files.readAllLines(VALIDATOR_FILE).size();
+        int serviceLines = SourceLines.code(SERVICE_FILE);
+        int processorLines = SourceLines.code(PROCESSOR_FILE);
+        int validatorLines = SourceLines.code(VALIDATOR_FILE);
 
         assertTrue(serviceLines <= 80, "MobilePaymentService deve ter <= 80 linhas, mas tem " + serviceLines);
         assertTrue(processorLines <= 135, "MobilePaymentTransactionProcessor deve ter <= 135 linhas, mas tem " + processorLines);

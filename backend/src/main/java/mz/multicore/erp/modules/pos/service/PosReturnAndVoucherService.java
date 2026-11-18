@@ -42,6 +42,11 @@ import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.Optional;
 
+/**
+ * POS returns and store vouchers. Cancelled invoices and non-POS invoices cannot be returned here, a cash refund
+ * needs an open till session with enough cash, and refunds can also be given as a voucher redeemable on a later
+ * sale.
+ */
 @Component
 public class PosReturnAndVoucherService {
 

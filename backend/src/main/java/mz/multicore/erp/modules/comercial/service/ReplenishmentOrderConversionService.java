@@ -17,6 +17,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Links internal replenishment orders with stock transfers: converts an order into a transfer, records the order
+ * behind an approved transfer and updates the order when its transfer is resolved.
+ */
 @Component
 public class ReplenishmentOrderConversionService {
 

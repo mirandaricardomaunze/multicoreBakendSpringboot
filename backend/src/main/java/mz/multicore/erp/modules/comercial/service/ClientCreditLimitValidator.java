@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+/**
+ * Refuses new credit that would take a client's open invoice balance past the client's credit limit.
+ */
 @Component
 public class ClientCreditLimitValidator {
 

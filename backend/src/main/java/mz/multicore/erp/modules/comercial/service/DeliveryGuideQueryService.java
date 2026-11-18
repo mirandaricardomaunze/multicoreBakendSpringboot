@@ -17,6 +17,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
 
+/**
+ * Read side of delivery guides: lists, detail, loading for print and mapping to DTOs.
+ */
 @Service
 public class DeliveryGuideQueryService {
     private final DeliveryGuideRepository guideRepository;

@@ -183,8 +183,8 @@ public final class CommercialMovementsDataCoordinator {
 
     private static void extractWarehouseNames(String rawArmazem, TreeSet<String> whNames) {
         if (rawArmazem == null || rawArmazem.isBlank() || rawArmazem.equals("—")) return;
-        if (rawArmazem.contains("→")) {
-            for (String part : rawArmazem.split("→")) {
+        if (rawArmazem.contains("›")) {
+            for (String part : rawArmazem.split("›")) {
                 String c = part.trim();
                 if (!c.isEmpty() && !c.equals("-")) whNames.add(c);
             }

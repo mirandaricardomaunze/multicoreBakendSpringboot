@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.financeira.service;
 
+import mz.multicore.erp.architecture.SourceLines;
+
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -30,9 +32,9 @@ class FinanceServiceDecompositionHarnessTest {
         verify(opService).registerAutoPayout(BigDecimal.TEN, "Salário");
 
         Path base = findModuleRoot().resolve("src/main/java/mz/multicore/erp/modules/financeira/service");
-        int facadeLines = Files.readAllLines(base.resolve("FinanceService.java")).size();
-        int opLines = Files.readAllLines(base.resolve("TreasuryOperationService.java")).size();
-        int queryLines = Files.readAllLines(base.resolve("TreasuryQueryService.java")).size();
+        int facadeLines = SourceLines.code(base.resolve("FinanceService.java"));
+        int opLines = SourceLines.code(base.resolve("TreasuryOperationService.java"));
+        int queryLines = SourceLines.code(base.resolve("TreasuryQueryService.java"));
 
         assertTrue(facadeLines <= 95, "FinanceService deve ter <= 95 linhas, mas tem " + facadeLines);
         assertTrue(opLines <= 100, "TreasuryOperationService deve ter <= 100 linhas, mas tem " + opLines);

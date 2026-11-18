@@ -37,8 +37,8 @@ final class StockBatchesPanel {
         owner.batchExpirationCombo = new JComboBox<>(new String[]{
                 "Todos os lotes",
                 "Vencidos",
-                "Vence em ≤ 30 dias",
-                "Vence em ≤ 90 dias",
+                "Vence em até 30 dias",
+                "Vence em até 90 dias",
                 "Válidos (> 90 dias)"
         });
         UIHelper.styleComboBox(owner.batchExpirationCombo);

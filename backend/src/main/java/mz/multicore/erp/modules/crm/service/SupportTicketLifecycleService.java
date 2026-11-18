@@ -19,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+/**
+ * Support tickets ("pedidos de assistência"): creation, edits and status changes. A ticket cannot be moved to
+ * the status it already has, and cancelling one requires a reason.
+ */
 @Service
 public class SupportTicketLifecycleService {
 

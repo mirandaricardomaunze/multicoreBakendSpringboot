@@ -88,7 +88,7 @@ public class StockTransferMovementExecutor {
         movement.setBatch(batch);
         movement.setDescription("Transferência " + transfer.getTransferNumber()
                 + " — " + transfer.getOriginWarehouse().getName()
-                + " → " + transfer.getDestinationWarehouse().getName());
+                + " › " + transfer.getDestinationWarehouse().getName());
         movement.setMovementDate(transfer.getTransferDate());
         movement.setCreatedBy(transfer.getCreatedBy());
         stockMovementRepository.save(movement);

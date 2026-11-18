@@ -23,6 +23,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Set;
 
+/**
+ * Renders the assistant's analysis and professional documents as PDF. Documents that have legal or operational
+ * effect must be produced in their own module, not here.
+ */
 @Service
 public class AiManagementReportService {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");

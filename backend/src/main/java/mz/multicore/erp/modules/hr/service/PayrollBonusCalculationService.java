@@ -15,6 +15,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Calculates the thirteenth-month payment from the months each employee worked in the year, and the vacation
+ * allowance, which only approved vacations are entitled to.
+ */
 @Component
 public class PayrollBonusCalculationService {
 

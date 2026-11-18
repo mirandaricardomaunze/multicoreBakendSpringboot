@@ -14,6 +14,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Read side of the equipment catalogue: detail, active equipment and paged search.
+ */
 @Component
 public class EquipmentCatalogQueryService {
 

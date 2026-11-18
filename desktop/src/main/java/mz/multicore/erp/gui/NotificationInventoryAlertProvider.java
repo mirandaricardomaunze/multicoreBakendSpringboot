@@ -90,7 +90,7 @@ final class NotificationInventoryAlertProvider {
                     String driver = t.driverName() != null && !t.driverName().isBlank()
                             ? t.driverName()
                             : (t.responsible() != null && !t.responsible().isBlank() ? t.responsible() : "Transportador");
-                    String detail = String.format("%s → %s · Despachada há %s por %s · Recepção pendente no destino",
+                    String detail = String.format("%s › %s · Despachada há %s por %s · Recepção pendente no destino",
                             t.originWarehouseName(), t.destinationWarehouseName(), timeDesc, driver);
                     int priority = days >= 5 ? 3 : 2;
                     items.add(new NotificationItem(

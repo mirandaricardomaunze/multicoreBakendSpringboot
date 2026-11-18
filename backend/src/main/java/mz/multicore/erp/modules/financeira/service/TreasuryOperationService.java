@@ -15,6 +15,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Records treasury movements. An outflow can never take an account below zero, and automatic payouts posted by
+ * other modules (salaries, expenses, taxes) are taken from the cash account, matching how the ledger posts them.
+ */
 @Component
 public class TreasuryOperationService {
 
