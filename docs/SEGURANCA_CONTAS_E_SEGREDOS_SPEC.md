@@ -1,6 +1,6 @@
 # Contas partilhadas, credenciais e segredos — Especificação e harness
 
-**Última actualização:** 2026-11-01
+**Última actualização:** 2026-11-19
 
 ## Objectivo
 
@@ -38,6 +38,10 @@ credenciais previsíveis, anexos clínicos em claro, sessões sem limite e conta
 - As sessões expiradas são removidas de 10 em 10 minutos e em cada login.
 - Cada utilizador tem até 10 sessões; ao exceder, cai a mais antiga.
 - Um login válido limpa só o contador da própria conta. O contador do IP expira sozinho.
+- As sessões ficam na base de dados (`auth_sessions`, V136): reiniciar ou actualizar o backend não
+  desliga ninguém, e várias instâncias partilham as mesmas sessões.
+- A tabela guarda só o SHA-256 do token. Quem a lê não consegue usar uma sessão.
+- Terminar uma sessão ou as sessões de um utilizador vale em todas as instâncias.
 
 ### Desconto e preço no POS
 
@@ -121,8 +125,11 @@ credenciais previsíveis, anexos clínicos em claro, sessões sem limite e conta
 | SC-30 | Falha ao cifrar um backup | A cópia em claro fica; nada se perde |
 | SC-31 | Backup antigo em claro (`.dump`, `.json`) | Cifrado com a data original; o claro sai depois de verificado |
 | SC-32 | Backup lógico novo | Gravado cifrado e verificável |
+| SC-33 | Sessão aberta, servidor reiniciado | Continua válida, com a mesma validade e restrição |
+| SC-34 | Ler a tabela de sessões | Só o hash do token; o token não aparece |
+| SC-35 | Terminar sessões noutra instância | Recusadas também nesta |
 
-Testes: `SharedAccountSecurityHarnessTest`, `SessionAndLoginLimitsHarnessTest`,
+Testes: `SharedAccountSecurityHarnessTest`, `SessionAndLoginLimitsHarnessTest`, `PersistentAuthSessionHarnessTest`,
 `MandatorySecurityHarnessTest`, `PreProductionSecurityHarnessTest` e `BackupAtRestHarnessTest`.
 
 ## Verificação do servidor
@@ -137,7 +144,9 @@ instalado, última migração, segredos, portas, HTTPS, senhas de demonstração
 - A venda em contingência com desconto acima de 10% fica para revisão se a autorização expirar.
 - Um desconto retomado de uma venda suspensa precisa de novo PIN.
 - `ATTACHMENT_KEY` protege anexos, segredos TOTP e backups: perdê-la impede restaurar os backups.
-- As sessões vivem em memória: reiniciar o backend termina-as e várias instâncias não as partilham.
+- Cada pedido autenticado lê a sessão na base de dados (uma leitura pela chave primária).
+- Com várias instâncias, o limite de 10 sessões é aproximado: dois logins em simultâneo da mesma
+  conta em instâncias diferentes podem deixar uma sessão a mais até ao login seguinte.
 - Cifrar um backup antigo não apaga cópias já feitas fora do servidor, e o disco pode reter blocos
   do ficheiro apagado: essas cópias têm de ser destruídas ou substituídas pelo operador.
 - Backups em claro têm uma hora de espera antes de serem cifrados, para não apanhar um ficheiro em escrita.
