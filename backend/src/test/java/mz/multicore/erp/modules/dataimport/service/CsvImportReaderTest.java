@@ -55,4 +55,43 @@ class CsvImportReaderTest {
     void emptyContentDecodesToEmptyText() {
         assertThat(reader.decode(new byte[0])).isEmpty();
     }
+
+    // IMP-02
+    @Test
+    void detectsSemicolonSeparatorFromHeader() {
+        assertThat(reader.detectSeparator("nome;nuit;email")).isEqualTo(';');
+    }
+
+    // IMP-02
+    @Test
+    void detectsCommaSeparatorFromHeader() {
+        assertThat(reader.detectSeparator("nome,nuit,email")).isEqualTo(',');
+    }
+
+    // IMP-02
+    @Test
+    void separatorInsideQuotedHeaderDoesNotCount() {
+        assertThat(reader.detectSeparator("\"nome, completo\";nuit")).isEqualTo(';');
+    }
+
+    // IMP-02
+    @Test
+    void splitsPlainFieldsBySeparator() {
+        assertThat(reader.parseLine("João;400000001;", ';'))
+                .containsExactly("João", "400000001", "");
+    }
+
+    // IMP-02
+    @Test
+    void quotedFieldMayContainTheSeparator() {
+        assertThat(reader.parseLine("\"Açúcar, Lda\",400000001", ','))
+                .containsExactly("Açúcar, Lda", "400000001");
+    }
+
+    // IMP-02
+    @Test
+    void doubledQuotesInsideQuotedFieldBecomeOneQuote() {
+        assertThat(reader.parseLine("\"Loja \"\"Central\"\"; Maputo\";1", ';'))
+                .containsExactly("Loja \"Central\"; Maputo", "1");
+    }
 }

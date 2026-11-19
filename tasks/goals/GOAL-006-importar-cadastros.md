@@ -1,12 +1,12 @@
 ---
 id: GOAL-006
 title: "Importar clientes, fornecedores e artigos de outro ERP por CSV"
-status: IN_PROGRESS
+status: BLOCKED
 priority: HIGH
 spec: docs/IMPORTACAO_DADOS_SPEC.md
 harness: docs/IMPORTACAO_DADOS_HARNESS.md
 verify: ["CsvImportReaderTest", "ImportValueParserTest", "ClientImportServiceTest", "ClientOptionalEmailTest", "SupplierImportServiceTest", "ProductImportServiceTest", "DataImportHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "ModuleDecouplingHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "DataImportPanelHarnessTest"]
-blockedBy: []
+blockedBy: ["build partido: pacote units/dto nunca foi commitado (3218952)"]
 ---
 
 # Objectivo
@@ -48,9 +48,21 @@ cada agregado. O leitor CSV e o parser de valores são classes puras, sem Spring
 
 ## Perguntas em aberto
 
-(Vazio. A IA escreve aqui quando precisa de decisão humana e passa o goal a BLOCKED.)
+- **2026-11-19 — Build do backend partido por código alheio a este goal.** O commit `3218952`
+  (`feat(sectores): unidades e precos no POS e nas compras`) usa o pacote
+  `mz.multicore.erp.modules.units.dto` (`UnitBarcodeItemDTO`, `UnitConversionDTO`, `UnitOfMeasureDTO`,
+  `CreateUnitOfMeasureRequest`, …) mas nenhum ficheiro desse pacote está no git. Com o `target/` actual
+  falha `UnitBarcodeItemDTO`; num build limpo (o gate) falha o pacote inteiro. Sem compilar não dá para
+  provar `CsvImportReaderTest` verde, por isso IMP-02 ficou implementado mas **não marcado**.
+  Opções:
+  1. **(recomendado)** Quem fez o `3218952` commita os DTOs que ficaram na sua cópia de trabalho; o
+     loop retoma e só tem de correr o teste e marcar IMP-02.
+  2. A IA recria os DTOs a partir dos usos (controller, serviços e `SectorFoundationHttpIntegrationTest`).
+     Arriscado: forma da API inventada, e é trabalho de outro goal.
+  Para desbloquear: escolher a opção, voltar a `status: IN_PROGRESS` e esvaziar `blockedBy`.
 
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-19 · IMP-01 · `CsvImportReader.decode` (módulo `dataimport`, classe pura): UTF-8 com/sem BOM e fallback Windows-1252 com acentos intactos; `CsvImportReaderTest` verde
+- 2026-11-19 · IMP-02 · `CsvImportReader.detectSeparator`/`parseLine` + 6 testes escritos (falharam antes da implementação); não marcado porque o backend não compila (`units/dto` em falta, ver Perguntas em aberto) → BLOCKED
