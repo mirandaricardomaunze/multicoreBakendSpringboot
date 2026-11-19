@@ -45,6 +45,13 @@ public class UnitsApiClient {
         clientFactory.authenticatedClient().delete("/api/units/products/units/" + productUnitId + "?companyId=" + companyId);
     }
 
+    /** Sellable alternative unit with this barcode, or {@code null} when the barcode is not one. */
+    public UnitBarcodeItemDTO findByBarcode(Long companyId, String barcode, Long warehouseId) {
+        return clientFactory.authenticatedClient().get("/api/units/barcode?companyId=" + companyId + "&barcode="
+                + URLEncoder.encode(barcode, StandardCharsets.UTF_8)
+                + (warehouseId == null ? "" : "&warehouseId=" + warehouseId), UnitBarcodeItemDTO.class);
+    }
+
     public UnitConversionDTO convert(Long companyId, Long productId, String unitCode, BigDecimal quantity) {
         return clientFactory.authenticatedClient().get("/api/units/products/" + productId + "/convert?companyId="
                 + companyId + "&unitCode=" + URLEncoder.encode(unitCode, StandardCharsets.UTF_8)

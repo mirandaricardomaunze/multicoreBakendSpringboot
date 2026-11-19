@@ -55,6 +55,10 @@ SPEC: `docs/SECTORES_ACTIVIDADE_SPEC.md` · detalhe: `UNIDADES_MEDIDA_SPEC.md`, 
 | ID | Garantia | Teste |
 |---|---|---|
 | UN-UI-01 | Fatura e encomenda ganham Ctrl+U uma só vez; sem linha seleccionada nada é escrito | `PickupUiHarnessTest` |
+| UN-UI-02 | Encomenda a fornecedor ganha Ctrl+U (unidades de compra) uma só vez; sem produto nada é escrito | `PickupUiHarnessTest` |
+| UN-02 | Código de barras da palete devolve o artigo e 40 un; código desconhecido ou unidade fora da venda não devolve nada | `SectorFoundationHttpIntegrationTest` |
+| TP-POS-01 | Carrinho do POS mostra o preço da tabela ou do grosso; preço de cotação manda; sem tabela, preço normal | `PosCartListPriceTest` |
+| TP-POS-02 | O checkout não envia o preço mostrado: o servidor resolve-o outra vez | `PosCartListPriceTest` |
 | FR-UI-01 | Fatura e encomenda ganham "Adicionar frete" uma só vez; códigos de zona estáveis | `PickupUiHarnessTest` |
 | FR-01 | Zona de frete (serviço sem stock) fatura-se com IVA | `SectorFoundationHttpIntegrationTest` |
 | FR-02 | A verificação de stock livre ignora artigos que não controlam stock (corrigido: recusava serviços) | `SectorFoundationHttpIntegrationTest` |

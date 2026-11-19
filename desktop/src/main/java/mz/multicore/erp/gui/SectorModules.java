@@ -60,7 +60,21 @@ final class SectorModules {
         this.activityApi = activityApi;
     }
 
-    /** Builds the modules whose clients exist and wires the add-ons that live inside Commercial and Stock. */
+    /** Existing screens that receive sector add-ons; any of them may be {@code null} (seller sessions, tests). */
+    record Hosts(ComercialPanel comercial, StockPanel stock, ConfigPanel config, POSPanel pos, ComprasPanel purchases) {}
+
+    /** Builds the modules and wires the add-ons that live inside Commercial, Stock, POS and Purchases. */
+    static SectorModules create(Hosts hosts, ComercialApiClient comercialApi,
+                                InventoryApiClient inventoryApi, PromotionApiClient promotionApi, ActivityApiClient activityApi,
+                                UnitsApiClient unitsApi, PricingApiClient pricingApi, PickupApiClient pickupApi,
+                                BulkStockApiClient bulkApi, ProjectsApiClient projectsApi, FinanceApiClient financeApi,
+                                ProductionApiClient productionApi, SectorApiClients sector) {
+        PosSectorPricing.install(hosts.pos(), unitsApi, pricingApi);
+        if (hosts.purchases() != null) hosts.purchases().purchaseOrdersPanel.installUnitEntry(unitsApi);
+        return create(hosts.comercial(), hosts.stock(), hosts.config(), comercialApi, inventoryApi, promotionApi, activityApi,
+                unitsApi, pricingApi, pickupApi, bulkApi, projectsApi, financeApi, productionApi, sector);
+    }
+
     static SectorModules create(ComercialPanel comercial, StockPanel stock, ConfigPanel config, ComercialApiClient comercialApi,
                                 InventoryApiClient inventoryApi, PromotionApiClient promotionApi, ActivityApiClient activityApi,
                                 UnitsApiClient unitsApi, PricingApiClient pricingApi, PickupApiClient pickupApi,

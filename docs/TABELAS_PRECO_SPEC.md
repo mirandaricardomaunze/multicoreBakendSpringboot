@@ -22,8 +22,15 @@ preço normal e o preço de grosso por quantidade, e o desconto era feito à mã
 5. **Onde se aplica:** fatura, encomenda e cotação (o servidor calcula o preço) e o checkout do POS
    quando o desktop não envia preço.
 6. **POS sem regressão.** O piso de preço do caixa (`PosPriceGuard`) passa a ser o menor entre o preço
-   normal e o da tabela do cliente: nunca fica mais apertado do que era. O carrinho do POS no desktop
-   ainda mostra o preço normal; mostrar o preço da tabela no carrinho fica para a F2.
+   normal e o da tabela do cliente: nunca fica mais apertado do que era.
+   - **Carrinho (F2, 2026-11-19):** ao escolher o cliente ou mudar a quantidade, o carrinho mostra o
+     preço que o servidor vai cobrar: o da tabela do cliente ou o do grosso. Antes mostrava sempre o
+     preço normal, e o talão saía com outro valor.
+   - O desktop continua a não enviar esse preço. O servidor resolve-o outra vez no checkout, e é sempre
+     ele que decide. Um preço de cotação continua a mandar sobre a tabela.
+   - Sem rede para consultar o preço, o carrinho fica com o preço normal.
+9. **Preço por unidade alternativa:** não existe. Uma palete mais barata faz-se com um escalão na unidade
+   base (ver `UNIDADES_MEDIDA_SPEC.md`, decisão 8).
 7. **Compatibilidade.** Os serviços de venda recebem o `PriceResolutionService` como último argumento.
    As fachadas antigas que os montam à mão (`ComercialService`, `QuotationService`) passam `null`, e
    `null` mantém a regra de sempre. No POS, o preço por omissão vem de `PosPriceGuard.defaultPrice`,

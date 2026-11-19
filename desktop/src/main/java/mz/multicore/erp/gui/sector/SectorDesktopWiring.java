@@ -61,29 +61,54 @@ public final class SectorDesktopWiring {
                             "Seleccione uma linha com produto para indicar a quantidade noutra unidade.");
                     return;
                 }
-                UnitQuantityDialog.show(table, unitsApiClient, productId,
+                UnitQuantityDialog.show(table, unitsApiClient, productId, false,
                         qty -> mz.multicore.erp.gui.CommercialDraftLineAccess.setSelectedQuantity(comercialPanel, table, qty));
             };
-            table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-                    .put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, java.awt.event.InputEvent.CTRL_DOWN_MASK), UNIT_ENTRY_KEY);
-            table.getActionMap().put(UNIT_ENTRY_KEY, new AbstractAction() {
-                @Override public void actionPerformed(java.awt.event.ActionEvent e) { action.run(); }
-            });
-            JPopupMenu menu = table.getComponentPopupMenu() == null ? new JPopupMenu() : table.getComponentPopupMenu();
-            JMenuItem item = new JMenuItem("Quantidade noutra unidade (palete, saco…)",
-                    mz.multicore.erp.gui.components.UIHelper.icon("fas-ruler-combined", 13,
-                            mz.multicore.erp.gui.components.UIHelper.MODULE_STOCK));
-            item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, java.awt.event.InputEvent.CTRL_DOWN_MASK));
-            item.addActionListener(e -> action.run());
-            menu.add(item);
-            ActivityCapabilities.bindVisible(item, ActivityCapabilities.MULTI_UNIT_SALES);
-            table.setComponentPopupMenu(menu);
-            String tip = table.getToolTipText();
-            table.setToolTipText((tip == null || tip.isBlank() ? "" : tip + " · ") + "Ctrl+U: quantidade noutra unidade");
-            table.putClientProperty(UNIT_ENTRY_KEY, Boolean.TRUE);
+            bindUnitEntry(table, action);
             installed++;
         }
         return installed;
+    }
+
+    /**
+     * Ctrl+U on the purchase-order grid (SA-C02): "3 paletes" becomes the base quantity of the selected line, using
+     * the units marked for purchase. The price stays per base unit.
+     */
+    public static boolean installPurchaseUnitEntry(JTable table, UnitsApiClient unitsApiClient,
+                                                   java.util.function.Supplier<Long> selectedProductId,
+                                                   java.util.function.Consumer<java.math.BigDecimal> applyBaseQuantity) {
+        if (table == null || unitsApiClient == null || Boolean.TRUE.equals(table.getClientProperty(UNIT_ENTRY_KEY))) return false;
+        bindUnitEntry(table, () -> {
+            if (!ActivityCapabilities.enabled(ActivityCapabilities.MULTI_UNIT_SALES)) return;
+            Long productId = selectedProductId.get();
+            if (productId == null) {
+                mz.multicore.erp.gui.components.ToastManager.show(table, mz.multicore.erp.gui.components.FeedbackType.INFO,
+                        "Seleccione uma linha com produto para indicar a quantidade noutra unidade.");
+                return;
+            }
+            UnitQuantityDialog.show(table, unitsApiClient, productId, true, applyBaseQuantity);
+        });
+        return true;
+    }
+
+    private static void bindUnitEntry(JTable table, Runnable action) {
+        table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+                .put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, java.awt.event.InputEvent.CTRL_DOWN_MASK), UNIT_ENTRY_KEY);
+        table.getActionMap().put(UNIT_ENTRY_KEY, new AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { action.run(); }
+        });
+        JPopupMenu menu = table.getComponentPopupMenu() == null ? new JPopupMenu() : table.getComponentPopupMenu();
+        JMenuItem item = new JMenuItem("Quantidade noutra unidade (palete, saco…)",
+                mz.multicore.erp.gui.components.UIHelper.icon("fas-ruler-combined", 13,
+                        mz.multicore.erp.gui.components.UIHelper.MODULE_STOCK));
+        item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        item.addActionListener(e -> action.run());
+        menu.add(item);
+        ActivityCapabilities.bindVisible(item, ActivityCapabilities.MULTI_UNIT_SALES);
+        table.setComponentPopupMenu(menu);
+        String tip = table.getToolTipText();
+        table.setToolTipText((tip == null || tip.isBlank() ? "" : tip + " · ") + "Ctrl+U: quantidade noutra unidade");
+        table.putClientProperty(UNIT_ENTRY_KEY, Boolean.TRUE);
     }
 
     /** Adds "Adicionar frete" (Ctrl+Alt+F and the right-click menu) to the invoice and order draft grids. */

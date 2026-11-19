@@ -110,6 +110,27 @@ class SectorFoundationHttpIntegrationTest {
                  "defaultSale":false,"defaultPurchase":false}""".formatted(c.companyId(), productId))
                 .andExpect(status().isBadRequest());
 
+        // POS: the pallet barcode sells 40 units of the same product; unknown codes return nothing.
+        String palletCode = "PAL" + shortId();
+        sendJson(put("/api/units/products"), c, """
+                {"companyId":%s,"productId":%d,"unitCode":"PALETE","factorToBase":40,"barcode":"%s",
+                 "sellable":true,"purchasable":true,"defaultSale":false,"defaultPurchase":true}"""
+                .formatted(c.companyId(), productId, palletCode)).andExpect(status().isOk());
+        JsonNode scanned = getJson("/api/units/barcode?companyId=" + c.companyId() + "&barcode=" + palletCode
+                + "&warehouseId=" + c.warehouseId(), c);
+        assertThat(scanned.get("item").get("product").get("id").asLong()).isEqualTo(productId);
+        assertThat(scanned.get("unitCode").asText()).isEqualTo("PALETE");
+        assertThat(new BigDecimal(scanned.get("factorToBase").asText())).isEqualByComparingTo("40");
+        assertThat(mockMvc.perform(auth(get("/api/units/barcode?companyId=" + c.companyId() + "&barcode=NAO" + shortId()), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).isBlank();
+        // A unit not marked for sale is not sold by its barcode.
+        sendJson(put("/api/units/products"), c, """
+                {"companyId":%s,"productId":%d,"unitCode":"PALETE","factorToBase":40,"barcode":"%s",
+                 "sellable":false,"purchasable":true,"defaultSale":false,"defaultPurchase":true}"""
+                .formatted(c.companyId(), productId, palletCode)).andExpect(status().isOk());
+        assertThat(mockMvc.perform(auth(get("/api/units/barcode?companyId=" + c.companyId() + "&barcode=" + palletCode), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).isBlank();
+
         // The base can no longer change because an alternative unit depends on it.
         sendJson(put("/api/units/products/base"), c, """
                 {"companyId":%s,"productId":%d,"unitCode":"KG"}""".formatted(c.companyId(), productId))

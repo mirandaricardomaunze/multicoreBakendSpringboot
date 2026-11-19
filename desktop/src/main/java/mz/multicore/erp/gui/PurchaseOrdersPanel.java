@@ -244,6 +244,8 @@ final class PurchaseOrdersPanel {
         } catch (IllegalArgumentException ignored) {}
     }
 
+    void installUnitEntry(mz.multicore.erp.desktop.client.UnitsApiClient unitsApiClient) { editor.installUnitEntry(poLinesTable, unitsApiClient); }
+
     void addBlankPoLine() { editor.addBlankPoLine(poLinesTable); }
     void removeSelectedPoLine() { editor.removeSelectedPoLine(poLinesTable); }
     void configureProductCellEditor() { editor.configureProductCellEditor(poLinesTable); }
