@@ -101,11 +101,15 @@ function Initialize-Worktree {
     # Commit ONLY the synced files, so pending (not yet gated) iteration work is never swept into
     # the bootstrap commit, and the diff guard only judges what the iterations add.
     $paths = @($synced | ForEach-Object { $_ -replace '\\', '/' } | Select-Object -Unique)
-    $changed = @(git -C $work status --porcelain -- $paths)
-    if ($changed.Count -gt 0) {
-        git -C $work add -- $paths
-        git -C $work commit -q -m "chore(ralph): sincroniza goals, specs e harness do checkout principal`n`n$coAuthor" -- $paths
-        Write-Host "[ralph] bootstrap commit: $($changed.Count) harness/goal file(s) from the main checkout"
+    # Every git call here goes to Out-Host: anything left on the pipeline would become part of the
+    # function's return value and corrupt $work. Stage first and ask the index whether anything
+    # really changed, so CRLF warnings on stderr are never mistaken for changed files.
+    git -C $work add -- $paths 2>&1 | Out-Host
+    git -C $work diff --cached --quiet -- $paths
+    if ($LASTEXITCODE -ne 0) {
+        $count = @(git -C $work diff --cached --name-only -- $paths).Count
+        git -C $work commit -q -m "chore(ralph): sincroniza goals, specs e harness do checkout principal`n`n$coAuthor" -- $paths 2>&1 | Out-Host
+        Write-Host "[ralph] bootstrap commit: $count harness/goal file(s) from the main checkout"
     }
     return $work
 }
