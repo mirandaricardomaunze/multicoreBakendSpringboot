@@ -71,7 +71,10 @@ Corpo: secção `## Critérios de aceitação` com checkboxes `- [ ] ID — gara
 - Depois de cada iteração o loop corre o gate **por conta própria**: compilação do reactor,
   `RalphGoalsHarnessTest`, `DeliveryGraphHarnessTest`, `MultiModuleArchitectureHarnessTest` e os
   testes de `verify`. Quando a IA declara `GOAL_DONE`, o gate corre a suite completa.
-- Só estados com gate verde são commitados (na worktree isolada `ralph/goals`). Nunca há `push`.
+- Só estados com gate verde são commitados (na worktree isolada `ralph/goals`). Depois de cada
+  commit o **próprio loop** faz `push` do ramo `ralph/goals` para `origin`, sem `--force`; se o push
+  falhar, fica registado em `progress.log` e o loop continua localmente. `-NoPush` desliga o push.
+  Decisão do responsável de 2026-11-19. O loop nunca faz push de outro ramo nem para `main`.
 - O loop pára quando: não há goals executáveis; atinge `-MaxIterations`; o gate falha
   `-MaxGateFailures` vezes seguidas; existe o ficheiro `.ralph/STOP`.
 - `NEEDS_HUMAN`: dúvida de regra de negócio, fiscal ou legal. O goal passa a `BLOCKED` com a pergunta
@@ -81,5 +84,6 @@ Corpo: secção `## Critérios de aceitação` com checkboxes `- [ ] ID — gara
 
 - Inventar regras fiscais, legais ou de negócio que a SPEC não diga.
 - Apagar, desactivar (`@Disabled`) ou enfraquecer testes ou harness existentes para ficar verde.
-- Alterar outro goal, fazer `git push`, `--no-verify` ou mexer em POMs sem o critério o exigir.
+- Alterar outro goal, fazer `git commit` ou `git push` (quem faz commit e push é o loop, depois do
+  gate), `--no-verify` ou mexer em POMs sem o critério o exigir.
 - Divergir de `AGENTS.md`, `ARCHITECTURE.md` ou `CONVENTIONS.md`.

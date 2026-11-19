@@ -5,8 +5,9 @@
 
 .DESCRIPTION
   Default mode works in an isolated git worktree (..\<repo>-ralph, branch ralph/goals) so it never
-  touches files of other sessions in the main checkout. Gate-green states are committed there.
-  Nothing is ever pushed. Stop gracefully by creating .ralph\STOP in the main repository.
+  touches files of other sessions in the main checkout. Gate-green states are committed there and
+  the loop itself (never the agent) pushes branch ralph/goals to origin, without force; -NoPush turns
+  that off. Stop gracefully by creating .ralph\STOP in the main repository.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts\ralph\ralph.ps1
@@ -21,6 +22,7 @@ param(
     [int]$MaxLimitWaitHours = 8,
     [switch]$NoWaitOnLimit,
     [switch]$NoWorktree,
+    [switch]$NoPush,
     [switch]$SkipPermissions,
     [switch]$Offline,
     [string]$Model,
@@ -119,6 +121,16 @@ $template = Get-Content (Join-Path $PSScriptRoot 'PROMPT.md') -Raw -Encoding UTF
 Write-Host "[ralph] claude : $claude"
 Write-Host "[ralph] work   : $work $(if (-not $NoWorktree) { "(branch $branch)" })"
 if ($NoWorktree) { Write-Warning 'NoWorktree: no automatic commits (shared checkout). Review and commit by hand.' }
+
+# Pushes ralph/goals after a gate-green commit. Never forces: if origin moved, the push fails, is
+# logged, and the loop keeps working locally (a human reconciles). The agent itself cannot push.
+function Push-RalphBranch {
+    if ($NoWorktree -or $NoPush) { return '-' }
+    git -C $work push -q -u origin $branch 2>&1 | Out-Host
+    if ($LASTEXITCODE -eq 0) { return 'ok' }
+    Write-Warning "[ralph] push of $branch failed; commits stay local."
+    return 'FAIL'
+}
 
 function Write-Progress-Line([string]$line) {
     $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
@@ -241,6 +253,7 @@ for ($i = 1; $i -le $MaxIterations; $i++) {
     $lastGate = if ($LASTEXITCODE -eq 0) { 'PASS' } else { 'FAIL' }
 
     $commit = '-'
+    $pushed = '-'
     if ($lastGate -eq 'PASS') {
         $gateFailures = 0
         if (-not $NoWorktree) {
@@ -251,12 +264,13 @@ for ($i = 1; $i -le $MaxIterations; $i++) {
                 Set-Content -LiteralPath $msgFile -Encoding UTF8 -Value "ralph($($g.Id)): $summary`n`nIteracao $i do Ralph loop. Gate: PASS.`n`n$coAuthor"
                 git -C $work commit -q -F $msgFile
                 $commit = (git -C $work rev-parse --short HEAD).Trim()
+                $pushed = Push-RalphBranch
             }
         }
     } else {
         $gateFailures++
     }
-    Write-Progress-Line "iter $i :: $($g.Id) agent=$status gate=$lastGate commit=$commit ${mins}min :: $summary"
+    Write-Progress-Line "iter $i :: $($g.Id) agent=$status gate=$lastGate commit=$commit push=$pushed ${mins}min :: $summary"
 
     if ($gateFailures -ge $MaxGateFailures) { Write-Progress-Line "Gate failed $gateFailures times in a row. Stopping for human review."; break }
     if ($status -eq 'NEEDS_HUMAN' -and $Goal) { Write-Progress-Line "$($g.Id) needs a human decision. Stopping."; break }
