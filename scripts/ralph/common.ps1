@@ -55,11 +55,12 @@ function Find-ClaudeExe {
     if ($Explicit) { return $Explicit }
     $cmd = Get-Command claude -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
-    $candidates = @(
+    # @(...) keeps an array even with a single match: indexing a lone string returns its first letter.
+    $candidates = @(@(
         (Join-Path $env:USERPROFILE '.local\bin\claude.exe'),
         (Join-Path $env:APPDATA 'npm\claude.cmd')
-    ) | Where-Object { Test-Path $_ }
-    if ($candidates) { return $candidates[0] }
+    ) | Where-Object { Test-Path $_ })
+    if ($candidates.Count -gt 0) { return $candidates[0] }
     $ext = Get-ChildItem (Join-Path $env:USERPROFILE '.vscode\extensions') -Directory -Filter 'anthropic.claude-code-*' -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Descending |
         ForEach-Object { Join-Path $_.FullName 'resources\native-binary\claude.exe' } |
