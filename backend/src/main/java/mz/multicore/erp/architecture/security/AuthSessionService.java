@@ -2,42 +2,56 @@ package mz.multicore.erp.architecture.security;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.users.model.AppUser;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Comparator;
+import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Issues, validates and revokes the opaque bearer tokens of logged-in users. Sessions last 8 hours, a user keeps at
+ * most {@link #MAX_SESSIONS_PER_USER} (the oldest falls first) and only the SHA-256 of each token is stored, in the
+ * database, so a restart or a second instance keeps everyone signed in (SC-09, SC-10, SC-33..SC-35).
+ */
 @Service
 public class AuthSessionService {
 
     private static final Duration SESSION_LIFETIME = Duration.ofHours(8);
     static final int MAX_SESSIONS_PER_USER = 10;
-    private final Map<String, AuthSession> sessions = new ConcurrentHashMap<>();
+    private final AuthSessionStore store;
     private Instant lastIssuedAt = Instant.EPOCH;
+
+    @Autowired
+    public AuthSessionService(AuthSessionStore store) {
+        this.store = store;
+    }
+
+    /** Process-local sessions, for unit tests built without Spring. */
+    public AuthSessionService() {
+        this(new InMemoryAuthSessionStore());
+    }
 
     public synchronized AuthSession create(AppUser user) {
         return create(user, false);
     }
 
-    /** @param restricted a sessão só serve para concluir a segurança da conta */
+    /** @param restricted the session only serves to finish securing the account (password change, 2FA setup) */
     public synchronized AuthSession create(AppUser user, boolean restricted) {
         Instant now = nextIssuedAt();
-        purgeExpired(now);
+        store.deleteExpired(now);
         revokeOldestBeyondLimit(user.getUsername());
-        AuthSession session = new AuthSession(
-                UUID.randomUUID().toString(),
-                user.getUsername(),
-                now,
-                now.plus(SESSION_LIFETIME),
-                restricted
-        );
-        sessions.put(session.token(), session);
+        AuthSession session = new AuthSession(UUID.randomUUID().toString(), user.getUsername(), now,
+                now.plus(SESSION_LIFETIME), restricted);
+        store.save(new AuthSessionStore.StoredSession(hash(session.token()), session.username(),
+                session.issuedAt(), session.expiresAt(), restricted));
         return session;
     }
 
@@ -45,54 +59,60 @@ public class AuthSessionService {
         if (token == null || token.isBlank()) {
             throw new BusinessRuleException("Token de autenticação em falta.");
         }
-        AuthSession session = sessions.get(token);
-        if (session == null || session.expiresAt().isBefore(Instant.now())) {
-            sessions.remove(token);
+        String tokenHash = hash(token);
+        AuthSessionStore.StoredSession stored = store.find(tokenHash).orElse(null);
+        if (stored == null || stored.expiresAt().isBefore(Instant.now())) {
+            if (stored != null) store.delete(tokenHash);
             throw new BusinessRuleException("Sessão inválida ou expirada.");
         }
-        return session;
+        return new AuthSession(token, stored.username(), stored.issuedAt(), stored.expiresAt(), stored.restricted());
     }
 
     public void revoke(String token) {
-        if (token != null) {
-            sessions.remove(token);
+        if (token != null && !token.isBlank()) {
+            store.delete(hash(token));
         }
     }
 
     public void revokeUser(String username) {
         if (username != null) {
-            sessions.entrySet().removeIf(entry -> username.equals(entry.getValue().username()));
+            store.deleteUser(username);
         }
     }
 
-    /** Sem isto, cada login deixava uma entrada em memória até o seu token voltar a ser usado. */
+    /** Without this, every login would leave a row behind until its token was used again. */
     @Scheduled(fixedDelay = 600_000)
     public void purgeExpired() {
         purgeExpired(Instant.now());
     }
 
     void purgeExpired(Instant now) {
-        sessions.values().removeIf(session -> session.expiresAt().isBefore(now));
+        store.deleteExpired(now);
     }
 
     int activeSessions() {
-        return sessions.size();
+        return (int) store.count();
     }
 
     private void revokeOldestBeyondLimit(String username) {
-        List<AuthSession> owned = sessions.values().stream()
-                .filter(session -> session.username().equals(username))
-                .sorted(Comparator.comparing(AuthSession::issuedAt))
-                .toList();
-        owned.stream().limit(Math.max(0, owned.size() - MAX_SESSIONS_PER_USER + 1))
-                .forEach(session -> sessions.remove(session.token()));
+        List<String> owned = store.hashesOldestFirst(username);
+        owned.stream().limit(Math.max(0, owned.size() - MAX_SESSIONS_PER_USER + 1)).forEach(store::delete);
     }
 
-    /** Sem empates: o limite por utilizador tem de saber sempre qual é a sessão mais antiga. */
+    /** No ties, at the microsecond precision the database keeps: the per-user limit must know the oldest session. */
     private Instant nextIssuedAt() {
-        Instant now = Instant.now();
-        lastIssuedAt = now.isAfter(lastIssuedAt) ? now : lastIssuedAt.plusNanos(1);
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        lastIssuedAt = now.isAfter(lastIssuedAt) ? now : lastIssuedAt.plus(1, ChronoUnit.MICROS);
         return lastIssuedAt;
+    }
+
+    static String hash(String token) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 indisponível na JVM.", e);
+        }
     }
 
     public record AuthSession(String token, String username, Instant issuedAt, Instant expiresAt, boolean restricted) {
