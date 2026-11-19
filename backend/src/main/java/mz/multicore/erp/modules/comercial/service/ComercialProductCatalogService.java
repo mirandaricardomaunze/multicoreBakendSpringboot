@@ -115,7 +115,16 @@ public class ComercialProductCatalogService {
     }
 
     public POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode, Long warehouseId) {
-        ProductDTO product = findProductByBarcode(barcode);
+        return posCatalogItem(findProductByBarcode(barcode), warehouseId);
+    }
+
+    /** POS item of a product of the active company, e.g. one found by the barcode of an alternative unit. */
+    public POSCatalogItemDTO findPOSCatalogItemByProductId(Long productId, Long warehouseId) {
+        return posCatalogItem(productRepository.findByIdAndCompaniesId(productId, CurrentUserContext.getCurrentCompanyId())
+                .map(this::toDTO).orElse(null), warehouseId);
+    }
+
+    private POSCatalogItemDTO posCatalogItem(ProductDTO product, Long warehouseId) {
         if (product == null) return null;
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         Set<Long> sellableIds = warehouseId != null

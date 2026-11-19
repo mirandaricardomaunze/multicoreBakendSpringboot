@@ -65,6 +65,22 @@ class PickupUiHarnessTest {
     }
 
     @Test
+    @DisplayName("UN-UI-02: The purchase-order grid gains Ctrl+U once; no product selected writes nothing")
+    void purchaseGridGainsUnitEntry() {
+        JTable lines = new JTable(1, 2);
+        java.util.List<java.math.BigDecimal> applied = new ArrayList<>();
+        assertThat(SectorDesktopWiring.installPurchaseUnitEntry(lines, mock(UnitsApiClient.class), () -> null, applied::add)).isTrue();
+        assertThat(SectorDesktopWiring.installPurchaseUnitEntry(lines, mock(UnitsApiClient.class), () -> null, applied::add))
+                .as("idempotent").isFalse();
+        assertThat(SectorDesktopWiring.installPurchaseUnitEntry(new JTable(), null, () -> 1L, applied::add)).isFalse();
+        assertThat(lines.getComponentPopupMenu()).isNotNull();
+        javax.swing.Action action = lines.getActionMap().get(SectorDesktopWiring.UNIT_ENTRY_KEY);
+        assertThat(action).isNotNull();
+        action.actionPerformed(new java.awt.event.ActionEvent(lines, 0, SectorDesktopWiring.UNIT_ENTRY_KEY));
+        assertThat(applied).isEmpty();
+    }
+
+    @Test
     @DisplayName("FR-UI-01: Draft grids gain \"Adicionar frete\" once; zone codes are stable and safe")
     void draftGridsGainFreightEntry() {
         ComercialPanel panel = comercial();

@@ -30,7 +30,7 @@ final class PosBarcodeActions {
         Long warehouseId = owner.getSelectedWarehouseId();
         UIHelper.loadAsync(owner, () -> owner.comercialApiClient.findPOSCatalogItemByBarcode(code, warehouseId), item -> {
             if (item == null) {
-                showProductNotFound(code);
+                PosSectorPricing.addByUnitBarcode(owner, code, warehouseId, () -> showProductNotFound(code));
                 return;
             }
             if (!item.sellable()) {

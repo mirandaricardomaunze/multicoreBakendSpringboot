@@ -18,6 +18,11 @@ public class PosCartItem {
     public String serial;
     public String note;
     public BigDecimal customUnitPrice;
+    /**
+     * Price the server resolves for this client and quantity (price list or wholesale tier), shown so the cart matches
+     * the receipt. Display only: it is never sent, the server resolves it again at checkout.
+     */
+    public BigDecimal listUnitPrice;
     /** Weight that came from the scale (capture or scale label); {@code null} when nothing was weighed. */
     public BigDecimal scaleWeight;
 
@@ -43,9 +48,9 @@ public class PosCartItem {
     }
 
     public BigDecimal getEffectiveUnitPrice() {
-        return (customUnitPrice != null && customUnitPrice.compareTo(BigDecimal.ZERO) > 0)
-                ? customUnitPrice
-                : (product != null ? product.unitPrice() : BigDecimal.ZERO);
+        if (customUnitPrice != null && customUnitPrice.compareTo(BigDecimal.ZERO) > 0) return customUnitPrice;
+        if (listUnitPrice != null && listUnitPrice.compareTo(BigDecimal.ZERO) > 0) return listUnitPrice;
+        return product != null ? product.unitPrice() : BigDecimal.ZERO;
     }
 
     public LineCalculator.LineAmounts amounts() {

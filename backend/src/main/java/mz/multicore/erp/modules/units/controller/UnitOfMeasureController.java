@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.units.controller;
 
 import jakarta.validation.Valid;
 import mz.multicore.erp.modules.units.dto.*;
+import mz.multicore.erp.modules.units.service.ProductUnitBarcodeService;
 import mz.multicore.erp.modules.units.service.ProductUnitService;
 import mz.multicore.erp.modules.units.service.UnitOfMeasureService;
 import org.springframework.http.ResponseEntity;
@@ -17,10 +18,20 @@ public class UnitOfMeasureController {
 
     private final UnitOfMeasureService unitService;
     private final ProductUnitService productUnitService;
+    private final ProductUnitBarcodeService barcodeService;
 
-    public UnitOfMeasureController(UnitOfMeasureService unitService, ProductUnitService productUnitService) {
+    public UnitOfMeasureController(UnitOfMeasureService unitService, ProductUnitService productUnitService,
+                                   ProductUnitBarcodeService barcodeService) {
         this.unitService = unitService;
         this.productUnitService = productUnitService;
+        this.barcodeService = barcodeService;
+    }
+
+    /** POS: the barcode of a sellable alternative unit (a pallet) and how many base units it sells. Empty when unknown. */
+    @GetMapping("/barcode")
+    public ResponseEntity<UnitBarcodeItemDTO> findByBarcode(@RequestParam Long companyId, @RequestParam String barcode,
+                                                            @RequestParam(required = false) Long warehouseId) {
+        return ResponseEntity.ok(barcodeService.findSellable(companyId, barcode, warehouseId));
     }
 
     @GetMapping

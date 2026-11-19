@@ -24,16 +24,17 @@ final class UnitQuantityDialog {
     private UnitQuantityDialog() {
     }
 
-    static void show(JComponent parent, UnitsApiClient api, Long productId, Consumer<BigDecimal> onBaseQuantity) {
+    /** @param purchase offer the units marked for purchase instead of the ones marked for sale */
+    static void show(JComponent parent, UnitsApiClient api, Long productId, boolean purchase, Consumer<BigDecimal> onBaseQuantity) {
         Long companyId = CurrentUserContext.findCurrentCompanyId();
         if (companyId == null || productId == null) return;
-        UIHelper.loadAsync(parent, () -> api.productUnits(companyId, productId), units -> open(parent, api, companyId, units, onBaseQuantity),
+        UIHelper.loadAsync(parent, () -> api.productUnits(companyId, productId), units -> open(parent, api, companyId, units, purchase, onBaseQuantity),
                 error -> UserErrors.toast(parent, "ler as unidades", error));
     }
 
-    private static void open(JComponent parent, UnitsApiClient api, Long companyId, ProductUnitsDTO units,
+    private static void open(JComponent parent, UnitsApiClient api, Long companyId, ProductUnitsDTO units, boolean purchase,
                              Consumer<BigDecimal> onBaseQuantity) {
-        List<ProductUnitDTO> sellable = units.units().stream().filter(ProductUnitDTO::sellable).toList();
+        List<ProductUnitDTO> sellable = units.units().stream().filter(purchase ? ProductUnitDTO::purchasable : ProductUnitDTO::sellable).toList();
         if (sellable.isEmpty()) {
             ToastManager.show(parent, FeedbackType.INFO, units.productName() + " só tem a unidade base. Defina outras em "
                     + "Stock › produto › Unidades.");
@@ -51,7 +52,7 @@ final class UnitQuantityDialog {
                 return this;
             }
         });
-        sellable.stream().filter(ProductUnitDTO::defaultSale).findFirst().ifPresent(unitCombo::setSelectedItem);
+        sellable.stream().filter(purchase ? ProductUnitDTO::defaultPurchase : ProductUnitDTO::defaultSale).findFirst().ifPresent(unitCombo::setSelectedItem);
         DecimalField quantity = new DecimalField("1", 3, true);
         JLabel preview = new JLabel(" ");
         preview.setFont(Typography.EMPHASIS_BOLD);

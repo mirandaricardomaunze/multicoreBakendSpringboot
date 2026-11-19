@@ -110,6 +110,39 @@ final class PurchaseOrderEditorCoordinator {
         }
     }
 
+    /** Ctrl+U on the order lines: quantity given in a purchase unit (pallet, bag), converted to the base unit. */
+    void installUnitEntry(JTable poLinesTable, mz.multicore.erp.desktop.client.UnitsApiClient unitsApiClient) {
+        mz.multicore.erp.gui.sector.SectorDesktopWiring.installPurchaseUnitEntry(poLinesTable, unitsApiClient,
+                () -> selectedProductId(poLinesTable), qty -> setSelectedQuantity(poLinesTable, qty));
+    }
+
+    /** Product of the selected line, or {@code null}; used by Ctrl+U "quantidade noutra unidade". */
+    Long selectedProductId(JTable poLinesTable) {
+        int row = selectedLine(poLinesTable);
+        Long productId = row < 0 ? null : owner.poDraftLines.get(row).productId();
+        return productId == null || productId <= 0L ? null : productId;
+    }
+
+    /** Ctrl+U: the selected line takes the base quantity of "3 paletes"; price, batch and VAT stay as they were. */
+    void setSelectedQuantity(JTable poLinesTable, BigDecimal baseQuantity) {
+        int row = selectedLine(poLinesTable);
+        if (row < 0 || baseQuantity == null || !panel.isLineGridEditable()) return;
+        CreatePurchaseOrderLineRequest line = owner.poDraftLines.get(row);
+        owner.poDraftLines.set(row, new CreatePurchaseOrderLineRequest(line.productId(), baseQuantity, line.unitPrice(),
+                line.batchNumber(), line.expirationDate(), line.serialNumber(), line.taxRate()));
+        panel.refreshPoRows();
+        panel.setEditorDirty(true);
+        int view = poLinesTable.convertRowIndexToView(row);
+        if (view >= 0) poLinesTable.setRowSelectionInterval(view, view);
+    }
+
+    private int selectedLine(JTable poLinesTable) {
+        panel.stopPoCellEditing();
+        int view = poLinesTable == null ? -1 : poLinesTable.getSelectedRow();
+        int row = view < 0 ? -1 : poLinesTable.convertRowIndexToModel(view);
+        return row < owner.poDraftLines.size() ? row : -1;
+    }
+
     ProductDTO productById(Long id) {
         return owner.productsList.stream().filter(product -> product.id().equals(id)).findFirst().orElse(null);
     }

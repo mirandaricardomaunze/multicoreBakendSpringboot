@@ -240,8 +240,8 @@ public class MainFrame extends JFrame {
                     this::navigateFromNotification, this::updateNotificationBadge);
             notificationCoordinator = new MainFrameNotificationCoordinator(notificationFeed, notificationReadStore, this::navigateFromNotification);
             plataformaPanel = null;
-            sectorModules = SectorModules.create(comercialPanel, stockPanel, configPanel, comercialApiClient, inventoryApiClient, promotionApiClient,
-                    activityApiClient, unitsApiClient, pricingApiClient, pickupApiClient, bulkStockApiClient, projectsApiClient, financeApiClient, productionApiClient, sectorApiClients);
+            sectorModules = SectorModules.create(new SectorModules.Hosts(comercialPanel, stockPanel, configPanel, posPanel, comprasPanel), comercialApiClient, inventoryApiClient,
+                    promotionApiClient, activityApiClient, unitsApiClient, pricingApiClient, pickupApiClient, bulkStockApiClient, projectsApiClient, financeApiClient, productionApiClient, sectorApiClients);
             addCard(sellerDashboardPanel != null ? sellerDashboardPanel : dashboardPanel, "dashboard");
             addCard(posPanel, "pos");
             addCard(comercialPanel, "comercial"); addCard(comprasPanel, "compras");
