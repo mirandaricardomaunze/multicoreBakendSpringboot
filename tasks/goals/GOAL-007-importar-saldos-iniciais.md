@@ -1,12 +1,12 @@
 ---
 id: GOAL-007
 title: "Importar stock inicial e dívidas em aberto de clientes e fornecedores"
-status: TODO
+status: BLOCKED
 priority: HIGH
 spec: docs/IMPORTACAO_DADOS_SPEC.md
 harness: docs/IMPORTACAO_DADOS_HARNESS.md
 verify: ["StockOpeningImportServiceTest", "OpeningReceivableTest", "OpeningReceivableFiscalExclusionTest", "OpeningReceivableStatementTest", "OpeningReceivableSettlementTest", "OpeningPayableTest", "OpeningBalancesImportHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "ModuleDecouplingHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "DataImportPanelHarnessTest"]
-blockedBy: []
+blockedBy: ["pré-requisito GOAL-006 não está DONE (BLOCKED: build partido, units/dto)"]
 ---
 
 # Objectivo
@@ -42,8 +42,18 @@ Pré-requisito: GOAL-006 em `DONE` (usa `CsvImportReader`, `ImportValueParser` e
 
 ## Perguntas em aberto
 
-(Vazio. A IA escreve aqui quando precisa de decisão humana e passa o goal a BLOCKED.)
+- **2026-11-19 — Pré-requisito por cumprir.** O GOAL-007 exige o GOAL-006 em `DONE` (usa
+  `CsvImportReader`, `ImportValueParser` e o módulo `dataimport`), mas o GOAL-006 está `BLOCKED`, só
+  com IMP-01 marcado. O backend não compila porque o pacote `modules/units/dto` do commit `3218952`
+  nunca foi commitado. Ver a pergunta em aberto no GOAL-006.
+  Opções:
+  1. **(recomendado)** Desbloquear e terminar o GOAL-006 primeiro: commitar os DTOs de `units/dto`
+     e deixar o loop acabar IMP-02..IMP-UI-01. Depois voltar este goal a `TODO` e esvaziar `blockedBy`.
+  2. Começar já as partes do GOAL-007 que não dependem do `dataimport`. Não recomendado: o build está
+     partido, por isso nenhum teste se consegue provar verde, e isso contraria o pré-requisito escrito.
+  Para desbloquear: GOAL-006 em `DONE`, depois `status: TODO` e `blockedBy: []` aqui.
 
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-19 · — · não começado: pré-requisito GOAL-006 está `BLOCKED` (build partido, `units/dto` em falta) → BLOCKED
