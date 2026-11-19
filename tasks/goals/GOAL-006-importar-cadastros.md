@@ -1,7 +1,7 @@
 ---
 id: GOAL-006
 title: "Importar clientes, fornecedores e artigos de outro ERP por CSV"
-status: TODO
+status: IN_PROGRESS
 priority: HIGH
 spec: docs/IMPORTACAO_DADOS_SPEC.md
 harness: docs/IMPORTACAO_DADOS_HARNESS.md
@@ -20,7 +20,7 @@ cada agregado. O leitor CSV e o parser de valores são classes puras, sem Spring
 
 ## Critérios de aceitação
 
-- [ ] IMP-01 — UTF-8 com/sem BOM e Windows-1252 com acentos intactos — `CsvImportReaderTest`
+- [x] IMP-01 — UTF-8 com/sem BOM e Windows-1252 com acentos intactos — `CsvImportReaderTest`
 - [ ] IMP-02 — separador `;`/`,` detectado, aspas e `""` — `CsvImportReaderTest`
 - [ ] IMP-03 — colunas por nome tolerante; obrigatória em falta recusa; extra anunciada — `CsvImportReaderTest`
 - [ ] IMP-05 — limites 2 MB / 5 000 linhas; linhas vazias ignoradas — `CsvImportReaderTest`
@@ -53,3 +53,4 @@ cada agregado. O leitor CSV e o parser de valores são classes puras, sem Spring
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-19 · IMP-01 · `CsvImportReader.decode` (módulo `dataimport`, classe pura): UTF-8 com/sem BOM e fallback Windows-1252 com acentos intactos; `CsvImportReaderTest` verde
