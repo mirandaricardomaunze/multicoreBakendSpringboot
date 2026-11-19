@@ -130,8 +130,11 @@ if ($NoWorktree) { Write-Warning 'NoWorktree: no automatic commits (shared check
 # logged, and the loop keeps working locally (a human reconciles). The agent itself cannot push.
 function Push-RalphBranch {
     if ($NoWorktree -or $NoPush) { return '-' }
-    git -C $work push -q -u origin $branch 2>&1 | Out-Host
-    if ($LASTEXITCODE -eq 0) { return 'ok' }
+    # Through cmd (Invoke-Native): git writes "remote:" lines to stderr, which PowerShell 5.1 with
+    # ErrorActionPreference=Stop would turn into a terminating error even on a successful push.
+    $result = Invoke-Native -CommandLine "git push -q -u origin $branch" -WorkDir $work
+    if ($result.Output.Trim()) { Write-Host $result.Output.Trim() }
+    if ($result.ExitCode -eq 0) { return 'ok' }
     Write-Warning "[ralph] push of $branch failed; commits stay local."
     return 'FAIL'
 }
