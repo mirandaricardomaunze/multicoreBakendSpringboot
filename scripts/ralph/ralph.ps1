@@ -138,7 +138,11 @@ function Push-RalphBranch {
 
 function Write-Progress-Line([string]$line) {
     $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    Add-Content -LiteralPath $progressLog -Value "$stamp  $line" -Encoding UTF8
+    # A reader (editor, tail) can hold the log open on Windows: retry, and never let the log stop the loop.
+    for ($try = 1; $try -le 5; $try++) {
+        try { Add-Content -LiteralPath $progressLog -Value "$stamp  $line" -Encoding UTF8 -ErrorAction Stop; break }
+        catch { if ($try -eq 5) { Write-Warning "[ralph] progress.log locked, line not written: $line" } else { Start-Sleep -Milliseconds 500 } }
+    }
     Write-Host "[ralph] $line"
 }
 
