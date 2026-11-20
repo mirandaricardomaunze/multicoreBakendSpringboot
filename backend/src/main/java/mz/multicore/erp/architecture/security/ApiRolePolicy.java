@@ -22,7 +22,7 @@ public final class ApiRolePolicy {
 
     /** Raízes que têm uma decisão deliberada nesta política, mesmo quando a decisão fina é por método. */
     private static final Set<String> EXPLICIT_AREAS = Set.of(
-            "/api/auth", "/api/version", "/api/platform", "/api/monitoring",
+            "/api/auth", "/api/version", "/api/changes", "/api/platform", "/api/monitoring",
             "/api/backup", "/api/users", "/api/documents",
             "/api/license", "/api/subscription", "/api/dashboard", "/api/crm",
             "/api/support/tickets", "/api/promotions", "/api/comercial", "/api/pos",
@@ -65,7 +65,8 @@ public final class ApiRolePolicy {
             return manager;
         }
         boolean seller = "SELLER".equals(normalized) || manager;
-        if (matches(uri, "/api/license") || matches(uri, "/api/subscription")) {
+        // Change counter for auto-refresh: any authenticated role of the company may poll it.
+        if (matches(uri, "/api/license") || matches(uri, "/api/subscription") || matches(uri, "/api/changes")) {
             return !normalized.isBlank();
         }
         if (matches(uri, "/api/dashboard")) {

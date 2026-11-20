@@ -11,6 +11,10 @@ class ApiRolePolicyTest {
     void employee_hasOnlyMinimumSelfServiceAccess() {
         assertTrue(ApiRolePolicy.allows("EMPLOYEE", "GET", "/api/license/status"));
         assertTrue(ApiRolePolicy.allows("EMPLOYEE", "GET", "/api/subscription/current"));
+        // AA-04: every role polls the change counter so its visible screen refreshes on its own.
+        assertTrue(ApiRolePolicy.allows("EMPLOYEE", "GET", "/api/changes"));
+        assertTrue(ApiRolePolicy.allows("SELLER", "GET", "/api/changes"));
+        assertFalse(ApiRolePolicy.allows("", "GET", "/api/changes"));
         assertFalse(ApiRolePolicy.allows("EMPLOYEE", "GET", "/api/comercial/clients"));
         assertFalse(ApiRolePolicy.allows("EMPLOYEE", "GET", "/api/finance/accounts"));
         assertFalse(ApiRolePolicy.allows("EMPLOYEE", "GET", "/api/hr/employees"));

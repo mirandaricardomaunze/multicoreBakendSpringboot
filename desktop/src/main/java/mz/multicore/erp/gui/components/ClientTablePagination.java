@@ -197,6 +197,18 @@ public final class ClientTablePagination {
         return rows;
     }
 
+    /** Zero-based page on screen, or -1 when the table has no client pagination. */
+    static int currentPage(JTable table) {
+        return table.getClientProperty(INSTANCE) instanceof ClientTablePagination pagination ? pagination.page : -1;
+    }
+
+    /** Shows {@code target}, clamped to the pages that exist; no-op without client pagination. */
+    static void showPage(JTable table, int target) {
+        if (target >= 0 && table.getClientProperty(INSTANCE) instanceof ClientTablePagination pagination) {
+            pagination.go(target);
+        }
+    }
+
     private void modelChanged(TableModelEvent ignored) {
         SwingUtilities.invokeLater(() -> { page = Math.min(page, totalPages() - 1); apply(); });
     }

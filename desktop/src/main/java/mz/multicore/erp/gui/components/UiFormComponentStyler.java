@@ -41,6 +41,8 @@ final class UiFormComponentStyler {
         button.setToolTipText("Carregar os dados mais recentes");
         button.getAccessibleContext().setAccessibleName("Actualizar dados");
         button.addActionListener(event -> refreshAction.run());
+        // Auto-refresh presses on-screen refresh buttons when another station changes data.
+        RefreshRegistry.register(button);
         return button;
     }
 

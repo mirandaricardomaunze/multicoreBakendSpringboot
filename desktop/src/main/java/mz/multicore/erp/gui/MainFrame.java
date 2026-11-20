@@ -39,19 +39,11 @@ import mz.multicore.erp.gui.components.RecentItemsHistoryManager;
 import mz.multicore.erp.desktop.client.HRApiClient;
 import mz.multicore.erp.desktop.client.AiAssistantApiClient;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
-import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -167,7 +159,7 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.PickupApiClient pickupApiClient,
             mz.multicore.erp.desktop.client.BulkStockApiClient bulkStockApiClient,
             mz.multicore.erp.desktop.client.ProjectsApiClient projectsApiClient,
-            mz.multicore.erp.desktop.client.SectorApiClients sectorApiClients
+            mz.multicore.erp.desktop.client.SectorApiClients sectorApiClients, mz.multicore.erp.desktop.client.ChangeFeedApiClient changeFeedApiClient
     ) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
@@ -304,6 +296,9 @@ public class MainFrame extends JFrame {
         }
 
         startSubscriptionWatch();
+        // Reloads the visible screen when another station changes data; stops when this frame closes.
+        mz.multicore.erp.gui.components.AutoRefreshCoordinator.start(this, changeFeedApiClient::current,
+                () -> desktopSessionStore.requireSession().activeCompanyId(), this::refreshNotificationBadgeAsync);
     }
 
     private void addCard(JComponent panel, String name) {
