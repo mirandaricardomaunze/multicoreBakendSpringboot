@@ -1,12 +1,12 @@
 ---
 id: GOAL-007
 title: "Importar stock inicial e dívidas em aberto de clientes e fornecedores"
-status: BLOCKED
+status: TODO
 priority: HIGH
 spec: docs/IMPORTACAO_DADOS_SPEC.md
 harness: docs/IMPORTACAO_DADOS_HARNESS.md
 verify: ["StockOpeningImportServiceTest", "OpeningReceivableTest", "OpeningReceivableFiscalExclusionTest", "OpeningReceivableStatementTest", "OpeningReceivableSettlementTest", "OpeningPayableTest", "OpeningBalancesImportHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "ModuleDecouplingHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "DataImportPanelHarnessTest"]
-blockedBy: ["pré-requisito GOAL-006 não está DONE (BLOCKED: build partido, units/dto)"]
+blockedBy: []
 ---
 
 # Objectivo
@@ -41,6 +41,8 @@ Pré-requisito: GOAL-006 em `DONE` (usa `CsvImportReader`, `ImportValueParser` e
   passados (SPEC §6).
 
 ## Perguntas em aberto
+
+- **2026-11-20 — Resposta (responsável via Claude):** falso alarme. O pacote `units/dto` está no git desde `380425a`; `mvn clean test-compile` na worktree passa (exit 0). A falha veio de um build intermédio. Desbloqueado: continuar.
 
 - **2026-11-19 — Pré-requisito por cumprir.** O GOAL-007 exige o GOAL-006 em `DONE` (usa
   `CsvImportReader`, `ImportValueParser` e o módulo `dataimport`), mas o GOAL-006 está `BLOCKED`, só

@@ -1,12 +1,12 @@
 ---
 id: GOAL-006
 title: "Importar clientes, fornecedores e artigos de outro ERP por CSV"
-status: BLOCKED
+status: IN_PROGRESS
 priority: HIGH
 spec: docs/IMPORTACAO_DADOS_SPEC.md
 harness: docs/IMPORTACAO_DADOS_HARNESS.md
 verify: ["CsvImportReaderTest", "ImportValueParserTest", "ClientImportServiceTest", "ClientOptionalEmailTest", "SupplierImportServiceTest", "ProductImportServiceTest", "DataImportHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "ModuleDecouplingHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "DataImportPanelHarnessTest"]
-blockedBy: ["build partido: pacote units/dto nunca foi commitado (3218952)"]
+blockedBy: []
 ---
 
 # Objectivo
@@ -47,6 +47,8 @@ cada agregado. O leitor CSV e o parser de valores são classes puras, sem Spring
 - Excel `.xlsx`, mapeamento livre de colunas, actualizar registos existentes (SPEC §6).
 
 ## Perguntas em aberto
+
+- **2026-11-20 — Resposta (responsável via Claude):** falso alarme. O pacote `units/dto` está no git desde `380425a`; `mvn clean test-compile` na worktree passa (exit 0). A falha veio de um build intermédio. Desbloqueado: continuar.
 
 - **2026-11-19 — Build do backend partido por código alheio a este goal.** O commit `3218952`
   (`feat(sectores): unidades e precos no POS e nas compras`) usa o pacote
