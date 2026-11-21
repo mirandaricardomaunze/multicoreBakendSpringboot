@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ExchangeRateRepository extends JpaRepository<ExchangeRate, Long> {
@@ -13,4 +14,8 @@ public interface ExchangeRateRepository extends JpaRepository<ExchangeRate, Long
     boolean existsByCompanyIdAndCurrencyAndRateDate(Long companyId, String currency, LocalDate rateDate);
 
     List<ExchangeRate> findByCompanyIdOrderByRateDateDescCurrencyAsc(Long companyId);
+
+    /** Rate of the given date or, failing that, of the most recent earlier date. */
+    Optional<ExchangeRate> findFirstByCompanyIdAndCurrencyAndRateDateLessThanEqualOrderByRateDateDesc(
+            Long companyId, String currency, LocalDate rateDate);
 }
