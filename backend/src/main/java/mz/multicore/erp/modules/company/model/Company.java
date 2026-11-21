@@ -108,6 +108,13 @@ public class Company extends BaseEntity {
     @Column(name = "stock_count_locked", nullable = false)
     private boolean stockCountLocked = false;
 
+    /**
+     * Moeda base (ISO 4217) em que ficam stock, custo médio, contabilidade e relatórios. MZN por omissão;
+     * só muda enquanto a empresa não tem movimentos ({@code CompanyBaseCurrencyService}, V140).
+     */
+    @Column(name = "base_currency", length = 3, nullable = false)
+    private String baseCurrency = CurrencyCode.DEFAULT_CODE;
+
     /** Name printed as the document title: the trade name when set, otherwise the legal name. */
     public String displayName() {
         return hasText(tradeName) ? tradeName.trim() : name;

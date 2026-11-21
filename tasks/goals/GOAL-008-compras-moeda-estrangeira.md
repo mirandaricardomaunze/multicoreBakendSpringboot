@@ -1,7 +1,7 @@
 ---
 id: GOAL-008
 title: "Comprar e pagar fornecedores em USD, ZAR e EUR com câmbio e diferença cambial"
-status: TODO
+status: IN_PROGRESS
 priority: HIGH
 spec: docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md
 harness: docs/MOEDA_ESTRANGEIRA_IMPORTACAO_HARNESS.md
@@ -18,7 +18,7 @@ Regras em `docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md` §2–§3 e §4.5.
 
 ## Critérios de aceitação
 
-- [ ] FX-01 — moeda base por empresa, MZN, imutável após movimentos — `CompanyBaseCurrencyTest`
+- [x] FX-01 — moeda base por empresa, MZN, imutável após movimentos — `CompanyBaseCurrencyTest`
 - [ ] FX-02 — moedas aceites e regras do câmbio — `ExchangeRateRulesTest`
 - [ ] FX-03 — câmbio proposto pela data ou anterior; sem câmbio exige escrita — `ExchangeRateRulesTest`
 - [ ] FX-04 — corrigir câmbio não altera documentos gravados — `ExchangeRateRulesTest`
@@ -48,3 +48,4 @@ Regras em `docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md` §2–§3 e §4.5.
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-22 · FX-01 · `Company.baseCurrency` (MZN por omissão, V140 põe MZN nas existentes), `CurrencyCode` com a lista fechada MZN/USD/ZAR/EUR e `CompanyBaseCurrencyService` que só deixa mudar a moeda base sem compras, facturas nem movimentos de stock (sondas `CompanyMovementProbe` em cada módulo dono); `CompanyBaseCurrencyTest` 7/7.

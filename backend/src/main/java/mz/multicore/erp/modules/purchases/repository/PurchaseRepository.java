@@ -10,6 +10,8 @@ import java.util.List;
 public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
     List<Purchase> findByCompanyId(Long companyId);
 
+    boolean existsByCompanyId(Long companyId);
+
     /** Chave do Saldo Inicial Fornecedor: fornecedor + número original na empresa (IMPORTACAO_DADOS_SPEC §5.3). */
     boolean existsByCompanyIdAndSupplierIdAndOriginalNumber(Long companyId, Long supplierId, String originalNumber);
 }

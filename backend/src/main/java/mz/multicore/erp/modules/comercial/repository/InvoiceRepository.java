@@ -22,6 +22,8 @@ import jakarta.persistence.LockModeType;
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByCompanyId(Long companyId);
 
+    boolean existsByCompanyId(Long companyId);
+
     /** Saldo equivalente a Invoice.outstandingAmount(), sem materializar o histórico. */
     @Query("""
             select coalesce(sum(coalesce(i.totalAmount, 0) + coalesce(i.noteAdjustment, 0) - coalesce(i.amountPaid, 0)), 0)
