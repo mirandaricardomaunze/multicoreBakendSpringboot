@@ -56,6 +56,11 @@ public class SupplierLookup {
         return supplierRepository.findByCompanyId(companyId);
     }
 
+    /** Há um fornecedor com este NUIT na empresa (activo ou inactivo). */
+    public boolean existsForCompanyByTaxId(String taxId, Long companyId) {
+        return taxId != null && companyId != null && supplierRepository.existsByTaxIdAndCompanyId(taxId, companyId);
+    }
+
     /** Fornecedores activos da empresa. */
     public List<Supplier> listActiveForCompany(Long companyId) {
         return supplierRepository.findByCompanyIdAndActiveTrue(companyId);

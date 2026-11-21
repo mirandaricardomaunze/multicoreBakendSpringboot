@@ -81,6 +81,16 @@ class SupplierLookupTest {
     }
 
     @Test
+    void nuitNaEmpresa_delegaESemChaveNaoConsulta() {
+        when(suppliers.existsByTaxIdAndCompanyId("400123456", 3L)).thenReturn(true);
+
+        assertThat(lookup.existsForCompanyByTaxId("400123456", 3L)).isTrue();
+        assertThat(lookup.existsForCompanyByTaxId("400123457", 3L)).isFalse();
+        assertThat(lookup.existsForCompanyByTaxId(null, 3L)).isFalse();
+        assertThat(lookup.existsForCompanyByTaxId("400123456", null)).isFalse();
+    }
+
+    @Test
     void documentosDeCompra_delegam() {
         List<Purchase> companyPurchases = List.of(new Purchase());
         List<Purchase> allPurchases = List.of(new Purchase(), new Purchase());

@@ -1,9 +1,7 @@
 package mz.multicore.erp.modules.dataimport.service;
 
 import jakarta.validation.Validator;
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.architecture.validation.TaxIdValidator;
 import mz.multicore.erp.modules.comercial.dto.SaveClientRequest;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.dataimport.dto.ImportPreviewDTO;
@@ -16,7 +14,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Importação de clientes por CSV (IMPORTACAO_DADOS_SPEC §4.1). Cada linha é convertida no mesmo
@@ -67,7 +64,7 @@ public class ClientImportService {
             return ImportRowDTO.error(row.number(), invalidValue.getColumn(), invalidValue.getMessage());
         }
         return requestValidator.firstViolation(row.number(), request, COLUMN_BY_PROPERTY)
-                .or(() -> taxIdViolation(row.number(), request.taxId()))
+                .or(() -> ImportTaxIdRule.violation(row.number(), request.taxId(), TAX_ID))
                 .or(() -> duplicates.violation(row.number(), request.taxId(), TAX_ID, "NUIT"))
                 .orElseGet(() -> ImportRowDTO.of(row.number(), statusOf(request.taxId(), companyId)));
     }
@@ -101,16 +98,6 @@ public class ClientImportService {
         } catch (ArithmeticException notWholeDays) {
             throw new ImportValueException(lineNumber, PAYMENT_TERMS_DAYS,
                     "o prazo de pagamento tem de ser um número inteiro de dias.");
-        }
-    }
-
-    /** A mesma verificação de NUIT que o registo manual faz antes de gravar. */
-    private static Optional<ImportRowDTO> taxIdViolation(int lineNumber, String taxId) {
-        try {
-            TaxIdValidator.validate(taxId);
-            return Optional.empty();
-        } catch (BusinessRuleException invalidTaxId) {
-            return Optional.of(ImportRowDTO.error(lineNumber, TAX_ID, invalidTaxId.getMessage()));
         }
     }
 
