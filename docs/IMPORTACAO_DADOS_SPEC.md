@@ -140,6 +140,10 @@ Colunas: `sku`\*, `armazem`\*, `quantidade`\*, `custo_unitario`\*, `lote`, `vali
   ajuste"). Assim reimportar o mesmo ficheiro nunca duplica stock.
 - Grava pelo ledger do inventário um movimento `ENTRY` por linha, com lote e saldo, como o stock
   inicial manual. **Sem lançamento contabilístico**.
+  - Descrição do movimento: `Stock inicial (importação)`. Antes de cada entrada, o custo médio do artigo
+    passa a contar com a quantidade ao `custo_unitario` (mesmo cálculo das entradas a custo real, pelo
+    `AverageCostUpdater` do inventário).
+  - Com algum `ERRO` no ficheiro nada é gravado (§3.1).
 
 ### 5.2 Dívidas de clientes — documento "Saldo Inicial" (série **SI**)
 

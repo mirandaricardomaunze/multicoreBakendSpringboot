@@ -6,14 +6,18 @@ import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.dataimport.dto.ImportPreviewDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowStatus;
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
+import mz.multicore.erp.modules.inventory.service.AverageCostUpdater;
 import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
+import mz.multicore.erp.modules.inventory.service.StockMovementService;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.InOrder;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -24,12 +28,17 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -39,6 +48,9 @@ import static org.mockito.Mockito.when;
  * entrada manual; SKU+armazém+lote repetidos no ficheiro são {@code ERRO} em ambas (SPEC §5.1, §3.3).
  * IMP-ST-02: artigo que já tem movimentos no armazém é {@code ERRO} ("use um ajuste"), por isso reimportar o
  * mesmo ficheiro nunca duplica stock (SPEC §5.1).
+ * IMP-ST-03: cada linha grava pelo ledger do inventário um movimento {@code ENTRY} com lote e validade (saldo e lote
+ * sobem pelo ledger), depois de levar o custo médio do artigo ao custo unitário do ficheiro; {@code ENTRY} não gera
+ * lançamento contabilístico, e um ficheiro com algum erro não grava nada (SPEC §5.1, §3.1).
  */
 class StockOpeningImportServiceTest {
 
@@ -51,6 +63,9 @@ class StockOpeningImportServiceTest {
     private final StockMovementLookup movementLookup = mock(StockMovementLookup.class);
     private final StockOpeningImportService service =
             new StockOpeningImportService(productLookup, warehouseLookup, movementLookup);
+    private final StockMovementService movementService = mock(StockMovementService.class);
+    private final AverageCostUpdater averageCost = mock(AverageCostUpdater.class);
+    private final StockOpeningWriter writer = new StockOpeningWriter(movementService, averageCost);
 
     private final Product rice = product(11L, "ART-001", "Arroz 5kg", false);
     private final Product milk = product(12L, "LEI-001", "Leite UHT", true);
@@ -230,5 +245,46 @@ class StockOpeningImportServiceTest {
         preview(HEADER, "ART-001;A01;10;5;L1;", "LEI-001;loja central;4;5;L2;" + FUTURE, "ART-001;A01;4;5;L3;");
 
         verify(movementLookup, times(1)).listProductIdsWithMovements(store.getId());
+    }
+
+    private ImportPlan<StockOpeningImportService.StockOpeningLine> plan(String... lines) {
+        return service.plan(String.join("\n", lines).getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static BigDecimal amount(String value) {
+        return argThat(actual -> actual != null && actual.compareTo(new BigDecimal(value)) == 0);
+    }
+
+    @Test
+    void eachLineEntersThroughTheLedgerAsEntryWithBatchAndExpiryAfterTheAverageCost() {
+        writer.write(plan(HEADER, "LEI-001;A02;1.200,5;42,75;L-2026-09;" + FUTURE, "ART-001;A01;10;0;;"));
+
+        InOrder ledger = inOrder(averageCost, movementService);
+        ledger.verify(averageCost).beforeEntry(eq(milk), eq(depot), amount("1200.5"), amount("51321.375"));
+        ledger.verify(movementService).registerMovement(eq(milk), eq(depot), amount("1200.5"), eq("ENTRY"),
+                eq("L-2026-09"), eq(null), eq(StockOpeningWriter.DESCRIPTION), eq(LocalDate.now().plusYears(1)));
+        ledger.verify(averageCost).beforeEntry(eq(rice), eq(store), amount("10"), amount("0"));
+        ledger.verify(movementService).registerMovement(eq(rice), eq(store), amount("10"), eq("ENTRY"),
+                eq(null), eq(null), eq(StockOpeningWriter.DESCRIPTION), eq(null));
+        // nenhum acerto nem outro tipo de movimento: ENTRY não é lançado na contabilidade
+        verifyNoMoreInteractions(movementService, averageCost);
+    }
+
+    @Test
+    void writeReturnsTheClassificationOfTheRecordedFile() {
+        ImportPreviewDTO written = writer.write(plan(HEADER, "ART-001;A01;10;5;;"));
+
+        assertThat(written.rows()).extracting(ImportRowDTO::status).containsExactly(ImportRowStatus.NOVO);
+    }
+
+    @Test
+    void fileWithAnyErrorRecordsNothing() {
+        ImportPlan<StockOpeningImportService.StockOpeningLine> plan =
+                plan(HEADER, "ART-001;A01;10;5;;", "XYZ-999;A01;10;5;;");
+
+        assertThatThrownBy(() -> writer.write(plan))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("nada foi gravado");
+        verifyNoInteractions(movementService, averageCost);
     }
 }
