@@ -45,6 +45,16 @@ public class ClientLookup {
         return id == null ? Optional.empty() : clientRepository.findById(id);
     }
 
+    /** Há um cliente com este NUIT ligado à empresa (mesma chave do registo manual). */
+    public boolean existsForCompanyByTaxId(String taxId, Long companyId) {
+        return taxId != null && clientRepository.findByTaxIdAndCompaniesId(taxId, companyId).isPresent();
+    }
+
+    /** Há um cliente com este NUIT em qualquer empresa (cliente partilhado). */
+    public boolean existsByTaxId(String taxId) {
+        return taxId != null && clientRepository.findByTaxId(taxId).isPresent();
+    }
+
     /** Clientes da empresa ordenados por nome. */
     public List<Client> listForCompany(Long companyId) {
         return clientRepository.findDistinctByCompaniesIdOrderByName(companyId);

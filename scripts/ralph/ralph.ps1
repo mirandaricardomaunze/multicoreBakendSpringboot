@@ -5,8 +5,9 @@
 
 .DESCRIPTION
   Default mode works in an isolated git worktree (..\<repo>-ralph, branch ralph/goals) so it never
-  touches files of other sessions in the main checkout. Gate-green states are committed there.
-  Nothing is ever pushed. Stop gracefully by creating .ralph\STOP in the main repository.
+  touches files of other sessions in the main checkout. Gate-green states are committed there and
+  the loop itself (never the agent) pushes branch ralph/goals to origin, without force; -NoPush turns
+  that off. Stop gracefully by creating .ralph\STOP in the main repository.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts\ralph\ralph.ps1
@@ -21,6 +22,7 @@ param(
     [int]$MaxLimitWaitHours = 8,
     [switch]$NoWaitOnLimit,
     [switch]$NoWorktree,
+    [switch]$NoPush,
     [switch]$SkipPermissions,
     [switch]$Offline,
     [string]$Model,
@@ -99,11 +101,15 @@ function Initialize-Worktree {
     # Commit ONLY the synced files, so pending (not yet gated) iteration work is never swept into
     # the bootstrap commit, and the diff guard only judges what the iterations add.
     $paths = @($synced | ForEach-Object { $_ -replace '\\', '/' } | Select-Object -Unique)
-    $changed = @(git -C $work status --porcelain -- $paths)
-    if ($changed.Count -gt 0) {
-        git -C $work add -- $paths
-        git -C $work commit -q -m "chore(ralph): sincroniza goals, specs e harness do checkout principal`n`n$coAuthor" -- $paths
-        Write-Host "[ralph] bootstrap commit: $($changed.Count) harness/goal file(s) from the main checkout"
+    # Every git call here goes to Out-Host: anything left on the pipeline would become part of the
+    # function's return value and corrupt $work. Stage first and ask the index whether anything
+    # really changed, so CRLF warnings on stderr are never mistaken for changed files.
+    git -C $work add -- $paths 2>&1 | Out-Host
+    git -C $work diff --cached --quiet -- $paths
+    if ($LASTEXITCODE -ne 0) {
+        $count = @(git -C $work diff --cached --name-only -- $paths).Count
+        git -C $work commit -q -m "chore(ralph): sincroniza goals, specs e harness do checkout principal`n`n$coAuthor" -- $paths 2>&1 | Out-Host
+        Write-Host "[ralph] bootstrap commit: $count harness/goal file(s) from the main checkout"
     }
     return $work
 }
@@ -120,9 +126,26 @@ Write-Host "[ralph] claude : $claude"
 Write-Host "[ralph] work   : $work $(if (-not $NoWorktree) { "(branch $branch)" })"
 if ($NoWorktree) { Write-Warning 'NoWorktree: no automatic commits (shared checkout). Review and commit by hand.' }
 
+# Pushes ralph/goals after a gate-green commit. Never forces: if origin moved, the push fails, is
+# logged, and the loop keeps working locally (a human reconciles). The agent itself cannot push.
+function Push-RalphBranch {
+    if ($NoWorktree -or $NoPush) { return '-' }
+    # Through cmd (Invoke-Native): git writes "remote:" lines to stderr, which PowerShell 5.1 with
+    # ErrorActionPreference=Stop would turn into a terminating error even on a successful push.
+    $result = Invoke-Native -CommandLine "git push -q -u origin $branch" -WorkDir $work
+    if ($result.Output.Trim()) { Write-Host $result.Output.Trim() }
+    if ($result.ExitCode -eq 0) { return 'ok' }
+    Write-Warning "[ralph] push of $branch failed; commits stay local."
+    return 'FAIL'
+}
+
 function Write-Progress-Line([string]$line) {
     $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    Add-Content -LiteralPath $progressLog -Value "$stamp  $line" -Encoding UTF8
+    # A reader (editor, tail) can hold the log open on Windows: retry, and never let the log stop the loop.
+    for ($try = 1; $try -le 5; $try++) {
+        try { Add-Content -LiteralPath $progressLog -Value "$stamp  $line" -Encoding UTF8 -ErrorAction Stop; break }
+        catch { if ($try -eq 5) { Write-Warning "[ralph] progress.log locked, line not written: $line" } else { Start-Sleep -Milliseconds 500 } }
+    }
     Write-Host "[ralph] $line"
 }
 
@@ -241,6 +264,7 @@ for ($i = 1; $i -le $MaxIterations; $i++) {
     $lastGate = if ($LASTEXITCODE -eq 0) { 'PASS' } else { 'FAIL' }
 
     $commit = '-'
+    $pushed = '-'
     if ($lastGate -eq 'PASS') {
         $gateFailures = 0
         if (-not $NoWorktree) {
@@ -251,12 +275,13 @@ for ($i = 1; $i -le $MaxIterations; $i++) {
                 Set-Content -LiteralPath $msgFile -Encoding UTF8 -Value "ralph($($g.Id)): $summary`n`nIteracao $i do Ralph loop. Gate: PASS.`n`n$coAuthor"
                 git -C $work commit -q -F $msgFile
                 $commit = (git -C $work rev-parse --short HEAD).Trim()
+                $pushed = Push-RalphBranch
             }
         }
     } else {
         $gateFailures++
     }
-    Write-Progress-Line "iter $i :: $($g.Id) agent=$status gate=$lastGate commit=$commit ${mins}min :: $summary"
+    Write-Progress-Line "iter $i :: $($g.Id) agent=$status gate=$lastGate commit=$commit push=$pushed ${mins}min :: $summary"
 
     if ($gateFailures -ge $MaxGateFailures) { Write-Progress-Line "Gate failed $gateFailures times in a row. Stopping for human review."; break }
     if ($status -eq 'NEEDS_HUMAN' -and $Goal) { Write-Progress-Line "$($g.Id) needs a human decision. Stopping."; break }

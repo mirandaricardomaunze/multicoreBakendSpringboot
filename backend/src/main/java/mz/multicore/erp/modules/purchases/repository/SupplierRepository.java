@@ -10,4 +10,5 @@ import java.util.List;
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
     List<Supplier> findByCompanyId(Long companyId);
     List<Supplier> findByCompanyIdAndActiveTrue(Long companyId);
+    boolean existsByTaxIdAndCompanyId(String taxId, Long companyId);
 }

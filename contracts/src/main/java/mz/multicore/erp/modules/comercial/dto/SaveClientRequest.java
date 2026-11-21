@@ -19,7 +19,7 @@ public record SaveClientRequest(
         @ValidNuit
         String taxId,
 
-        @NotBlank(message = "O email é obrigatório.")
+        /** Opcional (IMPORTACAO_DADOS_SPEC §4.1); se vier, tem de ser válido. */
         @Email(message = "O email deve ter um formato válido.")
         @Size(max = 200, message = "O email não pode exceder 200 caracteres.")
         String email,
@@ -36,6 +36,11 @@ public record SaveClientRequest(
         @DecimalMin(value = "0.00", message = "O limite de crédito não pode ser negativo.")
         BigDecimal creditLimit
 ) {
+
+    /** Email sem espaços à volta; vazio ou só espaços é "sem email" ({@code null}). */
+    public SaveClientRequest {
+        email = email == null || email.isBlank() ? null : email.strip();
+    }
 
     /** Retrocompatível: sem prazo indicado, pronto pagamento; sem limite de crédito. */
     public SaveClientRequest(String name, String taxId, String email, String address) {

@@ -1,0 +1,100 @@
+# Spec — Centros de custo e orçamento
+
+Status: **aprovada**
+Effective date: 2026-11-19
+Harness: [CENTROS_CUSTO_ORCAMENTO_HARNESS.md](CENTROS_CUSTO_ORCAMENTO_HARNESS.md)
+Goals: [GOAL-010](../tasks/goals/GOAL-010-centros-de-custo.md) (centros de custo) ·
+[GOAL-011](../tasks/goals/GOAL-011-orcamento.md) (orçamento)
+
+## 1. Problema
+
+O gestor e o contabilista querem saber quanto cada loja, armazém ou departamento ganha e gasta, e
+comparar com o planeado. Hoje a contabilidade só tem contas: não há como separar a renda da loja da
+Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
+
+## 2. Decisões do responsável (2026-11-19)
+
+| Tema | Decisão |
+|---|---|
+| O que é um centro | Cada **armazém/loja** é automaticamente um centro; o gestor cria **centros manuais** (Administração, Frota, Produção…). |
+| Obrigatoriedade | **Obrigatório nas linhas das classes 6 e 7**; não se usa nas classes 1–5. Automáticos herdam do armazém; manuais e despesas pedem-no. |
+| Orçamento | **Anual, por conta × centro × mês**, contas das classes 6 e 7; relatório real vs orçado. |
+| Excesso | **Só alerta**: grava normalmente; aviso a 90% e 100% do orçamento do mês. |
+
+## 3. Centros de custo (GOAL-010)
+
+### 3.1 Cadastro
+
+- `CostCenter` por empresa: `code` (único na empresa), `name`, `type` (`WAREHOUSE` ou `MANUAL`),
+  armazém ligado (só `WAREHOUSE`), `active`.
+- Criar um armazém cria o seu centro (`code` = código do armazém); armazéns existentes recebem centro
+  pela migração. Centro de armazém não se edita à mão: acompanha o nome e o estado do armazém.
+- Cada empresa recebe um centro manual **`ADM` — Administração**, que é o **centro por omissão**
+  (alterável nas Configurações para outro centro activo).
+- Centros manuais: criar, renomear, desactivar. Não se apaga um centro com lançamentos.
+- Centro inactivo não aceita lançamentos novos.
+- Gerir centros: **ADMIN** e **MANAGER**. Consultar: quem vê a contabilidade.
+
+### 3.2 Marcação nos lançamentos
+
+- `JournalLine.costCenter`: **obrigatório** nas linhas de contas das classes **6** e **7**, e
+  **proibido** nas classes 1–5 (`BusinessRuleException` no domínio do lançamento).
+- Centro de outra empresa ou inactivo é recusado.
+- Lançamentos automáticos: centro = centro do **armazém do documento de origem** (vendas, POS,
+  compras, quebras, ajustes de stock, custos de importação). Evento sem armazém (salários,
+  amortizações, combustível da frota, despesas de tesouraria sem centro) usa o **centro por omissão**.
+- Lançamento manual e despesa de tesouraria: o pedido aceita `costCenterId` nas linhas/na despesa;
+  vazio numa linha de classe 6/7 usa o **centro por omissão**. O desktop pede o centro com o centro por
+  omissão pré-seleccionado.
+- Linhas das classes 6/7 já existentes recebem o centro por omissão pela migração.
+
+### 3.3 Resultado por centro
+
+- Relatório "Resultados por centro de custo" para um período: por centro, proveitos (classe 7,
+  crédito − débito), custos (classe 6, débito − crédito) e resultado; mais a coluna "Total".
+- O total do relatório é **igual** ao resultado da demonstração de resultados do mesmo período.
+- Razão e balancete aceitam filtro opcional por centro.
+- Desktop: ecrã em Contabilidade com o relatório (período, tabela por centro) e exportação pelos
+  meios normais de tabela (PDF/Excel/CSV); gestão de centros em Configurações.
+
+## 4. Orçamento (GOAL-011)
+
+### 4.1 Orçamento anual
+
+- Um orçamento por empresa e ano, com linhas: conta **movimentável das classes 6 ou 7**, centro de
+  custo activo, mês (1–12) e valor ≥ 0. Uma linha por conta × centro × mês.
+- Editável a qualquer momento; cada gravação gera auditoria `BUDGET_CHANGE` com ano e totais.
+- **Copiar do ano anterior**: preenche cada conta × centro × mês com o **real** do mesmo mês do ano
+  anterior, com percentagem opcional de ajuste (ex.: +10%), arredondado a 2 casas. Só preenche células
+  vazias, nunca sobrescreve.
+- Gerir orçamento: **ADMIN** e **MANAGER**.
+
+### 4.2 Real vs orçado
+
+- Real = soma das linhas de lançamento da conta e centro no mês (classe 6: débito − crédito;
+  classe 7: crédito − débito).
+- Relatório por centro e conta, para um mês e acumulado do ano: orçado, real, desvio (real − orçado)
+  e desvio %. Desvio **desfavorável**: custo acima do orçado ou proveito abaixo; favorável no inverso.
+  Orçado zero mostra desvio % vazio, não infinito.
+
+### 4.3 Alertas
+
+- Por centro e mês: quando o **real dos custos (classe 6)** atinge **90%** e **100%** do **orçado dos
+  custos** desse centro nesse mês, gera-se **um** alerta por limiar, centro e mês (não repete).
+- O alerta aparece no sino dos perfis ADMIN e MANAGER.
+- Ao gravar uma compra ou despesa de tesouraria que faz o centro passar um limiar, a resposta traz um
+  **aviso** que o desktop mostra como toast. **Nada é bloqueado**.
+
+### 4.4 Desktop
+
+- Contabilidade › Orçamento: escolher ano, grelha conta × centro com os 12 meses, copiar do ano
+  anterior, gravar.
+- Contabilidade › Real vs Orçado: mês ou acumulado, filtro por centro, desvios coloridos pelo
+  vocabulário de estados do projecto (`StatusTone`).
+
+## 5. Fora de âmbito
+
+- Repartição automática de custos comuns entre centros (ex.: renda da sede pelas lojas).
+- Centros de custo em documentos comerciais sem armazém escolhido à mão (o centro vem do armazém).
+- Orçamento de tesouraria e de investimento; aprovação ou bloqueio por orçamento.
+- Vários orçamentos/versões por ano.

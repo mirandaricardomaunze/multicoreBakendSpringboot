@@ -1,0 +1,44 @@
+---
+id: GOAL-009
+title: "Frete, alfândega e despachante repartidos no custo dos artigos importados"
+status: TODO
+priority: HIGH
+spec: docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md
+harness: docs/MOEDA_ESTRANGEIRA_IMPORTACAO_HARNESS.md
+verify: ["LandedCostDocumentTest", "LandedCostAllocationTest", "LandedCostStockEffectTest", "LandedCostPostingTest", "LandedCostHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "LandedCostUiHarnessTest"]
+blockedBy: []
+---
+
+# Objectivo
+
+Depois de receber uma importação, o comprador regista os custos de frete, seguro, direitos,
+despachante e IVA aduaneiro num documento CI. O sistema reparte-os pelos artigos, sobe o custo médio
+do stock que ainda existe, manda a parte já vendida para CMV e cria as dívidas a cada fornecedor.
+Regras em `docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md` §4.
+
+Pré-requisito: GOAL-008 em `DONE` (moeda, câmbio e pagamento com diferença cambial). Se não estiver,
+a iteração termina com `NEEDS_HUMAN` e não começa este goal.
+
+## Critérios de aceitação
+
+- [ ] LC-03 — o que entra no custo e o que vai a IVA dedutível — `LandedCostAllocationTest`
+- [ ] LC-04 — repartição por valor, peso ou quantidade — `LandedCostAllocationTest`
+- [ ] LC-05 — arredondamento com resíduo na maior quota — `LandedCostAllocationTest`
+- [ ] LC-01 — documento CI numerado e ligado a compras recebidas — `LandedCostDocumentTest`
+- [ ] LC-02 — linhas de custo geram dívida a cada fornecedor — `LandedCostDocumentTest`
+- [ ] LC-06 — parte para o stock no custo médio, resto a CMV, vendas passadas intactas — `LandedCostStockEffectTest`
+- [ ] LC-07 — lançamento 3201/6101/2432 contra 2201, equilibrado — `LandedCostPostingTest`
+- [ ] LC-08 — pré-visualização e confirmação por HTTP, empresa activa, perfis de compras — `LandedCostHttpIntegrationTest`
+- [ ] LC-UI-01 — ecrã Compras › Custos de Importação — `LandedCostUiHarnessTest`
+
+## Fora de âmbito
+
+- Anular um CI confirmado, vendas e tesouraria em moeda estrangeira (SPEC §5).
+
+## Perguntas em aberto
+
+(Vazio. A IA escreve aqui quando precisa de decisão humana e passa o goal a BLOCKED.)
+
+## Registo de progresso
+
+<!-- uma linha por iteração: data · critério · resultado -->

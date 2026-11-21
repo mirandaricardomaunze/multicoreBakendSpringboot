@@ -46,7 +46,7 @@ Escreve a pergunta (com as opções e a tua recomendação) em `## Perguntas em 
 ## Proibido
 
 - Apagar, `@Disabled` ou enfraquecer testes/harness existentes para ficar verde.
-- Mexer noutros goals, `git commit`, `git push`, `--no-verify` (o loop faz o commit depois do gate).
+- Mexer noutros goals, `git commit`, `git push`, `--no-verify` (o loop faz o commit e o push depois do gate).
 - Emojis em Swing, `@Autowired` em campo, devolver `@Entity` para fora do Service.
 - Trabalhar em mais de um critério.
 

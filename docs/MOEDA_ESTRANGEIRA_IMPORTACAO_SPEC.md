@@ -1,0 +1,138 @@
+# Spec — Compras em moeda estrangeira e custos de importação
+
+Status: **aprovada**
+Effective date: 2026-11-19
+Harness: [MOEDA_ESTRANGEIRA_IMPORTACAO_HARNESS.md](MOEDA_ESTRANGEIRA_IMPORTACAO_HARNESS.md)
+Goals: [GOAL-008](../tasks/goals/GOAL-008-compras-moeda-estrangeira.md) (moeda e câmbio) ·
+[GOAL-009](../tasks/goals/GOAL-009-custos-de-importacao.md) (custos de importação)
+
+## 1. Problema
+
+Em Moçambique compra-se muito em USD, ZAR e EUR, e a mercadoria importada chega com frete,
+direitos aduaneiros e despachante. Hoje tudo é em meticais e esses custos não entram no artigo:
+o operador converte à mão, o custo médio fica abaixo do real e a margem aparece inflacionada.
+
+## 2. Decisões do responsável (2026-11-19)
+
+| Tema | Decisão |
+|---|---|
+| Âmbito | **Compras primeiro.** GOAL-008: compras e pagamentos a fornecedores em moeda estrangeira. GOAL-009: custos de importação. Vendas em moeda estrangeira ficam fora. |
+| Moeda base | **Por empresa, MZN por omissão**; não muda depois de haver movimentos. |
+| Câmbio | **Tabela diária** por empresa; o documento propõe o câmbio da data, o utilizador pode corrigir, e o valor usado fica **gravado no documento**. |
+| Diferença cambial | **Lançamento automático** no pagamento, em contas novas **6601** (desfavorável) e **7601** (favorável). |
+| Repartição | **Escolhida por documento**: por valor (omissão), por peso ou por quantidade. |
+| Custos depois de vender | A parte do stock **ainda existente** sobe o custo médio; a parte **já vendida** vai a **CMV (6101)**. Vendas passadas não mudam. |
+| IVA da importação | **IVA dedutível (2432)**, fora do custo. Direitos, frete e despachante entram no custo. |
+
+## 3. Moeda e câmbio (GOAL-008)
+
+### 3.1 Moeda base da empresa
+
+- `Company.baseCurrency` (código ISO 4217), **MZN** por omissão; escolhida no registo da empresa.
+- Empresas existentes ficam com **MZN** pela migração.
+- Depois do primeiro documento ou movimento (compra, factura, movimento de stock) a moeda base
+  **não pode ser alterada** (`BusinessRuleException`).
+- Stock, custo médio, contabilidade, SAF-T, declarações de IVA e relatórios ficam **sempre na moeda base**.
+
+### 3.2 Moedas e tabela de câmbios
+
+- Moedas aceites: **MZN, USD, ZAR, EUR** (lista fechada; outras ficam fora de âmbito).
+- Câmbio = quantas unidades da **moeda base** vale **1 unidade** da moeda estrangeira
+  (ex.: `USD = 63,9000`), > 0, com 4 casas decimais.
+- Um câmbio por empresa, moeda e data. Pode ser corrigido; documentos já gravados **não mudam**.
+- Câmbio proposto para uma data = o da própria data, ou o da data anterior mais recente. Sem nenhum,
+  o documento exige que o utilizador escreva o câmbio.
+- Criar e corrigir câmbios: **ADMIN**. Consultar: quem pode registar compras.
+
+### 3.3 Compra em moeda estrangeira
+
+- Fornecedor pode ter **moeda habitual** (opcional), proposta em encomendas e compras novas.
+- Encomenda (`PurchaseOrder`) e compra (`Purchase`) guardam `currency` e `exchangeRate` (fotografia).
+  Documento na moeda base tem câmbio **1** e comporta-se como hoje; compras existentes migram para a
+  moeda base com câmbio 1.
+- Preços e totais das linhas ficam na **moeda do documento**; o documento guarda também o **total em
+  moeda base** = `total × câmbio`, arredondado a 2 casas (HALF_UP).
+- Custo unitário que entra no stock e no **custo médio** = `preço unitário × câmbio`, na moeda base.
+- Lançamento automático da compra na moeda base, ao câmbio do documento (mesmas contas de hoje).
+- Contas a pagar e extracto de fornecedor mostram a **moeda**, o **valor em dívida na moeda do
+  documento** e o equivalente em moeda base.
+- PDFs da encomenda e da compra mostram o código da moeda e o câmbio usado.
+
+### 3.4 Pagamento e diferença cambial
+
+- O pagamento de uma compra em moeda estrangeira indica o **valor na moeda do documento** e o
+  **câmbio do pagamento** (proposto pela tabela para a data do pagamento, editável).
+- A conta de tesouraria é sempre na **moeda base**: sai `valor × câmbio do pagamento`.
+- A dívida ao fornecedor baixa `valor × câmbio do documento` (proporcional nos pagamentos parciais).
+  O pagamento que **liquida** a dívida baixa exactamente o saldo em moeda base que restava (sem
+  resíduos de cêntimos).
+- Lançamento automático equilibrado:
+  - Débito **2201** Fornecedores — valor ao câmbio do documento;
+  - Crédito **1101/1201** (conta usada) — valor ao câmbio do pagamento;
+  - diferença a débito de **6601** se o pagamento custou mais (perda), ou a crédito de **7601** se
+    custou menos (ganho).
+- Plano de contas: semear **66** "Custos financeiros" > **6601** "Diferenças de câmbio desfavoráveis"
+  e **76** "Proveitos financeiros" > **7601** "Diferenças de câmbio favoráveis", também nas empresas
+  que já têm plano, sem duplicar contas existentes.
+
+## 4. Custos de importação (GOAL-009)
+
+### 4.1 Documento "Custos de Importação" (série **CI**)
+
+- Numeração `CI-aaaa/n` por empresa. Liga-se a **uma ou mais compras recebidas** (estado
+  `COMPLETED`) da empresa. Uma compra pode receber vários documentos CI.
+- Linhas de custo, cada uma com: **tipo** (`FRETE`, `SEGURO`, `DIREITOS_ADUANEIROS`, `DESPACHANTE`,
+  `IVA_ADUANEIRO`, `OUTRO`), **fornecedor** (transportadora, despachante, Autoridade Tributária…),
+  **moeda e câmbio** (regras do §3), **valor** e, quando o serviço tem IVA, a **taxa de IVA**
+  existente na empresa.
+- Cada linha gera uma **dívida ao seu fornecedor**, visível em contas a pagar e paga com a mesma
+  acção de pagamento a fornecedor (com diferença cambial, §3.4).
+
+### 4.2 O que entra no custo
+
+- Entram no custo: `FRETE`, `SEGURO`, `DIREITOS_ADUANEIROS`, `DESPACHANTE`, `OUTRO` — sempre o valor
+  **sem IVA**, convertido à moeda base.
+- **Não entra**: `IVA_ADUANEIRO` e o IVA dos serviços — vão a **IVA dedutível (2432)** e à declaração
+  de IVA.
+
+### 4.3 Repartição
+
+- Método escolhido por documento: **VALOR** (omissão — valor em moeda base de cada linha de compra),
+  **PESO** (`netUnitWeightKg × quantidade`; se alguma linha não tem peso, é erro) ou **QUANTIDADE**.
+- Arredondamento a 2 casas; o resíduo de cêntimos vai para a linha com maior quota, para a soma
+  repartida ser exactamente o total.
+- **Pré-visualização** antes de gravar: por artigo, custo unitário original, custo acrescentado e
+  custo unitário final.
+
+### 4.4 Efeito no stock e na contabilidade
+
+- Para cada linha de compra com quantidade recebida `Q` e quota `C`:
+  - `S` = stock actual do artigo nesse armazém;
+  - parte para o stock = `C × min(1, S / Q)`; o resto (`C` − parte para o stock) é a parte já vendida.
+- A parte para o stock **sobe o custo médio** do artigo: `novo médio = (S × médio + parte) / S`.
+- A parte já vendida vai a **CMV (6101)**. **Vendas passadas não mudam** (o custo da linha de venda
+  é fotografado, ver `MARGEM_CUSTO_HISTORICO_SPEC.md`).
+- Lançamento automático equilibrado, na moeda base:
+  - Débito **3201** Mercadorias (parte para o stock) e **6101** CMV (parte já vendida);
+  - Débito **2432** IVA dedutível (IVA aduaneiro e IVA dos serviços);
+  - Crédito **2201** Fornecedores (total de cada linha com IVA).
+- Mesmos perfis que registam compras.
+
+### 4.5 Desktop
+
+- Compras: moeda e câmbio no formulário de encomenda e de compra; contas a pagar com a moeda.
+- Pagamento a fornecedor: campo de câmbio quando a compra é estrangeira, com a diferença cambial
+  mostrada antes de confirmar.
+- Configurações: tabela de câmbios (data, moeda, câmbio) e moeda base da empresa (só leitura depois
+  de haver movimentos).
+- Compras › Custos de Importação: escolher compras, linhas de custo, método, pré-visualização por
+  artigo e confirmação. Padrão de tabelas, tipografia e diálogos do projecto; ícones por `UIHelper.icon`.
+
+## 5. Fora de âmbito
+
+- Facturas de venda, recibos e POS em moeda estrangeira.
+- Contas de tesouraria (banco/caixa) em moeda estrangeira.
+- Reavaliação cambial de saldos em aberto no fecho do período.
+- Câmbio automático do Banco de Moçambique.
+- Moedas além de MZN, USD, ZAR e EUR.
+- Anular um documento CI depois de confirmado.

@@ -20,6 +20,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findBySkuAndCompaniesId(String sku, Long companyId);
     Optional<Product> findByReferenceAndCompaniesId(String reference, Long companyId);
     Optional<Product> findByBarcodeAndCompaniesId(String barcode, Long companyId);
+    List<Product> findBySkuIn(Collection<String> skus);
+    List<Product> findByBarcodeIn(Collection<String> barcodes);
+    List<Product> findByReferenceIn(Collection<String> references);
     Optional<Product> findByIdAndCompaniesId(Long id, Long companyId);
     List<Product> findDistinctByCompaniesIdOrderByName(Long companyId);
     long countByBusinessUnitId(Long businessUnitId);
