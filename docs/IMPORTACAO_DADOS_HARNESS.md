@@ -11,7 +11,7 @@
 |---|---|---|
 | IMP-01 | Lê UTF-8 com e sem BOM e, se não for UTF-8 válido, Windows-1252, com acentos intactos (§3.2) | `CsvImportReaderTest` ✅ |
 | IMP-02 | Detecta `;` ou `,` no cabeçalho; aspas protegem separador e `""` (§3.2) | `CsvImportReaderTest` ✅ |
-| IMP-03 | Colunas reconhecidas sem maiúsculas/acentos/espaços; obrigatória em falta recusa o ficheiro; a mais é anunciada (§3.2) | `CsvImportReaderTest` |
+| IMP-03 | Colunas reconhecidas sem maiúsculas/acentos/espaços; obrigatória em falta recusa o ficheiro; a mais é anunciada (§3.2) | `CsvImportReaderTest` ✅ |
 | IMP-04 | Números `1.234,56` e `1234.56`; datas `dd/mm/aaaa` e `aaaa-mm-dd`; outro formato é erro da linha com nº de linha (§3.2) | `ImportValueParserTest` |
 | IMP-05 | Acima de 2 MB ou 5 000 linhas o ficheiro é recusado; linhas vazias ignoradas (§3.2) | `CsvImportReaderTest` |
 

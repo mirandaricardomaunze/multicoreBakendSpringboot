@@ -1,13 +1,19 @@
 package mz.multicore.erp.modules.dataimport.service;
 
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * Lê ficheiros CSV de importação de outro ERP (IMPORTACAO_DADOS_SPEC §3.2).
@@ -102,5 +108,43 @@ public class CsvImportReader {
         }
         fields.add(field.toString());
         return fields;
+    }
+
+    /**
+     * Reconhece as colunas do cabeçalho pelo nome do modelo, sem distinguir maiúsculas, acentos nem
+     * espaços nas pontas. Coluna obrigatória em falta recusa o ficheiro inteiro; colunas a mais são
+     * ignoradas e devolvidas em {@link CsvHeader#extraColumns()} para serem anunciadas.
+     */
+    public CsvHeader readHeader(List<String> headerFields, List<String> requiredColumns, List<String> optionalColumns) {
+        Map<String, String> known = new LinkedHashMap<>();
+        requiredColumns.forEach(column -> known.put(normalizeColumn(column), column));
+        optionalColumns.forEach(column -> known.put(normalizeColumn(column), column));
+
+        Map<String, Integer> columnIndex = new LinkedHashMap<>();
+        List<String> extraColumns = new ArrayList<>();
+        for (int i = 0; i < headerFields.size(); i++) {
+            String original = headerFields.get(i) == null ? "" : headerFields.get(i).strip();
+            String column = known.get(normalizeColumn(original));
+            if (column == null) {
+                if (!original.isEmpty()) {
+                    extraColumns.add(original);
+                }
+            } else {
+                columnIndex.putIfAbsent(column, i);
+            }
+        }
+
+        List<String> missing = requiredColumns.stream().filter(column -> !columnIndex.containsKey(column)).toList();
+        if (!missing.isEmpty()) {
+            throw new BusinessRuleException((missing.size() == 1
+                    ? "Coluna obrigatória em falta no ficheiro: "
+                    : "Colunas obrigatórias em falta no ficheiro: ") + String.join(", ", missing) + ".");
+        }
+        return new CsvHeader(columnIndex, extraColumns);
+    }
+
+    private static String normalizeColumn(String name) {
+        String withoutAccents = Normalizer.normalize(name.strip(), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return withoutAccents.toLowerCase(Locale.ROOT);
     }
 }

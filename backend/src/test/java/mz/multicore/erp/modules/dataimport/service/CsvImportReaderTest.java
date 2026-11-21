@@ -1,11 +1,14 @@
 package mz.multicore.erp.modules.dataimport.service;
 
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * IMPORTACAO_DADOS_HARNESS — leitura do ficheiro CSV (SPEC §3.2).
@@ -93,5 +96,49 @@ class CsvImportReaderTest {
     void doubledQuotesInsideQuotedFieldBecomeOneQuote() {
         assertThat(reader.parseLine("\"Loja \"\"Central\"\"; Maputo\";1", ';'))
                 .containsExactly("Loja \"Central\"; Maputo", "1");
+    }
+
+    private static final List<String> CLIENT_REQUIRED = List.of("nome", "nuit");
+    private static final List<String> CLIENT_OPTIONAL = List.of("email", "morada");
+
+    // IMP-03
+    @Test
+    void recognisesColumnsIgnoringCaseAccentsAndOuterSpaces() {
+        CsvHeader header = reader.readHeader(
+                List.of(" NUIT ", "Nóme", "E-mail?", "MORADA"), CLIENT_REQUIRED, CLIENT_OPTIONAL);
+
+        List<String> row = List.of("400000001", "João", "x", "Maputo");
+        assertThat(header.value(row, "nome")).isEqualTo("João");
+        assertThat(header.value(row, "nuit")).isEqualTo("400000001");
+        assertThat(header.value(row, "morada")).isEqualTo("Maputo");
+        assertThat(header.has("email")).isFalse();
+        assertThat(header.value(row, "email")).isEmpty();
+    }
+
+    // IMP-03
+    @Test
+    void missingRequiredColumnRejectsTheWholeFile() {
+        assertThatThrownBy(() -> reader.readHeader(List.of("nome", "email"), CLIENT_REQUIRED, CLIENT_OPTIONAL))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("nuit");
+    }
+
+    // IMP-03
+    @Test
+    void extraColumnsAreIgnoredAndAnnounced() {
+        CsvHeader header = reader.readHeader(
+                List.of("nome", "Telefone", "nuit", " Observações "), CLIENT_REQUIRED, CLIENT_OPTIONAL);
+
+        assertThat(header.extraColumns()).containsExactly("Telefone", "Observações");
+        assertThat(header.value(List.of("Ana", "84", "400000001", "obs"), "nuit")).isEqualTo("400000001");
+    }
+
+    // IMP-03
+    @Test
+    void shortRowYieldsEmptyValueAndValuesAreTrimmed() {
+        CsvHeader header = reader.readHeader(List.of("nome", "nuit", "morada"), CLIENT_REQUIRED, CLIENT_OPTIONAL);
+
+        assertThat(header.value(List.of("  Ana  ", "400000001"), "nome")).isEqualTo("Ana");
+        assertThat(header.value(List.of("Ana", "400000001"), "morada")).isEmpty();
     }
 }
