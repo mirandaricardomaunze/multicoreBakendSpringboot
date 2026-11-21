@@ -2,8 +2,10 @@ package mz.multicore.erp.modules.dataimport.service;
 
 import jakarta.validation.Validator;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.validation.TaxIdValidator;
 import mz.multicore.erp.modules.comercial.dto.SaveClientRequest;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.dataimport.dto.ImportPreviewDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowStatus;
@@ -38,19 +40,26 @@ public class ClientImportService {
     private final CsvImportReader reader = new CsvImportReader();
     private final ImportValueParser parser = new ImportValueParser();
     private final ImportRequestValidator requestValidator;
+    private final ClientLookup clientLookup;
 
-    public ClientImportService(Validator validator) {
+    public ClientImportService(Validator validator, ClientLookup clientLookup) {
         this.requestValidator = new ImportRequestValidator(validator);
+        this.clientLookup = clientLookup;
     }
 
-    /** Lê o ficheiro e classifica cada linha, sem gravar nada (§3.1 passo 2). */
+    /** Lê o ficheiro e classifica cada linha na empresa activa, sem gravar nada (§3.1 passo 2). */
     public ImportPreviewDTO preview(byte[] content) {
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
         CsvTable table = reader.read(content, REQUIRED_COLUMNS, OPTIONAL_COLUMNS);
-        List<ImportRowDTO> rows = table.rows().stream().map(row -> classify(table, row)).toList();
+        DuplicateKeys duplicates = DuplicateKeys.of(table.rows(),
+                row -> parser.parseText(table.value(row, TAX_ID)));
+        List<ImportRowDTO> rows = table.rows().stream()
+                .map(row -> classify(table, row, duplicates, companyId))
+                .toList();
         return new ImportPreviewDTO(rows, table.header().extraColumns());
     }
 
-    private ImportRowDTO classify(CsvTable table, CsvTable.Row row) {
+    private ImportRowDTO classify(CsvTable table, CsvTable.Row row, DuplicateKeys duplicates, Long companyId) {
         SaveClientRequest request;
         try {
             request = toRequest(table, row);
@@ -59,7 +68,16 @@ public class ClientImportService {
         }
         return requestValidator.firstViolation(row.number(), request, COLUMN_BY_PROPERTY)
                 .or(() -> taxIdViolation(row.number(), request.taxId()))
-                .orElseGet(() -> ImportRowDTO.of(row.number(), ImportRowStatus.NOVO));
+                .or(() -> duplicates.violation(row.number(), request.taxId(), TAX_ID, "NUIT"))
+                .orElseGet(() -> ImportRowDTO.of(row.number(), statusOf(request.taxId(), companyId)));
+    }
+
+    /** §4.1: já na empresa → ignorado; só noutra empresa → o cliente partilhado é associado. */
+    private ImportRowStatus statusOf(String taxId, Long companyId) {
+        if (clientLookup.existsForCompanyByTaxId(taxId, companyId)) {
+            return ImportRowStatus.JA_EXISTE;
+        }
+        return clientLookup.existsByTaxId(taxId) ? ImportRowStatus.ASSOCIADO : ImportRowStatus.NOVO;
     }
 
     private SaveClientRequest toRequest(CsvTable table, CsvTable.Row row) {
