@@ -3,6 +3,13 @@ package mz.multicore.erp.modules.purchases.service;
 import mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.modules.accounting.model.Account;
+import mz.multicore.erp.modules.accounting.model.JournalEntry;
+import mz.multicore.erp.modules.accounting.model.JournalLine;
+import mz.multicore.erp.modules.accounting.service.JournalService;
+import mz.multicore.erp.modules.accounting.service.PgcNirfChart;
+import mz.multicore.erp.modules.accounting.service.PostingHelper;
+import mz.multicore.erp.modules.accounting.service.ProcurementPostingHandler;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.currency.service.ExchangeRateService;
@@ -28,6 +35,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -43,6 +51,8 @@ import static org.mockito.Mockito.when;
  * indica o valor na moeda do documento e o câmbio do pagamento (proposto pela tabela para a data, editável); a
  * tesouraria (sempre em moeda base) sai valor × câmbio do pagamento; a dívida baixa ao câmbio do documento,
  * proporcional nos parciais, e o pagamento que liquida baixa exactamente o saldo em moeda base que restava.
+ * Harness FX-10: o lançamento debita 2201 pela baixa da dívida, credita a tesouraria pelo que saiu e lança a
+ * diferença a débito de 6601 (perda) ou a crédito de 7601 (ganho), sempre equilibrado.
  */
 class ExchangeDifferenceTest {
 
@@ -172,6 +182,110 @@ class ExchangeDifferenceTest {
         SupplierPaymentRegisteredEvent event = publishedEvents().get(0);
         assertThat(event.supplierAmount()).isEqualByComparingTo(event.amount());
         assertThat(purchase.getOutstanding()).isEqualByComparingTo("50.00");
+    }
+
+    // ─── FX-10: lançamento do pagamento com diferença cambial (SPEC §3.4) ────────────────────────────────────────
+
+    @Test
+    void fx10_pagamentoMaisCaroDebitaAPerdaEm6601() {
+        usdPurchase("100.00", "63.9055");
+        payments.registerSupplierPayment(PURCHASE_ID, new BigDecimal("40.00"), ACCOUNT_ID, null,
+                new BigDecimal("65.0000"));
+
+        JournalEntry entry = post(publishedEvents().get(0));
+
+        // tesouraria 2600,00; dívida baixa 2556,22; perda 43,78
+        assertThat(debit(entry, PgcNirfChart.FORNECEDORES)).isEqualByComparingTo("2556.22");
+        assertThat(credit(entry, PgcNirfChart.BANCO)).isEqualByComparingTo("2600.00");
+        assertThat(debit(entry, PgcNirfChart.EXCHANGE_LOSS)).isEqualByComparingTo("43.78");
+        assertThat(lines(entry, PgcNirfChart.EXCHANGE_GAIN)).isEmpty();
+        assertThat(entry.isBalanced()).isTrue();
+    }
+
+    @Test
+    void fx10_pagamentoMaisBaratoCreditaOGanhoEm7601() {
+        usdPurchase("100.00", "63.9055");
+        payments.registerSupplierPayment(PURCHASE_ID, new BigDecimal("40.00"), ACCOUNT_ID, null,
+                new BigDecimal("62.5000"));
+
+        JournalEntry entry = post(publishedEvents().get(0));
+
+        // tesouraria 2500,00; dívida baixa 2556,22; ganho 56,22
+        assertThat(debit(entry, PgcNirfChart.FORNECEDORES)).isEqualByComparingTo("2556.22");
+        assertThat(credit(entry, PgcNirfChart.BANCO)).isEqualByComparingTo("2500.00");
+        assertThat(credit(entry, PgcNirfChart.EXCHANGE_GAIN)).isEqualByComparingTo("56.22");
+        assertThat(lines(entry, PgcNirfChart.EXCHANGE_LOSS)).isEmpty();
+        assertThat(entry.isBalanced()).isTrue();
+    }
+
+    @Test
+    void fx10_liquidacaoFechaOsFornecedoresSemResiduosEEquilibrada() {
+        usdPurchase("3.00", "63.9055");
+        for (int i = 0; i < 3; i++) {
+            payments.registerSupplierPayment(PURCHASE_ID, BigDecimal.ONE, ACCOUNT_ID, null, new BigDecimal("64.0000"));
+        }
+
+        BigDecimal suppliersDebited = BigDecimal.ZERO;
+        for (SupplierPaymentRegisteredEvent event : publishedEvents()) {
+            JournalEntry entry = post(event);
+            assertThat(entry.isBalanced()).isTrue();
+            suppliersDebited = suppliersDebited.add(debit(entry, PgcNirfChart.FORNECEDORES));
+        }
+        assertThat(suppliersDebited).as("2201 debitado = crédito da compra em moeda base").isEqualByComparingTo("191.72");
+    }
+
+    @Test
+    void fx10_semDiferencaNaoHaLinhaDeCambio() {
+        purchase("MZN", "1.0000", "200.00");
+        payments.registerSupplierPayment(PURCHASE_ID, new BigDecimal("150"), ACCOUNT_ID, null, null);
+
+        JournalEntry entry = post(publishedEvents().get(0));
+
+        assertThat(debit(entry, PgcNirfChart.FORNECEDORES)).isEqualByComparingTo("150");
+        assertThat(credit(entry, PgcNirfChart.BANCO)).isEqualByComparingTo("150");
+        assertThat(entry.getLines()).hasSize(2);
+        assertThat(entry.isBalanced()).isTrue();
+    }
+
+    @Test
+    void fx10_eventoAntigoSemValorDoFornecedorLancaComoHoje() {
+        JournalEntry entry = post(new SupplierPaymentRegisteredEvent(COMPANY_ID, 92L, "CP-2026/1",
+                LocalDate.of(2026, 11, 22), new BigDecimal("500.00"), true));
+
+        assertThat(debit(entry, PgcNirfChart.FORNECEDORES)).isEqualByComparingTo("500.00");
+        assertThat(credit(entry, PgcNirfChart.CAIXA)).isEqualByComparingTo("500.00");
+        assertThat(entry.getLines()).hasSize(2);
+    }
+
+    private JournalEntry post(SupplierPaymentRegisteredEvent event) {
+        PostingHelper helper = mock(PostingHelper.class);
+        JournalService journal = mock(JournalService.class);
+        when(helper.canPost(COMPANY_ID)).thenReturn(true);
+        when(helper.account(eq(COMPANY_ID), anyString())).thenAnswer(call -> account(call.getArgument(1)));
+        when(helper.cashAccount(eq(COMPANY_ID), anyBoolean()))
+                .thenAnswer(call -> account((boolean) call.getArgument(1) ? PgcNirfChart.CAIXA : PgcNirfChart.BANCO));
+        new ProcurementPostingHandler(helper, journal).postSupplierPayment(event);
+        ArgumentCaptor<JournalEntry> saved = ArgumentCaptor.forClass(JournalEntry.class);
+        verify(journal).save(saved.capture(), eq(COMPANY_ID));
+        return saved.getValue();
+    }
+
+    private static Account account(String code) {
+        Account account = new Account();
+        account.setCode(code);
+        return account;
+    }
+
+    private static List<JournalLine> lines(JournalEntry entry, String code) {
+        return entry.getLines().stream().filter(l -> code.equals(l.getAccount().getCode())).toList();
+    }
+
+    private static BigDecimal debit(JournalEntry entry, String code) {
+        return lines(entry, code).stream().map(JournalLine::safeDebit).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private static BigDecimal credit(JournalEntry entry, String code) {
+        return lines(entry, code).stream().map(JournalLine::safeCredit).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private List<SupplierPaymentRegisteredEvent> publishedEvents() {

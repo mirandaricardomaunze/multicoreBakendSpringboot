@@ -61,11 +61,16 @@ public class ProcurementPostingHandler {
         journalService.save(entry, event.companyId());
     }
 
+    /**
+     * Débito 2201 pela baixa da dívida (câmbio do documento), crédito da tesouraria pelo que saiu (câmbio do
+     * pagamento) e a diferença a débito de 6601 (perda) ou a crédito de 7601 (ganho) — SPEC §3.4.
+     */
     public void postSupplierPayment(SupplierPaymentRegisteredEvent event) {
         if (!postingHelper.canPost(event.companyId())) return;
         if (postingHelper.alreadyPosted(event.companyId(), JournalSource.SUPPLIER_PAYMENT, event.transactionId())) return;
         BigDecimal amount = safe(event.amount());
         if (amount.signum() <= 0) return;
+        BigDecimal supplierAmount = event.supplierAmount() == null ? amount : event.supplierAmount();
 
         JournalEntry entry = new JournalEntry();
         entry.setEntryDate(event.date());
@@ -74,9 +79,21 @@ public class ProcurementPostingHandler {
         entry.setSourceDocumentId(event.transactionId());
         entry.setSourceDocumentNumber(event.purchaseNumber());
         entry.addLine(JournalLine.debit(postingHelper.account(event.companyId(), PgcNirfChart.FORNECEDORES),
-                amount, "Liquidação ao fornecedor"));
+                supplierAmount, "Liquidação ao fornecedor"));
         entry.addLine(JournalLine.credit(postingHelper.cashAccount(event.companyId(), event.cashPayment()),
                 amount, "Saída de tesouraria"));
+        addExchangeDifference(entry, event.companyId(), amount.subtract(supplierAmount));
         journalService.save(entry, event.companyId());
+    }
+
+    /** Positiva: o pagamento custou mais do que a dívida baixou (perda); negativa: custou menos (ganho). */
+    private void addExchangeDifference(JournalEntry entry, Long companyId, BigDecimal difference) {
+        if (difference.signum() > 0) {
+            entry.addLine(JournalLine.debit(postingHelper.account(companyId, PgcNirfChart.EXCHANGE_LOSS),
+                    difference, "Diferença de câmbio desfavorável"));
+        } else if (difference.signum() < 0) {
+            entry.addLine(JournalLine.credit(postingHelper.account(companyId, PgcNirfChart.EXCHANGE_GAIN),
+                    difference.negate(), "Diferença de câmbio favorável"));
+        }
     }
 }
