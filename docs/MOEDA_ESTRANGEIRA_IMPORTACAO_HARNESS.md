@@ -3,7 +3,7 @@
 > Cenários que provam [MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md](MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04 verdes)
+**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-11 verdes)
 
 ## Moeda e câmbio (GOAL-008)
 
@@ -19,7 +19,7 @@
 | FX-08 | Contas a pagar e extracto de fornecedor mostram moeda, dívida na moeda do documento e equivalente em moeda base (§3.3) | `ForeignCurrencyPurchaseTest` |
 | FX-09 | Pagamento: sai valor × câmbio do pagamento; dívida baixa ao câmbio do documento, proporcional; liquidação sem resíduos (§3.4) | `ExchangeDifferenceTest` |
 | FX-10 | Diferença cambial lançada em 6601 (perda) ou 7601 (ganho); lançamento equilibrado (§3.4) | `ExchangeDifferenceTest` |
-| FX-11 | Plano de contas com 66/6601 e 76/7601, também nas empresas existentes, sem duplicar (§3.4) | `ExchangeDifferenceAccountsTest` |
+| FX-11 | Plano de contas com 66/6601 e 76/7601, também nas empresas existentes, sem duplicar (§3.4) | `ExchangeDifferenceAccountsTest` · `MigrationPostgresDialectHarnessTest` |
 | FX-12 | Endpoints de câmbios (criar/corrigir só ADMIN), compra e pagamento em moeda estrangeira; empresa activa (§3) | `ForeignCurrencyHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
 | FX-13 | PDFs de encomenda e compra mostram moeda e câmbio (§3.3) | `ForeignCurrencyHttpIntegrationTest` |
 | FX-UI-01 | Moeda e câmbio nos formulários de encomenda/compra; contas a pagar com moeda (§4.5) | `ForeignCurrencyUiHarnessTest` |

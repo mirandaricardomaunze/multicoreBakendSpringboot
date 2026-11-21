@@ -47,6 +47,8 @@ public final class PgcNirfChart {
     public static final String VARIACAO_PRODUCAO = "7301";
     public static final String RESULTADOS_TRANSITADOS = "5901"; // contrapartida do inventário inicial
     public static final String FSE = "6201";                    // fornecimentos e serviços de terceiros
+    public static final String EXCHANGE_LOSS = "6601";          // diferenças de câmbio desfavoráveis
+    public static final String EXCHANGE_GAIN = "7601";          // diferenças de câmbio favoráveis
 
     public static List<Seed> accounts() {
         return List.of(
@@ -104,6 +106,9 @@ public final class PgcNirfChart {
                         AccountNature.DEVEDORA, true),
                 new Seed("65", "Amortizações do exercício", AccountNature.DEVEDORA, false),
                 new Seed(DEPRECIACAO_EXERCICIO, "Amortizações e depreciações do exercício", AccountNature.DEVEDORA, true),
+                // 66/6601 e 76/7601: empresas que já tinham plano recebem-nas pela migração V142.
+                new Seed("66", "Custos financeiros", AccountNature.DEVEDORA, false),
+                new Seed(EXCHANGE_LOSS, "Diferenças de câmbio desfavoráveis", AccountNature.DEVEDORA, true),
 
                 // Classe 7 — Proveitos e ganhos
                 new Seed("7", "Proveitos e ganhos", AccountNature.CREDORA, false),
@@ -116,6 +121,8 @@ public final class PgcNirfChart {
                 new Seed("75", "Outros proveitos operacionais", AccountNature.CREDORA, false),
                 new Seed(OUTROS_PROVEITOS_OPERACIONAIS, "Outros proveitos operacionais",
                         AccountNature.CREDORA, true),
+                new Seed("76", "Proveitos financeiros", AccountNature.CREDORA, false),
+                new Seed(EXCHANGE_GAIN, "Diferenças de câmbio favoráveis", AccountNature.CREDORA, true),
 
                 // Classe 8 — Resultados
                 new Seed("8", "Resultados", AccountNature.CREDORA, false),

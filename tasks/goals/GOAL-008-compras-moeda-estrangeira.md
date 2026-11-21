@@ -22,7 +22,7 @@ Regras em `docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md` §2–§3 e §4.5.
 - [x] FX-02 — moedas aceites e regras do câmbio — `ExchangeRateRulesTest`
 - [x] FX-03 — câmbio proposto pela data ou anterior; sem câmbio exige escrita — `ExchangeRateRulesTest`
 - [x] FX-04 — corrigir câmbio não altera documentos gravados — `ExchangeRateRulesTest`
-- [ ] FX-11 — contas 6601 e 7601 semeadas, também em empresas existentes — `ExchangeDifferenceAccountsTest`
+- [x] FX-11 — contas 6601 e 7601 semeadas, também em empresas existentes — `ExchangeDifferenceAccountsTest`
 - [ ] FX-05 — encomenda e compra com moeda e câmbio; antigas com câmbio 1 — `ForeignCurrencyPurchaseTest`
 - [ ] FX-06 — total em moeda base e custo médio convertidos — `ForeignCurrencyPurchaseTest`
 - [ ] FX-08 — contas a pagar e extracto com moeda e dívida na moeda — `ForeignCurrencyPurchaseTest`
@@ -52,3 +52,4 @@ Regras em `docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md` §2–§3 e §4.5.
 - 2026-11-22 · FX-02 · novo módulo `currency` com `ExchangeRate` (tabela `exchange_rates`, V141, chave empresa+moeda+data e `CHECK (rate > 0)`) e `ExchangeRateService.create/list`: só MZN/USD/ZAR/EUR, a moeda base fica fora da tabela (câmbio sempre 1), câmbio > 0 com no máximo 4 casas (gravado com 4), um por empresa, moeda e data, só na empresa activa; `ExchangeRateRulesTest` 9/9.
 - 2026-11-22 · FX-03 · `ExchangeRateService.propose` devolve `ProposedExchangeRateDTO` com o câmbio da data ou da data anterior mais recente (moeda base sempre 1; sem câmbio, `manualRateRequired`) e `resolveDocumentRate` usa o câmbio escrito (validado como na tabela) ou o proposto, e recusa com "Escreva o câmbio do documento" quando não há nenhum; `ExchangeRateRulesTest` 15/15.
 - 2026-11-22 · FX-04 · `ExchangeRateService.correct` (`CorrectExchangeRateRequest`) corrige só o valor de um câmbio da empresa activa, com as mesmas regras da tabela; o documento guarda o valor (fotografia) devolvido por `resolveDocumentRate`, nunca uma FK para `exchange_rates` (verificado nas migrações), por isso a correcção só afecta documentos novos; `ExchangeRateRulesTest` 20/20.
+- 2026-11-22 · FX-11 · `PgcNirfChart` semeia 66 "Custos financeiros" > 6601 "Diferenças de câmbio desfavoráveis" e 76 "Proveitos financeiros" > 7601 "Diferenças de câmbio favoráveis" (constantes `EXCHANGE_LOSS`/`EXCHANGE_GAIN`) nas empresas novas; a migração V142 acrescenta-as às empresas que já têm plano, só as que faltam e repetível (provada em H2 modo PostgreSQL); `ExchangeDifferenceAccountsTest` 4/4. Nota: em dev (H2 sem Flyway) as empresas existentes recebem-nas pelo botão "semear plano", que já só cria as contas em falta.
