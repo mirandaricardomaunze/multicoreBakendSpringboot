@@ -23,7 +23,7 @@ Pré-requisito: GOAL-006 em `DONE` (usa `CsvImportReader`, `ImportValueParser` e
 ## Critérios de aceitação
 
 - [x] IMP-ST-01 — stock: referências, quantidade > 0, custo ≥ 0, validade quando exigida — `StockOpeningImportServiceTest`
-- [ ] IMP-ST-02 — stock: artigo com movimentos no armazém é erro; reimportar não duplica — `StockOpeningImportServiceTest`
+- [x] IMP-ST-02 — stock: artigo com movimentos no armazém é erro; reimportar não duplica — `StockOpeningImportServiceTest`
 - [ ] IMP-ST-03 — stock: `ENTRY` com lote e saldo pelo ledger, sem lançamento contabilístico — `StockOpeningImportServiceTest`
 - [ ] IMP-SI-01 — documento SI: numeração por empresa, nº original, chave cliente+nº original — `OpeningReceivableTest`
 - [ ] IMP-SI-02 — SI: valor > 0, vencimento ≥ data, data não futura, cliente existente — `OpeningReceivableTest`
@@ -60,3 +60,5 @@ Pré-requisito: GOAL-006 em `DONE` (usa `CsvImportReader`, `ImportValueParser` e
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-19 · — · não começado: pré-requisito GOAL-006 está `BLOCKED` (build partido, `units/dto` em falta) → BLOCKED
 - 2026-11-21 · IMP-ST-01 · `StockOpeningImportService` valida o stock inicial (artigo e armazém da empresa, armazém por código ou nome, quantidade > 0, custo ≥ 0, validade de perecível, lote vencido, SKU+armazém+lote repetido no ficheiro) com `StockOpeningImportServiceTest` verde 20/20
+- 2026-11-21 · IMP-ST-02 · artigo com movimentos no armazém é `ERRO` na coluna `armazem` ("já tem stock neste armazém; use um ajuste"), lido pela porta `StockMovementLookup.listProductIdsWithMovements` (uma consulta por armazém); reimportar o ficheiro já gravado dá `ERRO` em todas as linhas; `StockOpeningImportServiceTest` verde 23/23, `InventoryDocumentLookupsTest` 6/6
+- 2026-11-21 · gate · corrigida a falha intermitente do `DataImportPanelHarnessTest` (ArrayIndexOutOfBounds no `DefaultRowSorter`): os testes IMP-UI-01 passam a correr o painel na EDT (`SwingUtilities.invokeAndWait`), sem retirar asserções; verde 8/8 em três execuções seguidas, `DesktopThinContextTest` verde

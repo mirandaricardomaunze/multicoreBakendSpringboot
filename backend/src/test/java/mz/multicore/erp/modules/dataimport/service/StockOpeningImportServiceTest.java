@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.dataimport.dto.ImportPreviewDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowStatus;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
+import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,11 +21,15 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -32,6 +37,8 @@ import static org.mockito.Mockito.when;
  * obrigatórios; o artigo e o armazém têm de existir na empresa activa (armazém pelo código ou pelo nome);
  * quantidade &gt; 0 e custo &ge; 0; artigo perecível sem validade, ou com lote já vencido, é {@code ERRO} como na
  * entrada manual; SKU+armazém+lote repetidos no ficheiro são {@code ERRO} em ambas (SPEC §5.1, §3.3).
+ * IMP-ST-02: artigo que já tem movimentos no armazém é {@code ERRO} ("use um ajuste"), por isso reimportar o
+ * mesmo ficheiro nunca duplica stock (SPEC §5.1).
  */
 class StockOpeningImportServiceTest {
 
@@ -41,7 +48,9 @@ class StockOpeningImportServiceTest {
 
     private final ProductLookup productLookup = mock(ProductLookup.class);
     private final WarehouseLookup warehouseLookup = mock(WarehouseLookup.class);
-    private final StockOpeningImportService service = new StockOpeningImportService(productLookup, warehouseLookup);
+    private final StockMovementLookup movementLookup = mock(StockMovementLookup.class);
+    private final StockOpeningImportService service =
+            new StockOpeningImportService(productLookup, warehouseLookup, movementLookup);
 
     private final Product rice = product(11L, "ART-001", "Arroz 5kg", false);
     private final Product milk = product(12L, "LEI-001", "Leite UHT", true);
@@ -195,5 +204,31 @@ class StockOpeningImportServiceTest {
         assertThat(preview.rows()).extracting(ImportRowDTO::status).containsExactly(
                 ImportRowStatus.ERRO, ImportRowStatus.ERRO, ImportRowStatus.NOVO, ImportRowStatus.NOVO);
         assertThat(preview.rows().get(0).message()).contains("repetid").contains("2, 3");
+    }
+
+    @Test
+    void productWithMovementsInWarehouseIsErrorAskingForAdjustment() {
+        when(movementLookup.listProductIdsWithMovements(store.getId())).thenReturn(Set.of(rice.getId()));
+
+        assertError(singleRow("ART-001;A01;10;5;;"), "armazem", "já tem stock neste armazém; use um ajuste");
+        assertThat(singleRow("ART-001;A02;10;5;;").status()).isEqualTo(ImportRowStatus.NOVO);
+        assertThat(singleRow("LEI-001;A01;10;5;L1;" + FUTURE).status()).isEqualTo(ImportRowStatus.NOVO);
+    }
+
+    @Test
+    void reimportingTheSameFileAfterItWasRecordedNeverDuplicates() {
+        String[] file = {HEADER, "ART-001;A01;10;5;;", "LEI-001;A02;3;8;L1;" + FUTURE};
+        assertThat(preview(file).rows()).extracting(ImportRowDTO::status).containsOnly(ImportRowStatus.NOVO);
+
+        when(movementLookup.listProductIdsWithMovements(anyLong())).thenReturn(Set.of(rice.getId(), milk.getId()));
+
+        assertThat(preview(file).rows()).allSatisfy(row -> assertError(row, "armazem", "use um ajuste"));
+    }
+
+    @Test
+    void movementsAreReadOncePerWarehouse() {
+        preview(HEADER, "ART-001;A01;10;5;L1;", "LEI-001;loja central;4;5;L2;" + FUTURE, "ART-001;A01;4;5;L3;");
+
+        verify(movementLookup, times(1)).listProductIdsWithMovements(store.getId());
     }
 }

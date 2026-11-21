@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.dataimport.dto.ImportPreviewDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowStatus;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
+import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import org.springframework.stereotype.Service;
 
@@ -17,12 +18,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Importação do stock inicial por CSV (IMPORTACAO_DADOS_SPEC §5.1). Cada linha indica um artigo (pelo SKU)
  * e um armazém (pelo código ou nome) da empresa activa, a quantidade (&gt; 0), o custo unitário (&ge; 0) e,
  * opcionalmente, o lote e a validade, com as regras da entrada manual: artigo perecível exige validade e
  * lote já vencido não entra. A chave é SKU + armazém + lote: repetida no ficheiro é {@code ERRO} em ambas.
+ * Artigo que já tem movimentos no armazém é {@code ERRO} ("use um ajuste"): reimportar nunca duplica stock.
  */
 @Service
 public class StockOpeningImportService {
@@ -42,10 +45,13 @@ public class StockOpeningImportService {
     private final ImportValueParser parser = new ImportValueParser();
     private final ProductLookup productLookup;
     private final WarehouseLookup warehouseLookup;
+    private final StockMovementLookup movementLookup;
 
-    public StockOpeningImportService(ProductLookup productLookup, WarehouseLookup warehouseLookup) {
+    public StockOpeningImportService(ProductLookup productLookup, WarehouseLookup warehouseLookup,
+                                     StockMovementLookup movementLookup) {
         this.productLookup = productLookup;
         this.warehouseLookup = warehouseLookup;
+        this.movementLookup = movementLookup;
     }
 
     /** Lê o ficheiro e classifica cada linha na empresa activa, sem gravar nada (§3.1 passo 2). */
@@ -58,7 +64,8 @@ public class StockOpeningImportService {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         CsvTable table = reader.read(content, REQUIRED_COLUMNS, OPTIONAL_COLUMNS);
         FileContext context = new FileContext(table, companyId,
-                new ImportWarehouseResolver(warehouseLookup.listForCompany(companyId)), new HashMap<>());
+                new ImportWarehouseResolver(warehouseLookup.listForCompany(companyId)), new HashMap<>(),
+                new HashMap<>());
         List<ImportPlan.Line<StockOpeningLine>> converted = table.rows().stream()
                 .map(row -> convert(context, row))
                 .toList();
@@ -97,6 +104,7 @@ public class StockOpeningImportService {
         int line = row.number();
         Product product = product(context, parser.requireText(table.value(row, SKU), line, SKU), line);
         Warehouse warehouse = context.warehouses().resolve(table.value(row, WAREHOUSE), line, WAREHOUSE);
+        requireNoMovements(context, product, warehouse, line);
         BigDecimal quantity = parser.requireDecimal(table.value(row, QUANTITY), line, QUANTITY);
         if (quantity.signum() <= 0) {
             throw new ImportValueException(line, QUANTITY, "a quantidade tem de ser maior que zero.");
@@ -116,6 +124,19 @@ public class StockOpeningImportService {
                 .computeIfAbsent(sku, key -> productLookup.findBySkuForCompany(key, context.companyId()))
                 .orElseThrow(() -> new ImportValueException(line, SKU, "o artigo «" + sku
                         + "» não existe na empresa; importe primeiro os artigos."));
+    }
+
+    /**
+     * Stock inicial só entra onde o artigo ainda não tem movimentos; assim reimportar o mesmo ficheiro nunca
+     * duplica stock (§5.1). Consulta o ledger uma vez por armazém do ficheiro.
+     */
+    private void requireNoMovements(FileContext context, Product product, Warehouse warehouse, int line) {
+        Set<Long> productsWithMovements = context.productsWithMovementsByWarehouse().computeIfAbsent(
+                warehouse.getId(), movementLookup::listProductIdsWithMovements);
+        if (productsWithMovements.contains(product.getId())) {
+            throw new ImportValueException(line, WAREHOUSE, "o artigo «" + product.getName()
+                    + "» já tem stock neste armazém; use um ajuste.");
+        }
     }
 
     /** Regras da entrada manual: perecível exige validade; lote já vencido não entra (§5.1). */
@@ -148,6 +169,7 @@ public class StockOpeningImportService {
 
     /** O que a classificação de cada linha precisa de saber sobre o ficheiro inteiro e a empresa activa. */
     private record FileContext(CsvTable table, Long companyId, ImportWarehouseResolver warehouses,
-                               Map<String, Optional<Product>> productsBySku) {
+                               Map<String, Optional<Product>> productsBySku,
+                               Map<Long, Set<Long>> productsWithMovementsByWarehouse) {
     }
 }
