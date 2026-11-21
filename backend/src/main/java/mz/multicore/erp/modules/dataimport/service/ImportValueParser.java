@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
  */
 public class ImportValueParser {
 
+    static final String REQUIRED_VALUE = "valor obrigatório em falta.";
+
     /** Com vírgula decimal: pontos só como separadores de milhar em grupos de 3 ({@code 1.234,56}). */
     private static final Pattern DECIMAL_COMMA = Pattern.compile("-?(\\d{1,3}(\\.\\d{3})+|\\d+),\\d+");
     /** Sem vírgula: o ponto é decimal ({@code 1234.56}). */
@@ -32,6 +34,24 @@ public class ImportValueParser {
         }
         String value = raw.strip();
         return value.isEmpty() ? null : value;
+    }
+
+    /** Como {@link #parseText}, mas célula vazia é erro da linha ("valor obrigatório em falta."). */
+    public String requireText(String raw, int lineNumber, String column) {
+        String value = parseText(raw);
+        if (value == null) {
+            throw new ImportValueException(lineNumber, column, REQUIRED_VALUE);
+        }
+        return value;
+    }
+
+    /** Como {@link #parseDecimal}, mas célula vazia é erro da linha ("valor obrigatório em falta."). */
+    public BigDecimal requireDecimal(String raw, int lineNumber, String column) {
+        BigDecimal value = parseDecimal(raw, lineNumber, column);
+        if (value == null) {
+            throw new ImportValueException(lineNumber, column, REQUIRED_VALUE);
+        }
+        return value;
     }
 
     /**

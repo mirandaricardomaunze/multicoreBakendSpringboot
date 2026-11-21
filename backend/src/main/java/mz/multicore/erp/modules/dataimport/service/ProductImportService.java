@@ -47,7 +47,6 @@ public class ProductImportService {
     static final List<String> OPTIONAL_COLUMNS =
             List.of(BARCODE, REFERENCE, WHOLESALE_PRICE, UNIT, DESCRIPTION);
     private static final Map<String, String> COLUMN_BY_PROPERTY = columnByProperty();
-    private static final String REQUIRED_VALUE = "valor obrigatório em falta.";
 
     private final CsvImportReader reader = new CsvImportReader();
     private final ImportValueParser parser = new ImportValueParser();
@@ -178,19 +177,11 @@ public class ProductImportService {
     }
 
     private String requiredText(CsvTable table, CsvTable.Row row, String column) {
-        String value = parser.parseText(table.value(row, column));
-        if (value == null) {
-            throw new ImportValueException(row.number(), column, REQUIRED_VALUE);
-        }
-        return value;
+        return parser.requireText(table.value(row, column), row.number(), column);
     }
 
     private BigDecimal requiredDecimal(CsvTable table, CsvTable.Row row, String column) {
-        BigDecimal value = parser.parseDecimal(table.value(row, column), row.number(), column);
-        if (value == null) {
-            throw new ImportValueException(row.number(), column, REQUIRED_VALUE);
-        }
-        return value;
+        return parser.requireDecimal(table.value(row, column), row.number(), column);
     }
 
     private static Map<String, String> columnByProperty() {

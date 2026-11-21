@@ -1,7 +1,7 @@
 ---
 id: GOAL-007
 title: "Importar stock inicial e dívidas em aberto de clientes e fornecedores"
-status: TODO
+status: IN_PROGRESS
 priority: HIGH
 spec: docs/IMPORTACAO_DADOS_SPEC.md
 harness: docs/IMPORTACAO_DADOS_HARNESS.md
@@ -22,7 +22,7 @@ Pré-requisito: GOAL-006 em `DONE` (usa `CsvImportReader`, `ImportValueParser` e
 
 ## Critérios de aceitação
 
-- [ ] IMP-ST-01 — stock: referências, quantidade > 0, custo ≥ 0, validade quando exigida — `StockOpeningImportServiceTest`
+- [x] IMP-ST-01 — stock: referências, quantidade > 0, custo ≥ 0, validade quando exigida — `StockOpeningImportServiceTest`
 - [ ] IMP-ST-02 — stock: artigo com movimentos no armazém é erro; reimportar não duplica — `StockOpeningImportServiceTest`
 - [ ] IMP-ST-03 — stock: `ENTRY` com lote e saldo pelo ledger, sem lançamento contabilístico — `StockOpeningImportServiceTest`
 - [ ] IMP-SI-01 — documento SI: numeração por empresa, nº original, chave cliente+nº original — `OpeningReceivableTest`
@@ -59,3 +59,4 @@ Pré-requisito: GOAL-006 em `DONE` (usa `CsvImportReader`, `ImportValueParser` e
 
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-19 · — · não começado: pré-requisito GOAL-006 está `BLOCKED` (build partido, `units/dto` em falta) → BLOCKED
+- 2026-11-21 · IMP-ST-01 · `StockOpeningImportService` valida o stock inicial (artigo e armazém da empresa, armazém por código ou nome, quantidade > 0, custo ≥ 0, validade de perecível, lote vencido, SKU+armazém+lote repetido no ficheiro) com `StockOpeningImportServiceTest` verde 20/20
