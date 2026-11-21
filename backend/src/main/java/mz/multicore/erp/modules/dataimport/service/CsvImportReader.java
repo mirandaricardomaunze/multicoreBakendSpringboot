@@ -173,6 +173,23 @@ public class CsvImportReader {
         return new CsvHeader(columnIndex, extraColumns);
     }
 
+    /**
+     * Lê o ficheiro inteiro: descodifica, detecta o separador, reconhece o cabeçalho e separa os campos
+     * de cada linha de dados. Ficheiro vazio (sem cabeçalho) é recusado.
+     */
+    public CsvTable read(byte[] content, List<String> requiredColumns, List<String> optionalColumns) {
+        List<CsvLine> lines = lines(decode(content));
+        if (lines.isEmpty()) {
+            throw new BusinessRuleException("O ficheiro está vazio: falta a linha de cabeçalho.");
+        }
+        char separator = detectSeparator(lines.get(0).text());
+        CsvHeader header = readHeader(parseLine(lines.get(0).text(), separator), requiredColumns, optionalColumns);
+        List<CsvTable.Row> rows = lines.subList(1, lines.size()).stream()
+                .map(line -> new CsvTable.Row(line.number(), parseLine(line.text(), separator)))
+                .toList();
+        return new CsvTable(header, rows);
+    }
+
     private static String normalizeColumn(String name) {
         String withoutAccents = Normalizer.normalize(name.strip(), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
         return withoutAccents.toLowerCase(Locale.ROOT);

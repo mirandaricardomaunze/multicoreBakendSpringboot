@@ -3,7 +3,7 @@
 > Cenários que provam [IMPORTACAO_DADOS_SPEC.md](IMPORTACAO_DADOS_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-21 (IMP-01 a IMP-05 e IMP-CL-03 verdes; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`)
+**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 e IMP-CL-03 verdes; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`)
 
 ## Leitura do ficheiro (comum)
 
@@ -19,7 +19,7 @@
 
 | ID | Garantia | Teste |
 |---|---|---|
-| IMP-CL-01 | Cliente: NUIT obrigatório e válido, email opcional; linha inválida é `ERRO` com coluna e mensagem PT-MZ (§4.1) | `ClientImportServiceTest` |
+| IMP-CL-01 | Cliente: NUIT obrigatório e válido, email opcional; linha inválida é `ERRO` com coluna e mensagem PT-MZ (§4.1) | `ClientImportServiceTest` ✅ |
 | IMP-CL-02 | Cliente: NUIT da empresa → `JÁ EXISTE`; NUIT de outra empresa → `ASSOCIADO` sem alterar dados; NUIT repetido no ficheiro → `ERRO` (§4.1, §3.3) | `ClientImportServiceTest` |
 | IMP-CL-03 | Email do cliente opcional também no registo manual; migração retira `NOT NULL` de `clients.email` (§4.1) | `ClientOptionalEmailTest` ✅ · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` ✅ |
 | IMP-FO-01 | Fornecedor: NUIT obrigatório e válido; NUIT da empresa → `JÁ EXISTE`; repetido no ficheiro → `ERRO` (§4.2) | `SupplierImportServiceTest` |
