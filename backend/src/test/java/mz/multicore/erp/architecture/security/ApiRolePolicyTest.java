@@ -59,6 +59,17 @@ class ApiRolePolicyTest {
     }
 
     @Test
+    void dataImport_isAdminOnlyAndClassified() {
+        for (String role : new String[] {"MANAGER", "SELLER", "EMPLOYEE"}) {
+            assertFalse(ApiRolePolicy.allows(role, "GET", "/api/data-import/clients/template"));
+            assertFalse(ApiRolePolicy.allows(role, "POST", "/api/data-import/products/preview"));
+            assertFalse(ApiRolePolicy.allows(role, "POST", "/api/data-import/suppliers/commit"));
+        }
+        assertTrue(ApiRolePolicy.allows("ADMIN", "POST", "/api/data-import/clients/commit"));
+        assertTrue(ApiRolePolicy.isExplicitlyClassified("POST", "/api/data-import/clients/commit"));
+    }
+
+    @Test
     void classification_distinguishesDeniedFromForgottenEndpoint() {
         assertTrue(ApiRolePolicy.isExplicitlyClassified("GET", "/api/finance/accounts"));
         assertTrue(ApiRolePolicy.isExplicitlyClassified("POST", "/api/comercial/orders"));

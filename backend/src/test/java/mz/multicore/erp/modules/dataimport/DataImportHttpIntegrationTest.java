@@ -2,6 +2,9 @@ package mz.multicore.erp.modules.dataimport;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.users.model.AppUser;
+import mz.multicore.erp.modules.users.repository.AppUserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +13,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -34,6 +40,10 @@ class DataImportHttpIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper om;
+    @Autowired private CompanyRepository companyRepository;
+    @Autowired private AppUserRepository appUserRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private PlatformTransactionManager transactionManager;
 
     private record Ctx(String token, String companyId) {}
 
@@ -264,6 +274,44 @@ class DataImportHttpIntegrationTest {
                 .andExpect(status().isBadRequest());
 
         assertThat(auditEntries(c, "clientes-com-erro-imp08.csv")).isEmpty();
+    }
+
+    // ---- IMP-10: rotas de importação só para ADMIN (§3.3) ---------------------------------------------
+
+    @Test
+    @DisplayName("IMP-10: gestor e vendedor recebem 403 no modelo, na pré-visualização e na confirmação, sem gravar")
+    void onlyAdminMayUseTheImportRoutes() throws Exception {
+        Ctx admin = admin();
+        for (String role : List.of("MANAGER", "SELLER")) {
+            Ctx user = userWithRole(admin, role);
+            mockMvc.perform(auth(get("/api/data-import/clients/template"), user))
+                    .andExpect(status().isForbidden());
+            uploadRequest("clients", "preview", user, CLIENT_HEADER, "Importado Proibido;416000071;;;;")
+                    .andExpect(status().isForbidden());
+            uploadRequest("clients", "commit", user, CLIENT_HEADER, "Importado Proibido;416000071;;;;")
+                    .andExpect(status().isForbidden());
+        }
+        assertThat(clientTaxIds(admin)).doesNotContain("416000071");
+    }
+
+    /** Utilizador com o perfil dado na empresa activa do {@code admin}, criado para o teste. */
+    private Ctx userWithRole(Ctx admin, String role) throws Exception {
+        String username = "importacao-" + role.toLowerCase(java.util.Locale.ROOT);
+        new TransactionTemplate(transactionManager).executeWithoutResult(tx -> {
+            var company = companyRepository.findById(Long.valueOf(admin.companyId())).orElseThrow();
+            AppUser user = appUserRepository.findByUsername(username).orElseGet(AppUser::new);
+            user.setUsername(username);
+            user.setName("Teste " + role);
+            user.setPassword(passwordEncoder.encode("password"));
+            user.setRole(role);
+            user.setActive(true);
+            user.grantCompany(company, role);
+            appUserRepository.save(user);
+        });
+        JsonNode login = om.readTree(mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + username + "\",\"password\":\"password\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        return new Ctx(login.get("token").asText(), admin.companyId());
     }
 
     private List<JsonNode> auditEntries(Ctx c, String fileName) throws Exception {
