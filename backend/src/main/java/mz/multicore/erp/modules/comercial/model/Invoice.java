@@ -179,6 +179,15 @@ public class Invoice extends BaseEntity {
         return isSale() && status != null && status.isRealisedSale();
     }
 
+    /**
+     * Como o documento se identifica num recebimento: "Fatura FT-…" ou, no Saldo Inicial, "Saldo Inicial SI-… (nº
+     * original)" — não é factura fiscal e o cliente reconhece-o pelo número do sistema antigo (SPEC §5.2).
+     */
+    public String collectionLabel() {
+        if (isSale()) return "Fatura " + invoiceNumber;
+        return "Saldo Inicial " + invoiceNumber + (originalNumber == null ? "" : " (" + originalNumber + ")");
+    }
+
     /** Data do documento: a {@code documentDate} quando existe (Saldo Inicial), senão a data civil do {@code createdAt}. */
     public LocalDate issueDate() {
         if (documentDate != null) return documentDate;

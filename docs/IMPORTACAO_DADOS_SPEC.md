@@ -168,6 +168,10 @@ Colunas: `nuit_cliente`\*, `numero_original`\*, `data`\*, `vencimento`\*, `valor
   - No extracto a linha tem o tipo `SI`, o número `SI-aaaa/n`, a descrição "Saldo Inicial — <numero_original>" e o
     `numero_original` como referência.
 - Liquida-se com **recibos normais**, total ou parcialmente, como uma factura.
+  - Recibo `RC` pelo ecrã comercial ou liquidação pela tesouraria (sem valor = tudo o que falta); fica parcialmente
+    pago / pago, anular o recibo devolve o valor em dívida, e o recibo aparece a crédito no extracto com o `SI-aaaa/n`
+    como referência. O movimento de tesouraria diz "Recebimento Saldo Inicial SI-aaaa/n (<numero_original>) …", não
+    "Fatura".
 - **Sem lançamento contabilístico automático** (a abertura contabilística é feita pelo contabilista).
 
 ### 5.3 Dívidas a fornecedores — documento "Saldo Inicial Fornecedor" (série **SIF**)

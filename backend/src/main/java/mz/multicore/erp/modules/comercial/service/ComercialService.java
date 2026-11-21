@@ -232,7 +232,7 @@ public class ComercialService {
         invoice.setStatus(invoice.deriveStatusFromPayments());
         invoiceRepository.save(invoice);
 
-        String description = "Recebimento Fatura " + invoice.getInvoiceNumber() + " via " + paymentMethod + " (Recibo " + receiptNum + ")";
+        String description = "Recebimento " + invoice.collectionLabel() + " via " + paymentMethod + " (Recibo " + receiptNum + ")";
         financeService.registerTransaction(treasuryAccountId, "DEBIT", amountPaid, description);
 
         eventPublisher.publishEvent(new PaymentReceivedEvent(
