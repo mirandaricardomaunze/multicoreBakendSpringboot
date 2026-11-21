@@ -3,7 +3,7 @@
 > Cenários que provam [IMPORTACAO_DADOS_SPEC.md](IMPORTACAO_DADOS_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01, IMP-AR-01 a IMP-AR-03, IMP-06 a IMP-11 verdes; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`)
+**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01, IMP-AR-01 a IMP-AR-03, IMP-06 a IMP-11 e IMP-UI-02 verdes; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`)
 
 ## Leitura do ficheiro (comum)
 
@@ -33,7 +33,7 @@
 | IMP-10 | Rotas de importação só para ADMIN e classificadas na `ApiRolePolicy` (§3.3) | `ApiRolePolicyEndpointCoverageHarnessTest` ✅ · `DataImportHttpIntegrationTest` ✅ · `ApiRolePolicyTest` ✅ |
 | IMP-11 | O módulo de importação escreve só pelos serviços donos, sem Repository alheio — nem por import, import `*` ou nome completo (§3.3) | `DataImportModuleIsolationHarnessTest` ✅ · `ModuleDecouplingHarnessTest` ✅ |
 | IMP-UI-01 | Ecrã "Importar dados": entidade, modelo, ficheiro, pré-visualização em tabela; Confirmar só sem erros (§3.4) | `DataImportPanelHarnessTest` |
-| IMP-UI-02 | Formulário de cliente aceita email vazio (§4.1) | `DataImportPanelHarnessTest` |
+| IMP-UI-02 | Formulário de cliente aceita email vazio (§4.1) | `DataImportPanelHarnessTest` ✅ |
 
 ## Saldos iniciais (GOAL-007)
 
