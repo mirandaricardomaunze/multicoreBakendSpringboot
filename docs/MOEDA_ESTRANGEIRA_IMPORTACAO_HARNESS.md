@@ -3,7 +3,7 @@
 > Cenários que provam [MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md](MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-08, FX-11 verdes)
+**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-07, FX-08, FX-11 verdes)
 
 ## Moeda e câmbio (GOAL-008)
 

@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.purchases.service;
 
-import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
@@ -66,11 +65,7 @@ public class PurchaseOrderPayableRegistrar {
         purchase.setPurchaseNumber(documentNumberService.next(DocumentSeries.PURCHASE));
         purchase = purchaseRepository.save(purchase);
 
-        eventPublisher.publishEvent(new PurchaseRegisteredEvent(
-                order.getCompany().getId(), purchase.getId(), purchase.getPurchaseNumber(),
-                purchase.getPurchaseDate().toLocalDate(),
-                purchase.getTotalAmount().subtract(purchase.getTaxAmount()),
-                purchase.getTaxAmount(), purchase.getTotalAmount(), BigDecimal.ZERO, false));
+        eventPublisher.publishEvent(PurchaseRegisteredEvents.of(purchase, false, false));
         auditLogService.logCurrent("PURCHASE_ORDER_PAYABLE",
                 "Compra " + purchase.getPurchaseNumber() + " criada pela recepção da encomenda "
                         + order.getOrderNumber() + " (" + purchase.getTotalAmount().toPlainString() + " MT)");

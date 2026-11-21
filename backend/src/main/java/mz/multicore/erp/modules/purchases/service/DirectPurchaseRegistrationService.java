@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.purchases.service;
 
-import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.modules.comercial.model.Product;
@@ -134,15 +133,13 @@ public class DirectPurchaseRegistrationService {
         boolean cashPayment = false;
         if (payNow) {
             String description = "Pagamento Compra " + purchase.getPurchaseNumber() + " - Fornecedor " + supplier.getName();
-            financeService.registerTransaction(request.financeAccountId(), "CREDIT", total, description);
+            // A tesouraria é sempre na moeda base (MOEDA_ESTRANGEIRA §3.4): sai o total ao câmbio do documento.
+            financeService.registerTransaction(request.financeAccountId(), "CREDIT", purchase.baseTotal(),
+                    description);
             cashPayment = financeService.accountType(request.financeAccountId()) == TreasuryAccountType.CASH;
         }
 
-        eventPublisher.publishEvent(new PurchaseRegisteredEvent(
-                request.companyId(), purchase.getId(), purchase.getPurchaseNumber(),
-                purchase.getPurchaseDate().toLocalDate(),
-                purchase.getTotalAmount().subtract(purchase.getTaxAmount()),
-                purchase.getTaxAmount(), purchase.getTotalAmount(), purchase.getAmountPaid(), cashPayment));
+        eventPublisher.publishEvent(PurchaseRegisteredEvents.of(purchase, payNow, cashPayment));
 
         return purchase;
     }
