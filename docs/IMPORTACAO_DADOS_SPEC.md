@@ -165,6 +165,8 @@ Colunas: `nuit_cliente`\*, `numero_original`\*, `data`\*, `vencimento`\*, `valor
     as metas/ranking comerciais excluem o `OPENING_BALANCE`, que continua a contar como "por cobrar".
 - Entra no **extracto de conta corrente** como débito na `data`, na **antiguidade de saldos** pelo
   `vencimento`, na exposição de **limite de crédito** e na **mora** como qualquer factura.
+  - No extracto a linha tem o tipo `SI`, o número `SI-aaaa/n`, a descrição "Saldo Inicial — <numero_original>" e o
+    `numero_original` como referência.
 - Liquida-se com **recibos normais**, total ou parcialmente, como uma factura.
 - **Sem lançamento contabilístico automático** (a abertura contabilística é feita pelo contabilista).
 
