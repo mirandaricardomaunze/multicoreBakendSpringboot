@@ -60,7 +60,7 @@ public class SupplierImportService {
         CreateSupplierRequest request = toRequest(table, row, companyId);
         return requestValidator.firstViolation(row.number(), request, COLUMN_BY_PROPERTY)
                 .or(() -> ImportTaxIdRule.violation(row.number(), request.taxId(), TAX_ID))
-                .or(() -> duplicates.violation(row.number(), request.taxId(), TAX_ID, "NUIT"))
+                .or(() -> duplicates.violation(row.number(), request.taxId(), TAX_ID, "NUIT repetido"))
                 .orElseGet(() -> ImportRowDTO.of(row.number(), statusOf(request.taxId(), companyId)));
     }
 

@@ -34,14 +34,18 @@ final class DuplicateKeys {
         return new DuplicateKeys(linesByKey);
     }
 
-    /** {@code ERRO} na coluna da chave se a chave aparece em mais de uma linha do ficheiro. */
-    Optional<ImportRowDTO> violation(int lineNumber, String key, String column, String keyLabel) {
+    /**
+     * {@code ERRO} na coluna da chave se a chave aparece em mais de uma linha do ficheiro.
+     *
+     * @param repeatedLabel início da mensagem já com o género certo ("NUIT repetido", "Referência repetida")
+     */
+    Optional<ImportRowDTO> violation(int lineNumber, String key, String column, String repeatedLabel) {
         List<Integer> lines = key == null ? List.of() : linesByKey.getOrDefault(key, List.of());
         if (lines.size() < 2) {
             return Optional.empty();
         }
         String allLines = lines.stream().map(String::valueOf).collect(Collectors.joining(", "));
         return Optional.of(ImportRowDTO.error(lineNumber, column,
-                keyLabel + " repetido no ficheiro (linhas " + allLines + ")."));
+                repeatedLabel + " no ficheiro (linhas " + allLines + ")."));
     }
 }

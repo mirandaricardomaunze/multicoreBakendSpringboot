@@ -15,14 +15,19 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Importação de artigos por CSV (IMPORTACAO_DADOS_SPEC §4.3). Cada linha é convertida no mesmo
  * {@link CreateProductRequest} do registo manual e validada pelas mesmas regras; o {@code iva} tem de
  * ser uma taxa de IVA já existente na empresa activa, pela percentagem ou pelo código; a {@code categoria}
  * reconhece-se pelo nome e, se não existir, é anunciada em "categorias a criar" (criada só na confirmação).
+ * SKU já existente no sistema é {@code JÁ EXISTE}; código de barras ou referência de outro artigo é {@code ERRO}.
  */
 @Service
 public class ProductImportService {
@@ -60,40 +65,60 @@ public class ProductImportService {
     public ImportPreviewDTO preview(byte[] content) {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         CsvTable table = reader.read(content, REQUIRED_COLUMNS, OPTIONAL_COLUMNS);
-        ImportVatRateResolver vatRates = new ImportVatRateResolver(taxRateLookup.listActiveForCompany(companyId));
-        ImportCategoryPlan categories = new ImportCategoryPlan(productLookup.listCategoriesForCompany(companyId));
+        FileContext context = new FileContext(
+                table,
+                new ImportVatRateResolver(taxRateLookup.listActiveForCompany(companyId)),
+                new ImportCategoryPlan(productLookup.listCategoriesForCompany(companyId)),
+                new ImportProductKeys(productLookup.findByAnyKey(
+                        valuesOf(table, SKU), valuesOf(table, BARCODE), valuesOf(table, REFERENCE))),
+                duplicatesOf(table, SKU),
+                duplicatesOf(table, BARCODE),
+                duplicatesOf(table, REFERENCE));
         List<ImportRowDTO> rows = table.rows().stream()
-                .map(row -> classify(table, row, vatRates, categories))
+                .map(row -> classify(context, row))
                 .toList();
-        return new ImportPreviewDTO(rows, table.header().extraColumns(), categories.toCreate());
+        return new ImportPreviewDTO(rows, table.header().extraColumns(), context.categories().toCreate());
     }
 
-    /** Só a categoria de uma linha sem erros entra em "categorias a criar"; nada é gravado aqui. */
-    private ImportRowDTO classify(CsvTable table, CsvTable.Row row, ImportVatRateResolver vatRates,
-                                  ImportCategoryPlan categories) {
+    /**
+     * Ordem: valores, regras do registo manual, chaves repetidas no ficheiro, chaves de outro artigo e, por
+     * fim, o estado. Só a categoria de uma linha {@code NOVO} entra em "categorias a criar"; nada é gravado.
+     */
+    private ImportRowDTO classify(FileContext context, CsvTable.Row row) {
         ProductLine product;
         try {
-            product = toProductLine(table, row, vatRates, categories);
+            product = toProductLine(context, row);
         } catch (ImportValueException invalidValue) {
             return ImportRowDTO.error(row.number(), invalidValue.getColumn(), invalidValue.getMessage());
         }
-        return requestValidator.firstViolation(row.number(), product.request(), COLUMN_BY_PROPERTY)
+        int line = row.number();
+        CreateProductRequest request = product.request();
+        ImportProductKeys existing = context.existing();
+        return requestValidator.firstViolation(line, request, COLUMN_BY_PROPERTY)
+                .or(() -> context.skus().violation(line, request.sku(), SKU, "SKU repetido"))
+                .or(() -> context.barcodes().violation(line, request.barcode(), BARCODE, "Código de barras repetido"))
+                .or(() -> context.references().violation(line, request.reference(), REFERENCE, "Referência repetida"))
+                .or(() -> existing.foreignBarcode(line, request.sku(), request.barcode(), BARCODE))
+                .or(() -> existing.foreignReference(line, request.sku(), request.reference(), REFERENCE))
                 .orElseGet(() -> {
-                    categories.requireCreation(product.category());
-                    return ImportRowDTO.of(row.number(), ImportRowStatus.NOVO);
+                    if (existing.skuExists(request.sku())) {
+                        return ImportRowDTO.of(line, ImportRowStatus.JA_EXISTE); // ignorado, nunca alterado
+                    }
+                    context.categories().requireCreation(product.category());
+                    return ImportRowDTO.of(line, ImportRowStatus.NOVO);
                 });
     }
 
     /** Valores pela ordem das colunas do modelo: o primeiro problema da linha é o que se reporta. */
-    private ProductLine toProductLine(CsvTable table, CsvTable.Row row, ImportVatRateResolver vatRates,
-                                      ImportCategoryPlan categories) {
+    private ProductLine toProductLine(FileContext context, CsvTable.Row row) {
+        CsvTable table = context.table();
         int line = row.number();
         String sku = requiredText(table, row, SKU);
         String name = requiredText(table, row, NAME);
         BigDecimal salePrice = requiredDecimal(table, row, SALE_PRICE);
-        TaxRate vatRate = vatRates.resolve(table.value(row, VAT), line, VAT);
+        TaxRate vatRate = context.vatRates().resolve(table.value(row, VAT), line, VAT);
         String category = requiredText(table, row, CATEGORY);
-        Long categoryId = categories.existing(category).map(ProductCategory::getId).orElse(null);
+        Long categoryId = context.categories().existing(category).map(ProductCategory::getId).orElse(null);
         BigDecimal wholesalePrice = parser.parseDecimal(table.value(row, WHOLESALE_PRICE), line, WHOLESALE_PRICE);
         return new ProductLine(category, new CreateProductRequest(
                 sku,
@@ -112,6 +137,23 @@ public class ProductImportService {
 
     /** Linha convertida: o pedido do registo manual e o nome da categoria como veio no ficheiro. */
     private record ProductLine(String category, CreateProductRequest request) {
+    }
+
+    /** O que a classificação de cada linha precisa de saber sobre o ficheiro inteiro e a empresa activa. */
+    private record FileContext(CsvTable table, ImportVatRateResolver vatRates, ImportCategoryPlan categories,
+                               ImportProductKeys existing, DuplicateKeys skus, DuplicateKeys barcodes,
+                               DuplicateKeys references) {
+    }
+
+    private Set<String> valuesOf(CsvTable table, String column) {
+        return table.rows().stream()
+                .map(row -> parser.parseText(table.value(row, column)))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private DuplicateKeys duplicatesOf(CsvTable table, String column) {
+        return DuplicateKeys.of(table.rows(), row -> parser.parseText(table.value(row, column)));
     }
 
     private String requiredText(CsvTable table, CsvTable.Row row, String column) {

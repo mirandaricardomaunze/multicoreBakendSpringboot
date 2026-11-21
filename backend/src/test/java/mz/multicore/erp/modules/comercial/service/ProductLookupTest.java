@@ -120,6 +120,25 @@ class ProductLookupTest {
     }
 
     @Test
+    void findByAnyKey_juntaSkuCodigoDeBarrasEReferenciaSemRepetirArtigos() {
+        Product bySkuAndBarcode = product(1L);
+        Product byReference = product(2L);
+        when(products.findBySkuIn(Set.of("SKU-1"))).thenReturn(List.of(bySkuAndBarcode));
+        when(products.findByBarcodeIn(Set.of("560123"))).thenReturn(List.of(bySkuAndBarcode));
+        when(products.findByReferenceIn(Set.of("REF-2"))).thenReturn(List.of(byReference));
+
+        assertThat(lookup.findByAnyKey(Set.of("SKU-1"), Set.of("560123"), Set.of("REF-2")))
+                .containsExactly(bySkuAndBarcode, byReference);
+    }
+
+    @Test
+    void findByAnyKey_semChaves_naoTocaNoRepository() {
+        assertThat(lookup.findByAnyKey(Set.of(), Set.of(), Set.of())).isEmpty();
+        assertThat(lookup.findByAnyKey(null, null, null)).isEmpty();
+        verifyNoInteractions(products);
+    }
+
+    @Test
     void findAllById_e_countByBusinessUnit_delegam() {
         List<Product> found = List.of(product(1L));
         when(products.findAllById(Set.of(1L))).thenReturn(found);

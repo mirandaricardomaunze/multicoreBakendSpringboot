@@ -9,8 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * Porta de leitura de produtos e categorias para os outros módulos (docs/MODULE_DECOUPLING_SPEC.md §2).
@@ -82,6 +86,27 @@ public class ProductLookup {
     public Optional<Product> findByBarcodeForCompany(String barcode, Long companyId) {
         return barcode == null ? Optional.empty()
                 : productRepository.findByBarcodeAndCompaniesId(barcode, companyId);
+    }
+
+    /**
+     * Artigos de qualquer empresa com algum destes SKU, códigos de barras ou referências (os três são únicos
+     * na base), sem repetidos e por ordem de chegada. Conjunto vazio ou {@code null} não consulta a base.
+     */
+    public List<Product> findByAnyKey(Collection<String> skus, Collection<String> barcodes,
+                                      Collection<String> references) {
+        Map<Long, Product> found = new LinkedHashMap<>();
+        Stream.of(
+                        findByKeys(skus, productRepository::findBySkuIn),
+                        findByKeys(barcodes, productRepository::findByBarcodeIn),
+                        findByKeys(references, productRepository::findByReferenceIn))
+                .flatMap(List::stream)
+                .forEach(product -> found.putIfAbsent(product.getId(), product));
+        return List.copyOf(found.values());
+    }
+
+    private static List<Product> findByKeys(Collection<String> keys,
+                                            Function<Collection<String>, List<Product>> query) {
+        return keys == null || keys.isEmpty() ? List.of() : query.apply(keys);
     }
 
     public List<Product> findAllById(Collection<Long> ids) {

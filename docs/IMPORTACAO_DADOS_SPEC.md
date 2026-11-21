@@ -109,6 +109,14 @@ Colunas: `sku`\*, `nome`\*, `preco_venda`\*, `iva`\*, `categoria`\*, `codigo_bar
 - `unidade` vazia usa a unidade base por omissão do registo manual.
 - SKU já existe → `JÁ EXISTE`. Código de barras ou referência já usados por outro artigo → `ERRO`
   (são únicos no sistema).
+  - "Já existe" e "outro artigo" medem-se em **todo o sistema** (as três colunas são únicas na base):
+    o SKU de um artigo de outra empresa também é `JÁ EXISTE` e não é associado (`ASSOCIADO` é só de
+    clientes, §3.1). "Outro artigo" é um artigo com SKU diferente; o código de barras/referência do
+    próprio artigo existente não é conflito.
+  - Código de barras ou referência de outro artigo é `ERRO` mesmo que o SKU já exista.
+  - Código de barras ou referência repetidos no **mesmo ficheiro** são `ERRO` em ambas as linhas, como a
+    chave (§3.3), porque não podem entrar os dois.
+  - Só a categoria de uma linha `NOVO` entra em "categorias a criar".
 
 ## 5. Saldos iniciais (GOAL-007)
 

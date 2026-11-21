@@ -4,6 +4,7 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.ProductCategory;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.dataimport.dto.ImportPreviewDTO;
@@ -22,9 +23,11 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -36,6 +39,8 @@ import static org.mockito.Mockito.when;
  * → {@code ERRO} na coluna {@code iva} (SPEC §4.3).
  * IMP-AR-02: a {@code categoria} reconhece-se pelo nome sem maiúsculas/acentos entre as da empresa activa;
  * a inexistente não é erro, é listada em "categorias a criar" e a pré-visualização não a grava (SPEC §4.3).
+ * IMP-AR-03: SKU já existente no sistema → {@code JÁ EXISTE}; código de barras ou referência de outro artigo
+ * → {@code ERRO}; SKU, código de barras ou referência repetidos no ficheiro → {@code ERRO} em ambas (§3.3/§4.3).
  */
 class ProductImportServiceTest {
 
@@ -227,6 +232,7 @@ class ProductImportServiceTest {
         preview(HEADER, product("ART-001", "Bebidas"));
 
         verify(productLookup).listCategoriesForCompany(COMPANY_ID);
+        verify(productLookup).findByAnyKey(Set.of("ART-001"), Set.of(), Set.of());
         verifyNoMoreInteractions(productLookup);
     }
 
@@ -247,6 +253,114 @@ class ProductImportServiceTest {
 
         assertThat(preview.rows()).extracting(ImportRowDTO::column).containsExactly("iva", "categoria");
         assertThat(preview.categoriesToCreate()).isEmpty();
+    }
+
+    // ---- IMP-AR-03: SKU existente, código de barras e referência únicos no sistema ----------------
+
+    private static Product existingProduct(String sku, String barcode, String reference) {
+        Product product = new Product();
+        product.setSku(sku);
+        product.setBarcode(barcode);
+        product.setReference(reference);
+        return product;
+    }
+
+    private void existingProducts(Product... products) {
+        when(productLookup.findByAnyKey(any(), any(), any())).thenReturn(List.of(products));
+    }
+
+    private static String product(String sku, String barcode, String reference, String category) {
+        return sku + ";Arroz 5kg;350,00;16;" + category + ";" + barcode + ";" + reference + ";;;";
+    }
+
+    @Test
+    void existingSkuIsIgnoredAndItsCategoryIsNotCreated() {
+        existingProducts(existingProduct("ART-001", null, null));
+
+        ImportPreviewDTO preview = preview(HEADER, product("ART-001", "Bebidas"), product("ART-002", "Mercearia"));
+
+        assertThat(preview.rows()).extracting(ImportRowDTO::status)
+                .containsExactly(ImportRowStatus.JA_EXISTE, ImportRowStatus.NOVO);
+        assertThat(preview.rows().get(0).column()).isNull();
+        assertThat(preview.categoriesToCreate()).isEmpty();
+        assertThat(preview.hasErrors()).isFalse();
+    }
+
+    @Test
+    void lookupReceivesTheSkusBarcodesAndReferencesOfTheFileOnce() {
+        preview(HEADER,
+                product("ART-001", "600100", "REF-1", "Mercearia"),
+                product("ART-002", "", " REF-2 ", "Mercearia"));
+
+        verify(productLookup).findByAnyKey(
+                Set.of("ART-001", "ART-002"), Set.of("600100"), Set.of("REF-1", "REF-2"));
+    }
+
+    @Test
+    void barcodeOfAnotherArticleIsAnErrorInItsColumn() {
+        existingProducts(existingProduct("ART-900", "600100", null));
+
+        ImportRowDTO row = singleRow(product("ART-001", "600100", "", "Mercearia"));
+
+        assertThat(row.status()).isEqualTo(ImportRowStatus.ERRO);
+        assertThat(row.column()).isEqualTo("codigo_barras");
+        assertThat(row.message()).contains("600100").contains("ART-900");
+    }
+
+    @Test
+    void referenceOfAnotherArticleIsAnErrorInItsColumn() {
+        existingProducts(existingProduct("ART-900", null, "REF-1"));
+
+        ImportRowDTO row = singleRow(product("ART-001", "", "REF-1", "Mercearia"));
+
+        assertThat(row.status()).isEqualTo(ImportRowStatus.ERRO);
+        assertThat(row.column()).isEqualTo("referencia");
+        assertThat(row.message()).contains("REF-1").contains("ART-900");
+    }
+
+    @Test
+    void barcodeAndReferenceOfTheSameArticleAreNotAConflict() {
+        existingProducts(existingProduct("ART-001", "600100", "REF-1"));
+
+        ImportRowDTO row = singleRow(product("ART-001", "600100", "REF-1", "Mercearia"));
+
+        assertThat(row.status()).isEqualTo(ImportRowStatus.JA_EXISTE);
+    }
+
+    @Test
+    void foreignBarcodeIsAnErrorEvenWhenTheSkuAlreadyExists() {
+        existingProducts(existingProduct("ART-001", null, null), existingProduct("ART-900", "600100", null));
+
+        ImportRowDTO row = singleRow(product("ART-001", "600100", "", "Mercearia"));
+
+        assertThat(row.status()).isEqualTo(ImportRowStatus.ERRO);
+        assertThat(row.column()).isEqualTo("codigo_barras");
+    }
+
+    @Test
+    void repeatedSkuInTheFileIsAnErrorInBothLines() {
+        ImportPreviewDTO preview = preview(HEADER,
+                product("ART-001", "Mercearia"), product("ART-002", "Mercearia"), product("ART-001", "Bebidas"));
+
+        assertThat(preview.rows()).extracting(ImportRowDTO::status)
+                .containsExactly(ImportRowStatus.ERRO, ImportRowStatus.NOVO, ImportRowStatus.ERRO);
+        assertThat(preview.rows().get(0).column()).isEqualTo("sku");
+        assertThat(preview.rows().get(0).message()).contains("SKU repetido").contains("2, 4");
+        assertThat(preview.categoriesToCreate()).isEmpty();
+    }
+
+    @Test
+    void repeatedBarcodeOrReferenceInTheFileIsAnErrorInBothLines() {
+        ImportPreviewDTO preview = preview(HEADER,
+                product("ART-001", "600100", "", "Mercearia"),
+                product("ART-002", "600100", "", "Mercearia"),
+                product("ART-003", "", "REF-1", "Mercearia"),
+                product("ART-004", "", "REF-1", "Mercearia"));
+
+        assertThat(preview.rows()).extracting(ImportRowDTO::column)
+                .containsExactly("codigo_barras", "codigo_barras", "referencia", "referencia");
+        assertThat(preview.rows().get(0).message()).contains("Código de barras repetido").contains("2, 3");
+        assertThat(preview.rows().get(2).message()).contains("Referência repetida").contains("4, 5");
     }
 
     @Test
