@@ -3,7 +3,7 @@
 > Cenários que provam [IMPORTACAO_DADOS_SPEC.md](IMPORTACAO_DADOS_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01 e IMP-AR-01 verdes; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`)
+**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01, IMP-AR-01 e IMP-AR-02 verdes; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`)
 
 ## Leitura do ficheiro (comum)
 
@@ -24,7 +24,7 @@
 | IMP-CL-03 | Email do cliente opcional também no registo manual; migração retira `NOT NULL` de `clients.email` (§4.1) | `ClientOptionalEmailTest` ✅ · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` ✅ |
 | IMP-FO-01 | Fornecedor: NUIT obrigatório e válido; NUIT da empresa → `JÁ EXISTE`; repetido no ficheiro → `ERRO` (§4.2) | `SupplierImportServiceTest` ✅ |
 | IMP-AR-01 | Artigo: IVA por percentagem ou código existente; inexistente ou ambíguo → `ERRO` (§4.3) | `ProductImportServiceTest` ✅ |
-| IMP-AR-02 | Artigo: categoria inexistente é criada só na confirmação e listada na pré-visualização (§4.3) | `ProductImportServiceTest` |
+| IMP-AR-02 | Artigo: categoria inexistente é criada só na confirmação e listada na pré-visualização (§4.3) | `ProductImportServiceTest` ✅ |
 | IMP-AR-03 | Artigo: SKU existente → `JÁ EXISTE`; código de barras/referência de outro artigo → `ERRO` (§4.3) | `ProductImportServiceTest` |
 | IMP-06 | Pré-visualizar não grava nada; confirmar revalida, recusa tudo com qualquer erro e grava o resto numa só transacção (§3.1) | `DataImportHttpIntegrationTest` |
 | IMP-07 | Tudo na empresa activa; outra empresa não vê nem é alterada (§3.3) | `DataImportHttpIntegrationTest` |

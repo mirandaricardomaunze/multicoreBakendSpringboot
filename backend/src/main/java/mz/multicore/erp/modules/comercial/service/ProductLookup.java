@@ -104,6 +104,11 @@ public class ProductLookup {
         return id == null ? Optional.empty() : categoryRepository.findByIdAndCompaniesId(id, companyId);
     }
 
+    /** Categorias da empresa (activas e inactivas), por nome. */
+    public List<ProductCategory> listCategoriesForCompany(Long companyId) {
+        return companyId == null ? List.of() : categoryRepository.findDistinctByCompaniesIdOrderByNameAsc(companyId);
+    }
+
     public List<ProductCategory> findAllCategories() {
         return categoryRepository.findAll();
     }

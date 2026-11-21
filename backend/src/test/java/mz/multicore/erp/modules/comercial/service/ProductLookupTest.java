@@ -145,6 +145,16 @@ class ProductLookupTest {
     }
 
     @Test
+    void categorias_listForCompany_delegaEEmpresaNulaNaoTocaNoRepository() {
+        List<ProductCategory> ofCompany = List.of(category(3L));
+        when(categories.findDistinctByCompaniesIdOrderByNameAsc(4L)).thenReturn(ofCompany);
+
+        assertThat(lookup.listCategoriesForCompany(4L)).isEqualTo(ofCompany);
+        assertThat(lookup.listCategoriesForCompany(null)).isEmpty();
+        verify(categories).findDistinctByCompaniesIdOrderByNameAsc(4L);
+    }
+
+    @Test
     void categorias_findAll_e_count_delegam() {
         List<ProductCategory> all = List.of(category(1L), category(2L));
         when(categories.findAll()).thenReturn(all);

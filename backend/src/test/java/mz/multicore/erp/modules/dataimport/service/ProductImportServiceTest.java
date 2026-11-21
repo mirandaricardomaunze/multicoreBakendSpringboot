@@ -4,6 +4,8 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.modules.comercial.model.ProductCategory;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.dataimport.dto.ImportPreviewDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowStatus;
@@ -24,12 +26,16 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 /**
  * IMPORTACAO_DADOS_HARNESS — IMP-AR-01: o {@code iva} do artigo é a percentagem ou o código de uma taxa
  * de IVA já existente na empresa activa; inexistente ou ambígua (duas taxas com a mesma percentagem)
  * → {@code ERRO} na coluna {@code iva} (SPEC §4.3).
+ * IMP-AR-02: a {@code categoria} reconhece-se pelo nome sem maiúsculas/acentos entre as da empresa activa;
+ * a inexistente não é erro, é listada em "categorias a criar" e a pré-visualização não a grava (SPEC §4.3).
  */
 class ProductImportServiceTest {
 
@@ -40,8 +46,10 @@ class ProductImportServiceTest {
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
     private final TaxRateLookup taxRateLookup = mock(TaxRateLookup.class);
-    private final ProductImportService service = new ProductImportService(validator, taxRateLookup);
+    private final ProductLookup productLookup = mock(ProductLookup.class);
+    private final ProductImportService service = new ProductImportService(validator, taxRateLookup, productLookup);
     private final List<TaxRate> companyRates = new ArrayList<>();
+    private final List<ProductCategory> companyCategories = new ArrayList<>();
 
     @BeforeEach
     void activeCompany() {
@@ -49,6 +57,17 @@ class ProductImportServiceTest {
         companyRates.add(rate("IVA16", TaxType.IVA_STANDARD, "0.1600"));
         companyRates.add(rate("IVA5", TaxType.IVA_REDUCED, "0.0500"));
         when(taxRateLookup.listActiveForCompany(COMPANY_ID)).thenReturn(companyRates);
+        companyCategories.add(category(31L, "MERC", "Mercearia"));
+        companyCategories.add(category(32L, "HIG", "Higiene Pessoal"));
+        when(productLookup.listCategoriesForCompany(COMPANY_ID)).thenReturn(companyCategories);
+    }
+
+    private static ProductCategory category(Long id, String code, String name) {
+        ProductCategory category = new ProductCategory();
+        category.setId(id);
+        category.setCode(code);
+        category.setName(name);
+        return category;
     }
 
     @AfterEach
@@ -174,5 +193,64 @@ class ProductImportServiceTest {
 
         assertThatThrownBy(() -> preview(HEADER, product("16")))
                 .isInstanceOf(BusinessRuleException.class);
+    }
+
+    private static String product(String sku, String category) {
+        return sku + ";Arroz 5kg;350,00;16;" + category + ";;;;;";
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Mercearia", "MERCEARIA", " mercearia ", "Mercéaria", "higiene pessoal"})
+    void existingCategoryIsRecognisedByNameIgnoringCaseAndAccents(String category) {
+        ImportPreviewDTO preview = preview(HEADER, product("ART-001", category));
+
+        assertThat(preview.rows()).extracting(ImportRowDTO::status).containsExactly(ImportRowStatus.NOVO);
+        assertThat(preview.categoriesToCreate()).isEmpty();
+    }
+
+    @Test
+    void unknownCategoryIsListedOnceWithItsFirstSpellingAndIsNotAnError() {
+        ImportPreviewDTO preview = preview(HEADER,
+                product("ART-001", "Bebidas"),
+                product("ART-002", "BEBIDAS"),
+                product("ART-003", "Lacticínios"),
+                product("ART-004", "lacticinios"),
+                product("ART-005", "Mercearia"));
+
+        assertThat(preview.rows()).extracting(ImportRowDTO::status).containsOnly(ImportRowStatus.NOVO);
+        assertThat(preview.categoriesToCreate()).containsExactly("Bebidas", "Lacticínios");
+        assertThat(preview.hasErrors()).isFalse();
+    }
+
+    @Test
+    void previewOnlyReadsTheCategoriesOfTheActiveCompanyAndCreatesNothing() {
+        preview(HEADER, product("ART-001", "Bebidas"));
+
+        verify(productLookup).listCategoriesForCompany(COMPANY_ID);
+        verifyNoMoreInteractions(productLookup);
+    }
+
+    @Test
+    void categoryOfAnotherCompanyIsStillToBeCreated() {
+        when(productLookup.listCategoriesForCompany(COMPANY_ID)).thenReturn(List.of());
+
+        ImportPreviewDTO preview = preview(HEADER, product("ART-001", "Mercearia"));
+
+        assertThat(preview.categoriesToCreate()).containsExactly("Mercearia");
+    }
+
+    @Test
+    void categoryOfARowWithErrorsIsNotListedAndEmptyCategoryIsAnError() {
+        ImportPreviewDTO preview = preview(HEADER,
+                product("ART-001", "Bebidas").replace(";16;", ";17;"),
+                product("ART-002", ""));
+
+        assertThat(preview.rows()).extracting(ImportRowDTO::column).containsExactly("iva", "categoria");
+        assertThat(preview.categoriesToCreate()).isEmpty();
+    }
+
+    @Test
+    void clientAndSupplierPreviewsHaveNoCategoriesToCreate() {
+        assertThat(new ImportPreviewDTO(List.of(), List.of()).categoriesToCreate()).isEmpty();
     }
 }

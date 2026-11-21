@@ -8,11 +8,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -147,14 +145,14 @@ public class CsvImportReader {
      */
     public CsvHeader readHeader(List<String> headerFields, List<String> requiredColumns, List<String> optionalColumns) {
         Map<String, String> known = new LinkedHashMap<>();
-        requiredColumns.forEach(column -> known.put(normalizeColumn(column), column));
-        optionalColumns.forEach(column -> known.put(normalizeColumn(column), column));
+        requiredColumns.forEach(column -> known.put(ImportText.comparisonKey(column), column));
+        optionalColumns.forEach(column -> known.put(ImportText.comparisonKey(column), column));
 
         Map<String, Integer> columnIndex = new LinkedHashMap<>();
         List<String> extraColumns = new ArrayList<>();
         for (int i = 0; i < headerFields.size(); i++) {
             String original = headerFields.get(i) == null ? "" : headerFields.get(i).strip();
-            String column = known.get(normalizeColumn(original));
+            String column = known.get(ImportText.comparisonKey(original));
             if (column == null) {
                 if (!original.isEmpty()) {
                     extraColumns.add(original);
@@ -188,10 +186,5 @@ public class CsvImportReader {
                 .map(line -> new CsvTable.Row(line.number(), parseLine(line.text(), separator)))
                 .toList();
         return new CsvTable(header, rows);
-    }
-
-    private static String normalizeColumn(String name) {
-        String withoutAccents = Normalizer.normalize(name.strip(), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-        return withoutAccents.toLowerCase(Locale.ROOT);
     }
 }

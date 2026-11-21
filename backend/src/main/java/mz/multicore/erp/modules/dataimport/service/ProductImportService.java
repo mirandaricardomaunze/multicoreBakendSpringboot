@@ -3,6 +3,8 @@ package mz.multicore.erp.modules.dataimport.service;
 import jakarta.validation.Validator;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.dto.CreateProductRequest;
+import mz.multicore.erp.modules.comercial.model.ProductCategory;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.dataimport.dto.ImportPreviewDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowStatus;
@@ -19,7 +21,8 @@ import java.util.Map;
 /**
  * Importação de artigos por CSV (IMPORTACAO_DADOS_SPEC §4.3). Cada linha é convertida no mesmo
  * {@link CreateProductRequest} do registo manual e validada pelas mesmas regras; o {@code iva} tem de
- * ser uma taxa de IVA já existente na empresa activa, pela percentagem ou pelo código.
+ * ser uma taxa de IVA já existente na empresa activa, pela percentagem ou pelo código; a {@code categoria}
+ * reconhece-se pelo nome e, se não existir, é anunciada em "categorias a criar" (criada só na confirmação).
  */
 @Service
 public class ProductImportService {
@@ -45,10 +48,12 @@ public class ProductImportService {
     private final ImportValueParser parser = new ImportValueParser();
     private final ImportRequestValidator requestValidator;
     private final TaxRateLookup taxRateLookup;
+    private final ProductLookup productLookup;
 
-    public ProductImportService(Validator validator, TaxRateLookup taxRateLookup) {
+    public ProductImportService(Validator validator, TaxRateLookup taxRateLookup, ProductLookup productLookup) {
         this.requestValidator = new ImportRequestValidator(validator);
         this.taxRateLookup = taxRateLookup;
+        this.productLookup = productLookup;
     }
 
     /** Lê o ficheiro e classifica cada linha na empresa activa, sem gravar nada (§3.1 passo 2). */
@@ -56,45 +61,57 @@ public class ProductImportService {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         CsvTable table = reader.read(content, REQUIRED_COLUMNS, OPTIONAL_COLUMNS);
         ImportVatRateResolver vatRates = new ImportVatRateResolver(taxRateLookup.listActiveForCompany(companyId));
+        ImportCategoryPlan categories = new ImportCategoryPlan(productLookup.listCategoriesForCompany(companyId));
         List<ImportRowDTO> rows = table.rows().stream()
-                .map(row -> classify(table, row, vatRates))
+                .map(row -> classify(table, row, vatRates, categories))
                 .toList();
-        return new ImportPreviewDTO(rows, table.header().extraColumns());
+        return new ImportPreviewDTO(rows, table.header().extraColumns(), categories.toCreate());
     }
 
-    private ImportRowDTO classify(CsvTable table, CsvTable.Row row, ImportVatRateResolver vatRates) {
-        CreateProductRequest request;
+    /** Só a categoria de uma linha sem erros entra em "categorias a criar"; nada é gravado aqui. */
+    private ImportRowDTO classify(CsvTable table, CsvTable.Row row, ImportVatRateResolver vatRates,
+                                  ImportCategoryPlan categories) {
+        ProductLine product;
         try {
-            request = toRequest(table, row, vatRates);
+            product = toProductLine(table, row, vatRates, categories);
         } catch (ImportValueException invalidValue) {
             return ImportRowDTO.error(row.number(), invalidValue.getColumn(), invalidValue.getMessage());
         }
-        return requestValidator.firstViolation(row.number(), request, COLUMN_BY_PROPERTY)
-                .orElseGet(() -> ImportRowDTO.of(row.number(), ImportRowStatus.NOVO));
+        return requestValidator.firstViolation(row.number(), product.request(), COLUMN_BY_PROPERTY)
+                .orElseGet(() -> {
+                    categories.requireCreation(product.category());
+                    return ImportRowDTO.of(row.number(), ImportRowStatus.NOVO);
+                });
     }
 
     /** Valores pela ordem das colunas do modelo: o primeiro problema da linha é o que se reporta. */
-    private CreateProductRequest toRequest(CsvTable table, CsvTable.Row row, ImportVatRateResolver vatRates) {
+    private ProductLine toProductLine(CsvTable table, CsvTable.Row row, ImportVatRateResolver vatRates,
+                                      ImportCategoryPlan categories) {
         int line = row.number();
         String sku = requiredText(table, row, SKU);
         String name = requiredText(table, row, NAME);
         BigDecimal salePrice = requiredDecimal(table, row, SALE_PRICE);
         TaxRate vatRate = vatRates.resolve(table.value(row, VAT), line, VAT);
-        requiredText(table, row, CATEGORY);
+        String category = requiredText(table, row, CATEGORY);
+        Long categoryId = categories.existing(category).map(ProductCategory::getId).orElse(null);
         BigDecimal wholesalePrice = parser.parseDecimal(table.value(row, WHOLESALE_PRICE), line, WHOLESALE_PRICE);
-        return new CreateProductRequest(
+        return new ProductLine(category, new CreateProductRequest(
                 sku,
                 parser.parseText(table.value(row, REFERENCE)),
                 parser.parseText(table.value(row, BARCODE)),
                 name,
                 salePrice,
                 null, null, 1, null, null,
-                null, // categoria: resolvida pelo nome (IMP-AR-02)
+                categoryId, // null: categoria nova, criada só na confirmação
                 null, true,
                 vatRate.getId(),
                 parser.parseText(table.value(row, DESCRIPTION)),
                 wholesalePrice,
-                null, null, null);
+                null, null, null));
+    }
+
+    /** Linha convertida: o pedido do registo manual e o nome da categoria como veio no ficheiro. */
+    private record ProductLine(String category, CreateProductRequest request) {
     }
 
     private String requiredText(CsvTable table, CsvTable.Row row, String column) {
