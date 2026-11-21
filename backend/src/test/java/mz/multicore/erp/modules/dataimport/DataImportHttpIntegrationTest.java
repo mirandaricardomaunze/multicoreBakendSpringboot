@@ -180,6 +180,51 @@ class DataImportHttpIntegrationTest {
         assertThat(categories).doesNotContain("Doces Importados");
     }
 
+    // ---- IMP-07: tudo na empresa activa; a outra empresa não vê nem é alterada (§3.3) ----------------
+
+    @Test
+    @DisplayName("IMP-07: clientes, fornecedores, artigos e categorias importados ficam só na empresa activa")
+    void commitWritesOnlyIntoTheActiveCompany() throws Exception {
+        Ctx active = adminIn(1);
+        Ctx other = adminIn(0);
+        assertThat(active.companyId()).isNotEqualTo(other.companyId());
+
+        upload("clients", "commit", active, CLIENT_HEADER, "Importado Tenant;416000041;;;;");
+        upload("suppliers", "commit", active, "nome;nuit;email;telefone;morada;contacto",
+                "Fornecedor Tenant;416000042;;;;");
+        upload("products", "commit", active, PRODUCT_HEADER, "IMP-TEN-A;Artigo Tenant;10;IVA16;Tenant Importados;");
+
+        assertThat(clientTaxIds(active)).contains("416000041");
+        assertThat(clientTaxIds(other)).doesNotContain("416000041");
+        assertThat(supplierTaxIds(active)).contains("416000042");
+        assertThat(supplierTaxIds(other)).doesNotContain("416000042");
+        assertThat(productSkus(active)).contains("IMP-TEN-A");
+        assertThat(productSkus(other)).doesNotContain("IMP-TEN-A");
+        assertThat(categoryNames(active)).contains("Tenant Importados");
+        assertThat(categoryNames(other)).doesNotContain("Tenant Importados");
+    }
+
+    @Test
+    @DisplayName("IMP-07: na outra empresa o mesmo ficheiro não é JÁ EXISTE — cliente ASSOCIADO, fornecedor NOVO")
+    void otherCompanyClassifiesAgainstItsOwnData() throws Exception {
+        Ctx active = adminIn(1);
+        Ctx other = adminIn(0);
+        upload("clients", "commit", active, CLIENT_HEADER, "Importado Assoc;416000051;;;;");
+        upload("suppliers", "commit", active, "nome;nuit;email;telefone;morada;contacto",
+                "Fornecedor Assoc;416000052;;;;");
+
+        JsonNode clients = upload("clients", "preview", other, CLIENT_HEADER, "Importado Assoc;416000051;;;;");
+        assertThat(clients.get("rows").get(0).get("status").asText()).isEqualTo("ASSOCIADO");
+        JsonNode suppliers = upload("suppliers", "preview", other, "nome;nuit;email;telefone;morada;contacto",
+                "Fornecedor Assoc;416000052;;;;");
+        assertThat(suppliers.get("rows").get(0).get("status").asText()).isEqualTo("NOVO");
+
+        JsonNode associated = upload("clients", "commit", other, CLIENT_HEADER, "Importado Assoc;416000051;;;;");
+        assertThat(associated.get("associated").asInt()).isEqualTo(1);
+        assertThat(clientTaxIds(other)).contains("416000051");
+        assertThat(clientTaxIds(active)).contains("416000051");
+    }
+
     private JsonNode upload(String entity, String action, Ctx c, String header, String... lines) throws Exception {
         return om.readTree(uploadRequest(entity, action, c, header, lines)
                 .andExpect(status().isOk())
@@ -204,6 +249,16 @@ class DataImportHttpIntegrationTest {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
     }
 
+    private String supplierTaxIds(Ctx c) throws Exception {
+        return mockMvc.perform(auth(get("/api/purchases/suppliers").param("companyId", c.companyId()), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+    }
+
+    private String categoryNames(Ctx c) throws Exception {
+        return mockMvc.perform(auth(get("/api/product-categories"), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+    }
+
     private void assertTemplate(String entity, String fileName, String header) throws Exception {
         Ctx c = admin();
         MockHttpServletResponse response = mockMvc.perform(auth(get("/api/data-import/" + entity + "/template"), c))
@@ -221,10 +276,15 @@ class DataImportHttpIntegrationTest {
     }
 
     private Ctx admin() throws Exception {
+        return adminIn(0);
+    }
+
+    /** A Ana é ADMIN nas duas empresas do arranque; {@code index} escolhe a empresa activa. */
+    private Ctx adminIn(int index) throws Exception {
         JsonNode login = om.readTree(mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"ana\",\"password\":\"password\"}"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
-        return new Ctx(login.get("token").asText(), login.get("companies").get(0).get("id").asText());
+        return new Ctx(login.get("token").asText(), login.get("companies").get(index).get("id").asText());
     }
 
     private MockHttpServletRequestBuilder auth(MockHttpServletRequestBuilder req, Ctx c) {

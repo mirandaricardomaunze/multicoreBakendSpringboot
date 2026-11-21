@@ -27,7 +27,7 @@
 | IMP-AR-02 | Artigo: categoria inexistente é criada só na confirmação e listada na pré-visualização (§4.3) | `ProductImportServiceTest` ✅ |
 | IMP-AR-03 | Artigo: SKU existente → `JÁ EXISTE`; código de barras/referência de outro artigo → `ERRO` (§4.3) | `ProductImportServiceTest` ✅, `ProductLookupTest` ✅ |
 | IMP-06 | Pré-visualizar não grava nada; confirmar revalida, recusa tudo com qualquer erro e grava o resto numa só transacção (§3.1) | `DataImportHttpIntegrationTest` ✅ |
-| IMP-07 | Tudo na empresa activa; outra empresa não vê nem é alterada (§3.3) | `DataImportHttpIntegrationTest` |
+| IMP-07 | Tudo na empresa activa; outra empresa não vê nem é alterada (§3.3) | `DataImportHttpIntegrationTest` ✅ |
 | IMP-08 | Cada confirmação gera um `DATA_IMPORT` na auditoria com entidade, ficheiro e totais (§3.1) | `DataImportHttpIntegrationTest` |
 | IMP-09 | Modelo CSV descarregável por entidade (`GET /api/data-import/{clients\|suppliers\|products}/template`): UTF-8 com BOM, `;`, só cabeçalho (§3.1) | `DataImportHttpIntegrationTest` ✅ |
 | IMP-10 | Rotas de importação só para ADMIN e classificadas na `ApiRolePolicy` (§3.3) | `ApiRolePolicyEndpointCoverageHarnessTest` · `DataImportHttpIntegrationTest` |
