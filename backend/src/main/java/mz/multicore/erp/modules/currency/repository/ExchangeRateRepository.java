@@ -15,6 +15,8 @@ public interface ExchangeRateRepository extends JpaRepository<ExchangeRate, Long
 
     List<ExchangeRate> findByCompanyIdOrderByRateDateDescCurrencyAsc(Long companyId);
 
+    Optional<ExchangeRate> findByIdAndCompanyId(Long id, Long companyId);
+
     /** Rate of the given date or, failing that, of the most recent earlier date. */
     Optional<ExchangeRate> findFirstByCompanyIdAndCurrencyAndRateDateLessThanEqualOrderByRateDateDesc(
             Long companyId, String currency, LocalDate rateDate);

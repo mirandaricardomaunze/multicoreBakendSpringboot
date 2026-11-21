@@ -4,6 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.model.CurrencyCode;
 import mz.multicore.erp.modules.company.service.CompanyBaseCurrencyService;
+import mz.multicore.erp.modules.currency.dto.CorrectExchangeRateRequest;
 import mz.multicore.erp.modules.currency.dto.CreateExchangeRateRequest;
 import mz.multicore.erp.modules.currency.dto.ExchangeRateDTO;
 import mz.multicore.erp.modules.currency.dto.ProposedExchangeRateDTO;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.when;
 /**
  * FX-02 — moedas aceites, câmbio > 0 com 4 casas, um por empresa, moeda e data (SPEC §3.2).
  * FX-03 — câmbio proposto = o da data ou o anterior mais recente; sem nenhum, exige câmbio escrito.
+ * FX-04 — corrigir um câmbio da tabela não altera documentos já gravados.
  */
 class ExchangeRateRulesTest {
 
@@ -223,5 +225,76 @@ class ExchangeRateRulesTest {
     void fx03_dataEEmpresaActivaObrigatorias() {
         assertThrows(BusinessRuleException.class, () -> service.propose(COMPANY_ID, "USD", null));
         assertThrows(BusinessRuleException.class, () -> service.propose(8L, "USD", DAY));
+    }
+
+    // ---- FX-04 — corrigir câmbio não altera documentos gravados ----
+
+    @Test
+    void fx04_corrigeSoOValorDoCambio() {
+        ExchangeRate stored = rate("USD", DAY, "63.9000");
+        stored.setId(11L);
+        when(repository.findByIdAndCompanyId(11L, COMPANY_ID)).thenReturn(Optional.of(stored));
+
+        ExchangeRateDTO corrected = service.correct(COMPANY_ID, 11L,
+                new CorrectExchangeRateRequest(new BigDecimal("64.25")));
+
+        assertEquals(11L, corrected.id());
+        assertEquals("USD", corrected.currency());
+        assertEquals(DAY, corrected.rateDate());
+        assertEquals(new BigDecimal("64.2500"), corrected.rate());
+        verify(repository).save(stored);
+    }
+
+    @Test
+    void fx04_cambioCorrigidoSegueAsRegrasDaTabela() {
+        ExchangeRate stored = rate("USD", DAY, "63.9000");
+        when(repository.findByIdAndCompanyId(11L, COMPANY_ID)).thenReturn(Optional.of(stored));
+
+        for (String value : new String[]{"0", "-2", "63.12345"}) {
+            assertThrows(BusinessRuleException.class, () -> service.correct(COMPANY_ID, 11L,
+                    new CorrectExchangeRateRequest(new BigDecimal(value))));
+        }
+        assertThrows(BusinessRuleException.class, () -> service.correct(COMPANY_ID, 11L,
+                new CorrectExchangeRateRequest(null)));
+        assertEquals(new BigDecimal("63.9000"), stored.getRate());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void fx04_soCambiosDaEmpresaActiva() {
+        when(repository.findByIdAndCompanyId(12L, COMPANY_ID)).thenReturn(Optional.empty());
+
+        BusinessRuleException missing = assertThrows(BusinessRuleException.class, () -> service.correct(
+                COMPANY_ID, 12L, new CorrectExchangeRateRequest(new BigDecimal("64"))));
+        assertThat(missing.getMessage()).contains("Câmbio não encontrado");
+        assertThrows(BusinessRuleException.class, () -> service.correct(8L, 11L,
+                new CorrectExchangeRateRequest(new BigDecimal("64"))));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void fx04_documentoGuardaOValorENaoMudaComACorreccao() {
+        ExchangeRate stored = rate("USD", DAY, "63.9000");
+        when(repository.findFirstByCompanyIdAndCurrencyAndRateDateLessThanEqualOrderByRateDateDesc(
+                COMPANY_ID, "USD", DAY)).thenReturn(Optional.of(stored));
+        when(repository.findByIdAndCompanyId(11L, COMPANY_ID)).thenReturn(Optional.of(stored));
+
+        BigDecimal documentRate = service.resolveDocumentRate(COMPANY_ID, "USD", DAY, null);
+        service.correct(COMPANY_ID, 11L, new CorrectExchangeRateRequest(new BigDecimal("65")));
+
+        // o documento já gravado guardou o valor (fotografia), não uma referência à linha da tabela
+        assertEquals(new BigDecimal("63.9000"), documentRate);
+        // documentos novos passam a receber o câmbio corrigido
+        assertEquals(new BigDecimal("65.0000"), service.resolveDocumentRate(COMPANY_ID, "USD", DAY, null));
+    }
+
+    @Test
+    void fx04_nenhumaTabelaReferenciaATabelaDeCambios() throws IOException {
+        try (var migrations = Files.list(Path.of("src/main/resources/db/migration"))) {
+            assertThat(migrations.filter(file -> file.toString().endsWith(".sql")))
+                    .allSatisfy(file -> assertThat(Files.readString(file))
+                            .as("documentos guardam o valor do câmbio, nunca uma FK para exchange_rates: %s", file)
+                            .doesNotContainPattern("(?i)REFERENCES\\s+exchange_rates"));
+        }
     }
 }

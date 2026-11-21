@@ -4,6 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.model.CurrencyCode;
 import mz.multicore.erp.modules.company.service.CompanyBaseCurrencyService;
+import mz.multicore.erp.modules.currency.dto.CorrectExchangeRateRequest;
 import mz.multicore.erp.modules.currency.dto.CreateExchangeRateRequest;
 import mz.multicore.erp.modules.currency.dto.ExchangeRateDTO;
 import mz.multicore.erp.modules.currency.dto.ProposedExchangeRateDTO;
@@ -61,6 +62,19 @@ public class ExchangeRateService {
         entity.setRateDate(rateDate);
         entity.setRate(rate);
         entity.setCreatedBy(CurrentUserContext.getUsername());
+        return toDto(repository.save(entity));
+    }
+
+    /**
+     * Corrects the value of an existing rate of the active company. Documents store the rate value itself
+     * (snapshot), never a reference to this row, so documents already saved do not change (FX-04).
+     */
+    @Transactional
+    public ExchangeRateDTO correct(Long companyId, Long exchangeRateId, CorrectExchangeRateRequest request) {
+        CurrentUserContext.requireCompany(companyId);
+        ExchangeRate entity = repository.findByIdAndCompanyId(exchangeRateId, companyId)
+                .orElseThrow(() -> new BusinessRuleException("Câmbio não encontrado na empresa activa."));
+        entity.setRate(normalizeRate(request.rate()));
         return toDto(repository.save(entity));
     }
 
