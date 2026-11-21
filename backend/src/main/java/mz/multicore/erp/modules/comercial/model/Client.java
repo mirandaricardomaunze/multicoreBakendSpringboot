@@ -30,7 +30,8 @@ public class Client extends BaseEntity {
     @Column(name = "tax_id", nullable = false, unique = true)
     private String taxId; // NIF in Portugal / CNPJ/CPF in Brazil
 
-    @Column(name = "email", nullable = false)
+    /** Opcional desde a V137 (IMPORTACAO_DADOS_SPEC §4.1). */
+    @Column(name = "email")
     private String email;
 
     @Column(name = "address")

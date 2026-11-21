@@ -25,7 +25,7 @@ cada agregado. O leitor CSV e o parser de valores são classes puras, sem Spring
 - [x] IMP-03 — colunas por nome tolerante; obrigatória em falta recusa; extra anunciada — `CsvImportReaderTest`
 - [x] IMP-05 — limites 2 MB / 5 000 linhas; linhas vazias ignoradas — `CsvImportReaderTest`
 - [x] IMP-04 — números e datas nos formatos aceites; outro formato é erro com nº de linha — `ImportValueParserTest`
-- [ ] IMP-CL-03 — email do cliente opcional (migração, request, registo manual) — `ClientOptionalEmailTest`
+- [x] IMP-CL-03 — email do cliente opcional (migração, request, registo manual) — `ClientOptionalEmailTest`
 - [ ] IMP-CL-01 — cliente: NUIT obrigatório e válido, email opcional — `ClientImportServiceTest`
 - [ ] IMP-CL-02 — cliente: `JÁ EXISTE`, `ASSOCIADO` e repetido no ficheiro — `ClientImportServiceTest`
 - [ ] IMP-FO-01 — fornecedor: NUIT, `JÁ EXISTE` e repetido no ficheiro — `SupplierImportServiceTest`
@@ -72,3 +72,4 @@ cada agregado. O leitor CSV e o parser de valores são classes puras, sem Spring
 - 2026-11-21 · IMP-03 · `CsvImportReader.readHeader` + record `CsvHeader`: colunas por nome sem maiúsculas/acentos/espaços, obrigatória em falta → `BusinessRuleException` PT-MZ, extras em `extraColumns`; `CsvImportReaderTest` verde (14/14)
 - 2026-11-21 · IMP-05 · `CsvImportReader.decode` recusa > 2 MB; `lines()` + record `CsvLine` ignora linhas vazias, numera com o cabeçalho como linha 1 e recusa > 5 000 linhas de dados; `CsvImportReaderTest` verde (19/19). Nota: correr os testes a partir da raiz (`mvn -f ../pom.xml test -pl backend -am ...`) — só em `backend/` usa um `contracts` desactualizado do `~/.m2` e falha `units/dto` (era a causa do falso alarme de 2026-11-19)
 - 2026-11-21 · IMP-04 · `ImportValueParser` (classe pura): `parseDecimal` aceita `1.234,56` e `1234.56`, `parseDate` aceita `dd/mm/aaaa` e `aaaa-mm-dd` (STRICT, 31/02 é erro), `parseText` retira espaços; célula vazia → `null`; outro formato → `ImportValueException` (estende `BusinessRuleException`) com linha e coluna; `ImportValueParserTest` verde (31/31)
+- 2026-11-21 · IMP-CL-03 · `SaveClientRequest` sem `@NotBlank` no email (compact constructor: vazio/espaços → `null`, resto `strip()`; `@Email` mantém-se), `Client.email` nullable, migração `V137__client_email_optional.sql` (`ALTER TABLE clients ALTER COLUMN email DROP NOT NULL`); registo e edição manual aceitam cliente sem email. `ClientOptionalEmailTest` verde (6/6, H2 em memória própria — a H2 em ficheiro com `ddl-auto=update` mantém o `NOT NULL` antigo), `MigrationPostgresDialectHarnessTest` e `InputSecurityAndBackendValidationHarnessTest` verdes
