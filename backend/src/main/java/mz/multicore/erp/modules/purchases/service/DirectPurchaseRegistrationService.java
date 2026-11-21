@@ -119,12 +119,12 @@ public class DirectPurchaseRegistrationService {
 
             String desc = String.format("Compra %s - Fornecedor %s", purchase.getPurchaseNumber(), supplier.getName());
             inventoryService.registerPurchase(
-                    product, warehouse, lineReq.quantity(), lineReq.unitPrice(),
+                    product, warehouse, lineReq.quantity(), purchase.toBaseUnitCost(lineReq.unitPrice()),
                     lineReq.batchNumber(), lineReq.serialNumber(), desc, lineReq.expirationDate()
             );
         }
 
-        purchase.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        purchase.applyTotal(total);
         purchase.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
 
         boolean payNow = request.financeAccountId() != null;

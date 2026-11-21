@@ -61,7 +61,7 @@ public class PurchaseOrderPayableRegistrar {
             total = total.add(amounts.total());
             totalTax = totalTax.add(amounts.tax());
         }
-        purchase.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        purchase.applyTotal(total);
         purchase.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         purchase.setPurchaseNumber(documentNumberService.next(DocumentSeries.PURCHASE));
         purchase = purchaseRepository.save(purchase);

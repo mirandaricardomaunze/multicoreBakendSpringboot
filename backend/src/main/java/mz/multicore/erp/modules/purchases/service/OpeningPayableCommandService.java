@@ -59,7 +59,7 @@ public class OpeningPayableCommandService {
         document.setPurchaseDate(request.documentDate().atStartOfDay());
         document.setDueDate(request.dueDate());
         document.setDescription(request.description());
-        document.setTotalAmount(request.amount());
+        document.applyTotal(request.amount());
         document.setTaxAmount(BigDecimal.ZERO);
         document.setCreatedBy(CurrentUserContext.getUsername());
         document.setPurchaseNumber(documentNumberService.next(DocumentSeries.OPENING_PAYABLE));

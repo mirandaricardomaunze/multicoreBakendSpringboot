@@ -24,7 +24,9 @@ public record PurchaseDTO(
         /** Moeda do documento; os valores acima estão nesta moeda. */
         String currency,
         /** Câmbio gravado no documento (unidades da moeda base por 1 unidade da moeda). */
-        BigDecimal exchangeRate
+        BigDecimal exchangeRate,
+        /** Total em moeda base = total × câmbio, 2 casas (gravado no documento). */
+        BigDecimal baseTotalAmount
 ) {
     /** Construtor retrocompatível, anterior à moeda estrangeira: moeda base com câmbio 1. */
     public PurchaseDTO(Long id, String purchaseNumber, Long supplierId, String supplierName, Long warehouseId,
@@ -32,7 +34,8 @@ public record PurchaseDTO(
                        String status, LocalDateTime purchaseDate, List<PurchaseLineDTO> lines, Long businessUnitId,
                        String businessUnitName, BigDecimal returnedAmount) {
         this(id, purchaseNumber, supplierId, supplierName, warehouseId, companyId, totalAmount, taxAmount, amountPaid,
-                status, purchaseDate, lines, businessUnitId, businessUnitName, returnedAmount, null, BigDecimal.ONE);
+                status, purchaseDate, lines, businessUnitId, businessUnitName, returnedAmount, null, BigDecimal.ONE,
+                totalAmount);
     }
 
     /** Construtor retrocompatível, anterior às devoluções ao fornecedor. */

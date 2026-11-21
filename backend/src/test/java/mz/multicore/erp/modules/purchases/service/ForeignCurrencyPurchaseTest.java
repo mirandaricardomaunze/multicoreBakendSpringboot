@@ -12,9 +12,12 @@ import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.currency.service.ExchangeRateService;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
+import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
+import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
+import mz.multicore.erp.modules.inventory.service.WeightedAverageCost;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseLineRequest;
@@ -23,10 +26,13 @@ import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderRequest;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseRequest;
 import mz.multicore.erp.modules.purchases.dto.PurchaseDTO;
 import mz.multicore.erp.modules.purchases.dto.PurchaseOrderDTO;
+import mz.multicore.erp.modules.purchases.model.DocumentCurrency;
 import mz.multicore.erp.modules.purchases.model.Purchase;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrder;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrderLine;
 import mz.multicore.erp.modules.purchases.model.Supplier;
+import mz.multicore.erp.modules.purchases.repository.GoodsReceiptDiscrepancyRepository;
+import mz.multicore.erp.modules.purchases.repository.PurchaseOrderReceiptRepository;
 import mz.multicore.erp.modules.purchases.repository.PurchaseOrderRepository;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
@@ -55,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -64,7 +71,9 @@ import static org.mockito.Mockito.when;
 
 /**
  * Harness FX-05 (docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md §3.3): encomenda e compra guardam moeda e
- * câmbio (fotografia); na moeda base o câmbio é 1; as compras antigas migram com câmbio 1.
+ * câmbio (fotografia); na moeda base o câmbio é 1; as compras antigas migram com câmbio 1 (FX-05). O documento
+ * guarda também o total em moeda base (total × câmbio, 2 casas HALF_UP) e o stock e o custo médio entram ao
+ * preço × câmbio (FX-06).
  */
 class ForeignCurrencyPurchaseTest {
 
@@ -78,6 +87,7 @@ class ForeignCurrencyPurchaseTest {
     private final PurchaseRepository purchaseRepository = mock(PurchaseRepository.class);
     private final DocumentNumberService numbers = mock(DocumentNumberService.class);
     private final ExchangeRateService exchangeRates = mock(ExchangeRateService.class);
+    private final InventoryService inventory = mock(InventoryService.class);
     private final PurchaseCurrencyResolver resolver = new PurchaseCurrencyResolver(exchangeRates);
 
     private final PurchaseOrderService orders = new PurchaseOrderService(orderRepository,
@@ -91,7 +101,7 @@ class ForeignCurrencyPurchaseTest {
             new DirectPurchaseRegistrationService(supplierRepository, purchaseRepository,
                     new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                     new WarehouseLookup(warehouseRepository), new CompanyLookup(companyRepository),
-                    mock(InventoryService.class), mock(FinanceService.class), numbers,
+                    inventory, mock(FinanceService.class), numbers,
                     mock(ApplicationEventPublisher.class), resolver),
             new DirectPurchaseQueryService(purchaseRepository));
 
@@ -248,7 +258,8 @@ class ForeignCurrencyPurchaseTest {
             st.execute("insert into purchase_orders (id, company_id) values (10, 1), (20, 2)");
             st.execute("insert into purchases (id, company_id) values (11, 1), (21, 2)");
 
-            String runScript = "runscript from '" + migrationFile().toAbsolutePath().toString().replace("'", "''")
+            String runScript = "runscript from '" + migration("__purchase_document_currency.sql").toAbsolutePath()
+                    .toString().replace("'", "''")
                     + "' charset 'UTF-8'";
             st.execute(runScript);
             st.execute(runScript);
@@ -264,8 +275,162 @@ class ForeignCurrencyPurchaseTest {
                     assertEquals(0, rs.getBigDecimal("exchange_rate").compareTo(BigDecimal.ONE));
                 }
             }
-            assertThat(Files.readString(migrationFile())).doesNotContainIgnoringCase("exchange_rates");
+            assertThat(Files.readString(migration("__purchase_document_currency.sql"))).doesNotContainIgnoringCase("exchange_rates");
         }
+    }
+
+    @Test
+    void fx06_compraEmUsdGuardaTotalEmMoedaBaseArredondadoA2CasasHalfUp() {
+        when(exchangeRates.resolveDocumentRate(eq(COMPANY_ID), eq("USD"), any(LocalDate.class),
+                eq(new BigDecimal("63.9055")))).thenReturn(new BigDecimal("63.9055"));
+        // 3 × 33,33 = 99,99 USD × 63,9055 = 6389,910945 -> 6389,91
+        CreatePurchaseRequest request = new CreatePurchaseRequest(7L, 3L, COMPANY_ID, null,
+                List.of(new CreatePurchaseLineRequest(11L, new BigDecimal("3"), new BigDecimal("33.33"), null, null,
+                        null, BigDecimal.ZERO)), "USD", new BigDecimal("63.9055"));
+
+        PurchaseDTO dto = purchases.createPurchaseDTO(request);
+
+        assertEquals(new BigDecimal("99.99"), dto.totalAmount(), "o total fica na moeda do documento");
+        assertEquals(new BigDecimal("6389.91"), dto.baseTotalAmount());
+        assertEquals(new BigDecimal("6389.91"), savedPurchase().getBaseTotalAmount());
+    }
+
+    @Test
+    void fx06_compraEmUsdEntraNoStockENoCustoMedioAoPrecoVezesCambio() {
+        when(exchangeRates.resolveDocumentRate(eq(COMPANY_ID), eq("USD"), any(LocalDate.class),
+                eq(new BigDecimal("63.9")))).thenReturn(new BigDecimal("63.9000"));
+
+        purchases.createPurchase(purchaseRequest("USD", new BigDecimal("63.9")));
+
+        ArgumentCaptor<BigDecimal> unitCost = ArgumentCaptor.forClass(BigDecimal.class);
+        verify(inventory).registerPurchase(any(Product.class), any(Warehouse.class), eq(BigDecimal.TEN),
+                unitCost.capture(), isNull(), isNull(), anyString(), isNull());
+        assertEquals(0, unitCost.getValue().compareTo(new BigDecimal("6390")), "100 USD × 63,90 = 6390 MT");
+    }
+
+    @Test
+    void fx06_custoMedioPonderadoUsaOCustoConvertido() {
+        Product product = new Product();
+        product.setId(11L);
+        product.setPurchasePrice(new BigDecimal("6000.00"));
+        Warehouse warehouse = warehouseRepository.findById(3L).orElseThrow();
+        Stock stock = new Stock();
+        stock.setWarehouse(warehouse);
+        stock.setQuantity(BigDecimal.TEN);
+        StockRepository stocks = mock(StockRepository.class);
+        when(stocks.findByProductId(11L)).thenReturn(List.of(stock));
+        Purchase usd = new Purchase();
+        usd.applyDocumentCurrency(new DocumentCurrency("USD", new BigDecimal("63.9000")));
+
+        WeightedAverageCost.apply(stocks, product, warehouse,
+                BigDecimal.TEN, usd.toBaseUnitCost(new BigDecimal("100")));
+
+        // (10 × 6000 + 10 × 6390) / 20 = 6195,00 MT
+        assertEquals(new BigDecimal("6195.00"), product.getPurchasePrice());
+    }
+
+    @Test
+    void fx06_encomendaEmZarGuardaTotalEmMoedaBase() {
+        when(exchangeRates.resolveDocumentRate(eq(COMPANY_ID), eq("ZAR"), any(LocalDate.class),
+                eq(new BigDecimal("3.45")))).thenReturn(new BigDecimal("3.4500"));
+
+        PurchaseOrderDTO dto = orders.createOrder(orderRequest("ZAR", new BigDecimal("3.45")));
+
+        assertEquals(new BigDecimal("1000.00"), dto.totalAmount());
+        assertEquals(new BigDecimal("3450.00"), dto.baseTotalAmount());
+        assertEquals(new BigDecimal("3450.00"), savedOrder().getBaseTotalAmount());
+    }
+
+    @Test
+    void fx06_recepcaoDaEncomendaEmZarDaEntradaNoStockAoCustoConvertido() {
+        PurchaseOrder order = new PurchaseOrder();
+        order.setOrderNumber("EC-F-2026/3");
+        order.setStatus(PurchaseOrder.ORDERED);
+        order.setCompany(company());
+        order.setSupplier(supplierRepository.findById(7L).orElseThrow());
+        order.setWarehouse(warehouseRepository.findById(3L).orElseThrow());
+        order.applyDocumentCurrency(new DocumentCurrency("ZAR", new BigDecimal("3.4500")));
+        PurchaseOrderLine line = new PurchaseOrderLine();
+        line.setProduct(productRepository.findByIdAndCompaniesId(11L, COMPANY_ID).orElseThrow());
+        line.setQuantity(BigDecimal.TEN);
+        line.setReceivedQuantity(BigDecimal.ZERO);
+        line.setUnitPrice(new BigDecimal("100"));
+        line.setTaxRate(BigDecimal.ZERO);
+        order.addLine(line);
+
+        new PurchaseOrderReceiptExecutor(orderRepository, inventory, mock(AuditLogService.class),
+                mock(GoodsReceiptDiscrepancyRepository.class), mock(PurchaseOrderReceiptRepository.class),
+                mock(PurchaseOrderPayableRegistrar.class)).receiveOrder(order);
+
+        verify(inventory).registerPurchase(any(Product.class), any(Warehouse.class), eq(BigDecimal.TEN),
+                argThat(cost -> cost.compareTo(new BigDecimal("345")) == 0), isNull(), isNull(), anyString(),
+                isNull());
+    }
+
+    @Test
+    void fx06_compraCriadaPelaRecepcaoGuardaTotalEmMoedaBase() {
+        PurchaseOrder order = new PurchaseOrder();
+        order.setOrderNumber("EC-F-2026/2");
+        order.setCompany(company());
+        order.setSupplier(supplierRepository.findById(7L).orElseThrow());
+        order.applyDocumentCurrency(new DocumentCurrency("EUR", new BigDecimal("70.2500")));
+        PurchaseOrderLine line = new PurchaseOrderLine();
+        line.setProduct(productRepository.findByIdAndCompaniesId(11L, COMPANY_ID).orElseThrow());
+        line.setQuantity(BigDecimal.TEN);
+        line.setUnitPrice(new BigDecimal("100"));
+        line.setTaxRate(BigDecimal.ZERO);
+        order.addLine(line);
+
+        new PurchaseOrderPayableRegistrar(purchaseRepository, numbers, mock(ApplicationEventPublisher.class),
+                mock(AuditLogService.class)).register(order, Map.of(line, new BigDecimal("4")));
+
+        Purchase saved = savedPurchase();
+        assertEquals(new BigDecimal("400.00"), saved.getTotalAmount());
+        assertEquals(new BigDecimal("28100.00"), saved.getBaseTotalAmount());
+    }
+
+    @Test
+    void fx06_naMoedaBaseOTotalEmMoedaBaseEIgualAoTotal_eOCustoEOPreco() {
+        PurchaseDTO dto = purchases.createPurchaseDTO(new CreatePurchaseRequest(7L, 3L, COMPANY_ID, null,
+                List.of(purchaseLine())));
+
+        assertEquals(dto.totalAmount(), dto.baseTotalAmount());
+        verify(inventory).registerPurchase(any(Product.class), any(Warehouse.class), eq(BigDecimal.TEN),
+                argThat(cost -> cost.compareTo(new BigDecimal("100")) == 0), isNull(), isNull(), anyString(),
+                isNull());
+    }
+
+    @Test
+    void fx06_migracaoPreencheTotalEmMoedaBaseDosDocumentosExistentes_eERepetivel() throws Exception {
+        try (Connection db = DriverManager.getConnection("jdbc:h2:mem:fx06;MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
+             Statement st = db.createStatement()) {
+            for (String table : List.of("purchase_orders", "purchases")) {
+                st.execute("create table " + table + " (id bigint primary key, total_amount numeric(12,2) not null,"
+                        + " exchange_rate numeric(18,4) default 1 not null)");
+                st.execute("insert into " + table + " (id, total_amount, exchange_rate) values"
+                        + " (1, 1500.00, 1), (2, 99.99, 63.9055)");
+            }
+
+            String runScript = "runscript from '" + migration("__purchase_base_total.sql").toAbsolutePath()
+                    .toString().replace("'", "''") + "' charset 'UTF-8'";
+            st.execute(runScript);
+            st.execute(runScript);
+
+            for (String table : List.of("purchase_orders", "purchases")) {
+                try (ResultSet rs = st.executeQuery("select base_total_amount from " + table + " order by id")) {
+                    rs.next();
+                    assertEquals(new BigDecimal("1500.00"), rs.getBigDecimal(1));
+                    rs.next();
+                    assertEquals(new BigDecimal("6389.91"), rs.getBigDecimal(1));
+                }
+            }
+        }
+    }
+
+    private Purchase savedPurchase() {
+        ArgumentCaptor<Purchase> saved = ArgumentCaptor.forClass(Purchase.class);
+        verify(purchaseRepository).save(saved.capture());
+        return saved.getValue();
     }
 
     private static Company company() {
@@ -295,13 +460,12 @@ class ForeignCurrencyPurchaseTest {
                 BigDecimal.ZERO);
     }
 
-    private static Path migrationFile() throws IOException {
+    private static Path migration(String suffix) throws IOException {
         Path dir = Path.of("src/main/resources/db/migration");
         if (!Files.isDirectory(dir)) dir = Path.of("backend").resolve(dir);
         try (Stream<Path> files = Files.list(dir)) {
-            List<Path> matches = files
-                    .filter(p -> p.getFileName().toString().endsWith("__purchase_document_currency.sql")).toList();
-            assertThat(matches).as("uma migração Flyway acrescenta moeda e câmbio às compras").hasSize(1);
+            List<Path> matches = files.filter(p -> p.getFileName().toString().endsWith(suffix)).toList();
+            assertThat(matches).as("uma migração Flyway terminada em " + suffix).hasSize(1);
             return matches.get(0);
         }
     }

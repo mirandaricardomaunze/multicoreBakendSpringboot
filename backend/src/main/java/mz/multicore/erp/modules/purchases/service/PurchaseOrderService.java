@@ -172,7 +172,8 @@ public class PurchaseOrderService {
                 buId,
                 buName,
                 o.getCurrency(),
-                o.getExchangeRate()
+                o.getExchangeRate(),
+                o.getBaseTotalAmount()
         );
     }
 }

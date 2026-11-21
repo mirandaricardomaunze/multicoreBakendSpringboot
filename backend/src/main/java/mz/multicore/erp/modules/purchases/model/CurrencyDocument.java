@@ -8,6 +8,7 @@ import mz.multicore.erp.architecture.BaseEntity;
 import mz.multicore.erp.modules.company.model.CurrencyCode;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * Purchase document that snapshots its currency and exchange rate (docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md §3.3).
@@ -17,6 +18,8 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 public abstract class CurrencyDocument extends BaseEntity {
+
+    private static final int MONEY_SCALE = 2;
 
     /** Moeda do documento (fotografia); preços e totais das linhas estão nesta moeda. */
     @Column(name = "currency", nullable = false, length = 3,
@@ -28,9 +31,40 @@ public abstract class CurrencyDocument extends BaseEntity {
             columnDefinition = "numeric(18,4) default 1 not null")
     private BigDecimal exchangeRate = DocumentCurrency.BASE_RATE;
 
+    /** Total do documento em moeda base = total × câmbio, 2 casas HALF_UP (fotografia, como o câmbio). */
+    @Column(name = "base_total_amount", nullable = false, precision = 14, scale = 2,
+            columnDefinition = "numeric(14,2) default 0 not null")
+    private BigDecimal baseTotalAmount = BigDecimal.ZERO;
+
     /** Fotografa a moeda e o câmbio decididos para este documento. */
     public void applyDocumentCurrency(DocumentCurrency documentCurrency) {
         this.currency = documentCurrency.currency();
         this.exchangeRate = documentCurrency.exchangeRate();
     }
+
+    /** Valor na moeda do documento convertido para a moeda base ao câmbio do documento (2 casas, HALF_UP). */
+    public BigDecimal toBaseAmount(BigDecimal documentAmount) {
+        return documentAmount.multiply(exchangeRate).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Custo unitário em moeda base que entra no stock e no custo médio = preço unitário × câmbio, sem arredondar
+     * aqui: o custo médio arredonda uma só vez, no fim da média.
+     */
+    public BigDecimal toBaseUnitCost(BigDecimal documentUnitPrice) {
+        return documentUnitPrice.multiply(exchangeRate);
+    }
+
+    /**
+     * Grava o total na moeda do documento (2 casas, HALF_UP) e, com ele, o total em moeda base, para que os dois
+     * nunca fiquem desencontrados.
+     */
+    public void applyTotal(BigDecimal documentTotal) {
+        setTotalAmount(documentTotal.setScale(MONEY_SCALE, RoundingMode.HALF_UP));
+        this.baseTotalAmount = toBaseAmount(getTotalAmount());
+    }
+
+    public abstract BigDecimal getTotalAmount();
+
+    public abstract void setTotalAmount(BigDecimal totalAmount);
 }

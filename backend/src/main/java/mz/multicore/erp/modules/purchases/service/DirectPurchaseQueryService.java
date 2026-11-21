@@ -54,7 +54,7 @@ public class DirectPurchaseQueryService {
                 p.getCompany() != null ? p.getCompany().getId() : null,
                 p.getTotalAmount(), p.getTaxAmount(), p.getAmountPaid(),
                 p.getStatus(), p.getPurchaseDate(), lines, buId, buName, p.getReturnedAmount(),
-                p.getCurrency(), p.getExchangeRate()
+                p.getCurrency(), p.getExchangeRate(), p.getBaseTotalAmount()
         );
     }
 }

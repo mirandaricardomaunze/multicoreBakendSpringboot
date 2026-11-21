@@ -119,7 +119,7 @@ public class PurchaseOrderLifecycleService {
             totalTax = totalTax.add(amounts.tax());
         }
 
-        order.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        order.applyTotal(total);
         order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         order.setOrderNumber(documentNumberService.next(DocumentSeries.PURCHASE_ORDER));
 
@@ -183,7 +183,7 @@ public class PurchaseOrderLifecycleService {
             total = total.add(amounts.total());
             totalTax = totalTax.add(amounts.tax());
         }
-        order.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        order.applyTotal(total);
         order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
 
         PurchaseOrder saved = orderRepository.saveAndFlush(order);
