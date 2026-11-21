@@ -105,8 +105,17 @@ public class OpeningReceivableImportService {
                 companyId, clientsByTaxId, line);
         String originalNumber = parser.requireText(table.value(row, ORIGINAL_NUMBER), line, ORIGINAL_NUMBER);
         LocalDate date = requireDate(table.value(row, DATE), line, DATE);
+        if (date.isAfter(LocalDate.now())) {
+            throw new ImportValueException(line, DATE, "a data da factura não pode ser futura.");
+        }
         LocalDate dueDate = requireDate(table.value(row, DUE_DATE), line, DUE_DATE);
+        if (dueDate.isBefore(date)) {
+            throw new ImportValueException(line, DUE_DATE, "o vencimento não pode ser anterior à data da factura.");
+        }
         BigDecimal amount = parser.requireDecimal(table.value(row, AMOUNT), line, AMOUNT);
+        if (amount.signum() <= 0) {
+            throw new ImportValueException(line, AMOUNT, "o valor em dívida tem de ser maior que zero.");
+        }
         return new CreateOpeningReceivableRequest(client.getId(), originalNumber, date, dueDate, amount,
                 parser.parseText(table.value(row, DESCRIPTION)));
     }

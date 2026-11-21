@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * Cria o documento "Saldo Inicial" (série SI) de uma factura em aberto trazida de outro ERP
@@ -43,6 +44,7 @@ public class OpeningReceivableCommandService {
     @Transactional
     public String create(CreateOpeningReceivableRequest request) {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        requireValidValues(request);
         Client client = clientLookup.requireForCompany(request.clientId(), companyId);
         if (invoiceRepository.existsByCompanyIdAndClientIdAndOriginalNumber(
                 companyId, client.getId(), request.originalNumber())) {
@@ -63,5 +65,15 @@ public class OpeningReceivableCommandService {
         document.setStatus(InvoiceStatus.APPROVED);
         document.setInvoiceNumber(documentNumberService.next(DocumentSeries.OPENING_RECEIVABLE));
         return invoiceRepository.save(document).getInvoiceNumber();
+    }
+
+    /** Valor &gt; 0 e data não futura (§5.2); o vencimento ≥ data é garantido por {@link Invoice#assignDueDate}. */
+    private static void requireValidValues(CreateOpeningReceivableRequest request) {
+        if (request.amount() == null || request.amount().signum() <= 0) {
+            throw new BusinessRuleException("O valor em dívida tem de ser maior que zero.");
+        }
+        if (request.documentDate() != null && request.documentDate().isAfter(LocalDate.now())) {
+            throw new BusinessRuleException("A data da factura não pode ser futura.");
+        }
     }
 }

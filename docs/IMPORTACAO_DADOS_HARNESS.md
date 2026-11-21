@@ -3,7 +3,7 @@
 > Cenários que provam [IMPORTACAO_DADOS_SPEC.md](IMPORTACAO_DADOS_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01, IMP-AR-01 a IMP-AR-03, IMP-06 a IMP-11, IMP-UI-01 e IMP-UI-02 verdes — GOAL-006 concluído; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`; GOAL-007: IMP-ST-01 a IMP-ST-03 e IMP-SI-01 verdes)
+**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01, IMP-AR-01 a IMP-AR-03, IMP-06 a IMP-11, IMP-UI-01 e IMP-UI-02 verdes — GOAL-006 concluído; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`; GOAL-007: IMP-ST-01 a IMP-ST-03, IMP-SI-01 e IMP-SI-02 verdes)
 
 ## Leitura do ficheiro (comum)
 
@@ -43,7 +43,7 @@
 | IMP-ST-02 | Stock: artigo com movimentos nesse armazém → `ERRO`; reimportar não duplica (§5.1) | `StockOpeningImportServiceTest` ✅ |
 | IMP-ST-03 | Stock: grava `ENTRY` com lote e saldo pelo ledger; sem lançamento contabilístico (§5.1) | `StockOpeningImportServiceTest` ✅ |
 | IMP-SI-01 | Documento SI: numeração `SI-aaaa/n` por empresa; guarda `numero_original`; chave cliente+nº original → `JÁ EXISTE` (§5.2) | `OpeningReceivableTest` ✅ · `MigrationPostgresDialectHarnessTest` ✅ |
-| IMP-SI-02 | SI: valor > 0, vencimento ≥ data, data não futura; cliente inexistente → `ERRO` (§5.2) | `OpeningReceivableTest` |
+| IMP-SI-02 | SI: valor > 0, vencimento ≥ data, data não futura; cliente inexistente → `ERRO` (§5.2) | `OpeningReceivableTest` ✅ |
 | IMP-SI-03 | SI fora do SAF-T, do IVA e dos relatórios de vendas (§5.2) | `OpeningReceivableFiscalExclusionTest` |
 | IMP-SI-04 | SI entra no extracto, na antiguidade pelo vencimento, na exposição de crédito e na mora (§5.2) | `OpeningReceivableStatementTest` |
 | IMP-SI-05 | SI liquida-se com recibos normais, total ou parcial (§5.2) | `OpeningReceivableSettlementTest` |

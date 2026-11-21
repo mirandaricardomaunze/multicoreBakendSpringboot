@@ -237,6 +237,94 @@ class OpeningReceivableTest {
         verify(invoiceRepository, org.mockito.Mockito.never()).save(any());
     }
 
+    // ---- IMP-SI-02: valor > 0, vencimento ≥ data, data não futura, cliente existente (§5.2, §5) ----
+
+    private ImportRowDTO singleRow(String line) {
+        ImportPreviewDTO preview = preview(HEADER, line);
+        assertThat(preview.rows()).hasSize(1);
+        return preview.rows().get(0);
+    }
+
+    @Test
+    void zeroOrNegativeAmountIsErrorOnTheAmountColumn() {
+        for (String amount : List.of("0", "0,00", "-150")) {
+            ImportRowDTO row = singleRow("400123456;FT 1;15/10/2025;14/11/2025;" + amount + ";");
+
+            assertThat(row.status()).as(amount).isEqualTo(ImportRowStatus.ERRO);
+            assertThat(row.column()).isEqualTo("valor_em_divida");
+            assertThat(row.message()).contains("maior que zero");
+        }
+    }
+
+    @Test
+    void dueDateBeforeTheDocumentDateIsErrorOnTheDueDateColumn() {
+        ImportRowDTO row = singleRow("400123456;FT 1;15/10/2025;14/10/2025;1000;");
+
+        assertThat(row.status()).isEqualTo(ImportRowStatus.ERRO);
+        assertThat(row.column()).isEqualTo("vencimento");
+        assertThat(row.message()).contains("anterior");
+    }
+
+    @Test
+    void dueDateOnTheDocumentDateIsAccepted() {
+        assertThat(singleRow("400123456;FT 1;15/10/2025;15/10/2025;1000;").status())
+                .isEqualTo(ImportRowStatus.NOVO);
+    }
+
+    @Test
+    void futureDocumentDateIsErrorOnTheDateColumn() {
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+
+        ImportRowDTO row = singleRow("400123456;FT 1;" + tomorrow + ";" + tomorrow.plusDays(30) + ";1000;");
+
+        assertThat(row.status()).isEqualTo(ImportRowStatus.ERRO);
+        assertThat(row.column()).isEqualTo("data");
+        assertThat(row.message()).contains("futura");
+    }
+
+    @Test
+    void todayIsAValidDocumentDate() {
+        LocalDate today = LocalDate.now();
+
+        assertThat(singleRow("400123456;FT 1;" + today + ";" + today.plusDays(30) + ";1000;").status())
+                .isEqualTo(ImportRowStatus.NOVO);
+    }
+
+    @Test
+    void missingOrMalformedValuesAreErrorsOfTheirColumn() {
+        assertThat(singleRow("400123456;;15/10/2025;14/11/2025;1000;").column()).isEqualTo("numero_original");
+        assertThat(singleRow("400123456;FT 1;31-12-2025;14/11/2025;1000;").column()).isEqualTo("data");
+        assertThat(singleRow("400123456;FT 1;15/10/2025;;1000;").column()).isEqualTo("vencimento");
+        assertThat(singleRow("400123456;FT 1;15/10/2025;14/11/2025;abc;").column()).isEqualTo("valor_em_divida");
+    }
+
+    @Test
+    void fileWithAnInvalidDebtWritesNothing() {
+        ImportPlan<CreateOpeningReceivableRequest> plan = service.plan(file(HEADER,
+                "400123456;FT 1;15/10/2025;14/11/2025;1000;",
+                "400654321;FT 2;15/10/2025;14/11/2025;0;"));
+
+        assertThatThrownBy(() -> writer.write(plan)).isInstanceOf(BusinessRuleException.class);
+        verifyNoInteractions(invoiceRepository);
+    }
+
+    @Test
+    void commandRefusesNonPositiveAmountFutureDateAndDueDateBeforeTheDate() {
+        LocalDate date = LocalDate.of(2025, 10, 15);
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+
+        assertThatThrownBy(() -> commandService.create(new CreateOpeningReceivableRequest(31L, "FT 1",
+                date, date.plusDays(30), BigDecimal.ZERO, null)))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("maior que zero");
+        assertThatThrownBy(() -> commandService.create(new CreateOpeningReceivableRequest(31L, "FT 1",
+                tomorrow, tomorrow.plusDays(30), BigDecimal.TEN, null)))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("futura");
+        assertThatThrownBy(() -> commandService.create(new CreateOpeningReceivableRequest(31L, "FT 1",
+                date, date.minusDays(1), BigDecimal.TEN, null)))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("anterior");
+        verify(invoiceRepository, org.mockito.Mockito.never()).save(any());
+    }
+
     @Test
     void unknownClientCannotBeKeyed() {
         ImportPreviewDTO preview = preview(HEADER, "499999999;FT 1;15/10/2025;14/11/2025;1000;");
