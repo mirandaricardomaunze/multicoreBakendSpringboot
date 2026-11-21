@@ -117,6 +117,10 @@ Colunas: `sku`\*, `nome`\*, `preco_venda`\*, `iva`\*, `categoria`\*, `codigo_bar
   - Código de barras ou referência repetidos no **mesmo ficheiro** são `ERRO` em ambas as linhas, como a
     chave (§3.3), porque não podem entrar os dois.
   - Só a categoria de uma linha `NOVO` entra em "categorias a criar".
+- A categoria criada na confirmação recebe como código o nome sem acentos, em maiúsculas, com `_` no lugar
+  de espaços e símbolos (até 30 caracteres: `Lacticínios Frescos` → `LACTICINIOS_FRESCOS`), pelo serviço de
+  categorias do comercial. Se esse código já pertencer a outra categoria da empresa, a confirmação falha e,
+  por ser uma só transacção, nada fica gravado.
 
 ## 5. Saldos iniciais (GOAL-007)
 

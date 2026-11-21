@@ -63,6 +63,11 @@ public class ProductImportService {
 
     /** Lê o ficheiro e classifica cada linha na empresa activa, sem gravar nada (§3.1 passo 2). */
     public ImportPreviewDTO preview(byte[] content) {
+        return plan(content).preview();
+    }
+
+    /** Classificação com o artigo de cada linha válida; base da pré-visualização e da confirmação. */
+    ImportPlan<ProductLine> plan(byte[] content) {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         CsvTable table = reader.read(content, REQUIRED_COLUMNS, OPTIONAL_COLUMNS);
         FileContext context = new FileContext(
@@ -74,22 +79,23 @@ public class ProductImportService {
                 duplicatesOf(table, SKU),
                 duplicatesOf(table, BARCODE),
                 duplicatesOf(table, REFERENCE));
-        List<ImportRowDTO> rows = table.rows().stream()
+        List<ImportPlan.Line<ProductLine>> lines = table.rows().stream()
                 .map(row -> classify(context, row))
                 .toList();
-        return new ImportPreviewDTO(rows, table.header().extraColumns(), context.categories().toCreate());
+        return new ImportPlan<>(lines, table.header().extraColumns(), context.categories().toCreate());
     }
 
     /**
      * Ordem: valores, regras do registo manual, chaves repetidas no ficheiro, chaves de outro artigo e, por
      * fim, o estado. Só a categoria de uma linha {@code NOVO} entra em "categorias a criar"; nada é gravado.
      */
-    private ImportRowDTO classify(FileContext context, CsvTable.Row row) {
+    private ImportPlan.Line<ProductLine> classify(FileContext context, CsvTable.Row row) {
         ProductLine product;
         try {
             product = toProductLine(context, row);
         } catch (ImportValueException invalidValue) {
-            return ImportRowDTO.error(row.number(), invalidValue.getColumn(), invalidValue.getMessage());
+            return ImportPlan.Line.error(
+                    ImportRowDTO.error(row.number(), invalidValue.getColumn(), invalidValue.getMessage()));
         }
         int line = row.number();
         CreateProductRequest request = product.request();
@@ -100,12 +106,14 @@ public class ProductImportService {
                 .or(() -> context.references().violation(line, request.reference(), REFERENCE, "Referência repetida"))
                 .or(() -> existing.foreignBarcode(line, request.sku(), request.barcode(), BARCODE))
                 .or(() -> existing.foreignReference(line, request.sku(), request.reference(), REFERENCE))
+                .map(ImportPlan.Line::<ProductLine>error)
                 .orElseGet(() -> {
                     if (existing.skuExists(request.sku())) {
-                        return ImportRowDTO.of(line, ImportRowStatus.JA_EXISTE); // ignorado, nunca alterado
+                        // ignorado, nunca alterado
+                        return new ImportPlan.Line<>(ImportRowDTO.of(line, ImportRowStatus.JA_EXISTE), product);
                     }
                     context.categories().requireCreation(product.category());
-                    return ImportRowDTO.of(line, ImportRowStatus.NOVO);
+                    return new ImportPlan.Line<>(ImportRowDTO.of(line, ImportRowStatus.NOVO), product);
                 });
     }
 
@@ -135,8 +143,21 @@ public class ProductImportService {
                 null, null, null));
     }
 
-    /** Linha convertida: o pedido do registo manual e o nome da categoria como veio no ficheiro. */
-    private record ProductLine(String category, CreateProductRequest request) {
+    /**
+     * Linha convertida: o pedido do registo manual e o nome da categoria como veio no ficheiro. Com categoria
+     * nova o {@code categoryId} do pedido é {@code null} até a confirmação a criar.
+     */
+    record ProductLine(String category, CreateProductRequest request) {
+
+        /** O mesmo pedido com a categoria criada na confirmação. */
+        CreateProductRequest withCategory(Long categoryId) {
+            CreateProductRequest r = request;
+            return new CreateProductRequest(r.sku(), r.reference(), r.barcode(), r.name(), r.unitPrice(),
+                    r.purchasePrice(), r.minStock(), r.unitsPerBox(), r.packagesPerBox(), r.unitsPerPackage(),
+                    categoryId, r.saleType(), r.stockTracked(), r.taxRateId(), r.description(), r.wholesalePrice(),
+                    r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg(), r.businessUnitId(),
+                    r.tracksExpiry());
+        }
     }
 
     /** O que a classificação de cada linha precisa de saber sobre o ficheiro inteiro e a empresa activa. */

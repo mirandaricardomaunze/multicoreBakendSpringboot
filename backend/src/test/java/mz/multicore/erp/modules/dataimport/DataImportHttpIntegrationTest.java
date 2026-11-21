@@ -66,6 +66,144 @@ class DataImportHttpIntegrationTest {
         assertThat(body).contains("Entidade de importação desconhecida");
     }
 
+    // ---- IMP-06: pré-visualizar não grava; confirmar revalida, tudo ou nada, uma transacção ----------
+
+    private static final String CLIENT_HEADER = "nome;nuit;email;morada;prazo_pagamento_dias;limite_credito";
+    private static final String PRODUCT_HEADER = "sku;nome;preco_venda;iva;categoria;codigo_barras";
+
+    @Test
+    @DisplayName("IMP-06: pré-visualizar classifica as linhas e não grava nada")
+    void previewWritesNothing() throws Exception {
+        Ctx c = admin();
+        JsonNode preview = upload("clients", "preview", c, CLIENT_HEADER,
+                "Importado Prev A;416000001;;;;", "Importado Prev B;416000002;;;;");
+
+        assertThat(preview.get("rows")).hasSize(2);
+        assertThat(preview.get("rows").get(0).get("status").asText()).isEqualTo("NOVO");
+        assertThat(preview.get("rows").get(1).get("status").asText()).isEqualTo("NOVO");
+        assertThat(clientTaxIds(c)).doesNotContain("416000001", "416000002");
+    }
+
+    @Test
+    @DisplayName("IMP-06: confirmar grava as linhas NOVO e devolve os totais; repetir não duplica")
+    void commitWritesNewClientsAndIsNotDuplicatedOnRetry() throws Exception {
+        Ctx c = admin();
+        String[] lines = {"Importado Com A;416000011;a@importado.co.mz;Maputo;30;1000", "Importado Com B;416000012;;;;"};
+
+        JsonNode result = upload("clients", "commit", c, CLIENT_HEADER, lines);
+        assertThat(result.get("created").asInt()).isEqualTo(2);
+        assertThat(result.get("associated").asInt()).isZero();
+        assertThat(result.get("alreadyExisting").asInt()).isZero();
+        assertThat(clientTaxIds(c)).contains("416000011", "416000012");
+
+        JsonNode again = upload("clients", "commit", c, CLIENT_HEADER, lines);
+        assertThat(again.get("created").asInt()).isZero();
+        assertThat(again.get("alreadyExisting").asInt()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("IMP-06: confirmar fornecedores grava pelo serviço das compras")
+    void commitWritesNewSuppliers() throws Exception {
+        Ctx c = admin();
+        JsonNode result = upload("suppliers", "commit", c, "nome;nuit;email;telefone;morada;contacto",
+                "Fornecedor Importado;416000021;;;Beira;Sr. Mussa");
+
+        assertThat(result.get("created").asInt()).isEqualTo(1);
+        String suppliers = mockMvc.perform(auth(get("/api/purchases/suppliers").param("companyId", c.companyId()), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(suppliers).contains("416000021");
+    }
+
+    @Test
+    @DisplayName("IMP-06: com uma linha em erro a confirmação é recusada e nada é gravado")
+    void commitWithAnyErrorWritesNothing() throws Exception {
+        Ctx c = admin();
+        String body = uploadRequest("clients", "commit", c, CLIENT_HEADER,
+                        "Importado Ok;416000031;;;;", "Importado Mau;12345;;;;")
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(body).contains("nada foi gravado");
+        assertThat(clientTaxIds(c)).doesNotContain("416000031");
+    }
+
+    @Test
+    @DisplayName("IMP-06: confirmar volta a validar — conflito surgido depois da pré-visualização recusa tudo")
+    void commitRevalidatesInsteadOfTrustingThePreview() throws Exception {
+        Ctx c = admin();
+        String[] lines = {"IMP-REV-A;Artigo Rev A;10;IVA16;Geral;5600000000611", "IMP-REV-B;Artigo Rev B;20;IVA16;Geral;"};
+        JsonNode preview = upload("products", "preview", c, PRODUCT_HEADER, lines);
+        assertThat(preview.toString()).doesNotContain("ERRO");
+
+        mockMvc.perform(auth(post("/api/comercial/products"), c).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sku\":\"IMP-REV-OUTRO\",\"name\":\"Outro\",\"unitPrice\":5,\"unitsPerBox\":1,"
+                                + "\"barcode\":\"5600000000611\",\"stockTracked\":true}"))
+                .andExpect(status().isOk());
+
+        String body = uploadRequest("products", "commit", c, PRODUCT_HEADER, lines)
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(body).contains("nada foi gravado");
+        assertThat(productSkus(c)).doesNotContain("IMP-REV-A", "IMP-REV-B");
+    }
+
+    @Test
+    @DisplayName("IMP-06: confirmar cria as categorias novas e os artigos na mesma operação")
+    void commitCreatesNewCategoriesAndProducts() throws Exception {
+        Ctx c = admin();
+        JsonNode result = upload("products", "commit", c, PRODUCT_HEADER,
+                "IMP-CAT-A;Artigo Cat A;10;IVA16;Congelados Importados;", "IMP-CAT-B;Artigo Cat B;12;IVA16;congelados importados;");
+
+        assertThat(result.get("created").asInt()).isEqualTo(2);
+        assertThat(productSkus(c)).contains("IMP-CAT-A", "IMP-CAT-B");
+        String categories = mockMvc.perform(auth(get("/api/product-categories"), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(categories).containsOnlyOnce("Congelados Importados");
+    }
+
+    @Test
+    @DisplayName("IMP-06: falha a meio da escrita desfaz tudo o que a confirmação já tinha gravado")
+    void failureDuringWriteRollsBackEverything() throws Exception {
+        Ctx c = admin();
+        // A categoria "Doces Importados" é criada primeiro; a seguinte colide no código com uma categoria da empresa.
+        mockMvc.perform(auth(post("/api/product-categories"), c).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"IMPCOLIDE\",\"name\":\"Outra Categoria\"}"))
+                .andExpect(status().isOk());
+
+        uploadRequest("products", "commit", c, PRODUCT_HEADER,
+                        "IMP-TX-A;Artigo Tx A;10;IVA16;Doces Importados;", "IMP-TX-B;Artigo Tx B;10;IVA16;Impcolide;")
+                .andExpect(status().isBadRequest());
+
+        assertThat(productSkus(c)).doesNotContain("IMP-TX-A", "IMP-TX-B");
+        String categories = mockMvc.perform(auth(get("/api/product-categories"), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(categories).doesNotContain("Doces Importados");
+    }
+
+    private JsonNode upload(String entity, String action, Ctx c, String header, String... lines) throws Exception {
+        return om.readTree(uploadRequest(entity, action, c, header, lines)
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions uploadRequest(
+            String entity, String action, Ctx c, String header, String... lines) throws Exception {
+        byte[] csv = (header + "\r\n" + String.join("\r\n", lines) + "\r\n").getBytes(StandardCharsets.UTF_8);
+        return mockMvc.perform(auth(post("/api/data-import/" + entity + "/" + action), c)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .content(csv));
+    }
+
+    private String clientTaxIds(Ctx c) throws Exception {
+        return mockMvc.perform(auth(get("/api/comercial/clients"), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+    }
+
+    private String productSkus(Ctx c) throws Exception {
+        return mockMvc.perform(auth(get("/api/comercial/products"), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+    }
+
     private void assertTemplate(String entity, String fileName, String header) throws Exception {
         Ctx c = admin();
         MockHttpServletResponse response = mockMvc.perform(auth(get("/api/data-import/" + entity + "/template"), c))

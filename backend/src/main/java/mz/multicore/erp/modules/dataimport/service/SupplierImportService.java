@@ -46,22 +46,30 @@ public class SupplierImportService {
 
     /** Lê o ficheiro e classifica cada linha na empresa activa, sem gravar nada (§3.1 passo 2). */
     public ImportPreviewDTO preview(byte[] content) {
+        return plan(content).preview();
+    }
+
+    /** Classificação com o pedido de cada linha válida; base da pré-visualização e da confirmação. */
+    ImportPlan<CreateSupplierRequest> plan(byte[] content) {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         CsvTable table = reader.read(content, REQUIRED_COLUMNS, OPTIONAL_COLUMNS);
         DuplicateKeys duplicates = DuplicateKeys.of(table.rows(),
                 row -> parser.parseText(table.value(row, TAX_ID)));
-        List<ImportRowDTO> rows = table.rows().stream()
+        List<ImportPlan.Line<CreateSupplierRequest>> lines = table.rows().stream()
                 .map(row -> classify(table, row, duplicates, companyId))
                 .toList();
-        return new ImportPreviewDTO(rows, table.header().extraColumns());
+        return new ImportPlan<>(lines, table.header().extraColumns());
     }
 
-    private ImportRowDTO classify(CsvTable table, CsvTable.Row row, DuplicateKeys duplicates, Long companyId) {
+    private ImportPlan.Line<CreateSupplierRequest> classify(CsvTable table, CsvTable.Row row,
+                                                           DuplicateKeys duplicates, Long companyId) {
         CreateSupplierRequest request = toRequest(table, row, companyId);
         return requestValidator.firstViolation(row.number(), request, COLUMN_BY_PROPERTY)
                 .or(() -> ImportTaxIdRule.violation(row.number(), request.taxId(), TAX_ID))
                 .or(() -> duplicates.violation(row.number(), request.taxId(), TAX_ID, "NUIT repetido"))
-                .orElseGet(() -> ImportRowDTO.of(row.number(), statusOf(request.taxId(), companyId)));
+                .map(ImportPlan.Line::<CreateSupplierRequest>error)
+                .orElseGet(() -> new ImportPlan.Line<>(
+                        ImportRowDTO.of(row.number(), statusOf(request.taxId(), companyId)), request));
     }
 
     private ImportRowStatus statusOf(String taxId, Long companyId) {

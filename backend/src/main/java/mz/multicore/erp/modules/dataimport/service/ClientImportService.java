@@ -46,27 +46,36 @@ public class ClientImportService {
 
     /** Lê o ficheiro e classifica cada linha na empresa activa, sem gravar nada (§3.1 passo 2). */
     public ImportPreviewDTO preview(byte[] content) {
+        return plan(content).preview();
+    }
+
+    /** Classificação com o pedido de cada linha válida; base da pré-visualização e da confirmação. */
+    ImportPlan<SaveClientRequest> plan(byte[] content) {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         CsvTable table = reader.read(content, REQUIRED_COLUMNS, OPTIONAL_COLUMNS);
         DuplicateKeys duplicates = DuplicateKeys.of(table.rows(),
                 row -> parser.parseText(table.value(row, TAX_ID)));
-        List<ImportRowDTO> rows = table.rows().stream()
+        List<ImportPlan.Line<SaveClientRequest>> lines = table.rows().stream()
                 .map(row -> classify(table, row, duplicates, companyId))
                 .toList();
-        return new ImportPreviewDTO(rows, table.header().extraColumns());
+        return new ImportPlan<>(lines, table.header().extraColumns());
     }
 
-    private ImportRowDTO classify(CsvTable table, CsvTable.Row row, DuplicateKeys duplicates, Long companyId) {
+    private ImportPlan.Line<SaveClientRequest> classify(CsvTable table, CsvTable.Row row, DuplicateKeys duplicates,
+                                                       Long companyId) {
         SaveClientRequest request;
         try {
             request = toRequest(table, row);
         } catch (ImportValueException invalidValue) {
-            return ImportRowDTO.error(row.number(), invalidValue.getColumn(), invalidValue.getMessage());
+            return ImportPlan.Line.error(
+                    ImportRowDTO.error(row.number(), invalidValue.getColumn(), invalidValue.getMessage()));
         }
         return requestValidator.firstViolation(row.number(), request, COLUMN_BY_PROPERTY)
                 .or(() -> ImportTaxIdRule.violation(row.number(), request.taxId(), TAX_ID))
                 .or(() -> duplicates.violation(row.number(), request.taxId(), TAX_ID, "NUIT repetido"))
-                .orElseGet(() -> ImportRowDTO.of(row.number(), statusOf(request.taxId(), companyId)));
+                .map(ImportPlan.Line::<SaveClientRequest>error)
+                .orElseGet(() -> new ImportPlan.Line<>(
+                        ImportRowDTO.of(row.number(), statusOf(request.taxId(), companyId)), request));
     }
 
     /** §4.1: já na empresa → ignorado; só noutra empresa → o cliente partilhado é associado. */
