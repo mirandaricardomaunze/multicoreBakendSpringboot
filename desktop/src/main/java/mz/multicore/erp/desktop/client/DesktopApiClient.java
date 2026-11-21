@@ -114,9 +114,22 @@ public class DesktopApiClient {
                 .build());
     }
 
+    /** POST de bytes crus (ex.: um ficheiro CSV) com resposta JSON. */
+    public <T> T postBytes(String path, byte[] body, Class<T> responseType) {
+        return send(request(path)
+                .header("Content-Type", "application/octet-stream")
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build(), responseType);
+    }
+
     /** GET que devolve bytes — ex.: os PDFs de {@code /api/print/**}. */
     public byte[] getBytes(String path) {
-        HttpRequest httpRequest = request(path).header("Accept", "application/pdf").GET().build();
+        return getBytes(path, "application/pdf");
+    }
+
+    /** GET que devolve bytes do tipo indicado em {@code accept} (ex.: {@code text/csv}). */
+    public byte[] getBytes(String path, String accept) {
+        HttpRequest httpRequest = request(path).header("Accept", accept).GET().build();
         try {
             HttpResponse<byte[]> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {

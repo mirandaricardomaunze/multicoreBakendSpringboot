@@ -23,7 +23,7 @@ import java.util.Map;
 public class CsvImportReader {
 
     private static final Charset WINDOWS_1252 = Charset.forName("windows-1252");
-    private static final char BOM = '﻿';
+    private static final char BOM = (char) 0xFEFF;
     private static final char QUOTE = '"';
     private static final char SEMICOLON = ';';
     private static final char COMMA = ',';

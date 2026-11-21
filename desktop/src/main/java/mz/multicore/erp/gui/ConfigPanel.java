@@ -59,6 +59,17 @@ public class ConfigPanel extends JPanel {
                        MySubscriptionApiClient mySubscriptionApiClient,
                        SystemMonitoringApiClient monitoringApiClient,
                        mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient) {
+        this(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient,
+                mySubscriptionApiClient, monitoringApiClient, activityApiClient, null);
+    }
+
+    /** With the CSV import screen (IMPORTACAO_DADOS_SPEC §3.4): appends "Importar dados" at the end. */
+    public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
+                       DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
+                       MySubscriptionApiClient mySubscriptionApiClient,
+                       SystemMonitoringApiClient monitoringApiClient,
+                       mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
+                       DataImportApiClient dataImportApiClient) {
         this.activityPanel = activityApiClient == null ? null
                 : new mz.multicore.erp.gui.sector.ActivityProfilePanel(activityApiClient);
         this.userApiClient = userApiClient;
@@ -95,6 +106,10 @@ public class ConfigPanel extends JPanel {
                     new mz.multicore.erp.gui.pos.scale.ScaleSettingsPanel());
             tabbedPane.addTab("Gaveta deste Posto", UIHelper.icon("fas-cash-register", 16, UIHelper.APPROVED_GREEN),
                     new mz.multicore.erp.gui.pos.drawer.DrawerSettingsPanel());
+        }
+        if (dataImportApiClient != null) {
+            tabbedPane.addTab("Importar dados", UIHelper.icon("fas-file-import", 16, UIHelper.ACCENT_BLUE),
+                    new mz.multicore.erp.gui.dataimport.DataImportPanel(dataImportApiClient));
         }
 
         add(tabbedPane, BorderLayout.CENTER);
