@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.purchases.model;
 
-import mz.multicore.erp.architecture.BaseEntity;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import jakarta.persistence.*;
@@ -20,7 +19,7 @@ import java.util.List;
                 columnNames = {"company_id", "supplier_id", "original_number"})})
 @Getter
 @Setter
-public class Purchase extends BaseEntity {
+public class Purchase extends CurrencyDocument {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

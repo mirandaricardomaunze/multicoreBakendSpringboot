@@ -22,8 +22,25 @@ public record PurchaseOrderDTO(
         List<PurchaseOrderLineDTO> lines,
         long version,
         Long businessUnitId,
-        String businessUnitName
+        String businessUnitName,
+        /** Moeda do documento; preços e totais estão nesta moeda. */
+        String currency,
+        /** Câmbio gravado no documento (unidades da moeda base por 1 unidade da moeda). */
+        BigDecimal exchangeRate
 ) {
+    /** Construtor retrocompatível, anterior à moeda estrangeira: moeda base com câmbio 1. */
+    public PurchaseOrderDTO(
+            Long id, String orderNumber, Long supplierId, String supplierName,
+            Long warehouseId, Long companyId, LocalDate expectedDate, LocalDateTime orderDate,
+            LocalDateTime receivedAt, BigDecimal totalAmount, BigDecimal taxAmount,
+            String status, String notes, List<PurchaseOrderLineDTO> lines, long version,
+            Long businessUnitId, String businessUnitName
+    ) {
+        this(id, orderNumber, supplierId, supplierName, warehouseId, companyId, expectedDate, orderDate, receivedAt,
+                totalAmount, taxAmount, status, notes, lines, version, businessUnitId, businessUnitName,
+                null, BigDecimal.ONE);
+    }
+
     /** Construtor retrocompatível com 15 argumentos (sem unidade de negócio). */
     public PurchaseOrderDTO(
             Long id, String orderNumber, Long supplierId, String supplierName,

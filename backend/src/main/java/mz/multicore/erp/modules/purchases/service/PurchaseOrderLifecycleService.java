@@ -41,6 +41,7 @@ public class PurchaseOrderLifecycleService {
     private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
+    private final PurchaseCurrencyResolver currencyResolver;
 
     public PurchaseOrderLifecycleService(
             PurchaseOrderRepository orderRepository,
@@ -49,8 +50,10 @@ public class PurchaseOrderLifecycleService {
             WarehouseLookup warehouseLookup,
             CompanyLookup companyLookup,
             DocumentNumberService documentNumberService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            PurchaseCurrencyResolver currencyResolver
     ) {
+        this.currencyResolver = currencyResolver;
         this.orderRepository = orderRepository;
         this.supplierRepository = supplierRepository;
         this.productLookup = productLookup;
@@ -85,6 +88,8 @@ public class PurchaseOrderLifecycleService {
         order.setExpectedDate(request.expectedDate());
         order.setNotes(request.notes());
         order.setOrderDate(LocalDateTime.now());
+        order.applyDocumentCurrency(currencyResolver.resolve(company, request.currency(),
+                order.getOrderDate().toLocalDate(), request.exchangeRate()));
         order.setStatus(PurchaseOrder.ORDERED);
         order.setCreatedBy(CurrentUserContext.getUsername());
 

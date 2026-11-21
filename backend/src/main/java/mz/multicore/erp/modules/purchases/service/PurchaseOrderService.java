@@ -56,7 +56,8 @@ public class PurchaseOrderService {
         this(
                 orderRepository,
                 new PurchaseOrderLifecycleService(orderRepository, supplierRepository, productLookup,
-                        warehouseLookup, companyLookup, documentNumberService, auditLogService),
+                        warehouseLookup, companyLookup, documentNumberService, auditLogService,
+                        PurchaseCurrencyResolver.baseCurrencyOnly()),
                 new PurchaseOrderReceiptExecutor(orderRepository, inventoryService, auditLogService,
                         discrepancyRepository, receiptRepository, payableRegistrar)
         );
@@ -169,7 +170,9 @@ public class PurchaseOrderService {
                 lines,
                 o.getVersion(),
                 buId,
-                buName
+                buName,
+                o.getCurrency(),
+                o.getExchangeRate()
         );
     }
 }

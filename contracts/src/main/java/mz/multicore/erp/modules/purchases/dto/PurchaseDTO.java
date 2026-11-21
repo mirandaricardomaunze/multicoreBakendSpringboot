@@ -20,8 +20,21 @@ public record PurchaseDTO(
         Long businessUnitId,
         String businessUnitName,
         /** Valor devolvido ao fornecedor (notas DF). */
-        BigDecimal returnedAmount
+        BigDecimal returnedAmount,
+        /** Moeda do documento; os valores acima estão nesta moeda. */
+        String currency,
+        /** Câmbio gravado no documento (unidades da moeda base por 1 unidade da moeda). */
+        BigDecimal exchangeRate
 ) {
+    /** Construtor retrocompatível, anterior à moeda estrangeira: moeda base com câmbio 1. */
+    public PurchaseDTO(Long id, String purchaseNumber, Long supplierId, String supplierName, Long warehouseId,
+                       Long companyId, BigDecimal totalAmount, BigDecimal taxAmount, BigDecimal amountPaid,
+                       String status, LocalDateTime purchaseDate, List<PurchaseLineDTO> lines, Long businessUnitId,
+                       String businessUnitName, BigDecimal returnedAmount) {
+        this(id, purchaseNumber, supplierId, supplierName, warehouseId, companyId, totalAmount, taxAmount, amountPaid,
+                status, purchaseDate, lines, businessUnitId, businessUnitName, returnedAmount, null, BigDecimal.ONE);
+    }
+
     /** Construtor retrocompatível, anterior às devoluções ao fornecedor. */
     public PurchaseDTO(Long id, String purchaseNumber, Long supplierId, String supplierName, Long warehouseId,
                        Long companyId, BigDecimal totalAmount, BigDecimal taxAmount, BigDecimal amountPaid,

@@ -6,6 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
+import mz.multicore.erp.modules.purchases.model.DocumentCurrency;
 import mz.multicore.erp.modules.purchases.model.Purchase;
 import mz.multicore.erp.modules.purchases.model.PurchaseLine;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrder;
@@ -49,6 +50,8 @@ public class PurchaseOrderPayableRegistrar {
         purchase.setSupplier(order.getSupplier());
         purchase.setWarehouse(order.getWarehouse());
         purchase.setCompany(order.getCompany());
+        // A dívida nasce na moeda e ao câmbio gravados na encomenda (MOEDA_ESTRANGEIRA §3.3).
+        purchase.applyDocumentCurrency(new DocumentCurrency(order.getCurrency(), order.getExchangeRate()));
         purchase.setPurchaseDate(LocalDateTime.now());
         purchase.setCreatedBy(CurrentUserContext.getUsername());
 

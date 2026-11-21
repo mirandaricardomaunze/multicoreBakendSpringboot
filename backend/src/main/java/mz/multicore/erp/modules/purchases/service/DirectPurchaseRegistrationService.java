@@ -44,14 +44,16 @@ public class DirectPurchaseRegistrationService {
     private final FinanceService financeService;
     private final DocumentNumberService documentNumberService;
     private final ApplicationEventPublisher eventPublisher;
+    private final PurchaseCurrencyResolver currencyResolver;
 
     public DirectPurchaseRegistrationService(
             SupplierRepository supplierRepository, PurchaseRepository purchaseRepository,
             ProductLookup productLookup, WarehouseLookup warehouseLookup,
             CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, DocumentNumberService documentNumberService,
-            ApplicationEventPublisher eventPublisher
+            ApplicationEventPublisher eventPublisher, PurchaseCurrencyResolver currencyResolver
     ) {
+        this.currencyResolver = currencyResolver;
         this.supplierRepository = supplierRepository;
         this.purchaseRepository = purchaseRepository;
         this.productLookup = productLookup;
@@ -86,6 +88,8 @@ public class DirectPurchaseRegistrationService {
         purchase.setCompany(company);
         purchase.setPurchaseDate(LocalDateTime.now());
         purchase.setPurchaseNumber(documentNumberService.next(DocumentSeries.PURCHASE));
+        purchase.applyDocumentCurrency(currencyResolver.resolve(company, request.currency(),
+                purchase.getPurchaseDate().toLocalDate(), request.exchangeRate()));
 
         BigDecimal total = BigDecimal.ZERO, totalTax = BigDecimal.ZERO;
 
