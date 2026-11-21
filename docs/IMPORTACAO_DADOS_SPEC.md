@@ -129,6 +129,11 @@ Colunas: `sku`\*, `nome`\*, `preco_venda`\*, `iva`\*, `categoria`\*, `codigo_bar
 Pré-requisito: os clientes, fornecedores e artigos referidos já existem na empresa activa. Referência
 a um que não existe é `ERRO` da linha ("importe primeiro os clientes").
 
+- Rotas: as mesmas do §3.1 (`/api/data-import/{entidade}/template|preview|commit`), com as entidades
+  `opening-stock` (modelo `modelo-stock-inicial.csv`), `opening-receivables` (`modelo-dividas-clientes.csv`) e
+  `opening-payables` (`modelo-dividas-fornecedores.csv`). Tudo ou nada, empresa activa, só ADMIN e um `DATA_IMPORT`
+  por confirmação (entidade "stock inicial", "dívidas de clientes" ou "dívidas a fornecedores"), como nos cadastros.
+
 ### 5.1 Stock inicial — chave: SKU + armazém + lote
 
 Colunas: `sku`\*, `armazem`\*, `quantidade`\*, `custo_unitario`\*, `lote`, `validade`.

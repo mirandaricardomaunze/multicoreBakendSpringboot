@@ -17,7 +17,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Importação de cadastros por CSV (IMPORTACAO_DADOS_SPEC §3.1); só ADMIN (ver {@code ApiRolePolicy}).
+ * Importação por CSV de cadastros e saldos iniciais (IMPORTACAO_DADOS_SPEC §3.1, §5); só ADMIN (ver
+ * {@code ApiRolePolicy}).
  * O ficheiro chega como corpo binário ({@code application/octet-stream} ou {@code text/csv}).
  */
 @RestController
@@ -35,7 +36,10 @@ public class DataImportController {
         this.importService = importService;
     }
 
-    /** Modelo CSV da entidade ({@code clients}, {@code suppliers}, {@code products}). */
+    /**
+     * Modelo CSV da entidade ({@code clients}, {@code suppliers}, {@code products}, {@code opening-stock},
+     * {@code opening-receivables}, {@code opening-payables}).
+     */
     @GetMapping("/{entity}/template")
     public ResponseEntity<byte[]> template(@PathVariable String entity) {
         ImportTemplateDTO template = templateService.template(entity);

@@ -15,7 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Pré-visualizar e confirmar a importação de cadastros (IMPORTACAO_DADOS_SPEC §3.1). Pré-visualizar só
+ * Pré-visualizar e confirmar a importação de cadastros e saldos iniciais (IMPORTACAO_DADOS_SPEC §3.1; os saldos, §5,
+ * pelo {@link OpeningBalanceImportService}). Pré-visualizar só
  * classifica. Confirmar volta a classificar o ficheiro do zero (não confia na pré-visualização), recusa com
  * qualquer {@code ERRO} e grava as linhas {@code NOVO}/{@code ASSOCIADO} numa só transacção, sempre pelos
  * serviços donos de cada agregado (§3.3): clientes e artigos pelo comercial, fornecedores pelas compras.
@@ -29,28 +30,32 @@ public class DataImportService {
     private final ComercialService comercialService;
     private final ProductCategoryService categoryService;
     private final PurchaseService purchaseService;
+    private final OpeningBalanceImportService openingBalances;
     private final AuditLogService auditLogService;
 
     public DataImportService(ClientImportService clientImport, SupplierImportService supplierImport,
                              ProductImportService productImport, ComercialService comercialService,
                              ProductCategoryService categoryService, PurchaseService purchaseService,
-                             AuditLogService auditLogService) {
+                             OpeningBalanceImportService openingBalances, AuditLogService auditLogService) {
         this.clientImport = clientImport;
         this.supplierImport = supplierImport;
         this.productImport = productImport;
         this.comercialService = comercialService;
         this.categoryService = categoryService;
         this.purchaseService = purchaseService;
+        this.openingBalances = openingBalances;
         this.auditLogService = auditLogService;
     }
 
     /** §3.1 passo 2: classifica cada linha, sem gravar nada. */
     @Transactional(readOnly = true)
     public ImportPreviewDTO preview(String entityPath, byte[] content) {
-        return switch (ImportEntity.fromPath(entityPath)) {
+        ImportEntity entity = ImportEntity.fromPath(entityPath);
+        return switch (entity) {
             case CLIENTS -> clientImport.preview(content);
             case SUPPLIERS -> supplierImport.preview(content);
             case PRODUCTS -> productImport.preview(content);
+            case OPENING_STOCK, OPENING_RECEIVABLES, OPENING_PAYABLES -> openingBalances.preview(entity, content);
         };
     }
 
@@ -65,6 +70,7 @@ public class DataImportService {
             case CLIENTS -> commitClients(content);
             case SUPPLIERS -> commitSuppliers(content);
             case PRODUCTS -> commitProducts(content);
+            case OPENING_STOCK, OPENING_RECEIVABLES, OPENING_PAYABLES -> openingBalances.commit(entity, content);
         };
         ImportCommitResultDTO result = ImportCommitResultDTO.of(written);
         auditLogService.logCurrent(ImportAuditDetails.ACTION, ImportAuditDetails.describe(entity, fileName, result));
