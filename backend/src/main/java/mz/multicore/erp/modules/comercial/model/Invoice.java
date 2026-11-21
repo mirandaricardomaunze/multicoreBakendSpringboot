@@ -166,6 +166,19 @@ public class Invoice extends BaseEntity {
         if (status != null && status.isRealisedSale()) status = deriveStatusFromPayments();
     }
 
+    /**
+     * É uma venda: tudo menos o "Saldo Inicial" importado, que não é documento fiscal e fica fora do SAF-T, do IVA e
+     * dos relatórios de vendas e receita (IMPORTACAO_DADOS_SPEC §5.2). Continua a ser cobrado como uma factura.
+     */
+    public boolean isSale() {
+        return documentKind != InvoiceDocumentKind.OPENING_BALANCE;
+    }
+
+    /** Venda realizada que conta nas vendas, na receita e no IVA: é venda e o estado é de venda realizada. */
+    public boolean countsAsSale() {
+        return isSale() && status != null && status.isRealisedSale();
+    }
+
     /** Data do documento: a {@code documentDate} quando existe (Saldo Inicial), senão a data civil do {@code createdAt}. */
     public LocalDate issueDate() {
         if (documentDate != null) return documentDate;

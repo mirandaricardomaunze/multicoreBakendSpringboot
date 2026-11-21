@@ -63,7 +63,7 @@ public class FiscalSalesExportService {
         Company company = companyLookup.require(companyId);
 
         List<Invoice> invoices = invoiceLookup.listForCompany(companyId).stream()
-                .filter(i -> ISSUED.contains(i.getStatus()) && withinPeriod(i.getCreatedAt(), start, end))
+                .filter(i -> i.isSale() && ISSUED.contains(i.getStatus()) && withinPeriod(i.getCreatedAt(), start, end))
                 .sorted(Comparator.comparing(Invoice::getInvoiceNumber, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
 

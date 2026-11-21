@@ -161,6 +161,8 @@ Colunas: `nuit_cliente`\*, `numero_original`\*, `data`\*, `vencimento`\*, `valor
     espaços nas pontas). Cliente pelo NUIT ligado à empresa activa.
 - **Não é documento fiscal**: sem IVA, fora do SAF-T, das declarações de IVA e dos relatórios de
   vendas/receita.
+  - Venda é só a factura de natureza `SALE`: o SAF-T, o apuramento de IVA, o painel e o relatório diário da loja e
+    as metas/ranking comerciais excluem o `OPENING_BALANCE`, que continua a contar como "por cobrar".
 - Entra no **extracto de conta corrente** como débito na `data`, na **antiguidade de saldos** pelo
   `vencimento`, na exposição de **limite de crédito** e na **mora** como qualquer factura.
 - Liquida-se com **recibos normais**, total ou parcialmente, como uma factura.
