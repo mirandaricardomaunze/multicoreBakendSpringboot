@@ -179,6 +179,10 @@ Colunas: `nuit_cliente`\*, `numero_original`\*, `data`\*, `vencimento`\*, `valor
 Colunas: `nuit_fornecedor`\*, `numero_original`\*, `data`\*, `vencimento`\*, `valor_em_divida`\*, `descricao`.
 
 - Mesmas regras de chave, valores, datas e numeração do §5.2 (série **SIF**).
+  - Guarda-se na tabela das compras como natureza `OPENING_BALANCE` (as compras são `PURCHASE`), por pagar, sem
+    linhas, sem armazém e sem IVA, com a `data` da factura antiga como data da compra, o `vencimento` e a
+    `descricao`. A chave fornecedor + `numero_original` é única na empresa (também na base). Fornecedor pelo NUIT na
+    empresa activa; inexistente → `ERRO` ("importe primeiro os fornecedores"). Não publica evento de compra.
 - Não gera entrada de stock nem documento fiscal.
 - Aparece na lista de **contas a pagar** (`/api/purchases/payables`) e paga-se com a mesma acção de
   pagamento a fornecedor, total ou parcialmente, com a mesma conta financeira.

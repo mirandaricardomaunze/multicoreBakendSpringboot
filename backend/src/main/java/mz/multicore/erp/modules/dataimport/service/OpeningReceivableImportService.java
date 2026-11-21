@@ -10,8 +10,6 @@ import mz.multicore.erp.modules.dataimport.dto.ImportRowDTO;
 import mz.multicore.erp.modules.dataimport.dto.ImportRowStatus;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,23 +19,18 @@ import java.util.Optional;
  * Importação das dívidas de clientes por CSV (IMPORTACAO_DADOS_SPEC §5.2): cada linha é uma factura em aberto do
  * sistema antigo, que a confirmação grava como um documento "Saldo Inicial" (série SI). O cliente é o do NUIT na
  * empresa activa. A chave é cliente + {@code numero_original}: já importada → {@code JÁ EXISTE}; repetida no ficheiro
- * → {@code ERRO} em ambas (§3.3).
+ * → {@code ERRO} em ambas (§3.3). Datas e valor pelas regras comuns de {@link OpeningDebtColumns}.
  */
 @Service
 public class OpeningReceivableImportService {
 
     static final String CLIENT_TAX_ID = "nuit_cliente";
-    static final String ORIGINAL_NUMBER = "numero_original";
-    static final String DATE = "data";
-    static final String DUE_DATE = "vencimento";
-    static final String AMOUNT = "valor_em_divida";
-    static final String DESCRIPTION = "descricao";
 
-    static final List<String> REQUIRED_COLUMNS = List.of(CLIENT_TAX_ID, ORIGINAL_NUMBER, DATE, DUE_DATE, AMOUNT);
-    static final List<String> OPTIONAL_COLUMNS = List.of(DESCRIPTION);
+    static final List<String> REQUIRED_COLUMNS = OpeningDebtColumns.requiredColumns(CLIENT_TAX_ID);
 
     private final CsvImportReader reader = new CsvImportReader();
     private final ImportValueParser parser = new ImportValueParser();
+    private final OpeningDebtColumns debtColumns = new OpeningDebtColumns();
     private final ClientLookup clientLookup;
     private final InvoiceLookup invoiceLookup;
 
@@ -54,7 +47,7 @@ public class OpeningReceivableImportService {
     /** Classificação com o pedido de cada linha válida; base da pré-visualização e da confirmação. */
     ImportPlan<CreateOpeningReceivableRequest> plan(byte[] content) {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
-        CsvTable table = reader.read(content, REQUIRED_COLUMNS, OPTIONAL_COLUMNS);
+        CsvTable table = reader.read(content, REQUIRED_COLUMNS, OpeningDebtColumns.OPTIONAL_COLUMNS);
         Map<String, Optional<Client>> clientsByTaxId = new HashMap<>();
         List<ImportPlan.Line<CreateOpeningReceivableRequest>> converted = table.rows().stream()
                 .map(row -> convert(table, row, companyId, clientsByTaxId))
@@ -70,7 +63,8 @@ public class OpeningReceivableImportService {
             ImportPlan.Line<CreateOpeningReceivableRequest> line, DuplicateKeys duplicates, Long companyId) {
         int number = line.row().lineNumber();
         CreateOpeningReceivableRequest request = line.item();
-        return duplicates.violation(number, key(request), ORIGINAL_NUMBER, "Cliente e número original repetidos")
+        return duplicates.violation(number, key(request), OpeningDebtColumns.ORIGINAL_NUMBER,
+                        "Cliente e número original repetidos")
                 .map(ImportPlan.Line::<CreateOpeningReceivableRequest>error)
                 .orElseGet(() -> new ImportPlan.Line<>(ImportRowDTO.of(number, statusOf(request, companyId)), request));
     }
@@ -86,7 +80,6 @@ public class OpeningReceivableImportService {
         return request.clientId() + "|" + request.originalNumber();
     }
 
-    /** Valores pela ordem das colunas do modelo: o primeiro problema da linha é o que se reporta. */
     private ImportPlan.Line<CreateOpeningReceivableRequest> convert(CsvTable table, CsvTable.Row row, Long companyId,
                                                                     Map<String, Optional<Client>> clientsByTaxId) {
         try {
@@ -98,26 +91,15 @@ public class OpeningReceivableImportService {
         }
     }
 
+    /** O cliente primeiro (primeira coluna do modelo), depois as colunas comuns pela sua ordem. */
     private CreateOpeningReceivableRequest toRequest(CsvTable table, CsvTable.Row row, Long companyId,
                                                      Map<String, Optional<Client>> clientsByTaxId) {
         int line = row.number();
         Client client = client(parser.requireText(table.value(row, CLIENT_TAX_ID), line, CLIENT_TAX_ID),
                 companyId, clientsByTaxId, line);
-        String originalNumber = parser.requireText(table.value(row, ORIGINAL_NUMBER), line, ORIGINAL_NUMBER);
-        LocalDate date = requireDate(table.value(row, DATE), line, DATE);
-        if (date.isAfter(LocalDate.now())) {
-            throw new ImportValueException(line, DATE, "a data da factura não pode ser futura.");
-        }
-        LocalDate dueDate = requireDate(table.value(row, DUE_DATE), line, DUE_DATE);
-        if (dueDate.isBefore(date)) {
-            throw new ImportValueException(line, DUE_DATE, "o vencimento não pode ser anterior à data da factura.");
-        }
-        BigDecimal amount = parser.requireDecimal(table.value(row, AMOUNT), line, AMOUNT);
-        if (amount.signum() <= 0) {
-            throw new ImportValueException(line, AMOUNT, "o valor em dívida tem de ser maior que zero.");
-        }
-        return new CreateOpeningReceivableRequest(client.getId(), originalNumber, date, dueDate, amount,
-                parser.parseText(table.value(row, DESCRIPTION)));
+        OpeningDebtColumns.Values debt = debtColumns.read(table, row);
+        return new CreateOpeningReceivableRequest(client.getId(), debt.originalNumber(), debt.date(), debt.dueDate(),
+                debt.amount(), debt.description());
     }
 
     private Client client(String taxId, Long companyId, Map<String, Optional<Client>> clientsByTaxId, int line) {
@@ -125,9 +107,5 @@ public class OpeningReceivableImportService {
                 .computeIfAbsent(taxId, key -> clientLookup.findForCompanyByTaxId(key, companyId))
                 .orElseThrow(() -> new ImportValueException(line, CLIENT_TAX_ID, "o cliente com NUIT «" + taxId
                         + "» não existe na empresa; importe primeiro os clientes."));
-    }
-
-    private LocalDate requireDate(String raw, int line, String column) {
-        return parser.parseDate(parser.requireText(raw, line, column), line, column);
     }
 }

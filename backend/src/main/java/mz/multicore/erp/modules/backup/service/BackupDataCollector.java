@@ -188,7 +188,7 @@ public class BackupDataCollector {
             m.put("id", p.getId());
             m.put("purchaseNumber", p.getPurchaseNumber());
             m.put("supplierName", p.getSupplier().getName());
-            m.put("warehouseName", p.getWarehouse().getName());
+            m.put("warehouseName", p.getWarehouse() != null ? p.getWarehouse().getName() : null);
             m.put("total", p.getTotalAmount());
             m.put("status", p.getStatus());
             return m;
