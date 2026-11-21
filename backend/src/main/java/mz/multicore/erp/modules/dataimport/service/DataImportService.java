@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.dataimport.service;
 
+import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.dto.CreateProductCategoryRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateProductRequest;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
@@ -28,16 +29,19 @@ public class DataImportService {
     private final ComercialService comercialService;
     private final ProductCategoryService categoryService;
     private final PurchaseService purchaseService;
+    private final AuditLogService auditLogService;
 
     public DataImportService(ClientImportService clientImport, SupplierImportService supplierImport,
                              ProductImportService productImport, ComercialService comercialService,
-                             ProductCategoryService categoryService, PurchaseService purchaseService) {
+                             ProductCategoryService categoryService, PurchaseService purchaseService,
+                             AuditLogService auditLogService) {
         this.clientImport = clientImport;
         this.supplierImport = supplierImport;
         this.productImport = productImport;
         this.comercialService = comercialService;
         this.categoryService = categoryService;
         this.purchaseService = purchaseService;
+        this.auditLogService = auditLogService;
     }
 
     /** §3.1 passo 2: classifica cada linha, sem gravar nada. */
@@ -50,15 +54,21 @@ public class DataImportService {
         };
     }
 
-    /** §3.1 passo 3: tudo ou nada; uma falha a meio da escrita desfaz o que já tinha sido gravado. */
+    /**
+     * §3.1 passos 3–4: tudo ou nada; uma falha a meio da escrita desfaz o que já tinha sido gravado. Cada
+     * confirmação gravada deixa um único {@code DATA_IMPORT} na auditoria, na mesma transacção.
+     */
     @Transactional
-    public ImportCommitResultDTO commit(String entityPath, byte[] content) {
-        ImportPreviewDTO written = switch (ImportEntity.fromPath(entityPath)) {
+    public ImportCommitResultDTO commit(String entityPath, String fileName, byte[] content) {
+        ImportEntity entity = ImportEntity.fromPath(entityPath);
+        ImportPreviewDTO written = switch (entity) {
             case CLIENTS -> commitClients(content);
             case SUPPLIERS -> commitSuppliers(content);
             case PRODUCTS -> commitProducts(content);
         };
-        return ImportCommitResultDTO.of(written);
+        ImportCommitResultDTO result = ImportCommitResultDTO.of(written);
+        auditLogService.logCurrent(ImportAuditDetails.ACTION, ImportAuditDetails.describe(entity, fileName, result));
+        return result;
     }
 
     /** {@code ASSOCIADO}: o registo manual liga o cliente partilhado à empresa activa sem alterar os dados. */

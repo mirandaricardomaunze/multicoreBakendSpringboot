@@ -39,7 +39,9 @@ extractos bancários. Sem importação não há migração de clientes.
    - com algum `ERRO` recusa com `BusinessRuleException` e não grava nada;
    - sem erros grava todas as linhas `NOVO`/`ASSOCIADO` numa **só transacção** e devolve os totais.
 4. Cada confirmação gera **um** registo de auditoria `DATA_IMPORT` com entidade, nome do ficheiro e
-   totais (novos, associados, já existentes).
+   totais (novos, associados, já existentes). O nome do ficheiro chega no parâmetro opcional
+   `fileName` do `POST …/commit` (sem ele fica `(sem nome)`; cortado a 200 caracteres). O registo é
+   gravado na mesma transacção: confirmação recusada não deixa registo.
 
 ### 3.2 Ficheiro
 

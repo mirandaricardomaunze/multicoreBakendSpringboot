@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -50,9 +51,14 @@ public class DataImportController {
         return ResponseEntity.ok(importService.preview(entity, content));
     }
 
-    /** Revalida e grava tudo numa transacção; com qualquer erro recusa e não grava nada. */
+    /**
+     * Revalida e grava tudo numa transacção; com qualquer erro recusa e não grava nada. {@code fileName} é o
+     * nome do ficheiro escolhido pelo utilizador, só para a auditoria.
+     */
     @PostMapping(value = "/{entity}/commit", consumes = {MediaType.APPLICATION_OCTET_STREAM_VALUE, CSV_UPLOAD})
-    public ResponseEntity<ImportCommitResultDTO> commit(@PathVariable String entity, @RequestBody byte[] content) {
-        return ResponseEntity.ok(importService.commit(entity, content));
+    public ResponseEntity<ImportCommitResultDTO> commit(@PathVariable String entity,
+                                                        @RequestParam(required = false) String fileName,
+                                                        @RequestBody byte[] content) {
+        return ResponseEntity.ok(importService.commit(entity, fileName, content));
     }
 }

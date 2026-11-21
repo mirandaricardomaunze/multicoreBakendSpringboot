@@ -15,7 +15,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -225,6 +227,61 @@ class DataImportHttpIntegrationTest {
         assertThat(clientTaxIds(active)).contains("416000051");
     }
 
+    // ---- IMP-08: cada confirmação gera um DATA_IMPORT na auditoria (§3.1 passo 4) ----------------------
+
+    @Test
+    @DisplayName("IMP-08: confirmar gera um único DATA_IMPORT com entidade, nome do ficheiro e totais")
+    void commitWritesOneDataImportAuditEntry() throws Exception {
+        Ctx c = admin();
+        upload("clients", "commit", c, CLIENT_HEADER, "Importado Aud A;416000061;;;;");
+
+        mockMvc.perform(auth(post("/api/data-import/clients/commit"), c)
+                        .param("fileName", "clientes-primavera-imp08.csv")
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(csv(CLIENT_HEADER, "Importado Aud A;416000061;;;;", "Importado Aud B;416000062;;;;")))
+                .andExpect(status().isOk());
+
+        List<JsonNode> entries = auditEntries(c, "clientes-primavera-imp08.csv");
+        assertThat(entries).hasSize(1);
+        JsonNode entry = entries.get(0);
+        assertThat(entry.get("action").asText()).isEqualTo("DATA_IMPORT");
+        assertThat(entry.get("username").asText()).isEqualTo("ana");
+        assertThat(entry.get("details").asText())
+                .contains("clientes")
+                .contains("1 novo")
+                .contains("0 associados")
+                .contains("1 já existente");
+    }
+
+    @Test
+    @DisplayName("IMP-08: confirmação recusada não deixa DATA_IMPORT na auditoria")
+    void refusedCommitWritesNoAuditEntry() throws Exception {
+        Ctx c = admin();
+        mockMvc.perform(auth(post("/api/data-import/clients/commit"), c)
+                        .param("fileName", "clientes-com-erro-imp08.csv")
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(csv(CLIENT_HEADER, "Importado Aud Mau;12345;;;;")))
+                .andExpect(status().isBadRequest());
+
+        assertThat(auditEntries(c, "clientes-com-erro-imp08.csv")).isEmpty();
+    }
+
+    private List<JsonNode> auditEntries(Ctx c, String fileName) throws Exception {
+        JsonNode logs = om.readTree(mockMvc.perform(auth(get("/api/audit/logs"), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
+        List<JsonNode> matches = new ArrayList<>();
+        logs.forEach(log -> {
+            if (log.path("details").asText().contains(fileName)) {
+                matches.add(log);
+            }
+        });
+        return matches;
+    }
+
+    private static byte[] csv(String header, String... lines) {
+        return (header + "\r\n" + String.join("\r\n", lines) + "\r\n").getBytes(StandardCharsets.UTF_8);
+    }
+
     private JsonNode upload(String entity, String action, Ctx c, String header, String... lines) throws Exception {
         return om.readTree(uploadRequest(entity, action, c, header, lines)
                 .andExpect(status().isOk())
@@ -233,10 +290,9 @@ class DataImportHttpIntegrationTest {
 
     private org.springframework.test.web.servlet.ResultActions uploadRequest(
             String entity, String action, Ctx c, String header, String... lines) throws Exception {
-        byte[] csv = (header + "\r\n" + String.join("\r\n", lines) + "\r\n").getBytes(StandardCharsets.UTF_8);
         return mockMvc.perform(auth(post("/api/data-import/" + entity + "/" + action), c)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .content(csv));
+                .content(csv(header, lines)));
     }
 
     private String clientTaxIds(Ctx c) throws Exception {
@@ -279,12 +335,18 @@ class DataImportHttpIntegrationTest {
         return adminIn(0);
     }
 
-    /** A Ana é ADMIN nas duas empresas do arranque; {@code index} escolhe a empresa activa. */
+    /**
+     * A Ana é ADMIN nas duas empresas do arranque; {@code index} escolhe a empresa activa pela ordem do id
+     * (o login devolve as empresas sem ordem garantida, por isso não se usa a posição na resposta).
+     */
     private Ctx adminIn(int index) throws Exception {
         JsonNode login = om.readTree(mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"ana\",\"password\":\"password\"}"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
-        return new Ctx(login.get("token").asText(), login.get("companies").get(index).get("id").asText());
+        List<Long> companyIds = new ArrayList<>();
+        login.get("companies").forEach(company -> companyIds.add(company.get("id").asLong()));
+        companyIds.sort(null);
+        return new Ctx(login.get("token").asText(), String.valueOf(companyIds.get(index)));
     }
 
     private MockHttpServletRequestBuilder auth(MockHttpServletRequestBuilder req, Ctx c) {

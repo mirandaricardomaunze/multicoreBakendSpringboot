@@ -31,6 +31,11 @@ public enum ImportEntity {
         return "modelo-" + templateName + ".csv";
     }
 
+    /** Nome da entidade em PT-MZ, no plural, ex.: {@code clientes}. */
+    public String label() {
+        return templateName;
+    }
+
     public List<String> columns() {
         return columns;
     }
