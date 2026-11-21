@@ -23,7 +23,7 @@ cada agregado. O leitor CSV e o parser de valores são classes puras, sem Spring
 - [x] IMP-01 — UTF-8 com/sem BOM e Windows-1252 com acentos intactos — `CsvImportReaderTest`
 - [x] IMP-02 — separador `;`/`,` detectado, aspas e `""` — `CsvImportReaderTest`
 - [x] IMP-03 — colunas por nome tolerante; obrigatória em falta recusa; extra anunciada — `CsvImportReaderTest`
-- [ ] IMP-05 — limites 2 MB / 5 000 linhas; linhas vazias ignoradas — `CsvImportReaderTest`
+- [x] IMP-05 — limites 2 MB / 5 000 linhas; linhas vazias ignoradas — `CsvImportReaderTest`
 - [ ] IMP-04 — números e datas nos formatos aceites; outro formato é erro com nº de linha — `ImportValueParserTest`
 - [ ] IMP-CL-03 — email do cliente opcional (migração, request, registo manual) — `ClientOptionalEmailTest`
 - [ ] IMP-CL-01 — cliente: NUIT obrigatório e válido, email opcional — `ClientImportServiceTest`
@@ -70,3 +70,4 @@ cada agregado. O leitor CSV e o parser de valores são classes puras, sem Spring
 - 2026-11-19 · IMP-02 · `CsvImportReader.detectSeparator`/`parseLine` + 6 testes escritos (falharam antes da implementação); não marcado porque o backend não compila (`units/dto` em falta, ver Perguntas em aberto) → BLOCKED
 - 2026-11-21 · IMP-02 · build volta a compilar; `CsvImportReaderTest` verde (10/10, incl. os 6 de IMP-02) → marcado
 - 2026-11-21 · IMP-03 · `CsvImportReader.readHeader` + record `CsvHeader`: colunas por nome sem maiúsculas/acentos/espaços, obrigatória em falta → `BusinessRuleException` PT-MZ, extras em `extraColumns`; `CsvImportReaderTest` verde (14/14)
+- 2026-11-21 · IMP-05 · `CsvImportReader.decode` recusa > 2 MB; `lines()` + record `CsvLine` ignora linhas vazias, numera com o cabeçalho como linha 1 e recusa > 5 000 linhas de dados; `CsvImportReaderTest` verde (19/19). Nota: correr os testes a partir da raiz (`mvn -f ../pom.xml test -pl backend -am ...`) — só em `backend/` usa um `contracts` desactualizado do `~/.m2` e falha `units/dto` (era a causa do falso alarme de 2026-11-19)

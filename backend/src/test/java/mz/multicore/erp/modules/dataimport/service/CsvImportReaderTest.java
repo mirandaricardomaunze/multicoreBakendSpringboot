@@ -141,4 +141,61 @@ class CsvImportReaderTest {
         assertThat(header.value(List.of("  Ana  ", "400000001"), "nome")).isEqualTo("Ana");
         assertThat(header.value(List.of("Ana", "400000001"), "morada")).isEmpty();
     }
+
+    // IMP-05
+    @Test
+    void fileAboveTwoMegabytesIsRejected() {
+        byte[] tooBig = new byte[CsvImportReader.MAX_FILE_BYTES + 1];
+        java.util.Arrays.fill(tooBig, (byte) 'a');
+
+        assertThatThrownBy(() -> reader.decode(tooBig))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("2 MB");
+    }
+
+    // IMP-05
+    @Test
+    void fileOfExactlyTwoMegabytesIsAccepted() {
+        byte[] limit = new byte[CsvImportReader.MAX_FILE_BYTES];
+        java.util.Arrays.fill(limit, (byte) 'a');
+
+        assertThat(reader.decode(limit)).hasSize(CsvImportReader.MAX_FILE_BYTES);
+    }
+
+    // IMP-05
+    @Test
+    void emptyLinesAreIgnoredAndLineNumbersCountTheHeaderAsLineOne() {
+        List<CsvLine> lines = reader.lines("nome;nuit\r\nAna;400000001\n\n   \r\nRui;400000002\n");
+
+        assertThat(lines).containsExactly(
+                new CsvLine(1, "nome;nuit"),
+                new CsvLine(2, "Ana;400000001"),
+                new CsvLine(5, "Rui;400000002"));
+    }
+
+    // IMP-05
+    @Test
+    void fiveThousandDataLinesAreAcceptedButOneMoreIsRejected() {
+        assertThat(reader.lines(csvWithDataLines(CsvImportReader.MAX_DATA_LINES))).hasSize(5_001);
+
+        assertThatThrownBy(() -> reader.lines(csvWithDataLines(CsvImportReader.MAX_DATA_LINES + 1)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("5000");
+    }
+
+    // IMP-05
+    @Test
+    void emptyLinesDoNotCountTowardsTheLineLimit() {
+        String csv = csvWithDataLines(CsvImportReader.MAX_DATA_LINES) + "\n\n\n";
+
+        assertThat(reader.lines(csv)).hasSize(5_001);
+    }
+
+    private static String csvWithDataLines(int count) {
+        StringBuilder csv = new StringBuilder("nome;nuit\n");
+        for (int i = 0; i < count; i++) {
+            csv.append("Cliente ").append(i).append(";400000001\n");
+        }
+        return csv.toString();
+    }
 }

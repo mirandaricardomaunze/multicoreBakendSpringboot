@@ -30,10 +30,21 @@ public class CsvImportReader {
     private static final char SEMICOLON = ';';
     private static final char COMMA = ',';
 
-    /** Converte os bytes do ficheiro em texto, sem BOM, com os acentos intactos. */
+    /** Tamanho máximo do ficheiro: 2 MB. */
+    public static final int MAX_FILE_BYTES = 2 * 1024 * 1024;
+    /** Número máximo de linhas de dados (sem cabeçalho nem linhas vazias). */
+    public static final int MAX_DATA_LINES = 5_000;
+
+    /**
+     * Converte os bytes do ficheiro em texto, sem BOM, com os acentos intactos.
+     * Ficheiro acima de {@link #MAX_FILE_BYTES} é recusado.
+     */
     public String decode(byte[] content) {
         if (content == null || content.length == 0) {
             return "";
+        }
+        if (content.length > MAX_FILE_BYTES) {
+            throw new BusinessRuleException("O ficheiro excede o limite de 2 MB.");
         }
         String text = decodeStrictUtf8(content);
         if (text == null) {
@@ -55,6 +66,25 @@ public class CsvImportReader {
 
     private static String stripBom(String text) {
         return !text.isEmpty() && text.charAt(0) == BOM ? text.substring(1) : text;
+    }
+
+    /**
+     * Parte o texto nas linhas não vazias (a primeira é o cabeçalho), cada uma com o seu número no
+     * ficheiro, contando o cabeçalho como linha 1. Linhas vazias ou só com espaços são ignoradas.
+     * Mais de {@link #MAX_DATA_LINES} linhas de dados recusa o ficheiro.
+     */
+    public List<CsvLine> lines(String text) {
+        String[] physical = text.split("\\r?\\n|\\r", -1);
+        List<CsvLine> lines = new ArrayList<>();
+        for (int i = 0; i < physical.length; i++) {
+            if (!physical[i].isBlank()) {
+                lines.add(new CsvLine(i + 1, physical[i]));
+            }
+        }
+        if (lines.size() - 1 > MAX_DATA_LINES) {
+            throw new BusinessRuleException("O ficheiro excede o limite de " + MAX_DATA_LINES + " linhas de dados.");
+        }
+        return lines;
     }
 
     /**
