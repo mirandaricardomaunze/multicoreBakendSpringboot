@@ -19,7 +19,7 @@ Regras em `docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md` §2–§3 e §4.5.
 ## Critérios de aceitação
 
 - [x] FX-01 — moeda base por empresa, MZN, imutável após movimentos — `CompanyBaseCurrencyTest`
-- [ ] FX-02 — moedas aceites e regras do câmbio — `ExchangeRateRulesTest`
+- [x] FX-02 — moedas aceites e regras do câmbio — `ExchangeRateRulesTest`
 - [ ] FX-03 — câmbio proposto pela data ou anterior; sem câmbio exige escrita — `ExchangeRateRulesTest`
 - [ ] FX-04 — corrigir câmbio não altera documentos gravados — `ExchangeRateRulesTest`
 - [ ] FX-11 — contas 6601 e 7601 semeadas, também em empresas existentes — `ExchangeDifferenceAccountsTest`
@@ -49,3 +49,4 @@ Regras em `docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md` §2–§3 e §4.5.
 
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-22 · FX-01 · `Company.baseCurrency` (MZN por omissão, V140 põe MZN nas existentes), `CurrencyCode` com a lista fechada MZN/USD/ZAR/EUR e `CompanyBaseCurrencyService` que só deixa mudar a moeda base sem compras, facturas nem movimentos de stock (sondas `CompanyMovementProbe` em cada módulo dono); `CompanyBaseCurrencyTest` 7/7.
+- 2026-11-22 · FX-02 · novo módulo `currency` com `ExchangeRate` (tabela `exchange_rates`, V141, chave empresa+moeda+data e `CHECK (rate > 0)`) e `ExchangeRateService.create/list`: só MZN/USD/ZAR/EUR, a moeda base fica fora da tabela (câmbio sempre 1), câmbio > 0 com no máximo 4 casas (gravado com 4), um por empresa, moeda e data, só na empresa activa; `ExchangeRateRulesTest` 9/9.

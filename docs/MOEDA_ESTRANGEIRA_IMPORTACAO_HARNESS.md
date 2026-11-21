@@ -3,14 +3,14 @@
 > Cenários que provam [MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md](MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-22 (FX-01 verde)
+**Última actualização:** 2026-11-22 (FX-01, FX-02 verdes)
 
 ## Moeda e câmbio (GOAL-008)
 
 | ID | Garantia | Teste |
 |---|---|---|
 | FX-01 | Moeda base por empresa, MZN por omissão; migração põe MZN nas existentes; não muda depois do primeiro movimento — compra, factura ou movimento de stock (§3.1) | `CompanyBaseCurrencyTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
-| FX-02 | Só MZN, USD, ZAR, EUR; câmbio > 0 com 4 casas; um por empresa, moeda e data (§3.2) | `ExchangeRateRulesTest` |
+| FX-02 | Só MZN, USD, ZAR, EUR; câmbio > 0 com 4 casas; um por empresa, moeda e data; a moeda base não entra na tabela (câmbio 1) (§3.2) | `ExchangeRateRulesTest` · `MigrationPostgresDialectHarnessTest` |
 | FX-03 | Câmbio proposto = o da data ou o anterior mais recente; sem nenhum, o documento exige câmbio escrito (§3.2) | `ExchangeRateRulesTest` |
 | FX-04 | Corrigir um câmbio da tabela não altera documentos já gravados (§3.2) | `ExchangeRateRulesTest` |
 | FX-05 | Encomenda e compra guardam moeda e câmbio; moeda base tem câmbio 1; compras antigas migram com câmbio 1 (§3.3) | `ForeignCurrencyPurchaseTest` |
