@@ -1,6 +1,27 @@
 package mz.multicore.erp.modules.dataimport.service;
 
+import mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.modules.audit.service.AuditLogService;
+import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
+import mz.multicore.erp.modules.comercial.repository.DebitNoteRepository;
+import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
+import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
+import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
+import mz.multicore.erp.modules.financeira.service.FinanceService;
+import mz.multicore.erp.modules.fiscal.dto.IvaSummaryDTO;
+import mz.multicore.erp.modules.fiscal.service.FiscalSummaryService;
+import mz.multicore.erp.modules.purchases.dto.PayableDTO;
+import mz.multicore.erp.modules.purchases.dto.PurchaseDTO;
+import mz.multicore.erp.modules.purchases.repository.PurchaseOrderRepository;
+import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import mz.multicore.erp.modules.purchases.repository.SupplierReturnRepository;
+import mz.multicore.erp.modules.purchases.service.DirectPurchaseQueryService;
+import mz.multicore.erp.modules.purchases.service.DirectPurchaseService;
+import mz.multicore.erp.modules.purchases.service.SupplierPaymentService;
+import org.springframework.context.ApplicationEventPublisher;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -26,6 +47,7 @@ import org.mockito.ArgumentCaptor;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,10 +65,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * IMPORTACAO_DADOS_HARNESS — IMP-SIF-01: cada dívida a fornecedor importada é um documento "Saldo Inicial Fornecedor"
+ * IMPORTACAO_DADOS_HARNESS — IMP-SIF-01 e IMP-SIF-02: cada dívida a fornecedor importada é um documento "Saldo Inicial Fornecedor"
  * numerado na série própria {@code SIF-aaaa/n} da empresa activa, com as mesmas regras do SI (SPEC §5.3 → §5.2):
  * chave fornecedor + {@code numero_original} ({@code JÁ EXISTE} / repetida no ficheiro → {@code ERRO}), valor &gt; 0,
- * vencimento ≥ data, data não futura, fornecedor existente na empresa.
+ * vencimento ≥ data, data não futura, fornecedor existente na empresa. O SIF aparece nas contas a pagar e paga-se com
+ * o pagamento normal a fornecedor, total ou parcialmente; não é documento fiscal (fora do IVA dedutível).
  */
 class OpeningPayableTest {
 
@@ -305,5 +328,148 @@ class OpeningPayableTest {
                 date, date.minusDays(1), BigDecimal.TEN, null)))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("anterior");
         verify(purchaseRepository, never()).save(any());
+    }
+
+    // ---- IMP-SIF-02: contas a pagar e pagamento a fornecedor ----
+
+    private static final long ACCOUNT_ID = 3L;
+
+    private final FinanceService financeService = mock(FinanceService.class);
+    private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+    private final SupplierPaymentService paymentService = new SupplierPaymentService(purchaseRepository,
+            financeService, eventPublisher, mock(AuditLogService.class),
+            new DirectPurchaseService(null, new DirectPurchaseQueryService(purchaseRepository)));
+
+    private Purchase openingPayable(long id, String number, String originalNumber, String amount) {
+        Purchase document = new Purchase();
+        document.setId(id);
+        document.setDocumentKind(PurchaseDocumentKind.OPENING_BALANCE);
+        document.setCompany(company);
+        document.setSupplier(grossista);
+        document.setPurchaseNumber(number);
+        document.setOriginalNumber(originalNumber);
+        document.setPurchaseDate(LocalDate.of(2025, 10, 10).atStartOfDay());
+        document.setDueDate(LocalDate.of(2025, 11, 9));
+        document.setTotalAmount(new BigDecimal(amount));
+        document.setTaxAmount(BigDecimal.ZERO);
+        return document;
+    }
+
+    private void stubTreasury() {
+        when(financeService.registerTransaction(eq(ACCOUNT_ID), eq("CREDIT"), any(BigDecimal.class), anyString()))
+                .thenAnswer(invocation -> new TreasuryTransactionDTO(900L, ACCOUNT_ID, "Caixa", "CREDIT",
+                        invocation.getArgument(2), invocation.getArgument(3), LocalDateTime.now()));
+        when(financeService.accountType(ACCOUNT_ID)).thenReturn(TreasuryAccountType.BANK);
+    }
+
+    @Test
+    void openingPayableIsListedInPayablesWithItsOutstandingAndPaidOnesAreNot() {
+        Purchase open = openingPayable(51L, "SIF-" + YEAR + "/1", "FC 2025/77", "8300.40");
+        Purchase paid = openingPayable(52L, "SIF-" + YEAR + "/2", "FC 2025/78", "100.00");
+        paid.setAmountPaid(new BigDecimal("100.00"));
+        when(purchaseRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(open, paid));
+
+        List<PayableDTO> payables = paymentService.findPayablesByCompany(COMPANY_ID);
+
+        assertThat(payables).hasSize(1);
+        PayableDTO payable = payables.get(0);
+        assertThat(payable.purchaseId()).isEqualTo(51L);
+        assertThat(payable.purchaseNumber()).isEqualTo("SIF-" + YEAR + "/1");
+        assertThat(payable.supplierName()).isEqualTo("Grossista Lda");
+        assertThat(payable.totalAmount()).isEqualByComparingTo("8300.40");
+        assertThat(payable.amountPaid()).isEqualByComparingTo("0");
+        assertThat(payable.outstanding()).isEqualByComparingTo("8300.40");
+        assertThat(payable.purchaseDate().toLocalDate()).isEqualTo(LocalDate.of(2025, 10, 10));
+        assertThat(payable.businessUnitName()).isNull();
+    }
+
+    @Test
+    void partialPaymentLeavesTheRestOutstandingAndTheSecondPaymentSettlesIt() {
+        Purchase document = openingPayable(51L, "SIF-" + YEAR + "/1", "FC 2025/77", "1000.00");
+        when(purchaseRepository.findById(51L)).thenReturn(Optional.of(document));
+        stubTreasury();
+
+        PurchaseDTO afterPartial = paymentService.registerSupplierPayment(51L, new BigDecimal("400.00"), ACCOUNT_ID, null);
+        assertThat(afterPartial.amountPaid()).isEqualByComparingTo("400.00");
+        assertThat(afterPartial.warehouseId()).isNull();
+        assertThat(document.getOutstanding()).isEqualByComparingTo("600.00");
+
+        paymentService.registerSupplierPayment(51L, new BigDecimal("600.00"), ACCOUNT_ID, "TRF 12");
+        assertThat(document.getOutstanding()).isEqualByComparingTo("0");
+        verify(financeService, times(2)).registerTransaction(eq(ACCOUNT_ID), eq("CREDIT"), any(BigDecimal.class), anyString());
+
+        assertThatThrownBy(() -> paymentService.registerSupplierPayment(51L, BigDecimal.ONE, ACCOUNT_ID, null))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("totalmente paga");
+    }
+
+    @Test
+    void paymentAboveTheOutstandingIsRefusedAndNothingMoves() {
+        Purchase document = openingPayable(51L, "SIF-" + YEAR + "/1", "FC 2025/77", "1000.00");
+        when(purchaseRepository.findById(51L)).thenReturn(Optional.of(document));
+
+        assertThatThrownBy(() -> paymentService.registerSupplierPayment(51L, new BigDecimal("1000.01"), ACCOUNT_ID, null))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("excede");
+        assertThat(document.getAmountPaid()).isEqualByComparingTo("0");
+        verifyNoInteractions(financeService);
+    }
+
+    @Test
+    void treasuryMovementNamesTheOpeningPayableAndItsOriginalNumberAndTheEventCarriesTheSifNumber() {
+        Purchase document = openingPayable(51L, "SIF-" + YEAR + "/1", "FC 2025/77", "1000.00");
+        when(purchaseRepository.findById(51L)).thenReturn(Optional.of(document));
+        stubTreasury();
+
+        paymentService.registerSupplierPayment(51L, new BigDecimal("250.00"), ACCOUNT_ID, "TRF 12");
+
+        ArgumentCaptor<String> description = ArgumentCaptor.forClass(String.class);
+        verify(financeService).registerTransaction(eq(ACCOUNT_ID), eq("CREDIT"),
+                eq(new BigDecimal("250.00")), description.capture());
+        assertThat(description.getValue())
+                .contains("Grossista Lda")
+                .contains("Saldo Inicial Fornecedor SIF-" + YEAR + "/1 (FC 2025/77)")
+                .contains("ref. TRF 12")
+                .doesNotContain("Compra SIF");
+        ArgumentCaptor<SupplierPaymentRegisteredEvent> event =
+                ArgumentCaptor.forClass(SupplierPaymentRegisteredEvent.class);
+        verify(eventPublisher).publishEvent(event.capture());
+        assertThat(event.getValue().purchaseNumber()).isEqualTo("SIF-" + YEAR + "/1");
+        assertThat(event.getValue().amount()).isEqualByComparingTo("250.00");
+    }
+
+    @Test
+    void ordinaryPurchasesKeepTheirPaymentLabel() {
+        Purchase purchase = new Purchase();
+        purchase.setPurchaseNumber("CP-" + YEAR + "/9");
+
+        assertThat(purchase.isPurchase()).isTrue();
+        assertThat(purchase.paymentLabel()).isEqualTo("Compra CP-" + YEAR + "/9");
+        assertThat(openingPayable(51L, "SIF-" + YEAR + "/1", "FC 2025/77", "1").isPurchase()).isFalse();
+    }
+
+    @Test
+    void openingPayableIsNotADeductibleVatPurchase() {
+        LocalDateTime june = LocalDateTime.of(2026, 6, 15, 10, 0);
+        Purchase purchase = new Purchase();
+        purchase.setPurchaseNumber("CP-2026/1");
+        purchase.setSupplier(fabrica);
+        purchase.setPurchaseDate(june);
+        purchase.setTotalAmount(new BigDecimal("116.00"));
+        purchase.setTaxAmount(new BigDecimal("16.00"));
+        Purchase opening = openingPayable(51L, "SIF-2026/1", "FC 2025/77", "500.00");
+        opening.setPurchaseDate(june);
+        when(purchaseRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(purchase, opening));
+        InvoiceRepository invoices = mock(InvoiceRepository.class);
+        when(invoices.findByCompanyId(COMPANY_ID)).thenReturn(List.of());
+        FiscalSummaryService vat = new FiscalSummaryService(new InvoiceLookup(invoices),
+                new InvoiceNoteLookup(mock(CreditNoteRepository.class), mock(DebitNoteRepository.class)),
+                new SupplierLookup(mock(SupplierRepository.class), purchaseRepository,
+                        mock(PurchaseOrderRepository.class), mock(SupplierReturnRepository.class)));
+
+        IvaSummaryDTO summary = vat.computeMonth(COMPANY_ID, 2026, 6);
+
+        assertThat(summary.purchases()).extracting(IvaSummaryDTO.IvaLineDTO::documentNumber)
+                .containsExactly("CP-2026/1");
+        assertThat(summary.purchasesBase()).isEqualByComparingTo("100.00");
+        assertThat(summary.inputTax()).isEqualByComparingTo("16.00");
     }
 }

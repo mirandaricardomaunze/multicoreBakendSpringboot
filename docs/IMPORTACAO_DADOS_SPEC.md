@@ -184,8 +184,12 @@ Colunas: `nuit_fornecedor`\*, `numero_original`\*, `data`\*, `vencimento`\*, `va
     `descricao`. A chave fornecedor + `numero_original` é única na empresa (também na base). Fornecedor pelo NUIT na
     empresa activa; inexistente → `ERRO` ("importe primeiro os fornecedores"). Não publica evento de compra.
 - Não gera entrada de stock nem documento fiscal.
+  - Compra é só a de natureza `PURCHASE`: o apuramento de IVA (compras e IVA dedutível) exclui o `OPENING_BALANCE`.
 - Aparece na lista de **contas a pagar** (`/api/purchases/payables`) e paga-se com a mesma acção de
   pagamento a fornecedor, total ou parcialmente, com a mesma conta financeira.
+  - Parcial deixa o resto em dívida; pago na totalidade sai das contas a pagar; valor acima do saldo é recusado. O
+    movimento de tesouraria diz "Pagamento a fornecedor <nome> — Saldo Inicial Fornecedor SIF-aaaa/n
+    (<numero_original>)", não "Compra"; o evento de pagamento leva o `SIF-aaaa/n`, como numa compra.
 - Sem lançamento contabilístico automático.
 
 ## 6. Fora de âmbito

@@ -93,6 +93,23 @@ public class Purchase extends BaseEntity {
         return out.signum() > 0 ? out : BigDecimal.ZERO;
     }
 
+    /**
+     * É uma compra: tudo menos o "Saldo Inicial Fornecedor" importado, que não é documento fiscal e fica fora do IVA
+     * dedutível (IMPORTACAO_DADOS_SPEC §5.3). Continua a ser pago como uma compra.
+     */
+    public boolean isPurchase() {
+        return documentKind != PurchaseDocumentKind.OPENING_BALANCE;
+    }
+
+    /**
+     * Como o documento se identifica num pagamento: "Compra CP-…" ou, no Saldo Inicial Fornecedor, "Saldo Inicial
+     * Fornecedor SIF-… (nº original)" — o fornecedor reconhece-o pelo número do sistema antigo (SPEC §5.3).
+     */
+    public String paymentLabel() {
+        if (isPurchase()) return "Compra " + purchaseNumber;
+        return "Saldo Inicial Fornecedor " + purchaseNumber + (originalNumber == null ? "" : " (" + originalNumber + ")");
+    }
+
     @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseLine> lines = new ArrayList<>();
 

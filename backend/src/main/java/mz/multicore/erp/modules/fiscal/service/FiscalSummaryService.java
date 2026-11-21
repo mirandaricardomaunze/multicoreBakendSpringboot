@@ -96,7 +96,8 @@ public class FiscalSummaryService {
         BigDecimal inputTax = BigDecimal.ZERO;
 
         for (Purchase p : supplierLookup.listPurchasesForCompany(companyId)) {
-            if ("CANCELLED".equals(p.getStatus())) continue;
+            // An imported supplier opening balance is not a fiscal document and carries no deductible VAT.
+            if (!p.isPurchase() || "CANCELLED".equals(p.getStatus())) continue;
             LocalDateTime created = p.getPurchaseDate();
             if (created == null || created.isBefore(start) || created.isAfter(end)) continue;
 
