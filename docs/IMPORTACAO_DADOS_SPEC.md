@@ -153,6 +153,12 @@ Colunas: `nuit_cliente`\*, `numero_original`\*, `data`\*, `vencimento`\*, `valor
   Já importada → `JÁ EXISTE`.
 - `valor_em_divida` > 0; `vencimento` ≥ `data`; `data` não pode ser futura.
 - Numeração própria **SI** por empresa (`SI-2026/1`, …); `numero_original` fica guardado e visível.
+  - Guarda-se na tabela das facturas como natureza `OPENING_BALANCE` (as vendas são `SALE`), emitido e por
+    receber, sem linhas nem IVA, com a `data` da factura antiga como data do documento, o `vencimento` e a
+    `descricao`. Assim os recibos, o extracto e a antiguidade tratam-no como uma factura.
+  - A chave cliente + `numero_original` é única na empresa (também na base): a confirmação recusa uma dívida já
+    importada mesmo que a pré-visualização não a tenha visto. Compara-se o número tal como fica gravado (sem
+    espaços nas pontas). Cliente pelo NUIT ligado à empresa activa.
 - **Não é documento fiscal**: sem IVA, fora do SAF-T, das declarações de IVA e dos relatórios de
   vendas/receita.
 - Entra no **extracto de conta corrente** como débito na `data`, na **antiguidade de saldos** pelo

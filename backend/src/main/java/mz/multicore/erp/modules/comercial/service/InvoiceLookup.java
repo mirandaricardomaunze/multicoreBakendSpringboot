@@ -63,6 +63,12 @@ public class InvoiceLookup {
         return invoiceRepository.findByCompanyIdAndContingencyReference(companyId, contingencyReference);
     }
 
+    /** Já há um Saldo Inicial deste cliente com este número original na empresa (chave da importação, §5.2). */
+    public boolean existsOpeningReceivable(Long companyId, Long clientId, String originalNumber) {
+        return originalNumber != null
+                && invoiceRepository.existsByCompanyIdAndClientIdAndOriginalNumber(companyId, clientId, originalNumber);
+    }
+
     /** Pares {@code [productId, quantidade]} vendidos desde {@code since} nos estados indicados. */
     public List<Object[]> sumQuantitySoldByProductSince(Long companyId, Collection<InvoiceStatus> statuses,
                                                        LocalDateTime since) {

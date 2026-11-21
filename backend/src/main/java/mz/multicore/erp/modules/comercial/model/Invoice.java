@@ -17,8 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "invoices", uniqueConstraints = @UniqueConstraint(
-        name = "uk_invoices_company_number", columnNames = {"company_id", "invoice_number"}))
+@Table(name = "invoices", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_invoices_company_number", columnNames = {"company_id", "invoice_number"}),
+        @UniqueConstraint(name = "uk_invoices_company_client_original",
+                columnNames = {"company_id", "client_id", "original_number"})})
 @Getter
 @Setter
 public class Invoice extends BaseEntity {
@@ -90,6 +92,27 @@ public class Invoice extends BaseEntity {
     @Column(name = "sales_channel", nullable = false)
     private SalesChannel salesChannel = SalesChannel.MANUAL;
 
+    /** Venda ou "Saldo Inicial" importado (IMPORTACAO_DADOS_SPEC §5.2). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "document_kind", nullable = false, length = 20,
+            columnDefinition = "varchar(20) default 'SALE' not null")
+    private InvoiceDocumentKind documentKind = InvoiceDocumentKind.SALE;
+
+    /** Número da factura no sistema antigo; só no Saldo Inicial, onde com o cliente forma a chave da importação. */
+    @Column(name = "original_number", length = 60)
+    private String originalNumber;
+
+    /**
+     * Data do documento quando não é a do registo: no Saldo Inicial é a data da factura antiga. Nula nas vendas, que
+     * são datadas pela emissão ({@link #issueDate()}).
+     */
+    @Column(name = "document_date")
+    private LocalDate documentDate;
+
+    /** Descrição livre do Saldo Inicial, trazida do ficheiro importado. */
+    @Column(name = "description", length = 300)
+    private String description;
+
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InvoiceLine> lines = new ArrayList<>();
 
@@ -143,8 +166,9 @@ public class Invoice extends BaseEntity {
         if (status != null && status.isRealisedSale()) status = deriveStatusFromPayments();
     }
 
-    /** Data de emissão do documento (a data civil do {@code createdAt}). */
+    /** Data do documento: a {@code documentDate} quando existe (Saldo Inicial), senão a data civil do {@code createdAt}. */
     public LocalDate issueDate() {
+        if (documentDate != null) return documentDate;
         return getCreatedAt() == null ? null : getCreatedAt().toLocalDate();
     }
 

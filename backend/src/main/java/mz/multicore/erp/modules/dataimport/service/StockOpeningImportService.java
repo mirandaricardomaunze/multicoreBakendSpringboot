@@ -69,11 +69,7 @@ public class StockOpeningImportService {
         List<ImportPlan.Line<StockOpeningLine>> converted = table.rows().stream()
                 .map(row -> convert(context, row))
                 .toList();
-        Map<Integer, String> keyByLine = new HashMap<>();
-        converted.stream()
-                .filter(line -> line.item() != null)
-                .forEach(line -> keyByLine.put(line.row().lineNumber(), line.item().key()));
-        DuplicateKeys duplicates = DuplicateKeys.of(table.rows(), row -> keyByLine.get(row.number()));
+        DuplicateKeys duplicates = DuplicateKeys.ofLines(converted, StockOpeningLine::key);
         List<ImportPlan.Line<StockOpeningLine>> lines = converted.stream()
                 .map(line -> line.item() == null ? line : withDuplicateCheck(line, duplicates))
                 .toList();
