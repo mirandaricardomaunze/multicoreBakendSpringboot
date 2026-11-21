@@ -15,7 +15,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 /**
- * Ecrã "Importar dados" das Configurações (IMPORTACAO_DADOS_SPEC §3.4): escolher a entidade, descarregar
+ * Ecrã "Importar dados" das Configurações (IMPORTACAO_DADOS_SPEC §3.4): escolher a entidade (cadastros ou
+ * saldos iniciais: stock, dívidas de clientes e a fornecedores), descarregar
  * o modelo, escolher o ficheiro, ver a pré-visualização (linha, estado, coluna, mensagem) e confirmar.
  * Confirmar só fica activo com uma pré-visualização sem erros; o servidor volta a validar tudo.
  */
@@ -150,7 +151,7 @@ public class DataImportPanel extends JPanel {
         if (preview == null || preview.hasErrors()) return;
         ImportEntityOption entity = selectedEntity();
         if (!ModernMessageDialog.confirm(this, FeedbackType.WARNING, "Confirmar importação",
-                "Gravar as " + entity.lowerLabel() + " do ficheiro \"" + fileName + "\" na empresa activa?", "Importar")) {
+                "Gravar " + entity.objectPhrase() + " do ficheiro \"" + fileName + "\" na empresa activa?", "Importar")) {
             return;
         }
         String name = fileName;

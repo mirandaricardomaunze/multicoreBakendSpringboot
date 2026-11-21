@@ -3,7 +3,7 @@
 > Cenários que provam [IMPORTACAO_DADOS_SPEC.md](IMPORTACAO_DADOS_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01, IMP-AR-01 a IMP-AR-03, IMP-06 a IMP-11, IMP-UI-01 e IMP-UI-02 verdes — GOAL-006 concluído; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`; GOAL-007: IMP-ST-01 a IMP-ST-03, IMP-SI-01 a IMP-SI-05, IMP-SIF-01, IMP-SIF-02 e IMP-12 verdes)
+**Última actualização:** 2026-11-22 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01, IMP-AR-01 a IMP-AR-03, IMP-06 a IMP-11, IMP-UI-01 e IMP-UI-02 verdes — GOAL-006 concluído; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`; GOAL-007: IMP-ST-01 a IMP-ST-03, IMP-SI-01 a IMP-SI-05, IMP-SIF-01, IMP-SIF-02, IMP-12 e IMP-UI-03 verdes — GOAL-007 concluído)
 
 ## Leitura do ficheiro (comum)
 
@@ -50,4 +50,4 @@
 | IMP-SIF-01 | SIF: mesmas regras de chave, valores, datas e numeração `SIF-aaaa/n` (§5.3) | `OpeningPayableTest` ✅ · `MigrationPostgresDialectHarnessTest` ✅ |
 | IMP-SIF-02 | SIF aparece em contas a pagar e paga-se com a acção de pagamento a fornecedor, total ou parcial; fora do IVA dedutível (§5.3) | `OpeningPayableTest` ✅ · `VatSettlementHarnessTest` ✅ |
 | IMP-12 | Endpoints de stock inicial, SI e SIF (`opening-stock`, `opening-receivables`, `opening-payables`): modelo, pré-visualizar/confirmar, tudo ou nada, empresa activa, ADMIN, `DATA_IMPORT` (§3, §5) | `OpeningBalancesImportHttpIntegrationTest` ✅ · `ApiRolePolicyEndpointCoverageHarnessTest` ✅ |
-| IMP-UI-03 | Ecrã "Importar dados" oferece stock inicial, dívidas de clientes e dívidas a fornecedores (§3.4) | `DataImportPanelHarnessTest` |
+| IMP-UI-03 | Ecrã "Importar dados" oferece stock inicial, dívidas de clientes e dívidas a fornecedores (§3.4) | `DataImportPanelHarnessTest` ✅ |

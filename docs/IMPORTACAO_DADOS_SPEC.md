@@ -75,6 +75,9 @@ extractos bancários. Sem importação não há migração de clientes.
 - Um ecrã "Importar dados" em Configurações: escolher a entidade, descarregar o modelo, escolher o
   ficheiro, ver a pré-visualização numa tabela (linha, estado, coluna, mensagem) e confirmar.
 - O botão **Confirmar** só fica activo quando a pré-visualização não tem erros.
+- Entidades oferecidas, por esta ordem: Clientes, Fornecedores, Artigos (§4) e depois os saldos iniciais
+  Stock inicial, Dívidas de clientes e Dívidas a fornecedores (§5), que dependem dos cadastros. Mudar de
+  entidade descarta a pré-visualização.
 - Segue o padrão de tabelas, tipografia e diálogos do projecto; ícones por `UIHelper.icon`.
 
 ## 4. Cadastros (GOAL-006)

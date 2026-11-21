@@ -24,7 +24,7 @@ import static org.mockito.Mockito.mock;
 
 /**
  * Ecrã de importação e formulários que ela torna coerentes
- * (docs/IMPORTACAO_DADOS_HARNESS.md IMP-UI-01, IMP-UI-02).
+ * (docs/IMPORTACAO_DADOS_HARNESS.md IMP-UI-01, IMP-UI-02, IMP-UI-03).
  */
 class DataImportPanelHarnessTest {
 
@@ -101,7 +101,7 @@ class DataImportPanelHarnessTest {
             DataImportPanel panel = new DataImportPanel(mock(DataImportApiClient.class));
 
             JComboBox<ImportEntityOption> entity = panel.entityCombo();
-            assertEquals(3, entity.getItemCount());
+            assertTrue(entity.getItemCount() >= 3);
             assertEquals("Clientes", entity.getItemAt(0).toString());
             assertEquals("Fornecedores", entity.getItemAt(1).toString());
             assertEquals("Artigos", entity.getItemAt(2).toString());
@@ -161,8 +161,60 @@ class DataImportPanelHarnessTest {
         });
     }
 
+    // ── IMP-UI-03 ────────────────────────────────────────────────────────────────────────────
+
+    @Test
+    void impUi03_ecraOfereceSaldosIniciaisDepoisDosCadastros() throws Exception {
+        onEdt(() -> {
+            DataImportPanel panel = new DataImportPanel(mock(DataImportApiClient.class));
+
+            JComboBox<ImportEntityOption> entity = panel.entityCombo();
+            List<String> labels = new ArrayList<>();
+            for (int i = 0; i < entity.getItemCount(); i++) labels.add(entity.getItemAt(i).toString());
+            assertEquals(List.of("Clientes", "Fornecedores", "Artigos", "Stock inicial",
+                    "Dívidas de clientes", "Dívidas a fornecedores"), labels,
+                    "cadastros primeiro, depois os saldos iniciais que dependem deles");
+        });
+    }
+
+    @Test
+    void impUi03_saldosIniciaisUsamAsRotasEOsModelosDoServidor() {
+        assertEquals("opening-stock", ImportEntityOption.OPENING_STOCK.path());
+        assertEquals("opening-receivables", ImportEntityOption.OPENING_RECEIVABLES.path());
+        assertEquals("opening-payables", ImportEntityOption.OPENING_PAYABLES.path());
+        assertEquals("modelo-stock-inicial.csv", ImportEntityOption.OPENING_STOCK.templateFileName());
+        assertEquals("modelo-dividas-clientes.csv", ImportEntityOption.OPENING_RECEIVABLES.templateFileName());
+        assertEquals("modelo-dividas-fornecedores.csv", ImportEntityOption.OPENING_PAYABLES.templateFileName());
+        assertEquals("modelo-clientes.csv", ImportEntityOption.CLIENTS.templateFileName(),
+                "os modelos dos cadastros mantêm o nome");
+    }
+
+    @Test
+    void impUi03_mudarParaSaldoInicialDescartaPreVisualizacaoEOrientaOFicheiro() throws Exception {
+        onEdt(() -> {
+            DataImportPanel panel = new DataImportPanel(mock(DataImportApiClient.class));
+            panel.showPreview("clientes.csv", CSV, new ImportPreviewDTO(List.of(
+                    ImportRowDTO.of(2, ImportRowStatus.NOVO)), List.of()));
+            assertTrue(panel.confirmButton().isEnabled());
+
+            panel.entityCombo().setSelectedItem(ImportEntityOption.OPENING_RECEIVABLES);
+
+            assertFalse(panel.confirmButton().isEnabled(), "a pré-visualização de clientes não serve para dívidas");
+            assertEquals(0, panel.previewTableModel().getRowCount());
+            assertTrue(panel.summaryLabel().getText().contains("dívidas de clientes"), panel.summaryLabel().getText());
+        });
+    }
+
+    @Test
+    void impUi03_frasesDeConfirmacaoConcordamComCadaEntidade() {
+        assertEquals("os clientes", ImportEntityOption.CLIENTS.objectPhrase());
+        assertEquals("o stock inicial", ImportEntityOption.OPENING_STOCK.objectPhrase());
+        assertEquals("as dívidas de clientes", ImportEntityOption.OPENING_RECEIVABLES.objectPhrase());
+        assertEquals("as dívidas a fornecedores", ImportEntityOption.OPENING_PAYABLES.objectPhrase());
+    }
+
     /**
-     * Corre o corpo na EDT: os instaladores do UIHelper.styleTable reagem aos eventos do modelo na EDT,
+     * Corre o corpo na EDT:os instaladores do UIHelper.styleTable reagem aos eventos do modelo na EDT,
      * e mexer na tabela fora dela dá corridas intermitentes no RowSorter.
      */
     private static void onEdt(Runnable body) throws Exception {

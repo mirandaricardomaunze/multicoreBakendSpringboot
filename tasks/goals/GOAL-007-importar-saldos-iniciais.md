@@ -1,7 +1,7 @@
 ---
 id: GOAL-007
 title: "Importar stock inicial e dívidas em aberto de clientes e fornecedores"
-status: IN_PROGRESS
+status: DONE
 priority: HIGH
 spec: docs/IMPORTACAO_DADOS_SPEC.md
 harness: docs/IMPORTACAO_DADOS_HARNESS.md
@@ -33,7 +33,7 @@ Pré-requisito: GOAL-006 em `DONE` (usa `CsvImportReader`, `ImportValueParser` e
 - [x] IMP-SIF-01 — SIF: chave, valores, datas e numeração — `OpeningPayableTest`
 - [x] IMP-SIF-02 — SIF em contas a pagar e pagamento a fornecedor, total ou parcial — `OpeningPayableTest`
 - [x] IMP-12 — endpoints de stock inicial, SI e SIF: tudo ou nada, empresa activa, ADMIN — `OpeningBalancesImportHttpIntegrationTest`
-- [ ] IMP-UI-03 — ecrã "Importar dados" com stock inicial, dívidas de clientes e a fornecedores — `DataImportPanelHarnessTest`
+- [x] IMP-UI-03 — ecrã "Importar dados" com stock inicial, dívidas de clientes e a fornecedores — `DataImportPanelHarnessTest`
 
 ## Fora de âmbito
 
@@ -71,3 +71,4 @@ Pré-requisito: GOAL-006 em `DONE` (usa `CsvImportReader`, `ImportValueParser` e
 - 2026-11-21 · IMP-SIF-01 · documento "Saldo Inicial Fornecedor" em `purchases` com `document_kind = OPENING_BALANCE`, `original_number`, `due_date` e `description`, sem armazém (V139: `warehouse_id` passa a opcional, chave única empresa+fornecedor+nº original); série `SIF` em `DocumentSeries`; `OpeningPayableCommandService` (compras) cria o SIF por pagar (data da factura antiga como `purchase_date`), sem linhas, IVA, stock nem evento de compra, e recusa valor ≤ 0, data futura, vencimento anterior e chave já importada; `OpeningPayableImportService` + `OpeningPayableWriter` pelo NUIT do fornecedor; colunas e regras comuns ao SI extraídas para `OpeningDebtColumns`; backup tolera compra sem armazém; SPEC §5.3 clarificada; `OpeningPayableTest` verde 14/14, `OpeningReceivableTest` 18/18. Atenção para o IMP-SIF-02: o `FiscalSummaryService` ainda lista todas as `purchases` nas compras do IVA (o SIF entra com IVA 0 mas soma à base) — excluir o `OPENING_BALANCE` ("não gera documento fiscal", §5.3)
 - 2026-11-21 · IMP-SIF-02 · o SIF aparece nas contas a pagar (`SupplierPaymentService.findPayablesByCompany`, sai quando pago) e paga-se com o pagamento normal a fornecedor: parcial deixa o resto, segundo pagamento liquida, valor acima do saldo recusado sem mexer na tesouraria; o movimento de tesouraria diz "Saldo Inicial Fornecedor SIF-… (<nº original>)" via `Purchase.paymentLabel()` (compras mantêm "Compra …") e o evento leva o `SIF-…`; `Purchase.isPurchase()` tira o SIF do apuramento de IVA (`FiscalSummaryService`); SPEC §5.3 clarificada; `OpeningPayableTest` verde 20/20, `VatSettlementHarnessTest`, `OpeningReceivableFiscalExclusionTest`, `PurchaseServiceTest`, `PurchaseOrderPayableHarnessTest`, `ModuleDecouplingHarnessTest` e `CleanArchitectureHarnessTest` verdes
 - 2026-11-22 · IMP-12 · as rotas `/api/data-import/{opening-stock|opening-receivables|opening-payables}/template|preview|commit` (mesmo controller, só ADMIN pela regra existente de `/api/data-import`): `ImportEntity` ganha as três entidades (modelos `modelo-stock-inicial.csv`, `modelo-dividas-clientes.csv`, `modelo-dividas-fornecedores.csv` e nome PT-MZ para a auditoria) e o `DataImportService` delega no novo `OpeningBalanceImportService` (classificação + escritor de cada saldo), com a mesma transacção tudo-ou-nada e o mesmo `DATA_IMPORT`; SPEC §5 clarificada com as rotas; `OpeningBalancesImportHttpIntegrationTest` verde 8/8 (modelos, pré-visualizar não grava, confirmar, reimportar, erro não grava, empresa activa, auditoria, 403 para gestor/vendedor), `DataImportHttpIntegrationTest` 16/16, `ApiRolePolicyEndpointCoverageHarnessTest`, `ModuleDecouplingHarnessTest`, `DataImportModuleIsolationHarnessTest`, `CleanArchitectureHarnessTest` e testes unitários dos saldos verdes
+- 2026-11-22 · IMP-UI-03 · o ecrã "Importar dados" oferece, depois dos cadastros, "Stock inicial", "Dívidas de clientes" e "Dívidas a fornecedores" (`ImportEntityOption` com as rotas `opening-*` e os modelos `modelo-stock-inicial.csv`, `modelo-dividas-clientes.csv`, `modelo-dividas-fornecedores.csv` iguais aos do servidor); mudar de entidade descarta a pré-visualização; a confirmação usa a frase com o artigo certo ("Gravar o stock inicial…", `objectPhrase`); SPEC §3.4 clarificada; `DataImportPanelHarnessTest` verde 12/12, `DesktopThinContextTest` verde → GOAL-007 DONE
