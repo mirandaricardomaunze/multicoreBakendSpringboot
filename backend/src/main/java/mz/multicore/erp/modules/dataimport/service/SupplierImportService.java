@@ -30,8 +30,8 @@ public class SupplierImportService {
     static final String ADDRESS = "morada";
     static final String CONTACT = "contacto";
 
-    private static final List<String> REQUIRED_COLUMNS = List.of(NAME, TAX_ID);
-    private static final List<String> OPTIONAL_COLUMNS = List.of(EMAIL, PHONE, ADDRESS, CONTACT);
+    static final List<String> REQUIRED_COLUMNS = List.of(NAME, TAX_ID);
+    static final List<String> OPTIONAL_COLUMNS = List.of(EMAIL, PHONE, ADDRESS, CONTACT);
     private static final Map<String, String> COLUMN_BY_PROPERTY = columnByProperty();
 
     private final CsvImportReader reader = new CsvImportReader();

@@ -23,7 +23,7 @@ public final class ApiRolePolicy {
     /** Raízes que têm uma decisão deliberada nesta política, mesmo quando a decisão fina é por método. */
     private static final Set<String> EXPLICIT_AREAS = Set.of(
             "/api/auth", "/api/version", "/api/platform", "/api/monitoring",
-            "/api/backup", "/api/users", "/api/documents",
+            "/api/backup", "/api/users", "/api/data-import", "/api/documents",
             "/api/license", "/api/subscription", "/api/dashboard", "/api/crm",
             "/api/support/tickets", "/api/promotions", "/api/comercial", "/api/pos",
             "/api/product-categories", "/api/inventory", "/api/print",
@@ -52,7 +52,7 @@ public final class ApiRolePolicy {
         if (uri == null || method == null) {
             return false;
         }
-        if (matches(uri, "/api/backup") || (matches(uri, "/api/users")
+        if (matches(uri, "/api/backup") || matches(uri, "/api/data-import") || (matches(uri, "/api/users")
                 && !"/api/users/verify-pin".equals(uri))) {
             return false;
         }

@@ -30,8 +30,8 @@ public class ClientImportService {
     static final String PAYMENT_TERMS_DAYS = "prazo_pagamento_dias";
     static final String CREDIT_LIMIT = "limite_credito";
 
-    private static final List<String> REQUIRED_COLUMNS = List.of(NAME, TAX_ID);
-    private static final List<String> OPTIONAL_COLUMNS = List.of(EMAIL, ADDRESS, PAYMENT_TERMS_DAYS, CREDIT_LIMIT);
+    static final List<String> REQUIRED_COLUMNS = List.of(NAME, TAX_ID);
+    static final List<String> OPTIONAL_COLUMNS = List.of(EMAIL, ADDRESS, PAYMENT_TERMS_DAYS, CREDIT_LIMIT);
     private static final Map<String, String> COLUMN_BY_PROPERTY = columnByProperty();
 
     private final CsvImportReader reader = new CsvImportReader();

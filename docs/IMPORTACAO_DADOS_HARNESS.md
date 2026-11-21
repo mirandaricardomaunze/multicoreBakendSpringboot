@@ -3,7 +3,7 @@
 > Cenários que provam [IMPORTACAO_DADOS_SPEC.md](IMPORTACAO_DADOS_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01 e IMP-AR-01 a IMP-AR-03 verdes; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`)
+**Última actualização:** 2026-11-21 (IMP-01 a IMP-05, IMP-CL-01 a IMP-CL-03, IMP-FO-01, IMP-AR-01 a IMP-AR-03 e IMP-09 verdes; `PostgresSchemaParityHarnessTest` só corre via `scripts/verify-backup-restore.ps1`)
 
 ## Leitura do ficheiro (comum)
 
@@ -29,7 +29,7 @@
 | IMP-06 | Pré-visualizar não grava nada; confirmar revalida, recusa tudo com qualquer erro e grava o resto numa só transacção (§3.1) | `DataImportHttpIntegrationTest` |
 | IMP-07 | Tudo na empresa activa; outra empresa não vê nem é alterada (§3.3) | `DataImportHttpIntegrationTest` |
 | IMP-08 | Cada confirmação gera um `DATA_IMPORT` na auditoria com entidade, ficheiro e totais (§3.1) | `DataImportHttpIntegrationTest` |
-| IMP-09 | Modelo CSV descarregável por entidade: UTF-8 com BOM, `;`, só cabeçalho (§3.1) | `DataImportHttpIntegrationTest` |
+| IMP-09 | Modelo CSV descarregável por entidade (`GET /api/data-import/{clients\|suppliers\|products}/template`): UTF-8 com BOM, `;`, só cabeçalho (§3.1) | `DataImportHttpIntegrationTest` ✅ |
 | IMP-10 | Rotas de importação só para ADMIN e classificadas na `ApiRolePolicy` (§3.3) | `ApiRolePolicyEndpointCoverageHarnessTest` · `DataImportHttpIntegrationTest` |
 | IMP-11 | O módulo de importação escreve só pelos serviços donos, sem Repository alheio (§3.3) | `ModuleDecouplingHarnessTest` |
 | IMP-UI-01 | Ecrã "Importar dados": entidade, modelo, ficheiro, pré-visualização em tabela; Confirmar só sem erros (§3.4) | `DataImportPanelHarnessTest` |

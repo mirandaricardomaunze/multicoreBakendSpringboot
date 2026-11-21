@@ -43,8 +43,8 @@ public class ProductImportService {
     static final String UNIT = "unidade";
     static final String DESCRIPTION = "descricao";
 
-    private static final List<String> REQUIRED_COLUMNS = List.of(SKU, NAME, SALE_PRICE, VAT, CATEGORY);
-    private static final List<String> OPTIONAL_COLUMNS =
+    static final List<String> REQUIRED_COLUMNS = List.of(SKU, NAME, SALE_PRICE, VAT, CATEGORY);
+    static final List<String> OPTIONAL_COLUMNS =
             List.of(BARCODE, REFERENCE, WHOLESALE_PRICE, UNIT, DESCRIPTION);
     private static final Map<String, String> COLUMN_BY_PROPERTY = columnByProperty();
     private static final String REQUIRED_VALUE = "valor obrigatório em falta.";
