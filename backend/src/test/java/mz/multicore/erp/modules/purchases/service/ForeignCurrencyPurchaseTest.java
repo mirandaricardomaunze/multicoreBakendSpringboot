@@ -24,8 +24,12 @@ import mz.multicore.erp.modules.purchases.dto.CreatePurchaseLineRequest;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderLineRequest;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderRequest;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseRequest;
+import mz.multicore.erp.modules.purchases.dto.CurrencyBalanceDTO;
+import mz.multicore.erp.modules.purchases.dto.PayableDTO;
 import mz.multicore.erp.modules.purchases.dto.PurchaseDTO;
 import mz.multicore.erp.modules.purchases.dto.PurchaseOrderDTO;
+import mz.multicore.erp.modules.purchases.dto.SupplierStatementDTO;
+import mz.multicore.erp.modules.purchases.dto.SupplierStatementLineDTO;
 import mz.multicore.erp.modules.purchases.model.DocumentCurrency;
 import mz.multicore.erp.modules.purchases.model.Purchase;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrder;
@@ -73,7 +77,8 @@ import static org.mockito.Mockito.when;
  * Harness FX-05 (docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md §3.3): encomenda e compra guardam moeda e
  * câmbio (fotografia); na moeda base o câmbio é 1; as compras antigas migram com câmbio 1 (FX-05). O documento
  * guarda também o total em moeda base (total × câmbio, 2 casas HALF_UP) e o stock e o custo médio entram ao
- * preço × câmbio (FX-06).
+ * preço × câmbio (FX-06). Contas a pagar e extracto mostram a moeda, a dívida na moeda do documento e o
+ * equivalente em moeda base, baixado ao câmbio do documento e sem resíduos na liquidação (FX-08).
  */
 class ForeignCurrencyPurchaseTest {
 
@@ -425,6 +430,75 @@ class ForeignCurrencyPurchaseTest {
                 }
             }
         }
+    }
+
+    @Test
+    void fx08_contasAPagarMostramMoedaDividaNaMoedaEEquivalenteEmMoedaBase() {
+        Purchase usd = foreignPurchase(1L, "CP-2026/1", "USD", "63.9000", "1000.00", "400.00");
+        when(purchaseRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(usd));
+
+        List<PayableDTO> payables = new SupplierPaymentService(purchaseRepository, mock(FinanceService.class),
+                mock(ApplicationEventPublisher.class), mock(AuditLogService.class), purchases)
+                .findPayablesByCompany(COMPANY_ID);
+
+        assertThat(payables).hasSize(1);
+        PayableDTO payable = payables.get(0);
+        assertEquals("USD", payable.currency());
+        assertEquals(new BigDecimal("63.9000"), payable.exchangeRate());
+        assertEquals(new BigDecimal("600.00"), payable.outstanding(), "dívida na moeda do documento");
+        assertEquals(new BigDecimal("63900.00"), payable.baseTotalAmount());
+        assertEquals(new BigDecimal("38340.00"), payable.baseOutstanding(), "600 USD × 63,90 em moeda base");
+    }
+
+    @Test
+    void fx08_dividaEmMoedaBaseBaixaAoCambioDoDocumento_eLiquidadaNaoDeixaResiduos() {
+        // 99,99 USD × 63,9055 = 6389,91 MT; três pagamentos de 33,33 USD
+        Purchase partial = foreignPurchase(1L, "CP-2026/2", "USD", "63.9055", "99.99", "33.33");
+        assertEquals(new BigDecimal("2129.97"), partial.getBaseAmountPaid());
+        assertEquals(new BigDecimal("4259.94"), partial.getBaseOutstanding());
+
+        Purchase settled = foreignPurchase(2L, "CP-2026/3", "USD", "63.9055", "99.99", "99.99");
+        assertEquals(new BigDecimal("6389.91"), settled.getBaseAmountPaid(), "baixa exactamente o saldo em MT");
+        assertEquals(0, settled.getBaseOutstanding().signum());
+    }
+
+    @Test
+    void fx08_extractoDoFornecedorTemSaldoEmMoedaBaseEDividaPorMoeda() {
+        Purchase mzn = foreignPurchase(1L, "CP-2026/4", "MZN", "1.0000", "500.00", "0.00");
+        Purchase usd = foreignPurchase(2L, "CP-2026/5", "USD", "63.9000", "1000.00", "400.00");
+        LocalDate today = LocalDate.now();
+
+        SupplierStatementDTO statement = new SupplierStatementMovementBuilder().buildStatement(
+                usd.getSupplier(), today.minusDays(1), today, List.of(mzn, usd));
+
+        SupplierStatementLineDTO usdInvoice = statement.lines().stream()
+                .filter(l -> "V/FT".equals(l.documentType()) && "CP-2026/5".equals(l.documentNumber()))
+                .findFirst().orElseThrow();
+        assertEquals("USD", usdInvoice.currency());
+        assertEquals(new BigDecimal("63.9000"), usdInvoice.exchangeRate());
+        assertEquals(new BigDecimal("1000.00"), usdInvoice.documentAmount());
+        assertEquals(new BigDecimal("63900.00"), usdInvoice.credit(), "o extracto soma em moeda base");
+        SupplierStatementLineDTO usdPayment = statement.lines().stream()
+                .filter(l -> "PG".equals(l.documentType())).findFirst().orElseThrow();
+        assertEquals(new BigDecimal("400.00"), usdPayment.documentAmount());
+        assertEquals(new BigDecimal("25560.00"), usdPayment.debit());
+        assertEquals(new BigDecimal("38840.00"), statement.closingBalance());
+
+        assertThat(statement.outstandingByCurrency()).containsExactly(
+                new CurrencyBalanceDTO("MZN", new BigDecimal("500.00"), new BigDecimal("500.00")),
+                new CurrencyBalanceDTO("USD", new BigDecimal("600.00"), new BigDecimal("38340.00")));
+    }
+
+    private Purchase foreignPurchase(Long id, String number, String currency, String rate, String total, String paid) {
+        Purchase purchase = new Purchase();
+        purchase.setId(id);
+        purchase.setPurchaseNumber(number);
+        purchase.setCompany(company());
+        purchase.setSupplier(supplierRepository.findById(7L).orElseThrow());
+        purchase.applyDocumentCurrency(new DocumentCurrency(currency, new BigDecimal(rate)));
+        purchase.applyTotal(new BigDecimal(total));
+        purchase.setAmountPaid(new BigDecimal(paid));
+        return purchase;
     }
 
     private Purchase savedPurchase() {

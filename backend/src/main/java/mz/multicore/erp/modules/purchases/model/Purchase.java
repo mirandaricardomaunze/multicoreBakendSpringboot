@@ -93,6 +93,28 @@ public class Purchase extends CurrencyDocument {
     }
 
     /**
+     * Pago em moeda base, ao câmbio do documento. Liquidada a dívida, é exactamente o total em moeda base menos o
+     * devolvido, sem resíduos de cêntimos (SPEC §3.4).
+     */
+    @Transient
+    public BigDecimal getBaseAmountPaid() {
+        if (getOutstanding().signum() == 0) return baseTotal().subtract(toBaseAmount(orZero(returnedAmount)));
+        return toBaseAmount(orZero(amountPaid));
+    }
+
+    /** Dívida em moeda base, ao câmbio do documento: a que acompanha {@link #getOutstanding()} (SPEC §3.3). */
+    @Transient
+    public BigDecimal getBaseOutstanding() {
+        if (getOutstanding().signum() == 0) return toBaseAmount(BigDecimal.ZERO);
+        BigDecimal out = baseTotal().subtract(getBaseAmountPaid()).subtract(toBaseAmount(orZero(returnedAmount)));
+        return out.signum() > 0 ? out : toBaseAmount(BigDecimal.ZERO);
+    }
+
+    private static BigDecimal orZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    /**
      * É uma compra: tudo menos o "Saldo Inicial Fornecedor" importado, que não é documento fiscal e fica fora do IVA
      * dedutível (IMPORTACAO_DADOS_SPEC §5.3). Continua a ser pago como uma compra.
      */

@@ -64,6 +64,15 @@ public abstract class CurrencyDocument extends BaseEntity {
         this.baseTotalAmount = toBaseAmount(getTotalAmount());
     }
 
+    /**
+     * Total em moeda base para contas a pagar e extracto. Um documento gravado antes de a coluna existir (H2 de dev
+     * sem Flyway, onde ficou 0) converte o total ao seu câmbio.
+     */
+    public BigDecimal baseTotal() {
+        if (baseTotalAmount != null && baseTotalAmount.signum() != 0) return baseTotalAmount;
+        return toBaseAmount(getTotalAmount() == null ? BigDecimal.ZERO : getTotalAmount());
+    }
+
     public abstract BigDecimal getTotalAmount();
 
     public abstract void setTotalAmount(BigDecimal totalAmount);

@@ -17,11 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Supplier payables and their payment through treasury. A payment needs a treasury account and a positive amount
@@ -53,28 +49,16 @@ public class SupplierPaymentService {
         return purchaseRepository.findByCompanyId(companyId).stream()
                 .filter(p -> !"CANCELLED".equals(p.getStatus()))
                 .filter(p -> p.getOutstanding().signum() > 0)
-                .map(p -> {
-                    Set<String> bus = p.getLines() != null ? p.getLines().stream()
-                            .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getName() : null)
-                            .filter(Objects::nonNull)
-                            .collect(Collectors.toSet()) : Collections.emptySet();
-                    String buName = bus.isEmpty() ? null : (bus.size() == 1 ? bus.iterator().next() : "Misto");
-                    Long buId = bus.size() == 1 && p.getLines() != null ? p.getLines().stream()
-                            .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getId() : null)
-                            .filter(Objects::nonNull).findFirst().orElse(null) : null;
-                    return new PayableDTO(
-                            p.getId(),
-                            p.getPurchaseNumber(),
-                            p.getSupplier().getId(),
-                            p.getSupplier().getName(),
-                            p.getTotalAmount(),
-                            p.getAmountPaid(),
-                            p.getOutstanding(),
-                            p.getPurchaseDate(),
-                            buId,
-                            buName);
-                })
+                .map(SupplierPaymentService::toPayable)
                 .toList();
+    }
+
+    /** Dívida na moeda do documento e o equivalente em moeda base, ao câmbio do documento (SPEC §3.3). */
+    private static PayableDTO toPayable(Purchase p) {
+        PurchaseBusinessUnit unit = PurchaseBusinessUnit.of(p);
+        return new PayableDTO(p.getId(), p.getPurchaseNumber(), p.getSupplier().getId(), p.getSupplier().getName(),
+                p.getTotalAmount(), p.getAmountPaid(), p.getOutstanding(), p.getPurchaseDate(),
+                unit.id(), unit.name(), p.getCurrency(), p.getExchangeRate(), p.baseTotal(), p.getBaseOutstanding());
     }
 
     @Transactional
