@@ -67,7 +67,8 @@ public class PurchaseService {
                 new SupplierPaymentService(purchaseRepository, financeService, eventPublisher, auditLogService,
                         createDirectPurchaseService(supplierRepository, purchaseRepository, productLookup,
                                 warehouseLookup, companyLookup, inventoryService, financeService,
-                                documentNumberService, eventPublisher)));
+                                documentNumberService, eventPublisher),
+                        PurchaseCurrencyResolver.baseCurrencyOnly()));
     }
 
     private static DirectPurchaseService createDirectPurchaseService(

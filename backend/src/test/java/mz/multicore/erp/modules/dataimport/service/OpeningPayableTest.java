@@ -20,6 +20,7 @@ import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
 import mz.multicore.erp.modules.purchases.repository.SupplierReturnRepository;
 import mz.multicore.erp.modules.purchases.service.DirectPurchaseQueryService;
 import mz.multicore.erp.modules.purchases.service.DirectPurchaseService;
+import mz.multicore.erp.modules.purchases.service.PurchaseCurrencyResolver;
 import mz.multicore.erp.modules.purchases.service.SupplierPaymentService;
 import org.springframework.context.ApplicationEventPublisher;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
@@ -338,7 +339,8 @@ class OpeningPayableTest {
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private final SupplierPaymentService paymentService = new SupplierPaymentService(purchaseRepository,
             financeService, eventPublisher, mock(AuditLogService.class),
-            new DirectPurchaseService(null, new DirectPurchaseQueryService(purchaseRepository)));
+            new DirectPurchaseService(null, new DirectPurchaseQueryService(purchaseRepository)),
+            PurchaseCurrencyResolver.baseCurrencyOnly());
 
     private Purchase openingPayable(long id, String number, String originalNumber, String amount) {
         Purchase document = new Purchase();

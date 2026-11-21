@@ -438,7 +438,7 @@ class ForeignCurrencyPurchaseTest {
         when(purchaseRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(usd));
 
         List<PayableDTO> payables = new SupplierPaymentService(purchaseRepository, mock(FinanceService.class),
-                mock(ApplicationEventPublisher.class), mock(AuditLogService.class), purchases)
+                mock(ApplicationEventPublisher.class), mock(AuditLogService.class), purchases, resolver)
                 .findPayablesByCompany(COMPANY_ID);
 
         assertThat(payables).hasSize(1);

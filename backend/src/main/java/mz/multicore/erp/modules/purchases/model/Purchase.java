@@ -110,6 +110,18 @@ public class Purchase extends CurrencyDocument {
         return out.signum() > 0 ? out : toBaseAmount(BigDecimal.ZERO);
     }
 
+    /**
+     * Abate um pagamento na moeda do documento e devolve quanto a dívida baixou em moeda base, ao câmbio do
+     * documento: a diferença do saldo em moeda base antes e depois. Nos parciais é o valor × câmbio do documento
+     * sobre o pago acumulado (o mesmo saldo que contas a pagar mostram); o pagamento que liquida baixa exactamente o
+     * que restava, sem resíduos de cêntimos (SPEC §3.4).
+     */
+    public BigDecimal applyPayment(BigDecimal documentAmount) {
+        BigDecimal before = getBaseOutstanding();
+        amountPaid = orZero(amountPaid).add(documentAmount);
+        return before.subtract(getBaseOutstanding());
+    }
+
     private static BigDecimal orZero(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }

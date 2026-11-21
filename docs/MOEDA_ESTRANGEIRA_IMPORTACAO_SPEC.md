@@ -65,7 +65,8 @@ o operador converte à mão, o custo médio fica abaixo do real e a margem apare
 - A conta de tesouraria é sempre na **moeda base**: sai `valor × câmbio do pagamento`.
 - A dívida ao fornecedor baixa `valor × câmbio do documento` (proporcional nos pagamentos parciais).
   O pagamento que **liquida** a dívida baixa exactamente o saldo em moeda base que restava (sem
-  resíduos de cêntimos).
+  resíduos de cêntimos). Nos parciais, a baixa é a diferença do saldo em moeda base antes e depois
+  (pago acumulado × câmbio do documento, 2 casas HALF_UP), o mesmo saldo que contas a pagar mostram.
 - Lançamento automático equilibrado:
   - Débito **2201** Fornecedores — valor ao câmbio do documento;
   - Crédito **1101/1201** (conta usada) — valor ao câmbio do pagamento;
