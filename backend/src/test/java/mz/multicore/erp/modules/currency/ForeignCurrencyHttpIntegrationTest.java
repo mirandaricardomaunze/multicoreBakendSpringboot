@@ -75,6 +75,27 @@ class ForeignCurrencyHttpIntegrationTest {
         assertThat(none.get("manualRateRequired").asBoolean()).isTrue();
     }
 
+    /** FX-UI-03: the settings screen reads the base currency and whether it is still editable (SPEC §3.1, §4.5). */
+    @Test
+    void fxUi03_moedaBaseConsultadaPorQuemCompraEAlteradaSoPorAdmin() throws Exception {
+        Session manager = login("joao", null);
+        Session admin = login("ana", manager.companyId());
+
+        JsonNode base = getJson("/api/exchange-rates/base-currency", manager);
+        assertThat(base.get("currency").asText()).isEqualTo("MZN");
+        assertThat(base.get("editable").asBoolean()).as("a empresa demo já tem movimentos").isFalse();
+
+        send(put("/api/exchange-rates/base-currency"), manager, "{\"currency\":\"MZN\"}")
+                .andExpect(status().isForbidden());
+        send(put("/api/exchange-rates/base-currency"), admin, "{\"currency\":\"USD\"}")
+                .andExpect(status().isBadRequest());
+        send(put("/api/exchange-rates/base-currency"), admin, "{\"currency\":\"XYZ\"}")
+                .andExpect(status().isBadRequest());
+        JsonNode same = json(send(put("/api/exchange-rates/base-currency"), admin, "{\"currency\":\"MZN\"}"));
+        assertThat(same.get("currency").asText()).isEqualTo("MZN");
+        assertThat(same.get("editable").asBoolean()).isFalse();
+    }
+
     @Test
     void fx12_compraEmUsdComCambioDaTabelaEPagamentoComCambioDoPagamento() throws Exception {
         Session manager = login("joao", null);

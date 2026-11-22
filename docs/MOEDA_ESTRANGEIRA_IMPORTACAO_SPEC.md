@@ -146,7 +146,10 @@ por documento:
 - Pagamento a fornecedor: campo de câmbio quando a compra é estrangeira, com a diferença cambial
   mostrada antes de confirmar.
 - Configurações: tabela de câmbios (data, moeda, câmbio) e moeda base da empresa (só leitura depois
-  de haver movimentos).
+  de haver movimentos). Separador "Câmbios e Moeda Base": novo câmbio (moeda estrangeira, data, câmbio)
+  e corrigir câmbio (só o valor) por diálogo; a moeda base vem de `GET /api/exchange-rates/base-currency`
+  (`currency`, `editable`) e muda por `PUT` no mesmo caminho. Mesma regra de perfis do §3.2: consultar
+  MANAGER, criar/corrigir câmbios e mudar a moeda base só ADMIN (o ecrã desactiva os botões aos outros).
 - Compras › Custos de Importação: escolher compras, linhas de custo, método, pré-visualização por
   artigo e confirmação. Padrão de tabelas, tipografia e diálogos do projecto; ícones por `UIHelper.icon`.
 

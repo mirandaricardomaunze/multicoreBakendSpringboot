@@ -34,6 +34,8 @@ public class ConfigPanel extends JPanel {
     private final ConfigSubscriptionPanel subscriptionPanel;
     /** Activity profile panel (SA-C01); {@code null} in legacy constructors. */
     private final mz.multicore.erp.gui.sector.ActivityProfilePanel activityPanel;
+    /** Exchange rates and base currency (FX-UI-03); {@code null} in legacy constructors. */
+    private final mz.multicore.erp.gui.currency.ExchangeRatesPanel exchangeRatesPanel;
     private UserManagementPanel usersPanel;
 
     // TAB 1: AUDIT LOGS
@@ -70,6 +72,20 @@ public class ConfigPanel extends JPanel {
                        SystemMonitoringApiClient monitoringApiClient,
                        mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
                        DataImportApiClient dataImportApiClient) {
+        this(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient,
+                mySubscriptionApiClient, monitoringApiClient, activityApiClient, dataImportApiClient, null);
+    }
+
+    /** With the exchange-rate table and base currency (MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC §4.5): appended at the end. */
+    public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
+                       DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
+                       MySubscriptionApiClient mySubscriptionApiClient,
+                       SystemMonitoringApiClient monitoringApiClient,
+                       mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
+                       DataImportApiClient dataImportApiClient,
+                       ExchangeRateApiClient exchangeRateApiClient) {
+        this.exchangeRatesPanel = exchangeRateApiClient == null ? null
+                : new mz.multicore.erp.gui.currency.ExchangeRatesPanel(exchangeRateApiClient);
         this.activityPanel = activityApiClient == null ? null
                 : new mz.multicore.erp.gui.sector.ActivityProfilePanel(activityApiClient);
         this.userApiClient = userApiClient;
@@ -110,6 +126,10 @@ public class ConfigPanel extends JPanel {
         if (dataImportApiClient != null) {
             tabbedPane.addTab("Importar dados", UIHelper.icon("fas-file-import", 16, UIHelper.ACCENT_BLUE),
                     new mz.multicore.erp.gui.dataimport.DataImportPanel(dataImportApiClient));
+        }
+        if (exchangeRatesPanel != null) {
+            tabbedPane.addTab("Câmbios e Moeda Base", UIHelper.icon("fas-exchange-alt", 16, UIHelper.ACCENT_CYAN),
+                    exchangeRatesPanel);
         }
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -206,6 +226,7 @@ public class ConfigPanel extends JPanel {
         if (supportPanel != null) supportPanel.refresh();
         if (subscriptionPanel != null) subscriptionPanel.refresh();
         if (activityPanel != null) activityPanel.refresh();
+        if (exchangeRatesPanel != null) exchangeRatesPanel.refresh();
     }
 
     void loadAuditLogs() {
