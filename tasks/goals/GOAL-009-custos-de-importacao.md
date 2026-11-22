@@ -1,7 +1,7 @@
 ---
 id: GOAL-009
 title: "Frete, alfândega e despachante repartidos no custo dos artigos importados"
-status: TODO
+status: IN_PROGRESS
 priority: HIGH
 spec: docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md
 harness: docs/MOEDA_ESTRANGEIRA_IMPORTACAO_HARNESS.md
@@ -21,7 +21,7 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 
 ## Critérios de aceitação
 
-- [ ] LC-03 — o que entra no custo e o que vai a IVA dedutível — `LandedCostAllocationTest`
+- [x] LC-03 — o que entra no custo e o que vai a IVA dedutível — `LandedCostAllocationTest`
 - [ ] LC-04 — repartição por valor, peso ou quantidade — `LandedCostAllocationTest`
 - [ ] LC-05 — arredondamento com resíduo na maior quota — `LandedCostAllocationTest`
 - [ ] LC-01 — documento CI numerado e ligado a compras recebidas — `LandedCostDocumentTest`
@@ -42,3 +42,4 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-22 · LC-03 · `LandedCostType` (contracts, com `capitalizable()`), `LandedCostCharge` (custo sem IVA em moeda base vs IVA dedutível; IVA aduaneiro todo a dedutível) e `LandedCostCalculator.totals`; `LandedCostAllocationTest` 5/5 verde.
