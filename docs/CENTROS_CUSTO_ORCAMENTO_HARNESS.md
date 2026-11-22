@@ -3,13 +3,13 @@
 > Cenários que provam [CENTROS_CUSTO_ORCAMENTO_SPEC.md](CENTROS_CUSTO_ORCAMENTO_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-19
+**Última actualização:** 2026-11-22
 
 ## Centros de custo (GOAL-010)
 
 | ID | Garantia | Teste |
 |---|---|---|
-| CC-01 | Centro por empresa com código único, tipo WAREHOUSE/MANUAL; não se apaga com lançamentos; inactivo recusa lançamentos (§3.1) | `CostCenterRulesTest` |
+| CC-01 | Centro por empresa com código único, tipo WAREHOUSE/MANUAL; não se apaga com lançamentos; inactivo ou de outra empresa recusa lançamentos (§3.1) | `CostCenterRulesTest` (`cc01_*`) · `MigrationPostgresDialectHarnessTest` |
 | CC-02 | Criar armazém cria o seu centro; armazéns existentes recebem centro; centro de armazém acompanha nome e estado (§3.1) | `CostCenterWarehouseSyncTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | CC-03 | Cada empresa tem `ADM — Administração` como centro por omissão, alterável para outro centro activo (§3.1) | `CostCenterRulesTest` |
 | CC-04 | Linha de classe 6/7 exige centro; classe 1–5 recusa centro; centro de outra empresa recusado (§3.2) | `JournalLineCostCenterTest` |

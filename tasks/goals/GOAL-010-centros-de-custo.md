@@ -1,7 +1,7 @@
 ---
 id: GOAL-010
 title: "Resultado por loja, armazém e departamento com centros de custo"
-status: TODO
+status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md
 harness: docs/CENTROS_CUSTO_ORCAMENTO_HARNESS.md
@@ -17,7 +17,7 @@ cada centro. Regras em `docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md` §2–§3.
 
 ## Critérios de aceitação
 
-- [ ] CC-01 — cadastro de centros, código único, inactivo e apagar com lançamentos — `CostCenterRulesTest`
+- [x] CC-01 — cadastro de centros, código único, inactivo e apagar com lançamentos — `CostCenterRulesTest`
 - [ ] CC-03 — centro `ADM` por omissão por empresa, alterável — `CostCenterRulesTest`
 - [ ] CC-02 — centro automático por armazém, existentes migrados, acompanha o armazém — `CostCenterWarehouseSyncTest`
 - [ ] CC-04 — obrigatório em 6/7, proibido em 1–5, mesma empresa — `JournalLineCostCenterTest`
@@ -41,3 +41,4 @@ cada centro. Regras em `docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md` §2–§3.
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-22 · CC-01 · cadastro de centros de custo por empresa (código único, tipo WAREHOUSE/MANUAL, renomear/desactivar/apagar só manuais, não apaga com lançamentos, inactivo ou de outra empresa recusa lançamentos) em `CostCenterService`, migração V148 com `journal_lines.cost_center_id`; CostCenterRulesTest verde 14/14.

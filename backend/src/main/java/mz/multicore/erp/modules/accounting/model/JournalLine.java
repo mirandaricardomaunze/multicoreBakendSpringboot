@@ -39,6 +39,11 @@ public class JournalLine {
     @Column(name = "description", length = 300)
     private String description;
 
+    /** Centro de custo da partida (classes 6 e 7; docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §3.2). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cost_center_id")
+    private CostCenter costCenter;
+
     public BigDecimal safeDebit() {
         return debit == null ? BigDecimal.ZERO : debit;
     }
