@@ -20,7 +20,7 @@ cada centro. Regras em `docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md` §2–§3.
 - [x] CC-01 — cadastro de centros, código único, inactivo e apagar com lançamentos — `CostCenterRulesTest`
 - [x] CC-03 — centro `ADM` por omissão por empresa, alterável — `CostCenterRulesTest`
 - [x] CC-02 — centro automático por armazém, existentes migrados, acompanha o armazém — `CostCenterWarehouseSyncTest`
-- [ ] CC-04 — obrigatório em 6/7, proibido em 1–5, mesma empresa — `JournalLineCostCenterTest`
+- [x] CC-04 — obrigatório em 6/7, proibido em 1–5, mesma empresa — `JournalLineCostCenterTest`
 - [ ] CC-06 — manual e despesa com centro ou por omissão; linhas antigas migradas — `JournalLineCostCenterTest`
 - [ ] CC-05 — automáticos herdam do armazém ou usam o por omissão — `AutomaticPostingCostCenterTest`
 - [ ] CC-07 — resultados por centro iguais à demonstração de resultados — `CostCenterResultReportTest`
@@ -44,3 +44,4 @@ cada centro. Regras em `docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md` §2–§3.
 - 2026-11-22 · CC-01 · cadastro de centros de custo por empresa (código único, tipo WAREHOUSE/MANUAL, renomear/desactivar/apagar só manuais, não apaga com lançamentos, inactivo ou de outra empresa recusa lançamentos) em `CostCenterService`, migração V148 com `journal_lines.cost_center_id`; CostCenterRulesTest verde 14/14.
 - 2026-11-22 · CC-03 · centro por omissão por empresa (`cost_centers.default_center`, migração V149 cria `ADM — Administração` em cada empresa e marca-o); `CostCenterService.requireDefault` devolve-o ou cria/promove o `ADM`, `setDefault` muda para outro centro activo da empresa (ADMIN/MANAGER), o por omissão não se desactiva nem apaga; regra completada na SPEC §3.1; CostCenterRulesTest verde 23/23.
 - 2026-11-22 · CC-02 · centro automático por armazém: `WarehouseCommandService` (única escrita de armazéns) anuncia `WarehouseSavedEvent` e `CostCenterWarehouseSync` cria o centro WAREHOUSE (código = número do armazém, senão `ARM-<id>`) ou faz acompanhar nome e estado; arranque e migração V150 dão centro aos armazéns existentes; desactivar o armazém do centro por omissão devolve-o ao `ADM`; regra completada na SPEC §3.1; CostCenterWarehouseSyncTest verde 7/7.
+- 2026-11-22 · CC-04 · regra no domínio (`JournalLine.validateCostCenter`, `JournalEntry.validateCostCenters`): centro obrigatório nas classes 6/7, recusado nas classes 1–5, recusado se inactivo ou de outra empresa; `JournalService.save` (porta única) completa partidas 6/7 sem centro com o centro por omissão e aplica a regra, para os lançamentos automáticos não partirem (herança do armazém fica para CC-05, `costCenterId` no pedido e migração das linhas antigas para CC-06); SPEC §3.2 clarificada; JournalLineCostCenterTest verde 9/9, testes de lançamentos existentes verdes.

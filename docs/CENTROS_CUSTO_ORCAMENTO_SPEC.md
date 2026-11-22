@@ -43,7 +43,10 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 ### 3.2 Marcação nos lançamentos
 
 - `JournalLine.costCenter`: **obrigatório** nas linhas de contas das classes **6** e **7**, e
-  **proibido** nas classes 1–5 (`BusinessRuleException` no domínio do lançamento).
+  **proibido** nas classes 1–5 (`BusinessRuleException` no domínio do lançamento). A regra aplica-se na
+  porta única de gravação (`JournalService.save`), que antes de validar completa com o centro por omissão
+  as partidas 6/7 que chegam sem centro; um centro numa partida das classes 1–5 é recusado, nunca
+  descartado em silêncio.
 - Centro de outra empresa ou inactivo é recusado.
 - Lançamentos automáticos: centro = centro do **armazém do documento de origem** (vendas, POS,
   compras, quebras, ajustes de stock, custos de importação). Evento sem armazém (salários,

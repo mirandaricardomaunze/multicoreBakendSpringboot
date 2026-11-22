@@ -78,6 +78,48 @@ public class JournalLine {
         }
     }
 
+    /** Conta das classes 6 ou 7: a partida tem de levar centro de custo (§3.2). */
+    public boolean requiresCostCenter() {
+        int digit = accountClassDigit();
+        return digit == 6 || digit == 7;
+    }
+
+    /**
+     * Centro de custo bem aplicado (CC-04): obrigatório nas classes 6 e 7, proibido nas classes 1–5, e só um centro
+     * activo da empresa do lançamento.
+     */
+    public void validateCostCenter(Long companyId) {
+        int digit = accountClassDigit();
+        if (costCenter == null) {
+            if (requiresCostCenter()) {
+                throw new BusinessRuleException("A partida da conta " + account.getCode()
+                        + " (classe " + digit + ") tem de indicar o centro de custo.");
+            }
+            return;
+        }
+        if (digit >= 1 && digit <= 5) {
+            throw new BusinessRuleException("A partida da conta " + account.getCode()
+                    + " (classe " + digit + ") não leva centro de custo — só as classes 6 e 7.");
+        }
+        if (!costCenter.belongsTo(companyId)) {
+            throw new BusinessRuleException("O centro de custo " + costCenter.getCode()
+                    + " é de outra empresa e não pode ser usado neste lançamento.");
+        }
+        if (!costCenter.isActive()) {
+            throw new BusinessRuleException("O centro de custo " + costCenter.getCode()
+                    + " está inactivo e não aceita lançamentos.");
+        }
+    }
+
+    private int accountClassDigit() {
+        if (account == null) {
+            return 0;
+        }
+        return account.getAccountClass() != null
+                ? account.getAccountClass().digit()
+                : AccountClass.ofCode(account.getCode()).digit();
+    }
+
     /** Fábrica de uma partida a débito. */
     public static JournalLine debit(Account account, BigDecimal amount, String description) {
         JournalLine line = new JournalLine();

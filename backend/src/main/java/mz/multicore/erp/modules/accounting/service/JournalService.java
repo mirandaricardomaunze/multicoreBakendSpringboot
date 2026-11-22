@@ -9,6 +9,7 @@ import mz.multicore.erp.modules.accounting.dto.CreateJournalEntryRequest;
 import mz.multicore.erp.modules.accounting.dto.JournalEntryDTO;
 import mz.multicore.erp.modules.accounting.dto.JournalLineDTO;
 import mz.multicore.erp.modules.accounting.model.Account;
+import mz.multicore.erp.modules.accounting.model.CostCenter;
 import mz.multicore.erp.modules.accounting.model.JournalEntry;
 import mz.multicore.erp.modules.accounting.model.JournalLine;
 import mz.multicore.erp.modules.accounting.model.JournalSource;
@@ -41,17 +42,20 @@ public class JournalService {
     private final DocumentNumberService documentNumberService;
     private final CompanyService companyService;
     private final AuditLogService auditLogService;
+    private final CostCenterService costCenterService;
 
     public JournalService(JournalEntryRepository journalEntryRepository,
                           ChartOfAccountsService chartOfAccountsService,
                           DocumentNumberService documentNumberService,
                           CompanyService companyService,
-                          AuditLogService auditLogService) {
+                          AuditLogService auditLogService,
+                          CostCenterService costCenterService) {
         this.journalEntryRepository = journalEntryRepository;
         this.chartOfAccountsService = chartOfAccountsService;
         this.documentNumberService = documentNumberService;
         this.companyService = companyService;
         this.auditLogService = auditLogService;
+        this.costCenterService = costCenterService;
     }
 
     /** Lançamento manual do contabilista. */
@@ -91,7 +95,9 @@ public class JournalService {
     @Transactional
     public JournalEntry save(JournalEntry entry, Long companyId) {
         entry.setCompany(companyService.getCurrentCompanyReference(companyId));
+        assignDefaultCostCenter(entry, companyId);
         entry.validateForPosting();
+        entry.validateCostCenters();
         if (entry.getEntryNumber() == null) {
             entry.setEntryNumber(documentNumberService.next(DocumentSeries.JOURNAL_ENTRY));
         }
@@ -99,6 +105,17 @@ public class JournalService {
             entry.setCreatedBy(CurrentUserContext.getUsername());
         }
         return journalEntryRepository.save(entry);
+    }
+
+    /** Partidas das classes 6/7 sem centro ficam no centro por omissão da empresa (§3.2). */
+    private void assignDefaultCostCenter(JournalEntry entry, Long companyId) {
+        if (!entry.hasLinesMissingCostCenter()) {
+            return;
+        }
+        CostCenter defaultCenter = costCenterService.requireDefault(companyId);
+        entry.getLines().stream()
+                .filter(line -> line.requiresCostCenter() && line.getCostCenter() == null)
+                .forEach(line -> line.setCostCenter(defaultCenter));
     }
 
     /**
