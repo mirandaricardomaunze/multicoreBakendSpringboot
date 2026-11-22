@@ -5,6 +5,9 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.accounting.dto.CostCenterResultDTO;
 import mz.multicore.erp.modules.accounting.dto.CostCenterResultLineDTO;
 import mz.multicore.erp.modules.accounting.dto.IncomeStatementDTO;
+import mz.multicore.erp.modules.accounting.dto.LedgerDTO;
+import mz.multicore.erp.modules.accounting.dto.TrialBalanceDTO;
+import mz.multicore.erp.modules.accounting.dto.TrialBalanceLineDTO;
 import mz.multicore.erp.modules.accounting.model.Account;
 import mz.multicore.erp.modules.accounting.model.AccountClass;
 import mz.multicore.erp.modules.accounting.model.CostCenter;
@@ -18,7 +21,9 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -30,7 +35,8 @@ import static org.mockito.Mockito.when;
 /**
  * Harness CC-07 (docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §3.3): the "Resultados por centro de custo" report gives, per
  * centre, revenue (class 7, credit − debit), costs (class 6, debit − credit) and result, plus a total that is equal to
- * the income statement of the same period.
+ * the income statement of the same period. Harness CC-08: the ledger and the trial balance take an optional centre
+ * filter; empty gives the full report, a centre keeps only its own lines (opening balance included).
  */
 class CostCenterResultReportTest {
 
@@ -151,6 +157,71 @@ class CostCenterResultReportTest {
     void cc07_periodoObrigatorioEValido() {
         assertThrows(BusinessRuleException.class, () -> service.getCostCenterResult(null, TO));
         assertThrows(BusinessRuleException.class, () -> service.getCostCenterResult(TO, FROM));
+    }
+
+    @Test
+    void cc08_balanceteSemFiltroIgualAoCompleto() {
+        when(journalService.findEntriesBetween(COMPANY_ID, FROM, TO)).thenReturn(sampleEntries());
+
+        TrialBalanceDTO all = service.getTrialBalance(FROM, TO, null);
+
+        assertEquals(service.getTrialBalance(FROM, TO), all);
+        assertTrue(all.lines().stream().anyMatch(l -> l.accountCode().equals("1101")));
+        assertTrue(all.balanced());
+    }
+
+    @Test
+    void cc08_balanceteFiltradoSoTemAsPartidasDoCentro() {
+        when(journalService.findEntriesBetween(COMPANY_ID, FROM, TO)).thenReturn(sampleEntries());
+
+        TrialBalanceDTO porCentro = service.getTrialBalance(FROM, TO, porto.getId());
+
+        assertEquals(List.of("6221"), porCentro.lines().stream().map(TrialBalanceLineDTO::accountCode).toList());
+        TrialBalanceLineDTO renda = porCentro.lines().get(0);
+        assertEquals(new BigDecimal("320.00"), renda.totalDebit());
+        assertEquals(new BigDecimal("20.00"), renda.totalCredit());
+        assertEquals(new BigDecimal("300.00"), renda.balance());
+        assertEquals(new BigDecimal("320.00"), porCentro.totalDebit());
+        assertEquals(new BigDecimal("20.00"), porCentro.totalCredit());
+    }
+
+    @Test
+    void cc08_balanceteDeCentroSemPartidasFicaVazio() {
+        when(journalService.findEntriesBetween(COMPANY_ID, FROM, TO)).thenReturn(sampleEntries());
+
+        TrialBalanceDTO outro = service.getTrialBalance(FROM, TO, 999L);
+
+        assertTrue(outro.lines().isEmpty());
+        assertEquals(new BigDecimal("0.00"), outro.totalDebit());
+    }
+
+    @Test
+    void cc08_razaoFiltradoSoMostraMovimentosDoCentroIncluindoSaldoInicial() {
+        Account vendas = account("7101");
+        when(accountRepository.findByCompanyIdAndCode(COMPANY_ID, "7101")).thenReturn(Optional.of(vendas));
+        JournalEntry octoberBaixa = entry();
+        octoberBaixa.addLine(on(JournalLine.credit(vendas, new BigDecimal("500.00"), null), baixa));
+        JournalEntry octoberAdm = entry();
+        octoberAdm.addLine(on(JournalLine.credit(vendas, new BigDecimal("80.00"), null), adm));
+        when(journalService.findEntriesBetween(COMPANY_ID, LocalDate.of(1970, 1, 1), FROM.minusDays(1)))
+                .thenReturn(List.of(octoberBaixa, octoberAdm));
+        JournalEntry novemberAdm = entry();
+        novemberAdm.addLine(on(JournalLine.credit(vendas, new BigDecimal("30.00"), null), adm));
+        List<JournalEntry> november = new ArrayList<>(sampleEntries());
+        november.add(novemberAdm);
+        when(journalService.findEntriesBetween(COMPANY_ID, FROM, TO)).thenReturn(november);
+
+        LedgerDTO loja = service.getLedger("7101", FROM, TO, baixa.getId());
+
+        assertEquals(new BigDecimal("500.00"), loja.openingBalance());
+        assertEquals(2, loja.movements().size());
+        assertEquals(new BigDecimal("100.00"), loja.totalDebit());
+        assertEquals(new BigDecimal("1000.00"), loja.totalCredit());
+        assertEquals(new BigDecimal("1400.00"), loja.closingBalance());
+
+        LedgerDTO completo = service.getLedger("7101", FROM, TO, null);
+        assertEquals(new BigDecimal("580.00"), completo.openingBalance());
+        assertEquals(3, completo.movements().size());
     }
 
     private List<JournalEntry> sampleEntries() {

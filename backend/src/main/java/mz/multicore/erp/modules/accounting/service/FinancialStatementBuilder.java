@@ -29,7 +29,7 @@ public class FinancialStatementBuilder {
 
     public IncomeStatementDTO getIncomeStatement(LocalDate from, LocalDate to) {
         validatePeriod(from, to);
-        Map<String, LedgerAndTrialBalanceCalculator.Totals> totals = ledgerCalculator.totalsBetween(from, to);
+        Map<String, LedgerAndTrialBalanceCalculator.Totals> totals = ledgerCalculator.totalsBetween(from, to, null);
         List<FinancialStatementLineDTO> revenues = statementLines(totals, "7");
         List<FinancialStatementLineDTO> expenses = statementLines(totals, "6");
         BigDecimal totalRevenue = sum(revenues);
@@ -40,7 +40,7 @@ public class FinancialStatementBuilder {
 
     public BalanceSheetDTO getBalanceSheet(LocalDate asOf) {
         if (asOf == null) throw new BusinessRuleException("A data do balanço é obrigatória.");
-        Map<String, LedgerAndTrialBalanceCalculator.Totals> totals = ledgerCalculator.totalsBetween(LocalDate.of(1970, 1, 1), asOf);
+        Map<String, LedgerAndTrialBalanceCalculator.Totals> totals = ledgerCalculator.totalsBetween(LocalDate.of(1970, 1, 1), asOf, null);
         List<FinancialStatementLineDTO> assets = totals.values().stream()
                 .filter(t -> t.account().getNature() == AccountNature.DEVEDORA)
                 .filter(t -> "1234".contains(t.account().getCode().substring(0, 1)))

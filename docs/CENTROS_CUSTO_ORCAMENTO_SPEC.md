@@ -79,6 +79,12 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
   acima); uma linha por centro com movimentos nas classes 6/7, ordenada pelo código; partidas 6/7 sem centro
   (anteriores aos centros) aparecem numa linha "Sem centro", para o total bater sempre.
 - Razão e balancete aceitam filtro opcional por centro.
+  Concretização (CC-08): `costCenterId` opcional (`getLedger`/`getTrialBalance`, parâmetro `costCenterId` nos
+  endpoints); vazio dá o razão/balancete completos, como antes. Com centro, só contam as partidas desse centro —
+  também no saldo inicial do razão —, pelo que o balancete filtrado só tem contas das classes 6/7 e normalmente
+  não fica equilibrado (os totais e o indicador "equilibrado" reflectem só as partidas filtradas). As
+  partidas são sempre da empresa activa, logo um centro de outra empresa não mostra nada; um centro inactivo
+  continua consultável (histórico).
 - Desktop: ecrã em Contabilidade com o relatório (período, tabela por centro) e exportação pelos
   meios normais de tabela (PDF/Excel/CSV); gestão de centros em Configurações.
 

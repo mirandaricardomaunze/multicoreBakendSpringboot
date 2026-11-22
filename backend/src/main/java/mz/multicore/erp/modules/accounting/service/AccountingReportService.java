@@ -16,6 +16,7 @@ import java.time.LocalDate;
  * Razão, balancete, demonstração de resultados e balanço patrimonial.
  */
 @Service
+@Transactional(readOnly = true)
 public class AccountingReportService {
 
     private final LedgerAndTrialBalanceCalculator ledgerCalculator;
@@ -40,28 +41,29 @@ public class AccountingReportService {
         this.costCenterResultBuilder = new CostCenterResultBuilder(journalService);
     }
 
-    @Transactional(readOnly = true)
     public TrialBalanceDTO getTrialBalance(LocalDate from, LocalDate to) {
         return ledgerCalculator.getTrialBalance(from, to);
     }
 
-    @Transactional(readOnly = true)
-    public LedgerDTO getLedger(String accountCode, LocalDate from, LocalDate to) {
-        return ledgerCalculator.getLedger(accountCode, from, to);
+    /** Balancete filtrado por centro de custo (CC-08); {@code costCenterId} vazio dá o completo. */
+    public TrialBalanceDTO getTrialBalance(LocalDate from, LocalDate to, Long costCenterId) {
+        return ledgerCalculator.getTrialBalance(from, to, costCenterId);
     }
 
-    @Transactional(readOnly = true)
+    /** Razão da conta; com {@code costCenterId} só as partidas desse centro (CC-08), vazio dá o completo. */
+    public LedgerDTO getLedger(String accountCode, LocalDate from, LocalDate to, Long costCenterId) {
+        return ledgerCalculator.getLedger(accountCode, from, to, costCenterId);
+    }
+
     public IncomeStatementDTO getIncomeStatement(LocalDate from, LocalDate to) {
         return statementBuilder.getIncomeStatement(from, to);
     }
 
     /** Resultados por centro de custo (CC-07); o total é igual ao da demonstração de resultados do período. */
-    @Transactional(readOnly = true)
     public CostCenterResultDTO getCostCenterResult(LocalDate from, LocalDate to) {
         return costCenterResultBuilder.getCostCenterResult(from, to);
     }
 
-    @Transactional(readOnly = true)
     public BalanceSheetDTO getBalanceSheet(LocalDate asOf) {
         return statementBuilder.getBalanceSheet(asOf);
     }

@@ -63,16 +63,18 @@ public class AccountingController {
     @GetMapping("/trial-balance")
     public ResponseEntity<TrialBalanceDTO> getTrialBalance(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return ResponseEntity.ok(accountingReportService.getTrialBalance(from, to));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Long costCenterId) {
+        return ResponseEntity.ok(accountingReportService.getTrialBalance(from, to, costCenterId));
     }
 
     @GetMapping("/ledger/{accountCode}")
     public ResponseEntity<LedgerDTO> getLedger(
             @PathVariable String accountCode,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return ResponseEntity.ok(accountingReportService.getLedger(accountCode, from, to));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Long costCenterId) {
+        return ResponseEntity.ok(accountingReportService.getLedger(accountCode, from, to, costCenterId));
     }
 
     @GetMapping("/income-statement")

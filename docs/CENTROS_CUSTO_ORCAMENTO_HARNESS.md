@@ -16,7 +16,7 @@
 | CC-05 | Lançamentos automáticos herdam o centro do armazém de origem (venda, POS, notas, quebras, ajustes, produção, custos de importação, câmbio de compras); sem armazém ou sem centro activo usam o centro por omissão; estorno mantém o centro da original (§3.2) | `AutomaticPostingCostCenterTest` (`cc05_*`) |
 | CC-06 | Lançamento manual e despesa de tesouraria aceitam centro; vazio em 6/7 usa o por omissão; linhas antigas migradas (§3.2) | `JournalLineCostCenterTest` (`cc06_*`) · `MigrationPostgresDialectHarnessTest` |
 | CC-07 | Resultados por centro: proveitos, custos, resultado; total igual à demonstração de resultados; partidas 6/7 sem centro em "Sem centro" (§3.3) | `CostCenterResultReportTest` (`cc07_*`) |
-| CC-08 | Razão e balancete com filtro opcional por centro (§3.3) | `CostCenterResultReportTest` |
+| CC-08 | Razão e balancete com filtro opcional por centro: vazio = completo; com centro só as partidas dele, incluindo o saldo inicial do razão (§3.3) | `CostCenterResultReportTest` (`cc08_*`) |
 | CC-09 | Endpoints de centros (ADMIN/MANAGER para gerir) e relatório; empresa activa (§3) | `CostCenterHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
 | CC-UI-01 | Configurações: gestão de centros e centro por omissão (§3.3) | `CostCenterUiHarnessTest` |
 | CC-UI-02 | Lançamento manual e despesa pedem o centro com o por omissão pré-seleccionado (§3.2) | `CostCenterUiHarnessTest` |

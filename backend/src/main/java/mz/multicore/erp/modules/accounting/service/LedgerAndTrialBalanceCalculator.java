@@ -38,9 +38,12 @@ public class LedgerAndTrialBalanceCalculator {
     }
 
     public TrialBalanceDTO getTrialBalance(LocalDate from, LocalDate to) {
-        Map<String, Totals> byAccount = totalsBetween(from, to);
+        return getTrialBalance(from, to, null);
+    }
 
-        List<TrialBalanceLineDTO> lines = byAccount.values().stream()
+    /** Balancete; com {@code costCenterId} só conta as partidas desse centro (CC-08), vazio dá o completo. */
+    public TrialBalanceDTO getTrialBalance(LocalDate from, LocalDate to, Long costCenterId) {
+        List<TrialBalanceLineDTO> lines = totalsBetween(from, to, costCenterId).values().stream()
                 .sorted(Comparator.comparing(totals -> totals.account().getCode()))
                 .map(Totals::toLine)
                 .toList();
@@ -53,21 +56,21 @@ public class LedgerAndTrialBalanceCalculator {
         return new TrialBalanceDTO(from, to, lines, totalDebit, totalCredit, totalDebit.compareTo(totalCredit) == 0);
     }
 
-    public LedgerDTO getLedger(String accountCode, LocalDate from, LocalDate to) {
+    /** Razão da conta; com {@code costCenterId} só as partidas desse centro, também no saldo inicial (CC-08). */
+    public LedgerDTO getLedger(String accountCode, LocalDate from, LocalDate to, Long costCenterId) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         Account account = accountRepository.findByCompanyIdAndCode(companyId, accountCode)
                 .orElseThrow(() -> new BusinessRuleException("Conta " + accountCode + " não existe no plano."));
 
-        BigDecimal opening = balanceOf(account, LocalDate.of(1970, 1, 1), from.minusDays(1), companyId);
+        BigDecimal opening = openingBalance(account, from, costCenterId);
 
         List<LedgerMovementDTO> movements = new ArrayList<>();
         BigDecimal running = opening;
-        BigDecimal totalDebit = BigDecimal.ZERO;
-        BigDecimal totalCredit = BigDecimal.ZERO;
+        BigDecimal totalDebit = BigDecimal.ZERO, totalCredit = BigDecimal.ZERO;
 
         for (JournalEntry entry : journalService.findEntriesBetween(companyId, from, to)) {
             for (JournalLine line : entry.getLines()) {
-                if (!line.getAccount().getCode().equals(accountCode)) continue;
+                if (!line.getAccount().getCode().equals(accountCode) || !inCenter(line, costCenterId)) continue;
                 totalDebit = totalDebit.add(line.safeDebit());
                 totalCredit = totalCredit.add(line.safeCredit());
                 running = running.add(account.getNature().balanceOf(line.safeDebit(), line.safeCredit()));
@@ -87,11 +90,13 @@ public class LedgerAndTrialBalanceCalculator {
                 running.setScale(2, RoundingMode.HALF_UP));
     }
 
-    public Map<String, Totals> totalsBetween(LocalDate from, LocalDate to) {
+    /** Totais por conta no período; {@code costCenterId} vazio conta todas as partidas (CC-08). */
+    public Map<String, Totals> totalsBetween(LocalDate from, LocalDate to, Long costCenterId) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         Map<String, Totals> totals = new LinkedHashMap<>();
         for (JournalEntry entry : journalService.findEntriesBetween(companyId, from, to)) {
             for (JournalLine line : entry.getLines()) {
+                if (!inCenter(line, costCenterId)) continue;
                 totals.computeIfAbsent(line.getAccount().getCode(), ignored -> new Totals(line.getAccount()))
                         .add(line.safeDebit(), line.safeCredit());
             }
@@ -99,17 +104,15 @@ public class LedgerAndTrialBalanceCalculator {
         return totals;
     }
 
-    private BigDecimal balanceOf(Account account, LocalDate from, LocalDate to, Long companyId) {
-        if (to.isBefore(from)) return BigDecimal.ZERO;
-        BigDecimal debit = BigDecimal.ZERO, credit = BigDecimal.ZERO;
-        for (JournalEntry entry : journalService.findEntriesBetween(companyId, from, to)) {
-            for (JournalLine line : entry.getLines()) {
-                if (!line.getAccount().getCode().equals(account.getCode())) continue;
-                debit = debit.add(line.safeDebit());
-                credit = credit.add(line.safeCredit());
-            }
-        }
-        return account.getNature().balanceOf(debit, credit);
+    /** Sem filtro ({@code null}) todas as partidas contam; com filtro, só as marcadas com esse centro. */
+    private static boolean inCenter(JournalLine line, Long costCenterId) {
+        return costCenterId == null
+                || (line.getCostCenter() != null && costCenterId.equals(line.getCostCenter().getId()));
+    }
+
+    private BigDecimal openingBalance(Account account, LocalDate from, Long costCenterId) {
+        Totals before = totalsBetween(LocalDate.of(1970, 1, 1), from.minusDays(1), costCenterId).get(account.getCode());
+        return before == null ? BigDecimal.ZERO : before.balance();
     }
 
     public static final class Totals {
@@ -130,17 +133,20 @@ public class LedgerAndTrialBalanceCalculator {
             credit = credit.add(lineCredit);
         }
 
+        public BigDecimal balance() {
+            return account.getNature().balanceOf(debit, credit);
+        }
+
         public TrialBalanceLineDTO toLine() {
             return new TrialBalanceLineDTO(
                     account.getCode(), account.getName(), account.getAccountClass().label(),
                     account.getNature(), debit.setScale(2, RoundingMode.HALF_UP),
-                    credit.setScale(2, RoundingMode.HALF_UP),
-                    account.getNature().balanceOf(debit, credit).setScale(2, RoundingMode.HALF_UP));
+                    credit.setScale(2, RoundingMode.HALF_UP), balance().setScale(2, RoundingMode.HALF_UP));
         }
 
         public FinancialStatementLineDTO toStatementLine() {
             return new FinancialStatementLineDTO(account.getCode(), account.getName(),
-                    account.getNature().balanceOf(debit, credit).setScale(2, RoundingMode.HALF_UP));
+                    balance().setScale(2, RoundingMode.HALF_UP));
         }
     }
 }
