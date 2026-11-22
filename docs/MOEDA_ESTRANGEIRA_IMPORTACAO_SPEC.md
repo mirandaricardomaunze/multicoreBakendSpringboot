@@ -56,7 +56,28 @@ o operador converte à mão, o custo médio fica abaixo do real e a margem apare
 - Lançamento automático da compra na moeda base, ao câmbio do documento (mesmas contas de hoje).
 - Contas a pagar e extracto de fornecedor mostram a **moeda**, o **valor em dívida na moeda do
   documento** e o equivalente em moeda base.
-- PDFs da encomenda e da compra mostram o código da moeda e o câmbio usado.
+- PDFs da encomenda e da compra mostram o código da moeda e o câmbio usado (detalhe em §3.3.1).
+
+#### 3.3.1 PDFs da encomenda e da compra (FX-13)
+
+Até aqui o sistema **não tinha** PDF da encomenda a fornecedor nem da compra (o "Imprimir" de
+`COMPRAS_APROVISIONAMENTO_SPEC.md` Fase 3 ficou por fazer). FX-13 cria os dois, com os building blocks
+de `printing` (cabeçalho da empresa, tabela de linhas, bloco de totais, `MoneyFormat`), um serviço
+por documento:
+
+- `GET /api/print/purchase-order/{id}` → "Encomenda a Fornecedor"; `GET /api/print/purchase/{id}` →
+  "Compra a Fornecedor". `application/pdf`, sempre na **empresa activa** (documento de outra empresa
+  é recusado como não encontrado). Perfis: os mesmos que consultam compras (MANAGER, ADMIN).
+- Não são documentos fiscais emitidos pela empresa (a factura é do fornecedor; a encomenda não é
+  fiscal): **sem** controlo de reimpressão nem marca "2.ª via".
+- Conteúdo: cabeçalho da empresa, título, número do documento, data, fornecedor (nome e NUIT),
+  armazém, linhas (artigo, quantidade, preço unitário, IVA %, total da linha) e totais (sem IVA,
+  IVA, total), tudo na **moeda do documento** e com o código da moeda junto aos valores.
+- Documento em moeda estrangeira mostra também "Moeda: USD · Câmbio: 63,9055" (câmbio gravado no
+  documento, 4 casas) e "Total em moeda base: 6 390,55 MZN" (o `baseTotalAmount` gravado).
+- Documento na moeda base mostra só "Moeda: MZN", sem câmbio nem total em moeda base.
+- Prova: `ForeignCurrencyHttpIntegrationTest` lê o texto dos PDFs (encomenda e compra em USD; compra
+  em MZN sem câmbio) e confirma o acesso da empresa activa.
 
 ### 3.4 Pagamento e diferença cambial
 

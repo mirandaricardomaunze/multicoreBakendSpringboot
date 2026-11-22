@@ -21,7 +21,7 @@
 | FX-10 | Diferença cambial lançada em 6601 (perda) ou 7601 (ganho); lançamento equilibrado (§3.4) | `ExchangeDifferenceTest` |
 | FX-11 | Plano de contas com 66/6601 e 76/7601, também nas empresas existentes, sem duplicar (§3.4) | `ExchangeDifferenceAccountsTest` · `MigrationPostgresDialectHarnessTest` |
 | FX-12 | Endpoints de câmbios (criar/corrigir só ADMIN), compra e pagamento em moeda estrangeira; empresa activa (§3) | `ForeignCurrencyHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
-| FX-13 | PDFs de encomenda e compra mostram moeda e câmbio (§3.3) | `ForeignCurrencyHttpIntegrationTest` |
+| FX-13 | PDFs novos de encomenda (`/api/print/purchase-order/{id}`) e compra (`/api/print/purchase/{id}`) mostram moeda e câmbio; em moeda estrangeira também o total em moeda base; moeda base sem câmbio; só empresa activa, MANAGER/ADMIN (§3.3.1) | `ForeignCurrencyHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
 | FX-UI-01 | Moeda e câmbio nos formulários de encomenda/compra; contas a pagar com moeda (§4.5) | `ForeignCurrencyUiHarnessTest` |
 | FX-UI-02 | Pagamento com câmbio e diferença cambial antes de confirmar (§4.5) | `ForeignCurrencyUiHarnessTest` |
 | FX-UI-03 | Configurações: tabela de câmbios e moeda base só leitura com movimentos (§4.5) | `ForeignCurrencyUiHarnessTest` |
