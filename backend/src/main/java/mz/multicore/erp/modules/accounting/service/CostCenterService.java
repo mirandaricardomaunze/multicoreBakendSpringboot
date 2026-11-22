@@ -18,9 +18,14 @@ import java.util.List;
  * Cost centre register of the active company (docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §3.1, CC-01): managers create,
  * rename, deactivate and delete manual centres; warehouse centres follow their warehouse and are not edited by hand;
  * a centre with journal lines is never deleted; postings only accept an active centre of the same company.
+ * Each company has a default centre, born as {@code ADM — Administração} and changeable to another active centre
+ * (CC-03); the default centre is never deactivated or deleted.
  */
 @Service
 public class CostCenterService {
+
+    static final String DEFAULT_CODE = "ADM";
+    static final String DEFAULT_NAME = "Administração";
 
     private final CostCenterRepository repository;
     private final CompanyService companyService;
@@ -63,6 +68,9 @@ public class CostCenterService {
         if (!code.equalsIgnoreCase(center.getCode())) {
             requireFreeCode(center.getCompany().getId(), code);
         }
+        if (Boolean.FALSE.equals(request.active())) {
+            requireNotDefault(center, "desactivado");
+        }
         center.setCode(code);
         center.setName(name);
         if (request.active() != null) {
@@ -75,6 +83,7 @@ public class CostCenterService {
     public void delete(Long id) {
         PermissionGuard.requireManagerOrAdmin("apagar centro de custo");
         CostCenter center = requireManualOfActiveCompany(id);
+        requireNotDefault(center, "apagado");
         if (repository.hasJournalLines(center.getId())) {
             throw new BusinessRuleException("O centro de custo " + center.getCode()
                     + " já tem lançamentos e não pode ser apagado — desactive-o.");
@@ -91,6 +100,56 @@ public class CostCenterService {
                     + " está inactivo e não aceita lançamentos.");
         }
         return center;
+    }
+
+    /**
+     * Default centre of {@code companyId} (CC-03): used by postings without a warehouse. A company that still has none
+     * gets {@code ADM — Administração} (an existing {@code ADM} centre is promoted instead of duplicated).
+     */
+    @Transactional
+    public CostCenter requireDefault(Long companyId) {
+        return repository.findFirstByCompanyIdAndDefaultCenterTrue(companyId)
+                .orElseGet(() -> {
+                    CostCenter adm = repository.findByCompanyIdAndCodeIgnoreCase(companyId, DEFAULT_CODE)
+                            .orElseGet(() -> newAdministrationCenter(companyId));
+                    adm.setDefaultCenter(true);
+                    return repository.save(adm);
+                });
+    }
+
+    /** Makes another active centre of the active company its default centre (CC-03). */
+    @Transactional
+    public CostCenterDTO setDefault(Long id) {
+        PermissionGuard.requireManagerOrAdmin("alterar o centro de custo por omissão");
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        CostCenter center = requirePostable(companyId, id);
+        repository.findFirstByCompanyIdAndDefaultCenterTrue(companyId)
+                .filter(current -> !current.getId().equals(center.getId()))
+                .ifPresent(current -> {
+                    current.setDefaultCenter(false);
+                    repository.save(current);
+                });
+        center.setDefaultCenter(true);
+        return toDTO(repository.save(center));
+    }
+
+    private CostCenter newAdministrationCenter(Long companyId) {
+        CostCenter adm = new CostCenter();
+        adm.setCompany(companyService.getCurrentCompanyReference(companyId));
+        adm.setCode(DEFAULT_CODE);
+        adm.setName(DEFAULT_NAME);
+        adm.setType(CostCenterType.MANUAL);
+        adm.setActive(true);
+        adm.setCreatedBy(CurrentUserContext.getUsername());
+        return adm;
+    }
+
+    private static void requireNotDefault(CostCenter center, String action) {
+        if (center.isDefaultCenter()) {
+            throw new BusinessRuleException("O centro de custo " + center.getCode()
+                    + " é o centro por omissão e não pode ser " + action
+                    + " — escolha antes outro centro por omissão.");
+        }
     }
 
     private CostCenter requireManualOfActiveCompany(Long id) {
@@ -124,6 +183,6 @@ public class CostCenterService {
 
     static CostCenterDTO toDTO(CostCenter center) {
         return new CostCenterDTO(center.getId(), center.getCode(), center.getName(), center.getType(),
-                center.getWarehouseId(), center.isActive());
+                center.getWarehouseId(), center.isActive(), center.isDefaultCenter());
     }
 }

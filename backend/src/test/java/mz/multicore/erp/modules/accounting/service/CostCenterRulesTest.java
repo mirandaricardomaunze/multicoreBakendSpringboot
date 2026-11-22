@@ -33,6 +33,9 @@ import static org.mockito.Mockito.when;
  * that company and a type WAREHOUSE or MANUAL. Managers create, rename and deactivate manual centres; a warehouse
  * centre is not edited by hand; a centre with journal lines cannot be deleted; an inactive centre (or one of another
  * company) refuses new postings.
+ *
+ * <p>Harness CC-03: each company has {@code ADM — Administração} as its default centre, changeable to another active
+ * centre of the company; the default centre is never deactivated or deleted.
  */
 class CostCenterRulesTest {
 
@@ -195,6 +198,108 @@ class CostCenterRulesTest {
         when(repository.findById(41L)).thenReturn(Optional.of(fleet));
 
         assertSame(fleet, service.requirePostable(COMPANY_ID, 41L));
+    }
+
+    @Test
+    void cc03_devolveOCentroPorOmissaoDaEmpresa() {
+        CostCenter adm = center(1L, COMPANY_ID, "ADM", CostCenterType.MANUAL, true);
+        adm.setDefaultCenter(true);
+        when(repository.findFirstByCompanyIdAndDefaultCenterTrue(COMPANY_ID)).thenReturn(Optional.of(adm));
+
+        assertSame(adm, service.requireDefault(COMPANY_ID));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void cc03_empresaSemCentroPorOmissaoRecebeADMAdministracao() {
+        when(repository.findFirstByCompanyIdAndDefaultCenterTrue(COMPANY_ID)).thenReturn(Optional.empty());
+        when(repository.findByCompanyIdAndCodeIgnoreCase(COMPANY_ID, "ADM")).thenReturn(Optional.empty());
+
+        CostCenter created = service.requireDefault(COMPANY_ID);
+
+        assertEquals("ADM", created.getCode());
+        assertEquals("Administração", created.getName());
+        assertEquals(CostCenterType.MANUAL, created.getType());
+        assertTrue(created.isActive());
+        assertTrue(created.isDefaultCenter());
+        assertTrue(created.belongsTo(COMPANY_ID));
+    }
+
+    @Test
+    void cc03_admExistenteSemMarcaPassaAPorOmissao() {
+        CostCenter adm = center(1L, COMPANY_ID, "ADM", CostCenterType.MANUAL, true);
+        when(repository.findFirstByCompanyIdAndDefaultCenterTrue(COMPANY_ID)).thenReturn(Optional.empty());
+        when(repository.findByCompanyIdAndCodeIgnoreCase(COMPANY_ID, "ADM")).thenReturn(Optional.of(adm));
+
+        assertSame(adm, service.requireDefault(COMPANY_ID));
+        assertTrue(adm.isDefaultCenter());
+    }
+
+    @Test
+    void cc03_alteraOCentroPorOmissaoParaOutroCentroActivo() {
+        CostCenter adm = center(1L, COMPANY_ID, "ADM", CostCenterType.MANUAL, true);
+        adm.setDefaultCenter(true);
+        CostCenter store = center(42L, COMPANY_ID, "LJ01", CostCenterType.WAREHOUSE, true);
+        when(repository.findById(42L)).thenReturn(Optional.of(store));
+        when(repository.findFirstByCompanyIdAndDefaultCenterTrue(COMPANY_ID)).thenReturn(Optional.of(adm));
+
+        CostCenterDTO changed = service.setDefault(42L);
+
+        assertTrue(changed.defaultCenter());
+        assertEquals("LJ01", changed.code());
+        assertFalse(adm.isDefaultCenter());
+        assertTrue(store.isDefaultCenter());
+    }
+
+    @Test
+    void cc03_centroInactivoNaoPodeSerPorOmissao() {
+        CostCenter closed = center(44L, COMPANY_ID, "FROTA", CostCenterType.MANUAL, false);
+        when(repository.findById(44L)).thenReturn(Optional.of(closed));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> service.setDefault(44L));
+        assertThat(error.getMessage()).contains("inactivo");
+        assertFalse(closed.isDefaultCenter());
+    }
+
+    @Test
+    void cc03_centroDeOutraEmpresaNaoPodeSerPorOmissao() {
+        CostCenter foreign = center(43L, OTHER_COMPANY_ID, "FROTA", CostCenterType.MANUAL, true);
+        when(repository.findById(43L)).thenReturn(Optional.of(foreign));
+
+        assertThrows(BusinessRuleException.class, () -> service.setDefault(43L));
+        assertFalse(foreign.isDefaultCenter());
+    }
+
+    @Test
+    void cc03_soGestorOuAdminAlteraOCentroPorOmissao() {
+        CurrentUserContext.setCurrentUser("caixa", "CASHIER");
+
+        assertThrows(BusinessRuleException.class, () -> service.setDefault(42L));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void cc03_centroPorOmissaoNaoSeDesactivaNemApaga() {
+        CostCenter adm = center(1L, COMPANY_ID, "ADM", CostCenterType.MANUAL, true);
+        adm.setDefaultCenter(true);
+        when(repository.findById(1L)).thenReturn(Optional.of(adm));
+
+        BusinessRuleException deactivate = assertThrows(BusinessRuleException.class,
+                () -> service.update(1L, new SaveCostCenterRequest("ADM", "Administração", false)));
+        assertThat(deactivate.getMessage()).contains("por omissão");
+        assertTrue(adm.isActive());
+        assertThrows(BusinessRuleException.class, () -> service.delete(1L));
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    void cc03_listaIndicaOCentroPorOmissao() {
+        CostCenter adm = center(1L, COMPANY_ID, "ADM", CostCenterType.MANUAL, true);
+        adm.setDefaultCenter(true);
+        when(repository.findByCompanyIdOrderByCode(COMPANY_ID)).thenReturn(List.of(
+                adm, center(2L, COMPANY_ID, "LJ01", CostCenterType.WAREHOUSE, true)));
+
+        assertThat(service.list()).extracting(CostCenterDTO::defaultCenter).containsExactly(true, false);
     }
 
     private static CostCenter center(Long id, Long companyId, String code, CostCenterType type, boolean active) {

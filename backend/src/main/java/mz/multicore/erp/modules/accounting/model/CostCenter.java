@@ -45,6 +45,10 @@ public class CostCenter extends BaseEntity {
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
+    /** Centro por omissão da empresa (um por empresa; nasce como {@code ADM}); usado quando o lançamento não tem armazém. */
+    @Column(name = "default_center", nullable = false)
+    private boolean defaultCenter;
+
     public boolean belongsTo(Long companyId) {
         return company != null && company.getId() != null && company.getId().equals(companyId);
     }

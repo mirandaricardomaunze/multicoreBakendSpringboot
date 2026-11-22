@@ -30,7 +30,9 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 - Criar um armazém cria o seu centro (`code` = código do armazém); armazéns existentes recebem centro
   pela migração. Centro de armazém não se edita à mão: acompanha o nome e o estado do armazém.
 - Cada empresa recebe um centro manual **`ADM` — Administração**, que é o **centro por omissão**
-  (alterável nas Configurações para outro centro activo).
+  (alterável nas Configurações para outro centro activo). Há sempre um e só um por empresa: o centro
+  por omissão não se desactiva nem se apaga sem antes escolher outro; empresa nova recebe o `ADM` ao
+  primeiro uso, empresas existentes pela migração.
 - Centros manuais: criar, renomear, desactivar. Não se apaga um centro com lançamentos.
 - Centro inactivo não aceita lançamentos novos.
 - Gerir centros: **ADMIN** e **MANAGER**. Consultar: quem vê a contabilidade.

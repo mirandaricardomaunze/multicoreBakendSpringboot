@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CostCenterRepository extends JpaRepository<CostCenter, Long> {
@@ -14,6 +15,10 @@ public interface CostCenterRepository extends JpaRepository<CostCenter, Long> {
     List<CostCenter> findByCompanyIdOrderByCode(Long companyId);
 
     boolean existsByCompanyIdAndCodeIgnoreCase(Long companyId, String code);
+
+    Optional<CostCenter> findByCompanyIdAndCodeIgnoreCase(Long companyId, String code);
+
+    Optional<CostCenter> findFirstByCompanyIdAndDefaultCenterTrue(Long companyId);
 
     /** Há linhas de lançamento marcadas com este centro (impede apagar). */
     @Query("select count(l) > 0 from JournalLine l where l.costCenter.id = :costCenterId")
