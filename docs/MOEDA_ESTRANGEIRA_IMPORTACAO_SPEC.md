@@ -109,6 +109,13 @@ por documento:
   existente na empresa.
 - Cada linha gera uma **dívida ao seu fornecedor**, visível em contas a pagar e paga com a mesma
   acção de pagamento a fornecedor (com diferença cambial, §3.4).
+- Como fica gravado (LC-02): a dívida é um documento em `purchases` do tipo `LANDED_COST` (como o
+  Saldo Inicial Fornecedor), numerado `<nº do CI>-<n.º da linha>` (ex.: `CI-2026/3-2`), na moeda e ao
+  câmbio da linha, com total = valor sem IVA + IVA do serviço (no IVA aduaneiro, o próprio valor) e o
+  IVA no imposto do documento; sem armazém nem linhas, não mexe no stock e não publica evento de
+  compra (o lançamento é o do CI, §4.4). O pagamento identifica-a como "Custos de Importação CI-…".
+  Não é compra recebida: não pode ser ligada a outro CI. A taxa de IVA vem das taxas da empresa; o
+  IVA aduaneiro não leva taxa (é recusado). Um CI sem linhas de custo é recusado.
 
 ### 4.2 O que entra no custo
 

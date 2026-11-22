@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.purchases.model;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -59,4 +61,10 @@ public class LandedCostDocument extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "purchase_id"))
     @OrderColumn(name = "sort_order")
     private List<Purchase> purchases = new ArrayList<>();
+
+    /** Linhas de custo pela ordem escrita; cada uma com a sua dívida ao fornecedor (§4.1). */
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "landed_cost_document_id", nullable = false)
+    @OrderColumn(name = "sort_order")
+    private List<LandedCostDocumentCharge> charges = new ArrayList<>();
 }

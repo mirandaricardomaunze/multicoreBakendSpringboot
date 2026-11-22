@@ -3,7 +3,7 @@
 > Cenários que provam [MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md](MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12, FX-13, FX-UI-01, FX-UI-02, FX-UI-03 verdes — GOAL-008 completo; LC-01, LC-03, LC-04, LC-05 verdes)
+**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12, FX-13, FX-UI-01, FX-UI-02, FX-UI-03 verdes — GOAL-008 completo; LC-01, LC-02, LC-03, LC-04, LC-05 verdes)
 
 ## Moeda e câmbio (GOAL-008)
 
@@ -31,7 +31,7 @@
 | ID | Garantia | Teste |
 |---|---|---|
 | LC-01 | Documento CI numerado `CI-aaaa/n` por empresa, ligado a compras `COMPLETED` da empresa; várias CI por compra (§4.1) | `LandedCostDocumentTest` (`lc01_*`) |
-| LC-02 | Linhas com tipo, fornecedor, moeda/câmbio, valor e IVA; cada linha gera dívida ao seu fornecedor, paga pela acção normal (§4.1) | `LandedCostDocumentTest` |
+| LC-02 | Linhas com tipo, fornecedor, moeda/câmbio, valor e IVA; cada linha gera dívida `LANDED_COST` ao seu fornecedor (`<CI>-n`), em contas a pagar e paga pela acção normal; fornecedor e taxa da empresa; IVA aduaneiro sem taxa; CI sem linhas recusado (§4.1) | `LandedCostDocumentTest` (`lc02_*`) · `MigrationPostgresDialectHarnessTest` |
 | LC-03 | Custo = linhas não-IVA sem IVA em moeda base; IVA aduaneiro e IVA dos serviços fora do custo (§4.2) | `LandedCostAllocationTest` (`lc03_*`) |
 | LC-04 | Repartição por VALOR, PESO ou QUANTIDADE; PESO sem peso numa linha é erro (§4.3) | `LandedCostAllocationTest` (`lc04_*`) |
 | LC-05 | Arredondamento a 2 casas com resíduo na maior quota; soma igual ao total; empate vai à primeira linha (§4.3) | `LandedCostAllocationTest` (`lc05_*`) |
