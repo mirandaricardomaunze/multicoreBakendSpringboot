@@ -59,7 +59,7 @@ public class LandedCostCalculator {
 
     /**
      * Reparte {@code totalCost} pelas linhas, proporcionalmente à base do método (VALOR por omissão), com
-     * 2 casas HALF_UP.
+     * 2 casas HALF_UP; o resíduo de cêntimos vai para a maior quota, para a soma ser exactamente o total.
      */
     public List<Allocation> allocate(BigDecimal totalCost, LandedCostAllocationMethod method,
                                      List<AllocationLine> lines) {
@@ -73,13 +73,31 @@ public class LandedCostCalculator {
             throw new BusinessRuleException("Não há base para repartir o custo por "
                     + effective.label().toLowerCase() + ": as linhas somam zero.");
         }
+        BigDecimal total = totalCost.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+        List<BigDecimal> shares = new ArrayList<>(lines.size());
+        for (BigDecimal basis : bases) {
+            shares.add(total.multiply(basis).divide(totalBasis, MONEY_SCALE, RoundingMode.HALF_UP));
+        }
+        int largest = indexOfLargest(bases);
+        BigDecimal residue = total.subtract(shares.stream().reduce(BigDecimal.ZERO, BigDecimal::add));
+        shares.set(largest, shares.get(largest).add(residue));
+
         List<Allocation> allocations = new ArrayList<>(lines.size());
         for (int i = 0; i < lines.size(); i++) {
-            BigDecimal share = totalCost.multiply(bases.get(i))
-                    .divide(totalBasis, MONEY_SCALE, RoundingMode.HALF_UP);
-            allocations.add(new Allocation(lines.get(i).lineId(), share));
+            allocations.add(new Allocation(lines.get(i).lineId(), shares.get(i)));
         }
         return List.copyOf(allocations);
+    }
+
+    /** Linha com a maior quota (a maior base); em empate, a primeira — para o resíduo ser determinístico. */
+    private static int indexOfLargest(List<BigDecimal> bases) {
+        int largest = 0;
+        for (int i = 1; i < bases.size(); i++) {
+            if (bases.get(i).compareTo(bases.get(largest)) > 0) {
+                largest = i;
+            }
+        }
+        return largest;
     }
 
     public Totals totals(List<LandedCostCharge> charges) {

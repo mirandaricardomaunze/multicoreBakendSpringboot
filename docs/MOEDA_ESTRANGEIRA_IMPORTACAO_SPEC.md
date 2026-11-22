@@ -122,7 +122,8 @@ por documento:
 - Método escolhido por documento: **VALOR** (omissão — valor em moeda base de cada linha de compra),
   **PESO** (`netUnitWeightKg × quantidade`; se alguma linha não tem peso, é erro) ou **QUANTIDADE**.
 - Arredondamento a 2 casas; o resíduo de cêntimos vai para a linha com maior quota, para a soma
-  repartida ser exactamente o total.
+  repartida ser exactamente o total. Quotas a 2 casas HALF_UP; a "maior quota" é a da maior base do
+  método e, em empate, a primeira linha.
 - **Pré-visualização** antes de gravar: por artigo, custo unitário original, custo acrescentado e
   custo unitário final.
 

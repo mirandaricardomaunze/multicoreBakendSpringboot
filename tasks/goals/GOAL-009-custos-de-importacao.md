@@ -23,7 +23,7 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 
 - [x] LC-03 — o que entra no custo e o que vai a IVA dedutível — `LandedCostAllocationTest`
 - [x] LC-04 — repartição por valor, peso ou quantidade — `LandedCostAllocationTest`
-- [ ] LC-05 — arredondamento com resíduo na maior quota — `LandedCostAllocationTest`
+- [x] LC-05 — arredondamento com resíduo na maior quota — `LandedCostAllocationTest`
 - [ ] LC-01 — documento CI numerado e ligado a compras recebidas — `LandedCostDocumentTest`
 - [ ] LC-02 — linhas de custo geram dívida a cada fornecedor — `LandedCostDocumentTest`
 - [ ] LC-06 — parte para o stock no custo médio, resto a CMV, vendas passadas intactas — `LandedCostStockEffectTest`
@@ -44,3 +44,4 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-22 · LC-03 · `LandedCostType` (contracts, com `capitalizable()`), `LandedCostCharge` (custo sem IVA em moeda base vs IVA dedutível; IVA aduaneiro todo a dedutível) e `LandedCostCalculator.totals`; `LandedCostAllocationTest` 5/5 verde.
 - 2026-11-22 · LC-04 · `LandedCostAllocationMethod` (contracts: VALOR por omissão, PESO, QUANTIDADE) e `LandedCostCalculator.allocate` (quota proporcional, PESO = `netUnitWeightKg × quantidade`, linha sem peso ou base zero é `BusinessRuleException`); `LandedCostAllocationTest` 10/10 verde. Resíduo de cêntimos fica para LC-05.
+- 2026-11-22 · LC-05 · `LandedCostCalculator.allocate` arredonda as quotas a 2 casas HALF_UP e põe o resíduo de cêntimos na linha de maior base (empate: a primeira), soma sempre igual ao total; regra do empate escrita na SPEC §4.3; `LandedCostAllocationTest` 13/13 verde.

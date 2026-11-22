@@ -21,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  *
  * <p>LC-04: o custo reparte-se pelas linhas de compra por VALOR (omissão), PESO
  * ({@code netUnitWeightKg × quantidade}; linha sem peso é erro) ou QUANTIDADE.
+ *
+ * <p>LC-05: quotas a 2 casas HALF_UP; o resíduo de cêntimos vai para a maior quota (empate: a primeira),
+ * para a soma repartida ser exactamente o total.
  */
 class LandedCostAllocationTest {
 
@@ -145,6 +148,57 @@ class LandedCostAllocationTest {
         assertThrows(BusinessRuleException.class, () -> calculator.allocate(new BigDecimal("50.00"),
                 LandedCostAllocationMethod.VALOR,
                 List.of(new LandedCostCalculator.AllocationLine(1L, BigDecimal.ZERO, BigDecimal.ONE, null))));
+    }
+
+    // ---- LC-05: 2 casas, resíduo de cêntimos na maior quota, soma exactamente o total ----
+
+    private static LandedCostCalculator.AllocationLine qty(long id, String quantity) {
+        return new LandedCostCalculator.AllocationLine(id, null, new BigDecimal(quantity), null);
+    }
+
+    private static BigDecimal sum(List<LandedCostCalculator.Allocation> allocations) {
+        return allocations.stream().map(LandedCostCalculator.Allocation::share)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    @Test
+    void lc05_excessCentIsRemovedFromTheLargestShare() {
+        // 1,00 por 1:1:4 → 0,1667 / 0,1667 / 0,6667 → 0,17 + 0,17 + 0,67 = 1,01; o cêntimo a mais sai da maior
+        List<LandedCostCalculator.Allocation> shares = calculator.allocate(new BigDecimal("1.00"),
+                LandedCostAllocationMethod.QUANTIDADE, List.of(qty(1L, "1"), qty(2L, "1"), qty(3L, "4")));
+
+        assertThat(shares).extracting(LandedCostCalculator.Allocation::share)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(new BigDecimal("0.17"), new BigDecimal("0.17"), new BigDecimal("0.66"));
+        assertThat(sum(shares)).isEqualByComparingTo("1.00");
+    }
+
+    @Test
+    void lc05_missingCentGoesToTheLargestShareAndTiesGoToTheFirst() {
+        // 100,00 por 1:1:1 → 33,33 × 3 = 99,99; o cêntimo em falta vai à primeira das maiores
+        List<LandedCostCalculator.Allocation> shares = calculator.allocate(new BigDecimal("100.00"),
+                LandedCostAllocationMethod.QUANTIDADE, List.of(qty(1L, "1"), qty(2L, "1"), qty(3L, "1")));
+
+        assertThat(shares).extracting(LandedCostCalculator.Allocation::share)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(new BigDecimal("33.34"), new BigDecimal("33.33"), new BigDecimal("33.33"));
+        assertThat(sum(shares)).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void lc05_sharesAlwaysSumExactlyToTheTotalWithTwoDecimals() {
+        List<LandedCostCalculator.AllocationLine> lines = List.of(
+                qty(1L, "7"), qty(2L, "3"), qty(3L, "11"), qty(4L, "13"), qty(5L, "1"), qty(6L, "1"), qty(7L, "1"));
+        for (String total : List.of("0.01", "0.05", "1.00", "999.99", "78500.00", "12345.67")) {
+            List<LandedCostCalculator.Allocation> shares =
+                    calculator.allocate(new BigDecimal(total), LandedCostAllocationMethod.QUANTIDADE, lines);
+
+            assertThat(sum(shares)).as("total %s", total).isEqualByComparingTo(total);
+            assertThat(shares).allSatisfy(a -> {
+                assertThat(a.share().scale()).isEqualTo(2);
+                assertThat(a.share().signum()).isGreaterThanOrEqualTo(0);
+            });
+        }
     }
 
     @Test
