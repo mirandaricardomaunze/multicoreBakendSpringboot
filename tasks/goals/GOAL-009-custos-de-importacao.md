@@ -1,11 +1,11 @@
 ---
 id: GOAL-009
 title: "Frete, alfândega e despachante repartidos no custo dos artigos importados"
-status: IN_PROGRESS
+status: DONE
 priority: HIGH
 spec: docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md
 harness: docs/MOEDA_ESTRANGEIRA_IMPORTACAO_HARNESS.md
-verify: ["LandedCostDocumentTest", "LandedCostAllocationTest", "LandedCostStockEffectTest", "LandedCostPostingTest", "LandedCostHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "LandedCostUiHarnessTest"]
+verify: ["LandedCostDocumentTest", "LandedCostAllocationTest", "LandedCostStockEffectTest", "LandedCostPostingTest", "LandedCostHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "LandedCostUiHarnessTest", "ComprasPanelDecompositionHarnessTest"]
 blockedBy: []
 ---
 
@@ -29,7 +29,7 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - [x] LC-06 — parte para o stock no custo médio, resto a CMV, vendas passadas intactas — `LandedCostStockEffectTest`
 - [x] LC-07 — lançamento 3201/6101/2432 contra 2201, equilibrado — `LandedCostPostingTest`
 - [x] LC-08 — pré-visualização e confirmação por HTTP, empresa activa, perfis de compras — `LandedCostHttpIntegrationTest`
-- [ ] LC-UI-01 — ecrã Compras › Custos de Importação — `LandedCostUiHarnessTest`
+- [x] LC-UI-01 — ecrã Compras › Custos de Importação — `LandedCostUiHarnessTest`
 
 ## Fora de âmbito
 
@@ -50,3 +50,4 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - 2026-11-22 · LC-06 · `LandedCostStockEffect` reparte o custo capitalizável na confirmação do CI e, por linha, `LandedCostCalculator.splitByStock` dá parte para o stock = C × min(1, S/Q) e o resto a CMV; `AverageCostUpdater.absorbCost` sobe o médio (por artigo na empresa) sem mexer em quantidades; `LandedCostAllocation` fotografa quota/Q/S/partes/médio antes e depois (migração V147) e sai no DTO; regra de gravação na SPEC §4.4; `LandedCostStockEffectTest` 7/7 verde.
 - 2026-11-22 · LC-07 · `LandedCostDocumentService` publica `LandedCostConfirmedEvent` (valores em moeda base) e `LandedCostPostingService` (accounting) lança `JournalSource.LANDED_COST`: débito 3201 (parte do stock) e 6101 (parte vendida) das quotas fotografadas, 2432 pela diferença, crédito 2201 por dívida `<CI>-n`; sem duplicados nem sem plano de contas; regra de gravação na SPEC §4.4; `LandedCostPostingTest` 5/5 verde.
 - 2026-11-22 · LC-08 · `LandedCostController` (`POST /api/purchases/landed-costs/preview` e `POST /api/purchases/landed-costs`, área MANAGER/ADMIN de compras); `LandedCostDocumentService.preview` reutiliza as validações da confirmação e `LandedCostStockEffect.preview` simula o médio (`AverageCostUpdater.costAfterAbsorbing`) sem gravar; `LandedCostPreviewDTO`; regra de gravação na SPEC §4.3; `LandedCostHttpIntegrationTest` 3/3 verde.
+- 2026-11-22 · LC-UI-01 · Separador Compras › "Custos de Importação" (`gui/landedcost/LandedCostPanel`): compras recebidas com armazém a escolher, linhas de custo por `LandedCostChargeDialog` (`ModernFormDialog`, `DocumentCurrencyField`, IVA da empresa, IVA aduaneiro sem taxa), método Valor por omissão, pré-visualização por artigo e resumo via `PurchaseApiClient.previewLandedCost`, "Confirmar CI" só após pré-visualizar os dados actuais (`confirmLandedCost`); regra escrita na SPEC §4.5; `LandedCostUiHarnessTest` 7/7 e `ComprasPanelDecompositionHarnessTest` (8 abas) verdes. Goal DONE.

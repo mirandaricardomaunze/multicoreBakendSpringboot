@@ -78,7 +78,7 @@ class ComprasPanelDecompositionHarnessTest {
         ComprasPanel panel = new ComprasPanel(purchaseApi, invApi, comApi, finApi, stmtApi);
 
         assertNotNull(panel.tabbedPane, "JTabbedPane deve ser instanciado");
-        assertEquals(7, panel.tabbedPane.getTabCount(), "Todas as 7 abas de compras devem estar presentes");
+        assertEquals(8, panel.tabbedPane.getTabCount(), "Todas as 8 abas de compras devem estar presentes");
         assertEquals("Faturas de Compra (V/FT)", panel.tabbedPane.getTitleAt(0));
         assertEquals("Reposição", panel.tabbedPane.getTitleAt(1));
         assertEquals("Encomendas a Fornecedor (EC-F)", panel.tabbedPane.getTitleAt(2));
@@ -86,6 +86,7 @@ class ComprasPanelDecompositionHarnessTest {
         assertEquals("Gestão de Fornecedores", panel.tabbedPane.getTitleAt(4));
         assertEquals("Gestão de Negócios", panel.tabbedPane.getTitleAt(5));
         assertEquals("Conta Corrente & Reconciliação", panel.tabbedPane.getTitleAt(6));
+        assertEquals("Custos de Importação", panel.tabbedPane.getTitleAt(7));
     }
 
     @Test

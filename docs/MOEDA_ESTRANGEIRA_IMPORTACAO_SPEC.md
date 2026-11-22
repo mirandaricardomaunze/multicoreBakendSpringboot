@@ -183,6 +183,18 @@ por documento:
   MANAGER, criar/corrigir câmbios e mudar a moeda base só ADMIN (o ecrã desactiva os botões aos outros).
 - Compras › Custos de Importação: escolher compras, linhas de custo, método, pré-visualização por
   artigo e confirmação. Padrão de tabelas, tipografia e diálogos do projecto; ícones por `UIHelper.icon`.
+- Como fica (LC-UI-01): separador "Custos de Importação" em Compras. Card "Compras recebidas" só com compras
+  `COMPLETED` com armazém (dívidas de CI e Saldo Inicial ficam de fora), com coluna de escolha, Nº, fornecedor,
+  data, moeda e total em moeda base. Card "Linhas de custo" (Tipo, Fornecedor, Moeda, Câmbio, Valor sem IVA,
+  IVA): linha nova pelo diálogo canónico com tipo, fornecedor, moeda e câmbio (o mesmo campo dos documentos de
+  compra: câmbio proposto e editável), valor e taxa de IVA da empresa ("Sem IVA" por omissão; o IVA aduaneiro
+  não leva taxa); remover a linha seleccionada. Método de repartição com Valor por omissão. "Pré-visualizar"
+  chama `/preview` e mostra, por linha de compra, compra, artigo, quantidade recebida, custo unitário original,
+  custo acrescentado e custo unitário final, mais o resumo (custo que entra nos artigos, IVA dedutível, total
+  das dívidas). "Confirmar CI" só fica activo depois de uma pré-visualização dos dados actuais: mudar compras,
+  linhas ou método apaga a pré-visualização. Sem compras escolhidas ou sem linhas, o aviso aparece no ecrã sem
+  chamar o backend; os erros do backend aparecem no ecrã. Confirmado, mostra o número do CI e as dívidas
+  criadas e limpa o formulário.
 
 ## 5. Fora de âmbito
 
