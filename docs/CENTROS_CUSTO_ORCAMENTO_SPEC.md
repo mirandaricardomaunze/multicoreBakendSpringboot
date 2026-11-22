@@ -39,6 +39,11 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 - Centros manuais: criar, renomear, desactivar. Não se apaga um centro com lançamentos.
 - Centro inactivo não aceita lançamentos novos.
 - Gerir centros: **ADMIN** e **MANAGER**. Consultar: quem vê a contabilidade.
+  Concretização (CC-09): `/api/accounting/cost-centers` — `GET` lista, `POST` cria, `PUT /{id}` altera,
+  `PUT /{id}/default` torna-o o centro por omissão, `DELETE /{id}` apaga; relatório em
+  `GET /api/accounting/cost-center-result?from&to`. Área da contabilidade, logo só ADMIN/MANAGER; tudo na empresa
+  activa (centro de outra empresa responde "não encontrado nesta empresa"). Listar é "primeiro uso": a lista
+  traz sempre o centro por omissão (cria o `ADM` se a empresa ainda não tiver nenhum).
 
 ### 3.2 Marcação nos lançamentos
 

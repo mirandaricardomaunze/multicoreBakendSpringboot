@@ -17,7 +17,7 @@
 | CC-06 | Lançamento manual e despesa de tesouraria aceitam centro; vazio em 6/7 usa o por omissão; linhas antigas migradas (§3.2) | `JournalLineCostCenterTest` (`cc06_*`) · `MigrationPostgresDialectHarnessTest` |
 | CC-07 | Resultados por centro: proveitos, custos, resultado; total igual à demonstração de resultados; partidas 6/7 sem centro em "Sem centro" (§3.3) | `CostCenterResultReportTest` (`cc07_*`) |
 | CC-08 | Razão e balancete com filtro opcional por centro: vazio = completo; com centro só as partidas dele, incluindo o saldo inicial do razão (§3.3) | `CostCenterResultReportTest` (`cc08_*`) |
-| CC-09 | Endpoints de centros (ADMIN/MANAGER para gerir) e relatório; empresa activa (§3) | `CostCenterHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
+| CC-09 | Endpoints de centros (`/api/accounting/cost-centers`, ADMIN/MANAGER para gerir) e relatório (`/cost-center-result`, total igual à demonstração); empresa activa; a lista traz sempre o centro por omissão (§3.1, §3.3) | `CostCenterHttpIntegrationTest` (`cc09_*`) · `ApiRolePolicyEndpointCoverageHarnessTest` |
 | CC-UI-01 | Configurações: gestão de centros e centro por omissão (§3.3) | `CostCenterUiHarnessTest` |
 | CC-UI-02 | Lançamento manual e despesa pedem o centro com o por omissão pré-seleccionado (§3.2) | `CostCenterUiHarnessTest` |
 | CC-UI-03 | Contabilidade › Resultados por centro com período e exportação (§3.3) | `CostCenterUiHarnessTest` |

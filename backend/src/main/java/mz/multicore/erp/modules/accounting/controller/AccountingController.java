@@ -84,6 +84,14 @@ public class AccountingController {
         return ResponseEntity.ok(accountingReportService.getIncomeStatement(from, to));
     }
 
+    /** Resultados por centro de custo do período (SPEC centros de custo §3.3). */
+    @GetMapping("/cost-center-result")
+    public ResponseEntity<CostCenterResultDTO> getCostCenterResult(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(accountingReportService.getCostCenterResult(from, to));
+    }
+
     @GetMapping("/balance-sheet")
     public ResponseEntity<BalanceSheetDTO> getBalanceSheet(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf) {

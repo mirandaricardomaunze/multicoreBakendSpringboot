@@ -35,9 +35,12 @@ public class CostCenterService {
         this.companyService = companyService;
     }
 
-    @Transactional(readOnly = true)
+    /** Centres of the active company; listing is a "first use", so the list always shows the default centre (CC-09). */
+    @Transactional
     public List<CostCenterDTO> list() {
-        return repository.findByCompanyIdOrderByCode(CurrentUserContext.getCurrentCompanyId()).stream()
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        requireDefault(companyId);
+        return repository.findByCompanyIdOrderByCode(companyId).stream()
                 .map(CostCenterService::toDTO).toList();
     }
 
