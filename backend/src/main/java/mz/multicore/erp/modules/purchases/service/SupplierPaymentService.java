@@ -103,7 +103,7 @@ public class SupplierPaymentService {
         purchase = purchaseRepository.save(purchase);
 
         String desc = "Pagamento a fornecedor " + purchase.getSupplier().getName()
-                + " — Compra " + purchase.getPurchaseNumber()
+                + " — " + purchase.paymentLabel()
                 + (reference != null && !reference.isBlank() ? " (ref. " + reference + ")" : "");
         TreasuryTransactionDTO transaction = financeService.registerTransaction(
                 financeAccountId, "CREDIT", amount, desc);

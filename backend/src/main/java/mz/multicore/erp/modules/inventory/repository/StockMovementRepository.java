@@ -22,4 +22,7 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
     Page<StockMovement> findPageByCompanyId(@Param("companyId") Long companyId, Pageable pageable);
     
     List<StockMovement> findByProductId(Long productId);
+
+    @Query("SELECT DISTINCT sm.product.id FROM StockMovement sm WHERE sm.warehouse.id = :warehouseId")
+    List<Long> findProductIdsByWarehouseId(@Param("warehouseId") Long warehouseId);
 }

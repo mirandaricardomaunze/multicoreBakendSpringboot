@@ -50,6 +50,11 @@ public class ClientLookup {
         return taxId != null && clientRepository.findByTaxIdAndCompaniesId(taxId, companyId).isPresent();
     }
 
+    /** Cliente ligado à empresa com este NUIT (a referência das dívidas importadas, IMPORTACAO_DADOS_SPEC §5.2). */
+    public Optional<Client> findForCompanyByTaxId(String taxId, Long companyId) {
+        return taxId == null ? Optional.empty() : clientRepository.findByTaxIdAndCompaniesId(taxId, companyId);
+    }
+
     /** Há um cliente com este NUIT em qualquer empresa (cliente partilhado). */
     public boolean existsByTaxId(String taxId) {
         return taxId != null && clientRepository.findByTaxId(taxId).isPresent();

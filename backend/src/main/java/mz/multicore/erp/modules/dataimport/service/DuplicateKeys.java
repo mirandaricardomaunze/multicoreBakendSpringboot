@@ -35,6 +35,22 @@ final class DuplicateKeys {
     }
 
     /**
+     * Chaves das linhas já convertidas (saldos iniciais, §5): só as linhas sem erro têm item e, por isso, chave.
+     *
+     * @param keyOf chave do item da linha
+     */
+    static <T> DuplicateKeys ofLines(List<ImportPlan.Line<T>> lines, Function<T, String> keyOf) {
+        Map<String, List<Integer>> linesByKey = new HashMap<>();
+        for (ImportPlan.Line<T> line : lines) {
+            if (line.item() != null) {
+                linesByKey.computeIfAbsent(keyOf.apply(line.item()), ignored -> new ArrayList<>())
+                        .add(line.row().lineNumber());
+            }
+        }
+        return new DuplicateKeys(linesByKey);
+    }
+
+    /**
      * {@code ERRO} na coluna da chave se a chave aparece em mais de uma linha do ficheiro.
      *
      * @param repeatedLabel início da mensagem já com o género certo ("NUIT repetido", "Referência repetida")

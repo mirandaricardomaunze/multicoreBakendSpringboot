@@ -59,7 +59,8 @@ public class FiscalSummaryService {
 
         for (Invoice inv : invoiceLookup.listForCompany(companyId)) {
             // VAT is due when the invoice is issued, paid or not: a partially paid invoice counts in full.
-            if (inv.getStatus() == null || !inv.getStatus().isRealisedSale()) continue;
+            // An imported opening balance is not a fiscal document and carries no VAT.
+            if (!inv.countsAsSale()) continue;
             LocalDateTime created = inv.getCreatedAt();
             if (created == null || created.isBefore(start) || created.isAfter(end)) continue;
 
@@ -95,7 +96,8 @@ public class FiscalSummaryService {
         BigDecimal inputTax = BigDecimal.ZERO;
 
         for (Purchase p : supplierLookup.listPurchasesForCompany(companyId)) {
-            if ("CANCELLED".equals(p.getStatus())) continue;
+            // An imported supplier opening balance is not a fiscal document and carries no deductible VAT.
+            if (!p.isPurchase() || "CANCELLED".equals(p.getStatus())) continue;
             LocalDateTime created = p.getPurchaseDate();
             if (created == null || created.isBefore(start) || created.isAfter(end)) continue;
 

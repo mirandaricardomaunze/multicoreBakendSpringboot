@@ -167,8 +167,8 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.PickupApiClient pickupApiClient,
             mz.multicore.erp.desktop.client.BulkStockApiClient bulkStockApiClient,
             mz.multicore.erp.desktop.client.ProjectsApiClient projectsApiClient,
-            mz.multicore.erp.desktop.client.SectorApiClients sectorApiClients
-    ) {
+            mz.multicore.erp.desktop.client.SectorApiClients sectorApiClients,
+            mz.multicore.erp.desktop.client.DataImportApiClient dataImportApiClient) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
         this.mySubscriptionApiClient = mySubscriptionApiClient;
@@ -229,7 +229,7 @@ public class MainFrame extends JFrame {
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient,
                     promotionApiClient, scaleBarcodeParser, printApiClient);
             comprasPanel    = sellerSession ? null : new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient);
-            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient, activityApiClient);
+            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient, activityApiClient, dataImportApiClient);
             performancePanel = sellerSession ? null : new PerformancePanel(performanceApiClient, desktopSessionStore);
             forensicAuditPanel = sellerSession ? null : new ForensicAuditPanel(forensicAuditApiClient);
             aiAssistantPanel = sellerSession ? null : new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);

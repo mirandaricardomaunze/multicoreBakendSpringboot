@@ -48,7 +48,7 @@ public class GoalProgressEngine {
 
         // Filter realised sales only (CDC-BIZ-12)
         List<Invoice> realisedSales = invoices.stream()
-                .filter(inv -> inv.getStatus() != null && inv.getStatus().isRealisedSale())
+                .filter(Invoice::countsAsSale)
                 .toList();
 
         // If scope is EMPLOYEE, find employee identifier to match createdBy

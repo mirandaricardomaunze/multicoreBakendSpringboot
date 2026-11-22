@@ -70,13 +70,11 @@ public class CustomerStatementCollector {
             BigDecimal amount = inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO;
             Long buId = inv.getBusinessUnit() != null ? inv.getBusinessUnit().getId() : null;
             String buName = inv.getBusinessUnit() != null ? inv.getBusinessUnit().getName() : null;
-            events.add(new CustomerStatementMovement(
-                    invDate, "FT",
-                    inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : "-",
-                    "Factura a Crédito",
-                    inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : "-",
-                    amount, BigDecimal.ZERO, ts, buId, buName
-            ));
+            String number = inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : "-";
+            events.add(inv.isSale()
+                    ? new CustomerStatementMovement(invDate, "FT", number, "Factura a Crédito", number,
+                            amount, BigDecimal.ZERO, ts, buId, buName)
+                    : openingBalanceMovement(inv, invDate, number, amount, ts, buId, buName));
 
             LocalDate due = inv.effectiveDueDate();
             if (due != null && due.isBefore(to)) {
@@ -182,5 +180,13 @@ public class CustomerStatementCollector {
         }
 
         return new CollectedCustomerMovements(events, overdue);
+    }
+
+    /** Saldo Inicial (IMPORTACAO_DADOS_SPEC §5.2): débito na data da factura antiga, com o nº original visível. */
+    private static CustomerStatementMovement openingBalanceMovement(Invoice inv, LocalDate date, String number,
+            BigDecimal amount, LocalDateTime ts, Long buId, String buName) {
+        String original = inv.getOriginalNumber() == null || inv.getOriginalNumber().isBlank() ? null : inv.getOriginalNumber();
+        return new CustomerStatementMovement(date, "SI", number, original == null ? "Saldo Inicial" : "Saldo Inicial — " + original,
+                original == null ? number : original, amount, BigDecimal.ZERO, ts, buId, buName);
     }
 }

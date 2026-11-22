@@ -42,6 +42,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findOutstandingWithClient(@Param("companyId") Long companyId,
                                           @Param("statuses") Collection<InvoiceStatus> statuses);
 
+    /** Chave do Saldo Inicial importado: cliente + número original, na empresa (IMPORTACAO_DADOS_SPEC §5.2). */
+    boolean existsByCompanyIdAndClientIdAndOriginalNumber(Long companyId, Long clientId, String originalNumber);
+
     /** Página de faturas da empresa, da mais recente para a mais antiga. */
     Page<Invoice> findByCompanyIdOrderByCreatedAtDesc(Long companyId, Pageable pageable);
 

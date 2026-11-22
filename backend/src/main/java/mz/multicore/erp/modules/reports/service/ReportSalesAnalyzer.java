@@ -21,7 +21,7 @@ public class ReportSalesAnalyzer {
     private static final int TOP_PRODUCTS_LIMIT = 5;
 
     List<Invoice> filterRealisedSales(List<Invoice> invoices) {
-        return invoices.stream().filter(invoice -> invoice.getStatus().isRealisedSale()).toList();
+        return invoices.stream().filter(Invoice::countsAsSale).toList();
     }
 
     SalesSummaryDTO summarise(List<Invoice> sales) {

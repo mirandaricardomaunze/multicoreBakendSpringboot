@@ -8,13 +8,16 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "purchases", uniqueConstraints = @UniqueConstraint(
-        name = "uk_purchases_company_number", columnNames = {"company_id", "purchase_number"}))
+@Table(name = "purchases", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_purchases_company_number", columnNames = {"company_id", "purchase_number"}),
+        @UniqueConstraint(name = "uk_purchases_company_supplier_original",
+                columnNames = {"company_id", "supplier_id", "original_number"})})
 @Getter
 @Setter
 public class Purchase extends BaseEntity {
@@ -34,9 +37,28 @@ public class Purchase extends BaseEntity {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
+    /** Armazém onde a mercadoria entrou; vazio no Saldo Inicial Fornecedor, que não movimenta stock. */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "warehouse_id", nullable = false)
+    @JoinColumn(name = "warehouse_id")
     private Warehouse warehouse;
+
+    /** Compra ou "Saldo Inicial Fornecedor" importado (IMPORTACAO_DADOS_SPEC §5.3). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "document_kind", nullable = false, length = 20,
+            columnDefinition = "varchar(20) default 'PURCHASE' not null")
+    private PurchaseDocumentKind documentKind = PurchaseDocumentKind.PURCHASE;
+
+    /** Número da factura no sistema antigo; só no Saldo Inicial, onde com o fornecedor forma a chave da importação. */
+    @Column(name = "original_number", length = 60)
+    private String originalNumber;
+
+    /** Vencimento da factura antiga no Saldo Inicial Fornecedor. */
+    @Column(name = "due_date")
+    private LocalDate dueDate;
+
+    /** Descrição livre do Saldo Inicial Fornecedor, trazida do ficheiro importado. */
+    @Column(name = "description", length = 300)
+    private String description;
 
     /** Encomenda cuja recepção criou esta compra; vazio na compra directa. */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -69,6 +91,23 @@ public class Purchase extends BaseEntity {
         BigDecimal returned = returnedAmount == null ? BigDecimal.ZERO : returnedAmount;
         BigDecimal out = total.subtract(returned).subtract(paid);
         return out.signum() > 0 ? out : BigDecimal.ZERO;
+    }
+
+    /**
+     * É uma compra: tudo menos o "Saldo Inicial Fornecedor" importado, que não é documento fiscal e fica fora do IVA
+     * dedutível (IMPORTACAO_DADOS_SPEC §5.3). Continua a ser pago como uma compra.
+     */
+    public boolean isPurchase() {
+        return documentKind != PurchaseDocumentKind.OPENING_BALANCE;
+    }
+
+    /**
+     * Como o documento se identifica num pagamento: "Compra CP-…" ou, no Saldo Inicial Fornecedor, "Saldo Inicial
+     * Fornecedor SIF-… (nº original)" — o fornecedor reconhece-o pelo número do sistema antigo (SPEC §5.3).
+     */
+    public String paymentLabel() {
+        if (isPurchase()) return "Compra " + purchaseNumber;
+        return "Saldo Inicial Fornecedor " + purchaseNumber + (originalNumber == null ? "" : " (" + originalNumber + ")");
     }
 
     @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)

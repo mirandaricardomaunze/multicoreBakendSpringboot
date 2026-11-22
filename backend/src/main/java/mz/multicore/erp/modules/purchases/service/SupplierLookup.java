@@ -61,6 +61,28 @@ public class SupplierLookup {
         return taxId != null && companyId != null && supplierRepository.existsByTaxIdAndCompanyId(taxId, companyId);
     }
 
+    /** Fornecedor da empresa pelo NUIT (activo ou inactivo). */
+    public Optional<Supplier> findForCompanyByTaxId(String taxId, Long companyId) {
+        return taxId == null || companyId == null
+                ? Optional.empty()
+                : supplierRepository.findFirstByTaxIdAndCompanyId(taxId, companyId);
+    }
+
+    /** Fornecedor pelo id, só se for da empresa; {@code BusinessRuleException("Fornecedor não encontrado.")} senão. */
+    public Supplier requireForCompany(Long id, Long companyId) {
+        return (id == null || companyId == null
+                ? Optional.<Supplier>empty()
+                : supplierRepository.findByIdAndCompanyId(id, companyId))
+                .orElseThrow(() -> new BusinessRuleException(NOT_FOUND));
+    }
+
+    /** Já há um Saldo Inicial Fornecedor deste fornecedor com este número original na empresa (§5.3). */
+    public boolean existsOpeningPayable(Long companyId, Long supplierId, String originalNumber) {
+        return originalNumber != null
+                && purchaseRepository.existsByCompanyIdAndSupplierIdAndOriginalNumber(
+                        companyId, supplierId, originalNumber);
+    }
+
     /** Fornecedores activos da empresa. */
     public List<Supplier> listActiveForCompany(Long companyId) {
         return supplierRepository.findByCompanyIdAndActiveTrue(companyId);

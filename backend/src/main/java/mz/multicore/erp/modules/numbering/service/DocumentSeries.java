@@ -47,12 +47,16 @@ public final class DocumentSeries {
     public static final String PRODUCTION_ORDER = "OP";
     /** Internal return of goods to a supplier: lowers the debt, the stock and the deductible VAT. */
     public static final String SUPPLIER_RETURN = "DF";
+    /** "Saldo Inicial": customer debt brought from another ERP (IMPORTACAO_DADOS_SPEC §5.2). Not a fiscal series. */
+    public static final String OPENING_RECEIVABLE = "SI";
+    /** "Saldo Inicial Fornecedor": supplier debt brought from another ERP (IMPORTACAO_DADOS_SPEC §5.3). Not fiscal. */
+    public static final String OPENING_PAYABLE = "SIF";
 
     /** Todas as séries acima, para as criar antecipadamente ({@link DocumentSequenceBootstrap}). */
     public static final java.util.List<String> ALL = java.util.List.of(INVOICE, ORDER, QUOTATION, RECEIPT,
             CREDIT_NOTE, DEBIT_NOTE, STOCK_TRANSFER, DELIVERY_GUIDE, PURCHASE, PURCHASE_ORDER, PAYSLIP,
             EMPLOYMENT_CONTRACT, TERMINATION, JOURNAL_ENTRY, MATERIAL_PICKUP, CARCASS_BREAKDOWN, CONSIGNMENT, WEIGHING_TICKET,
-            PRODUCTION_ORDER, SUPPLIER_RETURN);
+            PRODUCTION_ORDER, SUPPLIER_RETURN, OPENING_RECEIVABLE, OPENING_PAYABLE);
 
     private DocumentSeries() {}
 }

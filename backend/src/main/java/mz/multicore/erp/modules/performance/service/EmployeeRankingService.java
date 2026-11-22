@@ -48,7 +48,7 @@ public class EmployeeRankingService {
 
         // CDC-BIZ-12: Apenas faturas com isRealisedSale() == true
         List<Invoice> realised = invoices.stream()
-                .filter(inv -> inv.getStatus() != null && inv.getStatus().isRealisedSale())
+                .filter(Invoice::countsAsSale)
                 .toList();
 
         List<Employee> employees = employeeLookup.listForCompany(companyId);

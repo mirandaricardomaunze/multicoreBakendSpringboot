@@ -136,7 +136,7 @@ public final class CustomerStatementOperationsCoordinator {
         peek.setHeaderIcon("fas-file-invoice", UIHelper.ACCENT_BLUE);
         peek.setTitle(docNo != null && !"-".equals(docNo) ? docNo : desc);
         peek.setSubtitle(desc);
-        peek.setStatus(type, "FT".equals(type) || "ND".equals(type) ? UIHelper.REJECTED_RED : UIHelper.APPROVED_GREEN);
+        peek.setStatus(type, "FT".equals(type) || "ND".equals(type) || "SI".equals(type) ?UIHelper.REJECTED_RED : UIHelper.APPROVED_GREEN);
 
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
         items.add(new QuickPeekPanel.PeekItem("Data", date, false));

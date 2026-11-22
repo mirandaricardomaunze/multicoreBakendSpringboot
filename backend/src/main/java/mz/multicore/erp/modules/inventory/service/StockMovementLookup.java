@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Porta de leitura do ledger de movimentos de stock para os outros módulos
@@ -24,5 +25,10 @@ public class StockMovementLookup {
     /** Movimentos dos armazéns da empresa, dos mais recentes para os mais antigos. */
     public List<StockMovement> listForCompany(Long companyId) {
         return movementRepository.findByCompanyId(companyId);
+    }
+
+    /** Ids dos artigos que já têm algum movimento no armazém (stock inicial só entra sem movimentos). */
+    public Set<Long> listProductIdsWithMovements(Long warehouseId) {
+        return Set.copyOf(movementRepository.findProductIdsByWarehouseId(warehouseId));
     }
 }

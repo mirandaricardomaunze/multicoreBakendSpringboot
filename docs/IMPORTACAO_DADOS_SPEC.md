@@ -75,6 +75,9 @@ extractos bancários. Sem importação não há migração de clientes.
 - Um ecrã "Importar dados" em Configurações: escolher a entidade, descarregar o modelo, escolher o
   ficheiro, ver a pré-visualização numa tabela (linha, estado, coluna, mensagem) e confirmar.
 - O botão **Confirmar** só fica activo quando a pré-visualização não tem erros.
+- Entidades oferecidas, por esta ordem: Clientes, Fornecedores, Artigos (§4) e depois os saldos iniciais
+  Stock inicial, Dívidas de clientes e Dívidas a fornecedores (§5), que dependem dos cadastros. Mudar de
+  entidade descarta a pré-visualização.
 - Segue o padrão de tabelas, tipografia e diálogos do projecto; ícones por `UIHelper.icon`.
 
 ## 4. Cadastros (GOAL-006)
@@ -129,6 +132,11 @@ Colunas: `sku`\*, `nome`\*, `preco_venda`\*, `iva`\*, `categoria`\*, `codigo_bar
 Pré-requisito: os clientes, fornecedores e artigos referidos já existem na empresa activa. Referência
 a um que não existe é `ERRO` da linha ("importe primeiro os clientes").
 
+- Rotas: as mesmas do §3.1 (`/api/data-import/{entidade}/template|preview|commit`), com as entidades
+  `opening-stock` (modelo `modelo-stock-inicial.csv`), `opening-receivables` (`modelo-dividas-clientes.csv`) e
+  `opening-payables` (`modelo-dividas-fornecedores.csv`). Tudo ou nada, empresa activa, só ADMIN e um `DATA_IMPORT`
+  por confirmação (entidade "stock inicial", "dívidas de clientes" ou "dívidas a fornecedores"), como nos cadastros.
+
 ### 5.1 Stock inicial — chave: SKU + armazém + lote
 
 Colunas: `sku`\*, `armazem`\*, `quantidade`\*, `custo_unitario`\*, `lote`, `validade`.
@@ -140,6 +148,10 @@ Colunas: `sku`\*, `armazem`\*, `quantidade`\*, `custo_unitario`\*, `lote`, `vali
   ajuste"). Assim reimportar o mesmo ficheiro nunca duplica stock.
 - Grava pelo ledger do inventário um movimento `ENTRY` por linha, com lote e saldo, como o stock
   inicial manual. **Sem lançamento contabilístico**.
+  - Descrição do movimento: `Stock inicial (importação)`. Antes de cada entrada, o custo médio do artigo
+    passa a contar com a quantidade ao `custo_unitario` (mesmo cálculo das entradas a custo real, pelo
+    `AverageCostUpdater` do inventário).
+  - Com algum `ERRO` no ficheiro nada é gravado (§3.1).
 
 ### 5.2 Dívidas de clientes — documento "Saldo Inicial" (série **SI**)
 
@@ -149,11 +161,25 @@ Colunas: `nuit_cliente`\*, `numero_original`\*, `data`\*, `vencimento`\*, `valor
   Já importada → `JÁ EXISTE`.
 - `valor_em_divida` > 0; `vencimento` ≥ `data`; `data` não pode ser futura.
 - Numeração própria **SI** por empresa (`SI-2026/1`, …); `numero_original` fica guardado e visível.
+  - Guarda-se na tabela das facturas como natureza `OPENING_BALANCE` (as vendas são `SALE`), emitido e por
+    receber, sem linhas nem IVA, com a `data` da factura antiga como data do documento, o `vencimento` e a
+    `descricao`. Assim os recibos, o extracto e a antiguidade tratam-no como uma factura.
+  - A chave cliente + `numero_original` é única na empresa (também na base): a confirmação recusa uma dívida já
+    importada mesmo que a pré-visualização não a tenha visto. Compara-se o número tal como fica gravado (sem
+    espaços nas pontas). Cliente pelo NUIT ligado à empresa activa.
 - **Não é documento fiscal**: sem IVA, fora do SAF-T, das declarações de IVA e dos relatórios de
   vendas/receita.
+  - Venda é só a factura de natureza `SALE`: o SAF-T, o apuramento de IVA, o painel e o relatório diário da loja e
+    as metas/ranking comerciais excluem o `OPENING_BALANCE`, que continua a contar como "por cobrar".
 - Entra no **extracto de conta corrente** como débito na `data`, na **antiguidade de saldos** pelo
   `vencimento`, na exposição de **limite de crédito** e na **mora** como qualquer factura.
+  - No extracto a linha tem o tipo `SI`, o número `SI-aaaa/n`, a descrição "Saldo Inicial — <numero_original>" e o
+    `numero_original` como referência.
 - Liquida-se com **recibos normais**, total ou parcialmente, como uma factura.
+  - Recibo `RC` pelo ecrã comercial ou liquidação pela tesouraria (sem valor = tudo o que falta); fica parcialmente
+    pago / pago, anular o recibo devolve o valor em dívida, e o recibo aparece a crédito no extracto com o `SI-aaaa/n`
+    como referência. O movimento de tesouraria diz "Recebimento Saldo Inicial SI-aaaa/n (<numero_original>) …", não
+    "Fatura".
 - **Sem lançamento contabilístico automático** (a abertura contabilística é feita pelo contabilista).
 
 ### 5.3 Dívidas a fornecedores — documento "Saldo Inicial Fornecedor" (série **SIF**)
@@ -161,9 +187,17 @@ Colunas: `nuit_cliente`\*, `numero_original`\*, `data`\*, `vencimento`\*, `valor
 Colunas: `nuit_fornecedor`\*, `numero_original`\*, `data`\*, `vencimento`\*, `valor_em_divida`\*, `descricao`.
 
 - Mesmas regras de chave, valores, datas e numeração do §5.2 (série **SIF**).
+  - Guarda-se na tabela das compras como natureza `OPENING_BALANCE` (as compras são `PURCHASE`), por pagar, sem
+    linhas, sem armazém e sem IVA, com a `data` da factura antiga como data da compra, o `vencimento` e a
+    `descricao`. A chave fornecedor + `numero_original` é única na empresa (também na base). Fornecedor pelo NUIT na
+    empresa activa; inexistente → `ERRO` ("importe primeiro os fornecedores"). Não publica evento de compra.
 - Não gera entrada de stock nem documento fiscal.
+  - Compra é só a de natureza `PURCHASE`: o apuramento de IVA (compras e IVA dedutível) exclui o `OPENING_BALANCE`.
 - Aparece na lista de **contas a pagar** (`/api/purchases/payables`) e paga-se com a mesma acção de
   pagamento a fornecedor, total ou parcialmente, com a mesma conta financeira.
+  - Parcial deixa o resto em dívida; pago na totalidade sai das contas a pagar; valor acima do saldo é recusado. O
+    movimento de tesouraria diz "Pagamento a fornecedor <nome> — Saldo Inicial Fornecedor SIF-aaaa/n
+    (<numero_original>)", não "Compra"; o evento de pagamento leva o `SIF-aaaa/n`, como numa compra.
 - Sem lançamento contabilístico automático.
 
 ## 6. Fora de âmbito
