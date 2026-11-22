@@ -92,6 +92,11 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
   continua consultável (histórico).
 - Desktop: ecrã em Contabilidade com o relatório (período, tabela por centro) e exportação pelos
   meios normais de tabela (PDF/Excel/CSV); gestão de centros em Configurações.
+  Concretização (CC-UI-01): Configurações › "Centros de Custo" (último separador) lista código, nome, tipo
+  (Manual/Armazém), estado e qual é o por omissão, e mostra o centro por omissão por cima da tabela. "Novo centro"
+  e "Editar" (código, nome, estado) só para centros manuais; "Apagar" só manual e nunca o por omissão (com
+  confirmação; o backend recusa se tiver lançamentos); "Tornar por omissão" só para centro activo que ainda não o
+  é. Sem ADMIN/MANAGER os botões ficam desactivados; o backend é quem decide.
 
 ## 4. Orçamento (GOAL-011)
 

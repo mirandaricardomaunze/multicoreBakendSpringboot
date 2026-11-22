@@ -15,6 +15,8 @@ import java.util.Map;
 @Profile("desktop")
 public class AccountingApiClient {
 
+    private static final String COST_CENTERS = "/api/accounting/cost-centers";
+
     private final DesktopClientFactory clientFactory;
 
     public AccountingApiClient(DesktopClientFactory clientFactory) {
@@ -71,6 +73,27 @@ public class AccountingApiClient {
     public mz.multicore.erp.modules.accounting.dto.InventoryAdjustmentDTO adjustInventory() {
         return clientFactory.authenticatedClient().post("/api/accounting/inventory-adjustment", null,
                 mz.multicore.erp.modules.accounting.dto.InventoryAdjustmentDTO.class);
+    }
+
+    /** Centros de custo da empresa activa; traz sempre o centro por omissão (SPEC §3.1). */
+    public List<CostCenterDTO> listCostCenters() {
+        return clientFactory.authenticatedClient().getList(COST_CENTERS, CostCenterDTO.class);
+    }
+
+    public CostCenterDTO createCostCenter(SaveCostCenterRequest request) {
+        return clientFactory.authenticatedClient().post(COST_CENTERS, request, CostCenterDTO.class);
+    }
+
+    public CostCenterDTO updateCostCenter(Long id, SaveCostCenterRequest request) {
+        return clientFactory.authenticatedClient().put(COST_CENTERS + "/" + id, request, CostCenterDTO.class);
+    }
+
+    public CostCenterDTO setDefaultCostCenter(Long id) {
+        return clientFactory.authenticatedClient().put(COST_CENTERS + "/" + id + "/default", null, CostCenterDTO.class);
+    }
+
+    public void deleteCostCenter(Long id) {
+        clientFactory.authenticatedClient().delete(COST_CENTERS + "/" + id);
     }
 
     public BalanceSheetDTO getBalanceSheet(LocalDate asOf) {

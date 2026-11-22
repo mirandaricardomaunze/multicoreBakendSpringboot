@@ -36,6 +36,8 @@ public class ConfigPanel extends JPanel {
     private final mz.multicore.erp.gui.sector.ActivityProfilePanel activityPanel;
     /** Exchange rates and base currency (FX-UI-03); {@code null} in legacy constructors. */
     private final mz.multicore.erp.gui.currency.ExchangeRatesPanel exchangeRatesPanel;
+    /** Cost centres and the default centre (CC-UI-01); {@code null} in legacy constructors. */
+    private final mz.multicore.erp.gui.accounting.CostCentersPanel costCentersPanel;
     private UserManagementPanel usersPanel;
 
     // TAB 1: AUDIT LOGS
@@ -84,6 +86,22 @@ public class ConfigPanel extends JPanel {
                        mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
                        DataImportApiClient dataImportApiClient,
                        ExchangeRateApiClient exchangeRateApiClient) {
+        this(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient,
+                mySubscriptionApiClient, monitoringApiClient, activityApiClient, dataImportApiClient,
+                exchangeRateApiClient, null);
+    }
+
+    /** With the cost centres and the default centre (CENTROS_CUSTO_ORCAMENTO_SPEC §3.3): appended at the end. */
+    public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
+                       DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
+                       MySubscriptionApiClient mySubscriptionApiClient,
+                       SystemMonitoringApiClient monitoringApiClient,
+                       mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
+                       DataImportApiClient dataImportApiClient,
+                       ExchangeRateApiClient exchangeRateApiClient,
+                       AccountingApiClient accountingApiClient) {
+        this.costCentersPanel = accountingApiClient == null ? null
+                : new mz.multicore.erp.gui.accounting.CostCentersPanel(accountingApiClient);
         this.exchangeRatesPanel = exchangeRateApiClient == null ? null
                 : new mz.multicore.erp.gui.currency.ExchangeRatesPanel(exchangeRateApiClient);
         this.activityPanel = activityApiClient == null ? null
@@ -130,6 +148,10 @@ public class ConfigPanel extends JPanel {
         if (exchangeRatesPanel != null) {
             tabbedPane.addTab("Câmbios e Moeda Base", UIHelper.icon("fas-exchange-alt", 16, UIHelper.ACCENT_CYAN),
                     exchangeRatesPanel);
+        }
+        if (costCentersPanel != null) {
+            tabbedPane.addTab("Centros de Custo", UIHelper.icon("fas-sitemap", 16, UIHelper.ACCENT_ORANGE),
+                    costCentersPanel);
         }
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -227,6 +249,7 @@ public class ConfigPanel extends JPanel {
         if (subscriptionPanel != null) subscriptionPanel.refresh();
         if (activityPanel != null) activityPanel.refresh();
         if (exchangeRatesPanel != null) exchangeRatesPanel.refresh();
+        if (costCentersPanel != null) costCentersPanel.refresh();
     }
 
     void loadAuditLogs() {
