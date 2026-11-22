@@ -13,7 +13,9 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Efeito no stock de um documento CI (docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md §4.3, §4.4): reparte o custo pelas
@@ -36,17 +38,57 @@ public class LandedCostStockEffect {
     /** Reparte {@code totalCost} (moeda base) pelas linhas das compras e aplica cada quota ao stock ou a CMV. */
     public List<LandedCostAllocation> apply(LandedCostAllocationMethod method, BigDecimal totalCost,
                                             List<Purchase> purchases) {
+        return allocate(method, totalCost, purchases, (product, warehouse, before, stockAmount) -> {
+            averageCost.absorbCost(product, warehouse, stockAmount);
+            return unitCost(product);
+        });
+    }
+
+    /**
+     * O mesmo cálculo que {@link #apply}, sem mexer em nenhum artigo (pré-visualização, §4.3): o médio de cada artigo
+     * é simulado e acumula quando o mesmo artigo aparece em várias linhas, como faria a confirmação.
+     */
+    public List<LandedCostAllocation> preview(LandedCostAllocationMethod method, BigDecimal totalCost,
+                                              List<Purchase> purchases) {
+        Map<Long, BigDecimal> simulated = new HashMap<>();
+        return allocate(method, totalCost, purchases, new AverageCost() {
+            @Override
+            public BigDecimal before(Product product) {
+                return simulated.getOrDefault(product.getId(), unitCost(product));
+            }
+
+            @Override
+            public BigDecimal absorb(Product product, Warehouse warehouse, BigDecimal before, BigDecimal stockAmount) {
+                BigDecimal after = averageCost.costAfterAbsorbing(product, warehouse, before, stockAmount)
+                        .setScale(2, RoundingMode.HALF_UP);
+                simulated.put(product.getId(), after);
+                return after;
+            }
+        });
+    }
+
+    /** Como o custo médio de um artigo reage à parte do stock: aplicado de verdade ou só simulado. */
+    private interface AverageCost {
+        default BigDecimal before(Product product) {
+            return unitCost(product);
+        }
+
+        BigDecimal absorb(Product product, Warehouse warehouse, BigDecimal before, BigDecimal stockAmount);
+    }
+
+    private List<LandedCostAllocation> allocate(LandedCostAllocationMethod method, BigDecimal totalCost,
+                                                List<Purchase> purchases, AverageCost cost) {
         List<PurchaseLine> lines = purchases.stream().flatMap(purchase -> purchase.getLines().stream()).toList();
         List<LandedCostCalculator.Allocation> shares = calculator.allocate(totalCost, method,
                 lines.stream().map(LandedCostStockEffect::allocationLine).toList());
         List<LandedCostAllocation> result = new ArrayList<>(lines.size());
         for (int i = 0; i < lines.size(); i++) {
-            result.add(applyShare(lines.get(i), shares.get(i).share()));
+            result.add(applyShare(lines.get(i), shares.get(i).share(), cost));
         }
         return List.copyOf(result);
     }
 
-    private LandedCostAllocation applyShare(PurchaseLine line, BigDecimal share) {
+    private LandedCostAllocation applyShare(PurchaseLine line, BigDecimal share, AverageCost cost) {
         Product product = line.getProduct();
         Warehouse warehouse = line.getPurchase().getWarehouse();
         BigDecimal stockQuantity = warehouse == null ? BigDecimal.ZERO
@@ -60,9 +102,9 @@ public class LandedCostStockEffect {
         allocation.setShareAmount(share);
         allocation.setStockAmount(split.stockAmount());
         allocation.setSoldAmount(split.soldAmount());
-        allocation.setUnitCostBefore(unitCost(product));
-        averageCost.absorbCost(product, warehouse, split.stockAmount());
-        allocation.setUnitCostAfter(unitCost(product));
+        BigDecimal before = cost.before(product);
+        allocation.setUnitCostBefore(before);
+        allocation.setUnitCostAfter(cost.absorb(product, warehouse, before, split.stockAmount()));
         return allocation;
     }
 

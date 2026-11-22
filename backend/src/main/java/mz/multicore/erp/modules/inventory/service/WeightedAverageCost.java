@@ -40,11 +40,21 @@ public final class WeightedAverageCost {
      */
     public static void absorb(StockRepository stockRepository, Product product, Warehouse warehouse,
                               BigDecimal addedCost) {
-        if (addedCost == null || addedCost.signum() <= 0 || product.getId() == null) return;
-        BigDecimal onHand = companyOnHand(stockRepository, product, warehouse);
-        if (onHand.signum() == 0) return;
         BigDecimal oldCost = product.getPurchasePrice() == null ? BigDecimal.ZERO : product.getPurchasePrice();
-        product.setPurchasePrice(onHand.multiply(oldCost).add(addedCost).divide(onHand, 2, RoundingMode.HALF_UP));
+        BigDecimal newCost = absorbedCost(stockRepository, product, warehouse, oldCost, addedCost);
+        if (newCost != oldCost) product.setPurchasePrice(newCost);
+    }
+
+    /**
+     * O médio que {@link #absorb} daria a partir de {@code currentCost}, sem alterar o artigo (pré-visualização dos
+     * custos de importação). Sem stock ou sem custo devolve {@code currentCost} tal como veio.
+     */
+    public static BigDecimal absorbedCost(StockRepository stockRepository, Product product, Warehouse warehouse,
+                                          BigDecimal currentCost, BigDecimal addedCost) {
+        if (addedCost == null || addedCost.signum() <= 0 || product.getId() == null) return currentCost;
+        BigDecimal onHand = companyOnHand(stockRepository, product, warehouse);
+        if (onHand.signum() == 0) return currentCost;
+        return onHand.multiply(currentCost).add(addedCost).divide(onHand, 2, RoundingMode.HALF_UP);
     }
 
     /** Stock do artigo em todos os armazéns da empresa do armazém indicado (nunca negativo). */

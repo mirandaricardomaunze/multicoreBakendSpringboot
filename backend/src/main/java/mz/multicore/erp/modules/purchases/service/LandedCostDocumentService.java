@@ -11,6 +11,7 @@ import mz.multicore.erp.modules.purchases.dto.CreateLandedCostRequest;
 import mz.multicore.erp.modules.purchases.dto.LandedCostAllocationDTO;
 import mz.multicore.erp.modules.purchases.dto.LandedCostChargeDTO;
 import mz.multicore.erp.modules.purchases.dto.LandedCostDocumentDTO;
+import mz.multicore.erp.modules.purchases.dto.LandedCostPreviewDTO;
 import mz.multicore.erp.modules.purchases.model.LandedCostAllocation;
 import mz.multicore.erp.modules.purchases.model.LandedCostAllocationMethod;
 import mz.multicore.erp.modules.purchases.model.LandedCostCharge;
@@ -64,24 +65,33 @@ public class LandedCostDocumentService {
         this.eventPublisher = eventPublisher;
     }
 
+    /**
+     * Pré-visualização (§4.3): as mesmas validações e o mesmo cálculo da confirmação, sem número, sem dívidas e sem
+     * mexer no custo médio dos artigos.
+     */
+    @Transactional(readOnly = true)
+    public LandedCostPreviewDTO preview(CreateLandedCostRequest request) {
+        Draft draft = draft(request);
+        LandedCostCalculator.Totals totals = draft.totals();
+        List<LandedCostAllocation> allocations = stockEffect.preview(draft.method(), totals.capitalizableCost(),
+                draft.purchases());
+        return new LandedCostPreviewDTO(draft.method(), totals.capitalizableCost(), totals.deductibleVat(),
+                totals.payableTotal(), allocations.stream().map(LandedCostDocumentService::toDto).toList());
+    }
+
+    /** Confirmação (§4.4): grava o CI, as dívidas, a fotografia por linha e o novo custo médio numa transacção. */
     @Transactional
     public LandedCostDocumentDTO register(CreateLandedCostRequest request) {
-        PermissionGuard.requireManagerOrAdmin("registar custos de importação");
-        Long companyId = CurrentUserContext.requireCurrentCompanyId();
-        List<Purchase> purchases = receivedPurchases(companyId, request.purchaseIds());
-        Company company = purchases.get(0).getCompany();
-        LocalDate documentDate = request.documentDate() == null ? LocalDate.now() : request.documentDate();
-        List<LandedCostDocumentCharge> charges = chargeResolver.resolve(company, documentDate, request.charges());
+        Draft draft = draft(request);
+        List<LandedCostDocumentCharge> charges = draft.charges();
 
         LandedCostDocument document = new LandedCostDocument();
-        document.setCompany(company);
-        document.setDocumentDate(documentDate);
-        document.setAllocationMethod(LandedCostAllocationMethod.orDefault(request.allocationMethod()));
-        document.getPurchases().addAll(purchases);
-        BigDecimal capitalizableCost = calculator.totals(
-                charges.stream().map(LandedCostDocumentCharge::charge).toList()).capitalizableCost();
+        document.setCompany(draft.company());
+        document.setDocumentDate(draft.documentDate());
+        document.setAllocationMethod(draft.method());
+        document.getPurchases().addAll(draft.purchases());
         document.getAllocations().addAll(
-                stockEffect.apply(document.getAllocationMethod(), capitalizableCost, purchases));
+                stockEffect.apply(draft.method(), draft.totals().capitalizableCost(), draft.purchases()));
         document.setDocumentNumber(documentNumberService.next(DocumentSeries.LANDED_COST));
         for (LandedCostDocumentCharge charge : charges) {
             Purchase payable = charge.createPayable(document, document.getCharges().size() + 1);
@@ -92,6 +102,25 @@ public class LandedCostDocumentService {
         LandedCostDocument saved = documentRepository.save(document);
         eventPublisher.publishEvent(postingEvent(saved));
         return toDto(saved);
+    }
+
+    /** Pedido validado na empresa activa: compras recebidas, linhas de custo resolvidas, método e totais. */
+    private record Draft(Company company, LocalDate documentDate, LandedCostAllocationMethod method,
+                         List<Purchase> purchases, List<LandedCostDocumentCharge> charges,
+                         LandedCostCalculator.Totals totals) {
+    }
+
+    private Draft draft(CreateLandedCostRequest request) {
+        PermissionGuard.requireManagerOrAdmin("registar custos de importação");
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        List<Purchase> purchases = receivedPurchases(companyId, request.purchaseIds());
+        Company company = purchases.get(0).getCompany();
+        LocalDate documentDate = request.documentDate() == null ? LocalDate.now() : request.documentDate();
+        List<LandedCostDocumentCharge> charges = chargeResolver.resolve(company, documentDate, request.charges());
+        LandedCostCalculator.Totals totals = calculator.totals(
+                charges.stream().map(LandedCostDocumentCharge::charge).toList());
+        return new Draft(company, documentDate, LandedCostAllocationMethod.orDefault(request.allocationMethod()),
+                purchases, charges, totals);
     }
 
     /**

@@ -41,4 +41,10 @@ public class AverageCostUpdater {
         WeightedAverageCost.absorb(stockRepository, product, warehouse, addedCost);
         productCommands.saveProduct(product);
     }
+
+    /** O médio que {@link #absorbCost} daria a partir de {@code currentCost}, sem gravar nada (pré-visualização). */
+    public BigDecimal costAfterAbsorbing(Product product, Warehouse warehouse, BigDecimal currentCost,
+                                         BigDecimal addedCost) {
+        return WeightedAverageCost.absorbedCost(stockRepository, product, warehouse, currentCost, addedCost);
+    }
 }

@@ -133,6 +133,13 @@ por documento:
   método e, em empate, a primeira linha.
 - **Pré-visualização** antes de gravar: por artigo, custo unitário original, custo acrescentado e
   custo unitário final.
+- Como fica gravado (LC-08): `POST /api/purchases/landed-costs/preview` recebe o mesmo pedido da confirmação,
+  aplica as mesmas validações (compras recebidas da empresa activa, linhas de custo) e devolve, em moeda base,
+  o custo que entra nos artigos, o IVA dedutível, o total das dívidas e, por linha de compra, quota (custo
+  acrescentado), parte para o stock, parte já vendida e médio antes/depois; não consome número, não cria
+  dívidas nem muda o custo médio (o médio é simulado e acumula quando o mesmo artigo aparece em várias
+  linhas, como na confirmação). `POST /api/purchases/landed-costs` confirma: CI, dívidas, fotografia e custo
+  médio numa só transacção (um erro não deixa nada gravado). Perfis: MANAGER e ADMIN.
 
 ### 4.4 Efeito no stock e na contabilidade
 
