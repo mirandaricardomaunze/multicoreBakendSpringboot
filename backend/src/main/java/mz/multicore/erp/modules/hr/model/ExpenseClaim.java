@@ -36,4 +36,11 @@ public class ExpenseClaim extends BaseEntity {
 
     @Column(name = "rejection_reason")
     private String rejectionReason;
+
+    /**
+     * Cost centre of the reimbursement posting (docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §3.2), or {@code null} for the
+     * company's default centre. Only the id: the centre belongs to the accounting module, which validates it.
+     */
+    @Column(name = "cost_center_id")
+    private Long costCenterId;
 }

@@ -66,17 +66,30 @@ public class FinanceService {
 
     @Transactional
     public void registerAutoExpensePayout(BigDecimal amount, String description) {
-        registerAutoPayout(amount, "Pagamento Despesa: " + description, mz.multicore.erp.architecture.events.PayoutPurpose.STAFF_EXPENSE);
+        registerAutoExpensePayout(amount, description, null);
+    }
+
+    /** Reimbursed expense paid by the treasury; {@code costCenterId} (optional) marks its expense posting (CC-06). */
+    @Transactional
+    public void registerAutoExpensePayout(BigDecimal amount, String description, Long costCenterId) {
+        registerAutoPayout(amount, "Pagamento Despesa: " + description,
+                mz.multicore.erp.architecture.events.PayoutPurpose.STAFF_EXPENSE, costCenterId);
     }
 
     /** Automatic payout that the books must also see: the ledger posts it by purpose (TreasuryPayoutEvent). */
     @Transactional
     public void registerAutoPayout(BigDecimal amount, String description, mz.multicore.erp.architecture.events.PayoutPurpose purpose) {
+        registerAutoPayout(amount, description, purpose, null);
+    }
+
+    private void registerAutoPayout(BigDecimal amount, String description,
+                                    mz.multicore.erp.architecture.events.PayoutPurpose purpose, Long costCenterId) {
         TreasuryTransactionDTO tx = operationService.registerAutoPayout(amount, description);
         if (tx == null || eventPublisher == null) return;
         eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.TreasuryPayoutEvent(
                 mz.multicore.erp.architecture.security.CurrentUserContext.getCurrentCompanyId(), tx.id(),
-                tx.transactionDate().toLocalDate(), amount, purpose, accountType(tx.accountId()) == TreasuryAccountType.CASH, description));
+                tx.transactionDate().toLocalDate(), amount, purpose, accountType(tx.accountId()) == TreasuryAccountType.CASH,
+                description, costCenterId));
     }
 
     @Transactional

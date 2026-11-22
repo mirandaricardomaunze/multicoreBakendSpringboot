@@ -54,7 +54,12 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 - Lançamento manual e despesa de tesouraria: o pedido aceita `costCenterId` nas linhas/na despesa;
   vazio numa linha de classe 6/7 usa o **centro por omissão**. O desktop pede o centro com o centro por
   omissão pré-seleccionado.
-- Linhas das classes 6/7 já existentes recebem o centro por omissão pela migração.
+  A "despesa de tesouraria" é a **despesa do colaborador** (`CreateExpenseClaimRequest.costCenterId`), paga pela
+  tesouraria ao aprovar e lançada a débito de 6201: o centro fica guardado na despesa e segue no
+  `TreasuryPayoutEvent` para a partida de custo. O módulo de RH guarda só o id; quem valida o centro (existe, é da
+  empresa, está activo) é a contabilidade ao lançar o reembolso — um centro que entretanto ficou inactivo faz
+  falhar a aprovação com a mensagem do centro, sem pagamento nem lançamento.
+- Linhas das classes 6/7 já existentes recebem o centro por omissão pela migração (V151).
 
 ### 3.3 Resultado por centro
 

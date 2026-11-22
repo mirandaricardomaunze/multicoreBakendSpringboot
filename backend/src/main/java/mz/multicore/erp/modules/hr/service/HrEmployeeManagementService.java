@@ -61,6 +61,7 @@ public class HrEmployeeManagementService {
         claim.setAmount(request.amount());
         claim.setCategory(request.category());
         claim.setDescription(request.description());
+        claim.setCostCenterId(request.costCenterId());
         claim.setStatus(ExpenseStatus.PENDING_APPROVAL);
 
         claim = expenseClaimRepository.save(claim);

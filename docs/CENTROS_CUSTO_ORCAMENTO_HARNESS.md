@@ -14,7 +14,7 @@
 | CC-03 | Cada empresa tem `ADM — Administração` como centro por omissão, alterável para outro centro activo; o por omissão não se desactiva nem apaga (§3.1) | `CostCenterRulesTest` (`cc03_*`) · `MigrationPostgresDialectHarnessTest` |
 | CC-04 | Linha de classe 6/7 exige centro; classe 1–5 recusa centro; centro de outra empresa ou inactivo recusado; a porta de gravação aplica a regra (§3.2) | `JournalLineCostCenterTest` (`cc04_*`) |
 | CC-05 | Lançamentos automáticos herdam o centro do armazém de origem; sem armazém usam o centro por omissão (§3.2) | `AutomaticPostingCostCenterTest` |
-| CC-06 | Lançamento manual e despesa de tesouraria aceitam centro; vazio em 6/7 usa o por omissão; linhas antigas migradas (§3.2) | `JournalLineCostCenterTest` |
+| CC-06 | Lançamento manual e despesa de tesouraria aceitam centro; vazio em 6/7 usa o por omissão; linhas antigas migradas (§3.2) | `JournalLineCostCenterTest` (`cc06_*`) · `MigrationPostgresDialectHarnessTest` |
 | CC-07 | Resultados por centro: proveitos, custos, resultado; total igual à demonstração de resultados (§3.3) | `CostCenterResultReportTest` |
 | CC-08 | Razão e balancete com filtro opcional por centro (§3.3) | `CostCenterResultReportTest` |
 | CC-09 | Endpoints de centros (ADMIN/MANAGER para gerir) e relatório; empresa activa (§3) | `CostCenterHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |

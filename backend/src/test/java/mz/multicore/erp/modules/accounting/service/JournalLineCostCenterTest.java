@@ -17,14 +17,40 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import mz.multicore.erp.architecture.events.PayoutPurpose;
+import mz.multicore.erp.architecture.events.TreasuryPayoutEvent;
+import mz.multicore.erp.modules.accounting.dto.CreateJournalEntryRequest;
+import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
+import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
+import mz.multicore.erp.modules.financeira.service.FinanceService;
+import mz.multicore.erp.modules.financeira.service.TreasuryOperationService;
+import mz.multicore.erp.modules.financeira.service.TreasuryQueryService;
+import mz.multicore.erp.modules.hr.model.Employee;
+import mz.multicore.erp.modules.hr.model.ExpenseClaim;
+import mz.multicore.erp.modules.hr.repository.ExpenseClaimRepository;
+import mz.multicore.erp.modules.hr.service.ExpenseApprovalCallback;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
+
+import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -35,6 +61,9 @@ import static org.mockito.Mockito.when;
  * Harness CC-04 (docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §3.2): a journal line of an account of class 6 or 7 must carry
  * a cost centre; a line of classes 1–5 never carries one; the centre must be active and belong to the entry's company.
  * The rule lives in the entry's domain and is applied by the single posting door ({@link JournalService#save}).
+ *
+ * <p>Harness CC-06: the manual entry and the reimbursed expense accept a cost centre; empty on class 6/7 uses the
+ * default centre; migration V151 moves the old class 6/7 lines to the default centre.
  */
 class JournalLineCostCenterTest {
 
@@ -177,6 +206,158 @@ class JournalLineCostCenterTest {
         assertDoesNotThrow(() -> journalService.save(entry, COMPANY_ID));
 
         verify(costCenterService, never()).requireDefault(any());
+    }
+
+    @Test
+    void cc06_lancamentoManualUsaOCentroIndicadoNaPartida() {
+        CostCenter store = center(10L, COMPANY_ID, true);
+        when(costCenterService.requirePostable(COMPANY_ID, 10L)).thenReturn(store);
+        when(chartOfAccountsService.requirePostableAccount(COMPANY_ID, "6221")).thenReturn(account("6221"));
+        when(chartOfAccountsService.requirePostableAccount(COMPANY_ID, "1101")).thenReturn(account("1101"));
+
+        journalService.createManualEntry(manual(
+                new CreateJournalEntryRequest.Line("6221", new BigDecimal("500.00"), null, null, 10L),
+                new CreateJournalEntryRequest.Line("1101", null, new BigDecimal("500.00"), null)));
+
+        JournalEntry saved = savedEntry();
+        assertSame(store, saved.getLines().get(0).getCostCenter());
+        assertNull(saved.getLines().get(1).getCostCenter());
+        verify(costCenterService, never()).requireDefault(any());
+    }
+
+    @Test
+    void cc06_lancamentoManualSemCentroEmClasse6UsaOPorOmissao() {
+        CostCenter adm = center(1L, COMPANY_ID, true);
+        when(costCenterService.requireDefault(COMPANY_ID)).thenReturn(adm);
+        when(chartOfAccountsService.requirePostableAccount(COMPANY_ID, "6221")).thenReturn(account("6221"));
+        when(chartOfAccountsService.requirePostableAccount(COMPANY_ID, "1101")).thenReturn(account("1101"));
+
+        journalService.createManualEntry(manual(
+                new CreateJournalEntryRequest.Line("6221", new BigDecimal("500.00"), null, null),
+                new CreateJournalEntryRequest.Line("1101", null, new BigDecimal("500.00"), null)));
+
+        assertSame(adm, savedEntry().getLines().get(0).getCostCenter());
+    }
+
+    @Test
+    void cc06_lancamentoManualComCentroEmClasse1ERecusado() {
+        when(costCenterService.requirePostable(COMPANY_ID, 10L)).thenReturn(center(10L, COMPANY_ID, true));
+        when(chartOfAccountsService.requirePostableAccount(COMPANY_ID, "1101")).thenReturn(account("1101"));
+        when(chartOfAccountsService.requirePostableAccount(COMPANY_ID, "1201")).thenReturn(account("1201"));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> journalService.createManualEntry(manual(
+                new CreateJournalEntryRequest.Line("1201", new BigDecimal("300.00"), null, null, 10L),
+                new CreateJournalEntryRequest.Line("1101", null, new BigDecimal("300.00"), null))));
+
+        assertTrue(error.getMessage().contains("não leva centro de custo"));
+        verify(journalEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void cc06_lancamentoManualComCentroInactivoOuDeOutraEmpresaERecusado() {
+        when(costCenterService.requirePostable(COMPANY_ID, 30L))
+                .thenThrow(new BusinessRuleException("O centro de custo C30 está inactivo e não aceita lançamentos."));
+        when(chartOfAccountsService.requirePostableAccount(COMPANY_ID, "6221")).thenReturn(account("6221"));
+
+        assertThrows(BusinessRuleException.class, () -> journalService.createManualEntry(manual(
+                new CreateJournalEntryRequest.Line("6221", new BigDecimal("500.00"), null, null, 30L),
+                new CreateJournalEntryRequest.Line("1101", null, new BigDecimal("500.00"), null))));
+
+        verify(journalEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void cc06_despesaDeTesourariaLancaNoCentroDaDespesa() {
+        CostCenter fleet = center(12L, COMPANY_ID, true);
+        when(costCenterService.requirePostable(COMPANY_ID, 12L)).thenReturn(fleet);
+
+        payoutPosting().onPayout(new TreasuryPayoutEvent(COMPANY_ID, 77L, LocalDate.of(2026, 11, 22),
+                new BigDecimal("180.00"), PayoutPurpose.STAFF_EXPENSE, true, "Reembolso Despesa #5", 12L));
+
+        JournalEntry saved = savedEntry();
+        assertSame(fleet, saved.getLines().get(0).getCostCenter());
+        assertNull(saved.getLines().get(1).getCostCenter());
+    }
+
+    @Test
+    void cc06_despesaDeTesourariaSemCentroUsaOPorOmissao() {
+        CostCenter adm = center(1L, COMPANY_ID, true);
+        when(costCenterService.requireDefault(COMPANY_ID)).thenReturn(adm);
+
+        payoutPosting().onPayout(new TreasuryPayoutEvent(COMPANY_ID, 78L, LocalDate.of(2026, 11, 22),
+                new BigDecimal("180.00"), PayoutPurpose.STAFF_EXPENSE, true, "Reembolso Despesa #6"));
+
+        assertSame(adm, savedEntry().getLines().get(0).getCostCenter());
+    }
+
+    @Test
+    void cc06_aprovacaoDaDespesaLevaOCentroAoPagamento() {
+        ExpenseClaimRepository claims = mock(ExpenseClaimRepository.class);
+        FinanceService finance = mock(FinanceService.class);
+        Employee employee = new Employee();
+        employee.setName("Maria");
+        ExpenseClaim claim = new ExpenseClaim();
+        claim.setId(5L);
+        claim.setEmployee(employee);
+        claim.setAmount(new BigDecimal("180.00"));
+        claim.setCostCenterId(12L);
+        when(claims.findById(5L)).thenReturn(Optional.of(claim));
+
+        new ExpenseApprovalCallback(claims, finance).onApproved(5L);
+
+        verify(finance).registerAutoExpensePayout(eq(new BigDecimal("180.00")), contains("#5"), eq(12L));
+    }
+
+    @Test
+    void cc06_pagamentoDaDespesaAnunciaOCentro() {
+        TreasuryOperationService operations = mock(TreasuryOperationService.class);
+        TreasuryQueryService queries = mock(TreasuryQueryService.class);
+        ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
+        when(operations.registerAutoPayout(any(), any())).thenReturn(new TreasuryTransactionDTO(
+                77L, 3L, "Caixa", "CREDIT", new BigDecimal("180.00"), "Pagamento Despesa: x", LocalDateTime.now()));
+        when(queries.accountType(3L)).thenReturn(TreasuryAccountType.CASH);
+
+        new FinanceService(operations, queries, publisher).registerAutoExpensePayout(new BigDecimal("180.00"), "x", 12L);
+
+        ArgumentCaptor<TreasuryPayoutEvent> event = ArgumentCaptor.forClass(TreasuryPayoutEvent.class);
+        verify(publisher).publishEvent(event.capture());
+        assertEquals(12L, event.getValue().costCenterId());
+        assertEquals(PayoutPurpose.STAFF_EXPENSE, event.getValue().purpose());
+    }
+
+    @Test
+    void cc06_migracaoPoeAsLinhasAntigasDe6e7NoCentroPorOmissao() throws Exception {
+        String sql;
+        try (InputStream in = getClass().getResourceAsStream(
+                "/db/migration/V151__cost_center_expenses_and_backfill.sql")) {
+            assertNotNull(in, "migração V151 em falta");
+            sql = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        String normalized = sql.replaceAll("\\s+", " ");
+        assertTrue(normalized.contains("ALTER TABLE expense_claims ADD COLUMN IF NOT EXISTS cost_center_id"));
+        assertTrue(normalized.contains("UPDATE journal_lines SET cost_center_id"));
+        assertTrue(normalized.contains("cc.default_center = TRUE"));
+        assertTrue(normalized.contains("WHERE cost_center_id IS NULL"));
+        assertTrue(normalized.contains("IN ('6', '7')"));
+    }
+
+    private TreasuryPayoutPostingService payoutPosting() {
+        PostingHelper helper = mock(PostingHelper.class);
+        when(helper.canPost(COMPANY_ID)).thenReturn(true);
+        when(helper.hasAccounts(eq(COMPANY_ID), any(String[].class))).thenReturn(true);
+        when(helper.account(eq(COMPANY_ID), anyString())).thenAnswer(inv -> account(inv.getArgument(1)));
+        when(helper.cashAccount(eq(COMPANY_ID), anyBoolean())).thenAnswer(inv -> account("1101"));
+        return new TreasuryPayoutPostingService(helper, journalService);
+    }
+
+    private JournalEntry savedEntry() {
+        ArgumentCaptor<JournalEntry> captor = ArgumentCaptor.forClass(JournalEntry.class);
+        verify(journalEntryRepository).save(captor.capture());
+        return captor.getValue();
+    }
+
+    private static CreateJournalEntryRequest manual(CreateJournalEntryRequest.Line... lines) {
+        return new CreateJournalEntryRequest(LocalDate.of(2026, 11, 22), "Renda da loja", List.of(lines));
     }
 
     private static JournalEntry entry(Long companyId) {

@@ -20,5 +20,13 @@ public record CreateExpenseClaimRequest(
 
     @NotBlank(message = "A descrição é obrigatória.")
     @Size(max = 500, message = "A descrição não pode exceder 500 caracteres.")
-    String description
-) {}
+    String description,
+
+    /** Optional cost centre of the reimbursement posting; empty uses the company's default centre. */
+    Long costCenterId
+) {
+    /** Claim without an explicit cost centre. */
+    public CreateExpenseClaimRequest(Long employeeId, BigDecimal amount, String category, String description) {
+        this(employeeId, amount, category, description, null);
+    }
+}

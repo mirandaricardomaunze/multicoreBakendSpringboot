@@ -40,7 +40,8 @@ public class ExpenseApprovalCallback implements ApprovalCallback {
             // Trigger automatic cash flow outflow (reimbursement payment)
             financeService.registerAutoExpensePayout(
                     claim.getAmount(),
-                    "Reembolso Despesa #" + claim.getId() + " - Colaborador: " + claim.getEmployee().getName()
+                    "Reembolso Despesa #" + claim.getId() + " - Colaborador: " + claim.getEmployee().getName(),
+                    claim.getCostCenterId()
             );
         });
     }

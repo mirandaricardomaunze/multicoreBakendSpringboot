@@ -76,6 +76,7 @@ public class JournalService {
             journalLine.setDebit(line.debit());
             journalLine.setCredit(line.credit());
             journalLine.setDescription(line.description());
+            journalLine.setCostCenter(costCenterOrNull(companyId, line.costCenterId()));
             entry.addLine(journalLine);
         }
 
@@ -105,6 +106,16 @@ public class JournalService {
             entry.setCreatedBy(CurrentUserContext.getUsername());
         }
         return journalEntryRepository.save(entry);
+    }
+
+    /**
+     * Centro pedido explicitamente para uma partida (lançamento manual, despesa — §3.2): tem de existir, ser da
+     * empresa e estar activo. {@code null} deixa a partida sem centro; se for de classe 6/7, {@link #save} completa-a
+     * com o centro por omissão.
+     */
+    @Transactional(readOnly = true)
+    public CostCenter costCenterOrNull(Long companyId, Long costCenterId) {
+        return costCenterId == null ? null : costCenterService.requirePostable(companyId, costCenterId);
     }
 
     /** Partidas das classes 6/7 sem centro ficam no centro por omissão da empresa (§3.2). */
