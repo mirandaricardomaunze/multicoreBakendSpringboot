@@ -156,6 +156,12 @@ por documento:
   - Débito **3201** Mercadorias (parte para o stock) e **6101** CMV (parte já vendida);
   - Débito **2432** IVA dedutível (IVA aduaneiro e IVA dos serviços);
   - Crédito **2201** Fornecedores (total de cada linha com IVA).
+- Como fica gravado (LC-07): um lançamento por CI, origem `LANDED_COST`, data e número do CI, feito na
+  confirmação (evento `LandedCostConfirmedEvent`, ouvido pela contabilidade; não lança duas vezes nem sem
+  plano de contas). 3201 e 6101 são as somas das partes fotografadas em `landed_cost_allocations`; uma linha
+  de 2201 por dívida `<CI>-n`, pelo total com IVA em moeda base (o que se vai pagar); 2432 é a diferença
+  (dívidas − 3201 − 6101), para o lançamento fechar mesmo com arredondamentos do câmbio. Valores zero não
+  geram linha.
 - Mesmos perfis que registam compras.
 
 ### 4.5 Desktop

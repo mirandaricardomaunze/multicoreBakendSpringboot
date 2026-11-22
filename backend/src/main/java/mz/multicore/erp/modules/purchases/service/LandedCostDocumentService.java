@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.purchases.service;
 
+import mz.multicore.erp.architecture.events.LandedCostConfirmedEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -19,6 +20,7 @@ import mz.multicore.erp.modules.purchases.model.Purchase;
 import mz.multicore.erp.modules.purchases.model.PurchaseLine;
 import mz.multicore.erp.modules.purchases.repository.LandedCostDocumentRepository;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,12 +28,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Registers "Custos de Importação" documents (docs/MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md §4.1): numbered in the CI
  * series of the active company, linked only to received purchases of that company, and with one debt per cost line
  * to that line's supplier, shown in accounts payable and paid like a purchase. The capitalizable cost is spread over
- * the purchase lines and applied to the stock still on hand or to cost of goods sold ({@link LandedCostStockEffect}).
+ * the purchase lines and applied to the stock still on hand or to cost of goods sold ({@link LandedCostStockEffect}),
+ * and the confirmation publishes the base-currency amounts of its journal entry (§4.4).
  */
 @Service
 public class LandedCostDocumentService {
@@ -43,18 +47,21 @@ public class LandedCostDocumentService {
     private final DocumentNumberService documentNumberService;
     private final LandedCostChargeResolver chargeResolver;
     private final LandedCostStockEffect stockEffect;
+    private final ApplicationEventPublisher eventPublisher;
     private final LandedCostCalculator calculator = new LandedCostCalculator();
 
     public LandedCostDocumentService(LandedCostDocumentRepository documentRepository,
                                      PurchaseRepository purchaseRepository,
                                      DocumentNumberService documentNumberService,
                                      LandedCostChargeResolver chargeResolver,
-                                     LandedCostStockEffect stockEffect) {
+                                     LandedCostStockEffect stockEffect,
+                                     ApplicationEventPublisher eventPublisher) {
         this.documentRepository = documentRepository;
         this.purchaseRepository = purchaseRepository;
         this.documentNumberService = documentNumberService;
         this.chargeResolver = chargeResolver;
         this.stockEffect = stockEffect;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -82,7 +89,30 @@ public class LandedCostDocumentService {
             charge.setPayable(purchaseRepository.save(payable));
             document.getCharges().add(charge);
         }
-        return toDto(documentRepository.save(document));
+        LandedCostDocument saved = documentRepository.save(document);
+        eventPublisher.publishEvent(postingEvent(saved));
+        return toDto(saved);
+    }
+
+    /**
+     * Valores do lançamento (§4.4): a parte do stock e a já vendida vêm das quotas fotografadas; cada dívida entra
+     * pelo seu total em moeda base (o que se vai pagar) e o IVA dedutível é a diferença, para o lançamento fechar.
+     */
+    private static LandedCostConfirmedEvent postingEvent(LandedCostDocument document) {
+        BigDecimal stockAmount = sum(document.getAllocations().stream().map(LandedCostAllocation::getStockAmount));
+        BigDecimal soldAmount = sum(document.getAllocations().stream().map(LandedCostAllocation::getSoldAmount));
+        List<LandedCostConfirmedEvent.Payable> payables = document.getCharges().stream()
+                .map(line -> new LandedCostConfirmedEvent.Payable(line.getPayable().getPurchaseNumber(),
+                        line.getSupplier().getName(), line.getPayable().baseTotal()))
+                .toList();
+        BigDecimal payableTotal = sum(payables.stream().map(LandedCostConfirmedEvent.Payable::amount));
+        return new LandedCostConfirmedEvent(document.getCompany().getId(), document.getId(),
+                document.getDocumentNumber(), document.getDocumentDate(), stockAmount, soldAmount,
+                payableTotal.subtract(stockAmount).subtract(soldAmount), payables);
+    }
+
+    private static BigDecimal sum(Stream<BigDecimal> values) {
+        return values.reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private List<Purchase> receivedPurchases(Long companyId, List<Long> purchaseIds) {

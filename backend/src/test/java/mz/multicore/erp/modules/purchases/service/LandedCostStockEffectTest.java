@@ -62,7 +62,8 @@ class LandedCostStockEffectTest {
             new LandedCostChargeResolver(suppliers, new PurchaseCurrencyResolver(mock(ExchangeRateService.class)),
                     mock(TaxRateLookup.class)),
             new LandedCostStockEffect(new StockLookup(stockRepository),
-                    new AverageCostUpdater(stockRepository, productCommands)));
+                    new AverageCostUpdater(stockRepository, productCommands)),
+            mock(org.springframework.context.ApplicationEventPublisher.class));
 
     private final Company company = new Company();
     private final Warehouse warehouse = warehouse(70L);

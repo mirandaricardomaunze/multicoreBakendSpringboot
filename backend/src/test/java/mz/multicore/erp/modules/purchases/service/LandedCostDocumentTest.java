@@ -75,7 +75,8 @@ class LandedCostDocumentTest {
     private final ExchangeRateService exchangeRates = mock(ExchangeRateService.class);
     private final PurchaseCurrencyResolver currencyResolver = new PurchaseCurrencyResolver(exchangeRates);
     private final LandedCostDocumentService service = new LandedCostDocumentService(documents, purchases, numbers,
-            new LandedCostChargeResolver(suppliers, currencyResolver, taxRates), mock(LandedCostStockEffect.class));
+            new LandedCostChargeResolver(suppliers, currencyResolver, taxRates), mock(LandedCostStockEffect.class),
+            mock(org.springframework.context.ApplicationEventPublisher.class));
 
     private final List<Purchase> savedPayables = new ArrayList<>();
 
