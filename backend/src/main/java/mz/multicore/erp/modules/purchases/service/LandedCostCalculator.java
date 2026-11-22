@@ -1,8 +1,12 @@
 package mz.multicore.erp.modules.purchases.service;
 
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.modules.purchases.model.LandedCostAllocationMethod;
 import mz.multicore.erp.modules.purchases.model.LandedCostCharge;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -12,6 +16,8 @@ import java.util.List;
  */
 public class LandedCostCalculator {
 
+    private static final int MONEY_SCALE = 2;
+
     /** Totais em moeda base de um documento CI. */
     public record Totals(BigDecimal capitalizableCost, BigDecimal deductibleVat) {
 
@@ -19,6 +25,61 @@ public class LandedCostCalculator {
         public BigDecimal payableTotal() {
             return capitalizableCost.add(deductibleVat);
         }
+    }
+
+    /**
+     * Linha de compra a receber custo: valor em moeda base, quantidade recebida e peso líquido unitário
+     * (pode faltar, excepto na repartição por PESO).
+     */
+    public record AllocationLine(Long lineId, BigDecimal baseLineValue, BigDecimal quantity,
+                                 BigDecimal netUnitWeightKg) {
+
+        BigDecimal basis(LandedCostAllocationMethod method) {
+            return switch (method) {
+                case VALOR -> orZero(baseLineValue);
+                case QUANTIDADE -> orZero(quantity);
+                case PESO -> {
+                    if (netUnitWeightKg == null || netUnitWeightKg.signum() <= 0) {
+                        throw new BusinessRuleException(
+                                "Para repartir por peso, todas as linhas têm de ter o peso líquido do artigo.");
+                    }
+                    yield netUnitWeightKg.multiply(orZero(quantity));
+                }
+            };
+        }
+
+        private static BigDecimal orZero(BigDecimal value) {
+            return value == null ? BigDecimal.ZERO : value;
+        }
+    }
+
+    /** Quota do custo, em moeda base, atribuída a uma linha de compra. */
+    public record Allocation(Long lineId, BigDecimal share) {
+    }
+
+    /**
+     * Reparte {@code totalCost} pelas linhas, proporcionalmente à base do método (VALOR por omissão), com
+     * 2 casas HALF_UP.
+     */
+    public List<Allocation> allocate(BigDecimal totalCost, LandedCostAllocationMethod method,
+                                     List<AllocationLine> lines) {
+        if (lines == null || lines.isEmpty()) {
+            throw new BusinessRuleException("Escolha pelo menos uma compra recebida com artigos para repartir o custo.");
+        }
+        LandedCostAllocationMethod effective = LandedCostAllocationMethod.orDefault(method);
+        List<BigDecimal> bases = lines.stream().map(line -> line.basis(effective)).toList();
+        BigDecimal totalBasis = bases.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (totalBasis.signum() <= 0) {
+            throw new BusinessRuleException("Não há base para repartir o custo por "
+                    + effective.label().toLowerCase() + ": as linhas somam zero.");
+        }
+        List<Allocation> allocations = new ArrayList<>(lines.size());
+        for (int i = 0; i < lines.size(); i++) {
+            BigDecimal share = totalCost.multiply(bases.get(i))
+                    .divide(totalBasis, MONEY_SCALE, RoundingMode.HALF_UP);
+            allocations.add(new Allocation(lines.get(i).lineId(), share));
+        }
+        return List.copyOf(allocations);
     }
 
     public Totals totals(List<LandedCostCharge> charges) {

@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.purchases.model.DocumentCurrency;
+import mz.multicore.erp.modules.purchases.model.LandedCostAllocationMethod;
 import mz.multicore.erp.modules.purchases.model.LandedCostCharge;
 import mz.multicore.erp.modules.purchases.model.LandedCostType;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  *
  * <p>LC-03: entram no custo FRETE, SEGURO, DIREITOS_ADUANEIROS, DESPACHANTE e OUTRO, sempre sem IVA e
  * convertidos à moeda base; IVA_ADUANEIRO e o IVA dos serviços vão a IVA dedutível, fora do custo.
+ *
+ * <p>LC-04: o custo reparte-se pelas linhas de compra por VALOR (omissão), PESO
+ * ({@code netUnitWeightKg × quantidade}; linha sem peso é erro) ou QUANTIDADE.
  */
 class LandedCostAllocationTest {
 
@@ -74,6 +78,73 @@ class LandedCostAllocationTest {
         assertThat(customsVat.baseCostAmount()).isEqualByComparingTo("0");
         assertThat(customsVat.baseVatAmount()).isEqualByComparingTo("800.00");
         assertThat(customsVat.basePayableAmount()).isEqualByComparingTo("800.00");
+    }
+
+    // ---- LC-04: repartição por VALOR (omissão), PESO ou QUANTIDADE ----
+
+    private static final List<LandedCostCalculator.AllocationLine> LINES = List.of(
+            // linha 1: 10 un. de 3 kg, valor 60 000 MZN → peso 30 kg
+            new LandedCostCalculator.AllocationLine(1L, new BigDecimal("60000.00"), new BigDecimal("10"), new BigDecimal("3")),
+            // linha 2: 30 un. de 0,5 kg, valor 20 000 MZN → peso 15 kg
+            new LandedCostCalculator.AllocationLine(2L, new BigDecimal("20000.00"), new BigDecimal("30"), new BigDecimal("0.5")),
+            // linha 3: 10 un. de 0,5 kg, valor 20 000 MZN → peso 5 kg
+            new LandedCostCalculator.AllocationLine(3L, new BigDecimal("20000.00"), new BigDecimal("10"), new BigDecimal("0.5")));
+
+    @Test
+    void lc04_byValueIsTheDefault() {
+        List<LandedCostCalculator.Allocation> byValue =
+                calculator.allocate(new BigDecimal("10000.00"), LandedCostAllocationMethod.VALOR, LINES);
+        List<LandedCostCalculator.Allocation> byDefault =
+                calculator.allocate(new BigDecimal("10000.00"), null, LINES);
+
+        assertThat(byValue).extracting(LandedCostCalculator.Allocation::lineId).containsExactly(1L, 2L, 3L);
+        assertThat(byValue).extracting(LandedCostCalculator.Allocation::share)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(new BigDecimal("6000.00"), new BigDecimal("2000.00"), new BigDecimal("2000.00"));
+        assertThat(byDefault).isEqualTo(byValue);
+    }
+
+    @Test
+    void lc04_byWeightUsesNetUnitWeightTimesQuantity() {
+        List<LandedCostCalculator.Allocation> shares =
+                calculator.allocate(new BigDecimal("10000.00"), LandedCostAllocationMethod.PESO, LINES);
+
+        assertThat(shares).extracting(LandedCostCalculator.Allocation::share)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(new BigDecimal("6000.00"), new BigDecimal("3000.00"), new BigDecimal("1000.00"));
+    }
+
+    @Test
+    void lc04_byQuantity() {
+        List<LandedCostCalculator.Allocation> shares =
+                calculator.allocate(new BigDecimal("10000.00"), LandedCostAllocationMethod.QUANTIDADE, LINES);
+
+        assertThat(shares).extracting(LandedCostCalculator.Allocation::share)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(new BigDecimal("2000.00"), new BigDecimal("6000.00"), new BigDecimal("2000.00"));
+    }
+
+    @Test
+    void lc04_byWeightWithALineWithoutWeightIsAnError() {
+        List<LandedCostCalculator.AllocationLine> lines = List.of(
+                new LandedCostCalculator.AllocationLine(1L, new BigDecimal("100.00"), new BigDecimal("2"), new BigDecimal("1")),
+                new LandedCostCalculator.AllocationLine(2L, new BigDecimal("100.00"), new BigDecimal("2"), null));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                calculator.allocate(new BigDecimal("50.00"), LandedCostAllocationMethod.PESO, lines));
+        assertThat(ex.getMessage()).contains("peso");
+        // os outros métodos não precisam do peso
+        assertThat(calculator.allocate(new BigDecimal("50.00"), LandedCostAllocationMethod.QUANTIDADE, lines))
+                .hasSize(2);
+    }
+
+    @Test
+    void lc04_withoutLinesOrBasisIsAnError() {
+        assertThrows(BusinessRuleException.class, () ->
+                calculator.allocate(new BigDecimal("50.00"), LandedCostAllocationMethod.VALOR, List.of()));
+        assertThrows(BusinessRuleException.class, () -> calculator.allocate(new BigDecimal("50.00"),
+                LandedCostAllocationMethod.VALOR,
+                List.of(new LandedCostCalculator.AllocationLine(1L, BigDecimal.ZERO, BigDecimal.ONE, null))));
     }
 
     @Test
