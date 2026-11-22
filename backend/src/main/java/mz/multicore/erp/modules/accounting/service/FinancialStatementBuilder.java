@@ -72,7 +72,8 @@ public class FinancialStatementBuilder {
                 .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private void validatePeriod(LocalDate from, LocalDate to) {
+    /** Period rule shared by every period report (income statement, results by cost centre). */
+    static void validatePeriod(LocalDate from, LocalDate to) {
         if (from == null || to == null) throw new BusinessRuleException("O período é obrigatório.");
         if (to.isBefore(from)) throw new BusinessRuleException("A data final não pode ser anterior à inicial.");
     }

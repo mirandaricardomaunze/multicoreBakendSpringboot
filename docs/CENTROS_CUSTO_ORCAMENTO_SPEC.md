@@ -74,6 +74,10 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 - Relatório "Resultados por centro de custo" para um período: por centro, proveitos (classe 7,
   crédito − débito), custos (classe 6, débito − crédito) e resultado; mais a coluna "Total".
 - O total do relatório é **igual** ao resultado da demonstração de resultados do mesmo período.
+  Concretização (CC-07): `AccountingReportService.getCostCenterResult` lê as mesmas partidas que a demonstração e
+  dá a cada valor o sinal da natureza da conta, como ela (no plano, classe 6 devedora e 7 credora — as fórmulas
+  acima); uma linha por centro com movimentos nas classes 6/7, ordenada pelo código; partidas 6/7 sem centro
+  (anteriores aos centros) aparecem numa linha "Sem centro", para o total bater sempre.
 - Razão e balancete aceitam filtro opcional por centro.
 - Desktop: ecrã em Contabilidade com o relatório (período, tabela por centro) e exportação pelos
   meios normais de tabela (PDF/Excel/CSV); gestão de centros em Configurações.
