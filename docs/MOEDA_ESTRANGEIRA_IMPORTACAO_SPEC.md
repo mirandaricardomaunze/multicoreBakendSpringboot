@@ -109,6 +109,13 @@ por documento:
   existente na empresa.
 - Cada linha gera uma **dívida ao seu fornecedor**, visível em contas a pagar e paga com a mesma
   acção de pagamento a fornecedor (com diferença cambial, §3.4).
+- Como fica gravado (LC-02): a dívida é um documento em `purchases` do tipo `LANDED_COST` (como o
+  Saldo Inicial Fornecedor), numerado `<nº do CI>-<n.º da linha>` (ex.: `CI-2026/3-2`), na moeda e ao
+  câmbio da linha, com total = valor sem IVA + IVA do serviço (no IVA aduaneiro, o próprio valor) e o
+  IVA no imposto do documento; sem armazém nem linhas, não mexe no stock e não publica evento de
+  compra (o lançamento é o do CI, §4.4). O pagamento identifica-a como "Custos de Importação CI-…".
+  Não é compra recebida: não pode ser ligada a outro CI. A taxa de IVA vem das taxas da empresa; o
+  IVA aduaneiro não leva taxa (é recusado). Um CI sem linhas de custo é recusado.
 
 ### 4.2 O que entra no custo
 
@@ -122,9 +129,17 @@ por documento:
 - Método escolhido por documento: **VALOR** (omissão — valor em moeda base de cada linha de compra),
   **PESO** (`netUnitWeightKg × quantidade`; se alguma linha não tem peso, é erro) ou **QUANTIDADE**.
 - Arredondamento a 2 casas; o resíduo de cêntimos vai para a linha com maior quota, para a soma
-  repartida ser exactamente o total.
+  repartida ser exactamente o total. Quotas a 2 casas HALF_UP; a "maior quota" é a da maior base do
+  método e, em empate, a primeira linha.
 - **Pré-visualização** antes de gravar: por artigo, custo unitário original, custo acrescentado e
   custo unitário final.
+- Como fica gravado (LC-08): `POST /api/purchases/landed-costs/preview` recebe o mesmo pedido da confirmação,
+  aplica as mesmas validações (compras recebidas da empresa activa, linhas de custo) e devolve, em moeda base,
+  o custo que entra nos artigos, o IVA dedutível, o total das dívidas e, por linha de compra, quota (custo
+  acrescentado), parte para o stock, parte já vendida e médio antes/depois; não consome número, não cria
+  dívidas nem muda o custo médio (o médio é simulado e acumula quando o mesmo artigo aparece em várias
+  linhas, como na confirmação). `POST /api/purchases/landed-costs` confirma: CI, dívidas, fotografia e custo
+  médio numa só transacção (um erro não deixa nada gravado). Perfis: MANAGER e ADMIN.
 
 ### 4.4 Efeito no stock e na contabilidade
 
@@ -134,10 +149,26 @@ por documento:
 - A parte para o stock **sobe o custo médio** do artigo: `novo médio = (S × médio + parte) / S`.
 - A parte já vendida vai a **CMV (6101)**. **Vendas passadas não mudam** (o custo da linha de venda
   é fotografado, ver `MARGEM_CUSTO_HISTORICO_SPEC.md`).
+- Como fica gravado (LC-06): o efeito aplica-se na confirmação do CI (a mesma transacção que grava as
+  dívidas). `Q` é a quantidade da linha de compra; a base VALOR é o valor **sem IVA** da linha em moeda
+  base (`preço × quantidade × câmbio da compra`). Parte para o stock a 2 casas HALF_UP; a parte já vendida
+  é o resto da quota (as duas somam sempre `C`). O custo médio do projecto é **por artigo na empresa**
+  (`WeightedAverageCost`), por isso o `S` da fórmula do médio é o stock do artigo em todos os armazéns da
+  empresa (`novo médio = (stock da empresa × médio + parte) / stock da empresa`, 2 casas HALF_UP); com um
+  só armazém coincide com a fórmula acima. Sem stock no armazém, a quota toda vai a CMV e o médio não muda.
+  Quantidades de stock não mexem. Cada linha fica fotografada em `landed_cost_allocations` (quota, `Q`,
+  `S`, parte para o stock, parte já vendida, médio antes e depois), que o lançamento (LC-07) e a
+  pré-visualização (LC-08) lêem.
 - Lançamento automático equilibrado, na moeda base:
   - Débito **3201** Mercadorias (parte para o stock) e **6101** CMV (parte já vendida);
   - Débito **2432** IVA dedutível (IVA aduaneiro e IVA dos serviços);
   - Crédito **2201** Fornecedores (total de cada linha com IVA).
+- Como fica gravado (LC-07): um lançamento por CI, origem `LANDED_COST`, data e número do CI, feito na
+  confirmação (evento `LandedCostConfirmedEvent`, ouvido pela contabilidade; não lança duas vezes nem sem
+  plano de contas). 3201 e 6101 são as somas das partes fotografadas em `landed_cost_allocations`; uma linha
+  de 2201 por dívida `<CI>-n`, pelo total com IVA em moeda base (o que se vai pagar); 2432 é a diferença
+  (dívidas − 3201 − 6101), para o lançamento fechar mesmo com arredondamentos do câmbio. Valores zero não
+  geram linha.
 - Mesmos perfis que registam compras.
 
 ### 4.5 Desktop
@@ -152,6 +183,18 @@ por documento:
   MANAGER, criar/corrigir câmbios e mudar a moeda base só ADMIN (o ecrã desactiva os botões aos outros).
 - Compras › Custos de Importação: escolher compras, linhas de custo, método, pré-visualização por
   artigo e confirmação. Padrão de tabelas, tipografia e diálogos do projecto; ícones por `UIHelper.icon`.
+- Como fica (LC-UI-01): separador "Custos de Importação" em Compras. Card "Compras recebidas" só com compras
+  `COMPLETED` com armazém (dívidas de CI e Saldo Inicial ficam de fora), com coluna de escolha, Nº, fornecedor,
+  data, moeda e total em moeda base. Card "Linhas de custo" (Tipo, Fornecedor, Moeda, Câmbio, Valor sem IVA,
+  IVA): linha nova pelo diálogo canónico com tipo, fornecedor, moeda e câmbio (o mesmo campo dos documentos de
+  compra: câmbio proposto e editável), valor e taxa de IVA da empresa ("Sem IVA" por omissão; o IVA aduaneiro
+  não leva taxa); remover a linha seleccionada. Método de repartição com Valor por omissão. "Pré-visualizar"
+  chama `/preview` e mostra, por linha de compra, compra, artigo, quantidade recebida, custo unitário original,
+  custo acrescentado e custo unitário final, mais o resumo (custo que entra nos artigos, IVA dedutível, total
+  das dívidas). "Confirmar CI" só fica activo depois de uma pré-visualização dos dados actuais: mudar compras,
+  linhas ou método apaga a pré-visualização. Sem compras escolhidas ou sem linhas, o aviso aparece no ecrã sem
+  chamar o backend; os erros do backend aparecem no ecrã. Confirmado, mostra o número do CI e as dívidas
+  criadas e limpa o formulário.
 
 ## 5. Fora de âmbito
 

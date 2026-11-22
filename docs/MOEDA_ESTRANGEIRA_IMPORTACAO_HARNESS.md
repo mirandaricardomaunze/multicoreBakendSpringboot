@@ -3,7 +3,7 @@
 > Cenários que provam [MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md](MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12, FX-13, FX-UI-01, FX-UI-02, FX-UI-03 verdes — GOAL-008 completo)
+**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12, FX-13, FX-UI-01, FX-UI-02, FX-UI-03 verdes — GOAL-008 completo; LC-01, LC-02, LC-03, LC-04, LC-05, LC-06, LC-07, LC-08, LC-UI-01 verdes — GOAL-009 completo)
 
 ## Moeda e câmbio (GOAL-008)
 
@@ -30,12 +30,12 @@
 
 | ID | Garantia | Teste |
 |---|---|---|
-| LC-01 | Documento CI numerado `CI-aaaa/n` por empresa, ligado a compras `COMPLETED` da empresa; várias CI por compra (§4.1) | `LandedCostDocumentTest` |
-| LC-02 | Linhas com tipo, fornecedor, moeda/câmbio, valor e IVA; cada linha gera dívida ao seu fornecedor, paga pela acção normal (§4.1) | `LandedCostDocumentTest` |
-| LC-03 | Custo = linhas não-IVA sem IVA em moeda base; IVA aduaneiro e IVA dos serviços fora do custo (§4.2) | `LandedCostAllocationTest` |
-| LC-04 | Repartição por VALOR, PESO ou QUANTIDADE; PESO sem peso numa linha é erro (§4.3) | `LandedCostAllocationTest` |
-| LC-05 | Arredondamento a 2 casas com resíduo na maior quota; soma igual ao total (§4.3) | `LandedCostAllocationTest` |
-| LC-06 | Parte para o stock = C × min(1, S/Q) sobe o custo médio; resto a CMV; vendas passadas inalteradas (§4.4) | `LandedCostStockEffectTest` |
-| LC-07 | Lançamento equilibrado: 3201 + 6101 + 2432 a débito, 2201 a crédito (§4.4) | `LandedCostPostingTest` |
-| LC-08 | Pré-visualização por artigo sem gravar; confirmação grava tudo numa transacção; empresa activa; perfis de compras (§4.3, §4.4) | `LandedCostHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
-| LC-UI-01 | Compras › Custos de Importação: compras, linhas, método, pré-visualização e confirmação (§4.5) | `LandedCostUiHarnessTest` |
+| LC-01 | Documento CI numerado `CI-aaaa/n` por empresa, ligado a compras `COMPLETED` da empresa; várias CI por compra (§4.1) | `LandedCostDocumentTest` (`lc01_*`) |
+| LC-02 | Linhas com tipo, fornecedor, moeda/câmbio, valor e IVA; cada linha gera dívida `LANDED_COST` ao seu fornecedor (`<CI>-n`), em contas a pagar e paga pela acção normal; fornecedor e taxa da empresa; IVA aduaneiro sem taxa; CI sem linhas recusado (§4.1) | `LandedCostDocumentTest` (`lc02_*`) · `MigrationPostgresDialectHarnessTest` |
+| LC-03 | Custo = linhas não-IVA sem IVA em moeda base; IVA aduaneiro e IVA dos serviços fora do custo (§4.2) | `LandedCostAllocationTest` (`lc03_*`) |
+| LC-04 | Repartição por VALOR, PESO ou QUANTIDADE; PESO sem peso numa linha é erro (§4.3) | `LandedCostAllocationTest` (`lc04_*`) |
+| LC-05 | Arredondamento a 2 casas com resíduo na maior quota; soma igual ao total; empate vai à primeira linha (§4.3) | `LandedCostAllocationTest` (`lc05_*`) |
+| LC-06 | Parte para o stock = C × min(1, S/Q) sobe o custo médio (médio por artigo na empresa); resto a CMV; sem stock tudo a CMV; IVA aduaneiro fora; quantidades e vendas passadas inalteradas (§4.4) | `LandedCostStockEffectTest` (`lc06_*`) · `MigrationPostgresDialectHarnessTest` |
+| LC-07 | Lançamento equilibrado `LANDED_COST`: 3201 + 6101 (quotas fotografadas) + 2432 (diferença) a débito, 2201 por dívida a crédito; sem duplicados nem sem plano de contas (§4.4) | `LandedCostPostingTest` (`lc07_*`) |
+| LC-08 | `POST /api/purchases/landed-costs/preview` por artigo (original, acrescentado, final) sem gravar; `POST /api/purchases/landed-costs` grava tudo numa transacção; empresa activa; perfis de compras (§4.3, §4.4) | `LandedCostHttpIntegrationTest` (`lc08_*`) · `ApiRolePolicyEndpointCoverageHarnessTest` |
+| LC-UI-01 | Compras › Custos de Importação: só compras recebidas com armazém; linhas de custo por diálogo canónico (moeda/câmbio proposto, IVA da empresa, IVA aduaneiro sem taxa); método Valor por omissão; pré-visualização por artigo (original, acrescentado, final) e resumo; confirmar só depois de pré-visualizar os dados actuais; avisos sem chamar o backend (§4.5) | `LandedCostUiHarnessTest` (`lcUi01_*`) |

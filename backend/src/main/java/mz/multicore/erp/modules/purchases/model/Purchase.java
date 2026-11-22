@@ -135,10 +135,20 @@ public class Purchase extends CurrencyDocument {
     }
 
     /**
-     * Como o documento se identifica num pagamento: "Compra CP-…" ou, no Saldo Inicial Fornecedor, "Saldo Inicial
-     * Fornecedor SIF-… (nº original)" — o fornecedor reconhece-o pelo número do sistema antigo (SPEC §5.3).
+     * Compra de mercadoria recebida em armazém: nem o Saldo Inicial Fornecedor nem a dívida de uma linha de custos
+     * de importação, que não trazem artigos (MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC §4.1).
+     */
+    public boolean isGoodsPurchase() {
+        return documentKind == PurchaseDocumentKind.PURCHASE;
+    }
+
+    /**
+     * Como o documento se identifica num pagamento: "Compra CP-…", "Custos de Importação CI-…" ou, no Saldo Inicial
+     * Fornecedor, "Saldo Inicial Fornecedor SIF-… (nº original)" — o fornecedor reconhece-o pelo número do sistema
+     * antigo (SPEC §5.3).
      */
     public String paymentLabel() {
+        if (documentKind == PurchaseDocumentKind.LANDED_COST) return "Custos de Importação " + purchaseNumber;
         if (isPurchase()) return "Compra " + purchaseNumber;
         return "Saldo Inicial Fornecedor " + purchaseNumber + (originalNumber == null ? "" : " (" + originalNumber + ")");
     }

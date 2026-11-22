@@ -4,6 +4,9 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderRequest;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseRequest;
 import mz.multicore.erp.modules.purchases.dto.CreateSupplierRequest;
+import mz.multicore.erp.modules.purchases.dto.CreateLandedCostRequest;
+import mz.multicore.erp.modules.purchases.dto.LandedCostDocumentDTO;
+import mz.multicore.erp.modules.purchases.dto.LandedCostPreviewDTO;
 import mz.multicore.erp.modules.purchases.dto.PayableDTO;
 import mz.multicore.erp.modules.purchases.dto.PurchaseDTO;
 import mz.multicore.erp.modules.purchases.dto.PurchaseOrderDTO;
@@ -102,6 +105,19 @@ public class PurchaseApiClient {
         String path = "/api/purchases/" + purchaseId + "/supplier-refund?amount=" + amount + "&financeAccountId=" + financeAccountId;
         if (reference != null && !reference.isBlank()) path += "&reference=" + URLEncoder.encode(reference, StandardCharsets.UTF_8);
         return clientFactory.authenticatedClient().post(path, null, PurchaseDTO.class);
+    }
+
+    // ─── Custos de Importação (CI, SPEC FX §4) ───────────────────────────────
+    /** Effect per purchase line, in base currency, without saving anything. */
+    public LandedCostPreviewDTO previewLandedCost(CreateLandedCostRequest request) {
+        return clientFactory.authenticatedClient()
+                .post("/api/purchases/landed-costs/preview", request, LandedCostPreviewDTO.class);
+    }
+
+    /** Confirms the CI: document, supplier debts and average cost in one transaction. */
+    public LandedCostDocumentDTO confirmLandedCost(CreateLandedCostRequest request) {
+        return clientFactory.authenticatedClient()
+                .post("/api/purchases/landed-costs", request, LandedCostDocumentDTO.class);
     }
 
     // ─── Encomendas a fornecedor ─────────────────────────────────────────────

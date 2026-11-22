@@ -51,12 +51,14 @@ public final class DocumentSeries {
     public static final String OPENING_RECEIVABLE = "SI";
     /** "Saldo Inicial Fornecedor": supplier debt brought from another ERP (IMPORTACAO_DADOS_SPEC §5.3). Not fiscal. */
     public static final String OPENING_PAYABLE = "SIF";
+    /** Internal "Custos de Importação" document: import costs spread over received purchases. Not fiscal. */
+    public static final String LANDED_COST = "CI";
 
     /** Todas as séries acima, para as criar antecipadamente ({@link DocumentSequenceBootstrap}). */
     public static final java.util.List<String> ALL = java.util.List.of(INVOICE, ORDER, QUOTATION, RECEIPT,
             CREDIT_NOTE, DEBIT_NOTE, STOCK_TRANSFER, DELIVERY_GUIDE, PURCHASE, PURCHASE_ORDER, PAYSLIP,
             EMPLOYMENT_CONTRACT, TERMINATION, JOURNAL_ENTRY, MATERIAL_PICKUP, CARCASS_BREAKDOWN, CONSIGNMENT, WEIGHING_TICKET,
-            PRODUCTION_ORDER, SUPPLIER_RETURN, OPENING_RECEIVABLE, OPENING_PAYABLE);
+            PRODUCTION_ORDER, SUPPLIER_RETURN, OPENING_RECEIVABLE, OPENING_PAYABLE, LANDED_COST);
 
     private DocumentSeries() {}
 }

@@ -3,6 +3,7 @@ package mz.multicore.erp.gui;
 import mz.multicore.erp.desktop.client.*;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.gui.currency.DocumentCurrencyField;
+import mz.multicore.erp.gui.landedcost.LandedCostPanel;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
@@ -31,6 +32,7 @@ public class ComprasPanel extends JPanel {
     private final PurchasePayablesPanel payablesPanel;
     final PurchaseOrdersPanel purchaseOrdersPanel;
     private final SupplierStatementPanel supplierStatementPanel;
+    private final LandedCostPanel landedCostPanel; // Custos de Importação (SPEC FX §4.5)
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     JTabbedPane tabbedPane;
@@ -120,29 +122,26 @@ public class ComprasPanel extends JPanel {
         this.payablesPanel = new PurchasePayablesPanel(this);
         this.purchaseOrdersPanel = new PurchaseOrdersPanel(this);
         this.supplierStatementPanel = statementApiClient != null ? new SupplierStatementPanel(statementApiClient, purchaseApiClient) : null;
+        this.landedCostPanel = new LandedCostPanel(purchaseApiClient, comercialApiClient, exchangeRateApiClient);
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM));
-
         tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
-
         tabbedPane.addTab("Faturas de Compra (V/FT)", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.MODULE_COMPRAS), createComprasTab());
         tabbedPane.addTab("Reposição", UIHelper.icon("fas-cart-arrow-down", 16, UIHelper.ACCENT_ORANGE), createReorderTab());
         tabbedPane.addTab("Encomendas a Fornecedor (EC-F)", UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE), createPurchaseOrdersTab());
         tabbedPane.addTab("Contas a Pagar", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.REJECTED_RED), createPayablesTab());
         tabbedPane.addTab("Gestão de Fornecedores", UIHelper.icon("fas-truck-loading", 16, UIHelper.ACCENT), createFornecedoresTab());
         tabbedPane.addTab("Gestão de Negócios", UIHelper.icon("fas-briefcase", 16, UIHelper.ACCENT), businessUnitsPanel.buildPanel());
-
         if (supplierStatementPanel != null) {
             tabbedPane.addTab("Conta Corrente & Reconciliação", UIHelper.icon("fas-file-invoice", 16, UIHelper.ACCENT_CYAN), supplierStatementPanel);
         }
+        tabbedPane.addTab("Custos de Importação", UIHelper.icon("fas-ship", 16, UIHelper.ACCENT_BLUE), landedCostPanel);
 
         tabbedPane.addChangeListener(e -> {
-            if (tabbedPane.getSelectedComponent() == supplierStatementPanel && supplierStatementPanel != null) {
-                supplierStatementPanel.refreshData();
-            }
+            if (supplierStatementPanel != null && tabbedPane.getSelectedComponent() == supplierStatementPanel) supplierStatementPanel.refreshData();
         });
 
         add(feedback, BorderLayout.NORTH);
@@ -305,6 +304,7 @@ public class ComprasPanel extends JPanel {
         loadPayables();
         loadReorderSuggestions();
         loadBusinessUnits();
+        landedCostPanel.refresh();
     }
 
     void loadSuppliers() { PurchaseMetadataCoordinator.loadSuppliers(this); }

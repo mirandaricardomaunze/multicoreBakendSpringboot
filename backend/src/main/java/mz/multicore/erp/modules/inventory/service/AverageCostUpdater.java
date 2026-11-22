@@ -31,4 +31,20 @@ public class AverageCostUpdater {
                 totalCost.divide(quantity, 6, RoundingMode.HALF_UP));
         productCommands.saveProduct(product);
     }
+
+    /**
+     * Sobe o custo médio com um custo acrescentado ao stock que já existe, sem entrada de quantidade (custos de
+     * importação, MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC §4.4).
+     */
+    public void absorbCost(Product product, Warehouse warehouse, BigDecimal addedCost) {
+        if (addedCost == null || addedCost.signum() <= 0) return;
+        WeightedAverageCost.absorb(stockRepository, product, warehouse, addedCost);
+        productCommands.saveProduct(product);
+    }
+
+    /** O médio que {@link #absorbCost} daria a partir de {@code currentCost}, sem gravar nada (pré-visualização). */
+    public BigDecimal costAfterAbsorbing(Product product, Warehouse warehouse, BigDecimal currentCost,
+                                         BigDecimal addedCost) {
+        return WeightedAverageCost.absorbedCost(stockRepository, product, warehouse, currentCost, addedCost);
+    }
 }

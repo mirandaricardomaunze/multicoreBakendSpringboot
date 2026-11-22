@@ -26,6 +26,9 @@ public enum JournalSource {
     /** Payment settling a supplier purchase. */
     SUPPLIER_PAYMENT("Pagamento a fornecedor"),
 
+    /** Confirmed "Custos de Importação" document: freight, duties and brokerage spread over imported goods. */
+    LANDED_COST("Custos de importação"),
+
     /** Approved credit note. */
     CREDIT_NOTE("Nota de crédito"),
 
