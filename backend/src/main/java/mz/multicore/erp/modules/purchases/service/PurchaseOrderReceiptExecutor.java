@@ -184,7 +184,7 @@ public class PurchaseOrderReceiptExecutor {
                 line.getProduct(),
                 order.getWarehouse(),
                 qty,
-                line.getUnitPrice(),
+                order.toBaseUnitCost(line.getUnitPrice()),
                 line.getBatchNumber(),
                 line.getSerialNumber(),
                 desc,

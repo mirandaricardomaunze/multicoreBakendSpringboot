@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.purchases.model;
 
-import mz.multicore.erp.architecture.BaseEntity;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import jakarta.persistence.*;
@@ -20,7 +19,7 @@ import java.util.List;
                 columnNames = {"company_id", "supplier_id", "original_number"})})
 @Getter
 @Setter
-public class Purchase extends BaseEntity {
+public class Purchase extends CurrencyDocument {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -91,6 +90,40 @@ public class Purchase extends BaseEntity {
         BigDecimal returned = returnedAmount == null ? BigDecimal.ZERO : returnedAmount;
         BigDecimal out = total.subtract(returned).subtract(paid);
         return out.signum() > 0 ? out : BigDecimal.ZERO;
+    }
+
+    /**
+     * Pago em moeda base, ao câmbio do documento. Liquidada a dívida, é exactamente o total em moeda base menos o
+     * devolvido, sem resíduos de cêntimos (SPEC §3.4).
+     */
+    @Transient
+    public BigDecimal getBaseAmountPaid() {
+        if (getOutstanding().signum() == 0) return baseTotal().subtract(toBaseAmount(orZero(returnedAmount)));
+        return toBaseAmount(orZero(amountPaid));
+    }
+
+    /** Dívida em moeda base, ao câmbio do documento: a que acompanha {@link #getOutstanding()} (SPEC §3.3). */
+    @Transient
+    public BigDecimal getBaseOutstanding() {
+        if (getOutstanding().signum() == 0) return toBaseAmount(BigDecimal.ZERO);
+        BigDecimal out = baseTotal().subtract(getBaseAmountPaid()).subtract(toBaseAmount(orZero(returnedAmount)));
+        return out.signum() > 0 ? out : toBaseAmount(BigDecimal.ZERO);
+    }
+
+    /**
+     * Abate um pagamento na moeda do documento e devolve quanto a dívida baixou em moeda base, ao câmbio do
+     * documento: a diferença do saldo em moeda base antes e depois. Nos parciais é o valor × câmbio do documento
+     * sobre o pago acumulado (o mesmo saldo que contas a pagar mostram); o pagamento que liquida baixa exactamente o
+     * que restava, sem resíduos de cêntimos (SPEC §3.4).
+     */
+    public BigDecimal applyPayment(BigDecimal documentAmount) {
+        BigDecimal before = getBaseOutstanding();
+        amountPaid = orZero(amountPaid).add(documentAmount);
+        return before.subtract(getBaseOutstanding());
+    }
+
+    private static BigDecimal orZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     /**

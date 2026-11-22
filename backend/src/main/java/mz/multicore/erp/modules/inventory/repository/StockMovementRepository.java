@@ -23,6 +23,8 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
     
     List<StockMovement> findByProductId(Long productId);
 
+    boolean existsByWarehouseCompanyId(Long companyId);
+
     @Query("SELECT DISTINCT sm.product.id FROM StockMovement sm WHERE sm.warehouse.id = :warehouseId")
     List<Long> findProductIdsByWarehouseId(@Param("warehouseId") Long warehouseId);
 }

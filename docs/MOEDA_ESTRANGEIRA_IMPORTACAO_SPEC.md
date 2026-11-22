@@ -56,7 +56,28 @@ o operador converte à mão, o custo médio fica abaixo do real e a margem apare
 - Lançamento automático da compra na moeda base, ao câmbio do documento (mesmas contas de hoje).
 - Contas a pagar e extracto de fornecedor mostram a **moeda**, o **valor em dívida na moeda do
   documento** e o equivalente em moeda base.
-- PDFs da encomenda e da compra mostram o código da moeda e o câmbio usado.
+- PDFs da encomenda e da compra mostram o código da moeda e o câmbio usado (detalhe em §3.3.1).
+
+#### 3.3.1 PDFs da encomenda e da compra (FX-13)
+
+Até aqui o sistema **não tinha** PDF da encomenda a fornecedor nem da compra (o "Imprimir" de
+`COMPRAS_APROVISIONAMENTO_SPEC.md` Fase 3 ficou por fazer). FX-13 cria os dois, com os building blocks
+de `printing` (cabeçalho da empresa, tabela de linhas, bloco de totais, `MoneyFormat`), um serviço
+por documento:
+
+- `GET /api/print/purchase-order/{id}` → "Encomenda a Fornecedor"; `GET /api/print/purchase/{id}` →
+  "Compra a Fornecedor". `application/pdf`, sempre na **empresa activa** (documento de outra empresa
+  é recusado como não encontrado). Perfis: os mesmos que consultam compras (MANAGER, ADMIN).
+- Não são documentos fiscais emitidos pela empresa (a factura é do fornecedor; a encomenda não é
+  fiscal): **sem** controlo de reimpressão nem marca "2.ª via".
+- Conteúdo: cabeçalho da empresa, título, número do documento, data, fornecedor (nome e NUIT),
+  armazém, linhas (artigo, quantidade, preço unitário, IVA %, total da linha) e totais (sem IVA,
+  IVA, total), tudo na **moeda do documento** e com o código da moeda junto aos valores.
+- Documento em moeda estrangeira mostra também "Moeda: USD · Câmbio: 63,9055" (câmbio gravado no
+  documento, 4 casas) e "Total em moeda base: 6 390,55 MZN" (o `baseTotalAmount` gravado).
+- Documento na moeda base mostra só "Moeda: MZN", sem câmbio nem total em moeda base.
+- Prova: `ForeignCurrencyHttpIntegrationTest` lê o texto dos PDFs (encomenda e compra em USD; compra
+  em MZN sem câmbio) e confirma o acesso da empresa activa.
 
 ### 3.4 Pagamento e diferença cambial
 
@@ -65,7 +86,8 @@ o operador converte à mão, o custo médio fica abaixo do real e a margem apare
 - A conta de tesouraria é sempre na **moeda base**: sai `valor × câmbio do pagamento`.
 - A dívida ao fornecedor baixa `valor × câmbio do documento` (proporcional nos pagamentos parciais).
   O pagamento que **liquida** a dívida baixa exactamente o saldo em moeda base que restava (sem
-  resíduos de cêntimos).
+  resíduos de cêntimos). Nos parciais, a baixa é a diferença do saldo em moeda base antes e depois
+  (pago acumulado × câmbio do documento, 2 casas HALF_UP), o mesmo saldo que contas a pagar mostram.
 - Lançamento automático equilibrado:
   - Débito **2201** Fornecedores — valor ao câmbio do documento;
   - Crédito **1101/1201** (conta usada) — valor ao câmbio do pagamento;
@@ -124,7 +146,10 @@ o operador converte à mão, o custo médio fica abaixo do real e a margem apare
 - Pagamento a fornecedor: campo de câmbio quando a compra é estrangeira, com a diferença cambial
   mostrada antes de confirmar.
 - Configurações: tabela de câmbios (data, moeda, câmbio) e moeda base da empresa (só leitura depois
-  de haver movimentos).
+  de haver movimentos). Separador "Câmbios e Moeda Base": novo câmbio (moeda estrangeira, data, câmbio)
+  e corrigir câmbio (só o valor) por diálogo; a moeda base vem de `GET /api/exchange-rates/base-currency`
+  (`currency`, `editable`) e muda por `PUT` no mesmo caminho. Mesma regra de perfis do §3.2: consultar
+  MANAGER, criar/corrigir câmbios e mudar a moeda base só ADMIN (o ecrã desactiva os botões aos outros).
 - Compras › Custos de Importação: escolher compras, linhas de custo, método, pré-visualização por
   artigo e confirmação. Padrão de tabelas, tipografia e diálogos do projecto; ícones por `UIHelper.icon`.
 

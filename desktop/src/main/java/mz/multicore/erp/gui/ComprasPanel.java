@@ -1,10 +1,8 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.desktop.client.ComercialApiClient;
-import mz.multicore.erp.desktop.client.FinanceApiClient;
-import mz.multicore.erp.desktop.client.InventoryApiClient;
-import mz.multicore.erp.desktop.client.PurchaseApiClient;
+import mz.multicore.erp.desktop.client.*;
 import mz.multicore.erp.gui.components.*;
+import mz.multicore.erp.gui.currency.DocumentCurrencyField;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
@@ -26,7 +24,7 @@ public class ComprasPanel extends JPanel {
     final InventoryApiClient inventoryApiClient;
     final ComercialApiClient comercialApiClient;
     final FinanceApiClient financeApiClient;
-
+    final ExchangeRateApiClient exchangeRateApiClient; // câmbio proposto no pagamento (SPEC FX §3.4); pode ser null
     private final PurchaseSuppliersPanel suppliersPanel;
     private final PurchaseBusinessUnitsPanel businessUnitsPanel;
     final PurchaseReorderPanel reorderPanel;
@@ -90,30 +88,32 @@ public class ComprasPanel extends JPanel {
     List<TreasuryAccountDTO> accountsList = new ArrayList<>();
     List<ProductDTO> productsList = new ArrayList<>();
 
-    // Draft items
-    final List<CreatePurchaseLineRequest> draftLines = new ArrayList<>();
+    final List<CreatePurchaseLineRequest> draftLines = new ArrayList<>(); // draft items
     BigDecimal draftTotal = BigDecimal.ZERO;
 
-    public ComprasPanel(
-            PurchaseApiClient purchaseApiClient,
-            InventoryApiClient inventoryApiClient,
-            ComercialApiClient comercialApiClient,
-            FinanceApiClient financeApiClient
-    ) {
-        this(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, null);
+    public final DocumentCurrencyField purchaseCurrencyField, poCurrencyField; // moeda e câmbio (SPEC FX §4.5)
+
+    public ComprasPanel(PurchaseApiClient purchaseApiClient, InventoryApiClient inventoryApiClient,
+                        ComercialApiClient comercialApiClient, FinanceApiClient financeApiClient) {
+        this(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, null, null);
     }
 
-    public ComprasPanel(
-            PurchaseApiClient purchaseApiClient,
-            InventoryApiClient inventoryApiClient,
-            ComercialApiClient comercialApiClient,
-            FinanceApiClient financeApiClient,
-            mz.multicore.erp.desktop.client.AccountStatementApiClient statementApiClient
-    ) {
+    public ComprasPanel(PurchaseApiClient purchaseApiClient, InventoryApiClient inventoryApiClient,
+                        ComercialApiClient comercialApiClient, FinanceApiClient financeApiClient,
+                        AccountStatementApiClient statementApiClient) {
+        this(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, statementApiClient, null);
+    }
+
+    public ComprasPanel(PurchaseApiClient purchaseApiClient, InventoryApiClient inventoryApiClient,
+                        ComercialApiClient comercialApiClient, FinanceApiClient financeApiClient,
+                        AccountStatementApiClient statementApiClient, ExchangeRateApiClient exchangeRateApiClient) {
+        this.purchaseCurrencyField = new DocumentCurrencyField(exchangeRateApiClient);
+        this.poCurrencyField = new DocumentCurrencyField(exchangeRateApiClient);
         this.purchaseApiClient = purchaseApiClient;
         this.inventoryApiClient = inventoryApiClient;
         this.comercialApiClient = comercialApiClient;
         this.financeApiClient = financeApiClient;
+        this.exchangeRateApiClient = exchangeRateApiClient;
         this.suppliersPanel = new PurchaseSuppliersPanel(this);
         this.businessUnitsPanel = new PurchaseBusinessUnitsPanel(this);
         this.reorderPanel = new PurchaseReorderPanel(this);
@@ -174,13 +174,15 @@ public class ComprasPanel extends JPanel {
         purchaseVatField = new JTextField(); UIHelper.styleTextField(purchaseVatField);
         purchaseVatField.setToolTipText("Como vem na fatura do fornecedor (ex.: 16). Vazio = taxa do artigo.");
 
+        purchaseCurrencyField.onCurrencyChange(() -> PurchaseInvoiceOperations.refreshPurchaseTotal(this));
         addFormRow(formCard, gbc, 0, "Fornecedor:", supplierCombo, "Armazém de Destino:", warehouseCombo);
-        addFormRow(formCard, gbc, 1, "Conta de Pagamento:", accountCombo, "Artigo / Produto:", productCombo);
-        addFormRow(formCard, gbc, 2, "Quantidade:", purchasePackageEditor, "Preço Unit. Custo (MT):", priceField);
-        addFormRow(formCard, gbc, 3, "Nº Lote (Opcional):", batchField, "Nº Série (Opcional):", serialField);
-        addFormRow(formCard, gbc, 4, "Validade do Lote (yyyy-MM-dd):", expirationField, "IVA da fatura (%):", purchaseVatField);
+        addFormRow(formCard, gbc, 1, "Conta de Pagamento:", accountCombo, "Moeda e câmbio:", purchaseCurrencyField);
+        addFormRow(formCard, gbc, 2, "Artigo / Produto:", productCombo, "Quantidade:", purchasePackageEditor);
+        addFormRow(formCard, gbc, 3, "Preço Unit. Custo (moeda do documento):", priceField, "IVA da fatura (%):", purchaseVatField);
+        addFormRow(formCard, gbc, 4, "Nº Lote (Opcional):", batchField, "Nº Série (Opcional):", serialField);
+        addFormRow(formCard, gbc, 5, "Validade do Lote (yyyy-MM-dd):", expirationField, "", new JLabel());
 
-        gbc.gridx = 0; gbc.gridy = 10; gbc.gridwidth = 2; gbc.weightx = 1.0;
+        gbc.gridx = 0; gbc.gridy = 12; gbc.gridwidth = 2; gbc.weightx = 1.0;
         gbc.insets = new Insets(16, 8, 12, 8);
         ModernButton addLineBtn = UIHelper.createAddLineButton();
         JPanel addLineActionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
@@ -188,7 +190,7 @@ public class ComprasPanel extends JPanel {
         addLineActionRow.add(addLineBtn);
         formCard.add(addLineActionRow, gbc);
 
-        gbc.gridy = 11; gbc.weighty = 1.0; gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridy = 13; gbc.weighty = 1.0; gbc.fill = GridBagConstraints.BOTH;
         String[] cols = {"Produto", "Qtd", "Preço Custo", "Lote/Série", "Subtotal", "IVA"};
         draftLinesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -200,7 +202,7 @@ public class ComprasPanel extends JPanel {
         UIHelper.styleEmbeddedTableScrollPane(scroll, draftLinesTable, 4);
         formCard.add(scroll, gbc);
 
-        gbc.gridy = 12; gbc.weighty = 0.0; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridy = 14; gbc.weighty = 0.0; gbc.fill = GridBagConstraints.HORIZONTAL;
         JPanel bottomPanel = new JPanel();
         bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
         bottomPanel.setOpaque(false);
@@ -342,7 +344,6 @@ public class ComprasPanel extends JPanel {
 
         String batch = batchField.getText().trim();
         if (batch.isEmpty()) batch = null;
-
         String serial = serialField.getText().trim();
         if (serial.isEmpty()) serial = null;
 
@@ -384,11 +385,11 @@ public class ComprasPanel extends JPanel {
 
         BigDecimal shownRate = invoiceTaxRate != null ? invoiceTaxRate : product.effectiveTaxRate();
         draftLinesModel.addRow(new Object[]{
-                product.name(), qty, price + " MT", lotSer.trim(), subtotal + " MT",
+                product.name(), qty, price + " " + purchaseCurrencyField.currency(), lotSer.trim(), subtotal + " " + purchaseCurrencyField.currency(),
                 formatRate(shownRate) + (invoiceTaxRate == null ? " (artigo)" : "")
         });
 
-        totalLabel.setText(String.format("Total Compra: %,.2f MT (excl. IVA)", draftTotal));
+        PurchaseInvoiceOperations.refreshPurchaseTotal(this);
 
         purchasePackageEditor.reset();
         batchField.setText("");

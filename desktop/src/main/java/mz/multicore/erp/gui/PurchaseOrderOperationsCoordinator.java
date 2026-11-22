@@ -61,6 +61,7 @@ final class PurchaseOrderOperationsCoordinator {
         selectSupplier(selected.supplierId());
         selectWarehouse(selected.warehouseId());
         panel.getPoExpectedField().setText(selected.expectedDate() == null ? "" : selected.expectedDate().toString());
+        owner.poCurrencyField.showDocument(selected.currency(), selected.exchangeRate());
         owner.poDraftLines.clear();
         if (selected.lines() != null) {
             for (PurchaseOrderLineDTO line : selected.lines()) {

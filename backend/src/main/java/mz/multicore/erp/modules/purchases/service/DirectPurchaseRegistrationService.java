@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.purchases.service;
 
-import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.modules.comercial.model.Product;
@@ -44,14 +43,16 @@ public class DirectPurchaseRegistrationService {
     private final FinanceService financeService;
     private final DocumentNumberService documentNumberService;
     private final ApplicationEventPublisher eventPublisher;
+    private final PurchaseCurrencyResolver currencyResolver;
 
     public DirectPurchaseRegistrationService(
             SupplierRepository supplierRepository, PurchaseRepository purchaseRepository,
             ProductLookup productLookup, WarehouseLookup warehouseLookup,
             CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, DocumentNumberService documentNumberService,
-            ApplicationEventPublisher eventPublisher
+            ApplicationEventPublisher eventPublisher, PurchaseCurrencyResolver currencyResolver
     ) {
+        this.currencyResolver = currencyResolver;
         this.supplierRepository = supplierRepository;
         this.purchaseRepository = purchaseRepository;
         this.productLookup = productLookup;
@@ -86,6 +87,8 @@ public class DirectPurchaseRegistrationService {
         purchase.setCompany(company);
         purchase.setPurchaseDate(LocalDateTime.now());
         purchase.setPurchaseNumber(documentNumberService.next(DocumentSeries.PURCHASE));
+        purchase.applyDocumentCurrency(currencyResolver.resolve(company, request.currency(),
+                purchase.getPurchaseDate().toLocalDate(), request.exchangeRate()));
 
         BigDecimal total = BigDecimal.ZERO, totalTax = BigDecimal.ZERO;
 
@@ -115,12 +118,12 @@ public class DirectPurchaseRegistrationService {
 
             String desc = String.format("Compra %s - Fornecedor %s", purchase.getPurchaseNumber(), supplier.getName());
             inventoryService.registerPurchase(
-                    product, warehouse, lineReq.quantity(), lineReq.unitPrice(),
+                    product, warehouse, lineReq.quantity(), purchase.toBaseUnitCost(lineReq.unitPrice()),
                     lineReq.batchNumber(), lineReq.serialNumber(), desc, lineReq.expirationDate()
             );
         }
 
-        purchase.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        purchase.applyTotal(total);
         purchase.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
 
         boolean payNow = request.financeAccountId() != null;
@@ -130,15 +133,13 @@ public class DirectPurchaseRegistrationService {
         boolean cashPayment = false;
         if (payNow) {
             String description = "Pagamento Compra " + purchase.getPurchaseNumber() + " - Fornecedor " + supplier.getName();
-            financeService.registerTransaction(request.financeAccountId(), "CREDIT", total, description);
+            // A tesouraria é sempre na moeda base (MOEDA_ESTRANGEIRA §3.4): sai o total ao câmbio do documento.
+            financeService.registerTransaction(request.financeAccountId(), "CREDIT", purchase.baseTotal(),
+                    description);
             cashPayment = financeService.accountType(request.financeAccountId()) == TreasuryAccountType.CASH;
         }
 
-        eventPublisher.publishEvent(new PurchaseRegisteredEvent(
-                request.companyId(), purchase.getId(), purchase.getPurchaseNumber(),
-                purchase.getPurchaseDate().toLocalDate(),
-                purchase.getTotalAmount().subtract(purchase.getTaxAmount()),
-                purchase.getTaxAmount(), purchase.getTotalAmount(), purchase.getAmountPaid(), cashPayment));
+        eventPublisher.publishEvent(PurchaseRegisteredEvents.of(purchase, payNow, cashPayment));
 
         return purchase;
     }

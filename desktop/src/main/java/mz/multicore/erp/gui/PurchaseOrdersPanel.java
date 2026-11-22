@@ -62,14 +62,14 @@ final class PurchaseOrdersPanel {
         owner.poProductCombo = new mz.multicore.erp.gui.components.ProductSearchComboBox();
         poPackageEditor = new PackageQuantityEditor();
         poQtyField = poPackageEditor.totalField();
-        owner.poProductCombo.addActionListener(event -> refreshPackagingFactor());
+        owner.poProductCombo.addActionListener(event -> refreshPackagingFactor()); owner.poCurrencyField.onCurrencyChange(this::recomputePoTotal);
         owner.poPriceField = new MoneyField("0");
         poExpectedField = new JTextField(); UIHelper.styleTextField(poExpectedField);
         poExpectedField.setToolTipText("Data prevista de entrega (aaaa-MM-dd) — opcional");
 
-        g.gridx = 0; g.gridy = 0; g.weightx = 0.5; formCard.add(label("Fornecedor:"), g); g.gridx = 1; formCard.add(label("Armazém de destino:"), g);
-        g.gridx = 0; g.gridy = 1; formCard.add(owner.poSupplierCombo, g); g.gridx = 1; formCard.add(owner.poWarehouseCombo, g);
-        g.gridx = 0; g.gridy = 2; g.gridwidth = 2; g.weightx = 1; formCard.add(label("Produto:"), g);
+        g.gridx = 0; g.gridy = 0; g.weightx = 0.5; formCard.add(label("Fornecedor:"), g); g.gridx = 1; formCard.add(label("Armazém de destino:"), g); g.gridx = 2; formCard.add(label("Moeda e câmbio:"), g);
+        g.gridx = 0; g.gridy = 1; formCard.add(owner.poSupplierCombo, g); g.gridx = 1; formCard.add(owner.poWarehouseCombo, g); g.gridx = 2; formCard.add(owner.poCurrencyField, g);
+        g.gridx = 0; g.gridy = 2; g.gridwidth = 3; g.weightx = 1; formCard.add(label("Produto:"), g);
         g.gridy = 3; formCard.add(owner.poProductCombo, g);
         g.gridwidth = 1; g.weightx = 0.33;
         g.gridx = 0; g.gridy = 4; formCard.add(label("Qtd:"), g); g.gridx = 1; formCard.add(label("Preço unit. (compra):"), g); g.gridx = 2; formCard.add(label("Entrega prevista:"), g);
@@ -204,7 +204,7 @@ final class PurchaseOrdersPanel {
         owner.poDraftLines.clear();
         if (owner.poLinesModel != null) owner.poLinesModel.setRowCount(0);
         recomputePoTotal();
-        poExpectedField.setText("");
+        poExpectedField.setText(""); owner.poCurrencyField.reset();
 
         if (supplierId != null) {
             for (int i = 0; i < owner.supplierComboList.size(); i++) {
@@ -301,7 +301,7 @@ final class PurchaseOrdersPanel {
     private void recomputePoTotal() {
         BigDecimal total = BigDecimal.ZERO;
         for (CreatePurchaseOrderLineRequest l : owner.poDraftLines) total = total.add(l.quantity().multiply(l.unitPrice()));
-        owner.poTotalLabel.setText(String.format("Total da Encomenda: %,.2f MT", total));
+        if (owner.poTotalLabel != null) owner.poTotalLabel.setText(String.format("Total da Encomenda: %,.2f %s", total, owner.poCurrencyField.currency()));
     }
 
     private CreatePurchaseOrderRequest buildPurchaseOrderRequest() {
@@ -325,7 +325,8 @@ final class PurchaseOrdersPanel {
         }
         return new CreatePurchaseOrderRequest(
                 owner.supplierComboList.get(supIdx).id(), owner.warehousesList.get(whIdx).id(),
-                CurrentUserContext.getCurrentCompanyId(), expected, null, new ArrayList<>(owner.poDraftLines));
+                CurrentUserContext.getCurrentCompanyId(), expected, null, new ArrayList<>(owner.poDraftLines),
+                owner.poCurrencyField.currency(), owner.poCurrencyField.exchangeRate());
     }
 
     public void refresh() {

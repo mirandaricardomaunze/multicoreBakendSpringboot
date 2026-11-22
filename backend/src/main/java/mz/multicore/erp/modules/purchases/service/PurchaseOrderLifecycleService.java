@@ -41,6 +41,7 @@ public class PurchaseOrderLifecycleService {
     private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
+    private final PurchaseCurrencyResolver currencyResolver;
 
     public PurchaseOrderLifecycleService(
             PurchaseOrderRepository orderRepository,
@@ -49,8 +50,10 @@ public class PurchaseOrderLifecycleService {
             WarehouseLookup warehouseLookup,
             CompanyLookup companyLookup,
             DocumentNumberService documentNumberService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            PurchaseCurrencyResolver currencyResolver
     ) {
+        this.currencyResolver = currencyResolver;
         this.orderRepository = orderRepository;
         this.supplierRepository = supplierRepository;
         this.productLookup = productLookup;
@@ -85,6 +88,8 @@ public class PurchaseOrderLifecycleService {
         order.setExpectedDate(request.expectedDate());
         order.setNotes(request.notes());
         order.setOrderDate(LocalDateTime.now());
+        order.applyDocumentCurrency(currencyResolver.resolve(company, request.currency(),
+                order.getOrderDate().toLocalDate(), request.exchangeRate()));
         order.setStatus(PurchaseOrder.ORDERED);
         order.setCreatedBy(CurrentUserContext.getUsername());
 
@@ -114,7 +119,7 @@ public class PurchaseOrderLifecycleService {
             totalTax = totalTax.add(amounts.tax());
         }
 
-        order.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        order.applyTotal(total);
         order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         order.setOrderNumber(documentNumberService.next(DocumentSeries.PURCHASE_ORDER));
 
@@ -178,7 +183,7 @@ public class PurchaseOrderLifecycleService {
             total = total.add(amounts.total());
             totalTax = totalTax.add(amounts.tax());
         }
-        order.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        order.applyTotal(total);
         order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
 
         PurchaseOrder saved = orderRepository.saveAndFlush(order);

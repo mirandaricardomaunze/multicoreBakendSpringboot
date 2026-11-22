@@ -1,11 +1,11 @@
 package mz.multicore.erp.modules.purchases.service;
 
-import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
+import mz.multicore.erp.modules.purchases.model.DocumentCurrency;
 import mz.multicore.erp.modules.purchases.model.Purchase;
 import mz.multicore.erp.modules.purchases.model.PurchaseLine;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrder;
@@ -49,6 +49,8 @@ public class PurchaseOrderPayableRegistrar {
         purchase.setSupplier(order.getSupplier());
         purchase.setWarehouse(order.getWarehouse());
         purchase.setCompany(order.getCompany());
+        // A dívida nasce na moeda e ao câmbio gravados na encomenda (MOEDA_ESTRANGEIRA §3.3).
+        purchase.applyDocumentCurrency(new DocumentCurrency(order.getCurrency(), order.getExchangeRate()));
         purchase.setPurchaseDate(LocalDateTime.now());
         purchase.setCreatedBy(CurrentUserContext.getUsername());
 
@@ -58,16 +60,12 @@ public class PurchaseOrderPayableRegistrar {
             total = total.add(amounts.total());
             totalTax = totalTax.add(amounts.tax());
         }
-        purchase.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        purchase.applyTotal(total);
         purchase.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         purchase.setPurchaseNumber(documentNumberService.next(DocumentSeries.PURCHASE));
         purchase = purchaseRepository.save(purchase);
 
-        eventPublisher.publishEvent(new PurchaseRegisteredEvent(
-                order.getCompany().getId(), purchase.getId(), purchase.getPurchaseNumber(),
-                purchase.getPurchaseDate().toLocalDate(),
-                purchase.getTotalAmount().subtract(purchase.getTaxAmount()),
-                purchase.getTaxAmount(), purchase.getTotalAmount(), BigDecimal.ZERO, false));
+        eventPublisher.publishEvent(PurchaseRegisteredEvents.of(purchase, false, false));
         auditLogService.logCurrent("PURCHASE_ORDER_PAYABLE",
                 "Compra " + purchase.getPurchaseNumber() + " criada pela recepção da encomenda "
                         + order.getOrderNumber() + " (" + purchase.getTotalAmount().toPlainString() + " MT)");

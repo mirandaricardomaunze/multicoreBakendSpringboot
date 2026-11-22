@@ -52,7 +52,7 @@ final class PurchaseInvoiceOperations {
         if (dlg.showDialog()) {
             PurchaseDTO purchase = created[0];
             ToastManager.success(owner, "Compra " + purchase.purchaseNumber() + " registada · "
-                    + (onCredit[0] ? "a crédito" : purchase.totalAmount() + " MT") + ".");
+                    + (onCredit[0] ? "a crédito" : purchase.totalAmount() + " " + purchase.currency()) + ".");
             clearPurchaseDraft(owner);
             owner.loadPurchasesHistory();
             owner.loadAccounts();
@@ -82,14 +82,23 @@ final class PurchaseInvoiceOperations {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
         return new CreatePurchaseRequest(supplier.id(), warehouse.id(), companyId, financeAccountId,
-                new ArrayList<>(owner.draftLines));
+                new ArrayList<>(owner.draftLines),
+                owner.purchaseCurrencyField.currency(), owner.purchaseCurrencyField.exchangeRate());
     }
 
     static void clearPurchaseDraft(ComprasPanel owner) {
         owner.draftLines.clear();
         if (owner.draftLinesModel != null) owner.draftLinesModel.setRowCount(0);
         owner.draftTotal = BigDecimal.ZERO;
-        if (owner.totalLabel != null) owner.totalLabel.setText("Total Compra: 0,00 MT (excl. IVA)");
+        owner.purchaseCurrencyField.reset();
+        refreshPurchaseTotal(owner);
+    }
+
+    /** Total do rascunho na moeda do documento escolhida. */
+    static void refreshPurchaseTotal(ComprasPanel owner) {
+        if (owner.totalLabel == null) return;
+        owner.totalLabel.setText(String.format("Total Compra: %,.2f %s (excl. IVA)",
+                owner.draftTotal, owner.purchaseCurrencyField.currency()));
     }
 
     static void loadPurchasesHistory(ComprasPanel owner) {

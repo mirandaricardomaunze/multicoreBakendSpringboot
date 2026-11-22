@@ -1,14 +1,19 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.gui.components.*;
+import mz.multicore.erp.gui.currency.PaymentExchangeRateField;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 import mz.multicore.erp.modules.purchases.dto.PayableDTO;
 
 import javax.swing.*;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Diálogo modal ergonómico para liquidação de faturas de compras a crédito.
+ * Diálogo modal ergonómico para liquidação de faturas de compras a crédito. Compra em moeda estrangeira pede o
+ * câmbio do pagamento e mostra a diferença cambial antes de confirmar (SPEC FX §3.4, §4.5).
  */
 public final class SupplierPaymentDialog {
 
@@ -35,16 +40,22 @@ public final class SupplierPaymentDialog {
         JTextField refField = new JTextField();
         UIHelper.styleTextField(refField);
 
-        JLabel info = new JLabel(String.format(
-                "<html><b>Compra:</b> %s · <b>Fornecedor:</b> %s<br><b>Em dívida:</b> %,.2f MT</html>",
-                pa.purchaseNumber(), pa.supplierName(), pa.outstanding()));
+        PaymentExchangeRateField rateField = new PaymentExchangeRateField(pa, owner.exchangeRateApiClient);
+        String currency = rateField.isForeign() ? pa.currency() : "MT";
+        JLabel info = new JLabel("<html><b>Compra:</b> " + pa.purchaseNumber() + " · <b>Fornecedor:</b> "
+                + pa.supplierName() + "<br><b>Em dívida:</b> " + DisplayNumbers.money(pa.outstanding()) + " " + currency
+                + (rateField.isForeign() ? " · câmbio do documento " + DisplayNumbers.rate(pa.exchangeRate()) : "")
+                + "</html>");
         info.setForeground(UIHelper.TEXT_LIGHT);
+        rateField.follow(amountField);
 
-        JPanel form = UIHelper.createDialogForm(
+        List<Object> fields = new ArrayList<>(List.of(
                 "Resumo:", info,
                 "Conta de Tesouraria:", accCombo,
-                "Valor a Pagar (MT):", amountField,
-                "Referência:", refField);
+                "Valor a Pagar (" + currency + "):", amountField));
+        if (rateField.isForeign()) fields.addAll(List.of("Câmbio do Pagamento:", rateField));
+        fields.addAll(List.of("Referência:", refField));
+        JPanel form = UIHelper.createDialogForm(fields.toArray());
 
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
                 "Pagar a Fornecedor - " + pa.purchaseNumber(), "fas-money-bill-wave",
@@ -57,8 +68,9 @@ public final class SupplierPaymentDialog {
             Long accountId = owner.accountsList.get(accCombo.getSelectedIndex()).id();
             String ref = refField.getText().trim();
             String reference = ref.isEmpty() ? null : ref;
+            BigDecimal paymentRate = rateField.exchangeRate();
             UIHelper.runWithProgress(owner, "A registar pagamento ao fornecedor…", () -> {
-                owner.purchaseApiClient.registerSupplierPayment(pa.purchaseId(), amount, accountId, reference);
+                owner.purchaseApiClient.registerSupplierPayment(pa.purchaseId(), amount, accountId, reference, paymentRate);
                 return null;
             }, ignored -> {
                 owner.showPurchaseSuccess("Pagamento registado.");

@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.purchases.service;
 
+import mz.multicore.erp.modules.purchases.dto.CurrencyBalanceDTO;
 import mz.multicore.erp.modules.purchases.dto.SupplierStatementDTO;
 import mz.multicore.erp.modules.purchases.dto.SupplierStatementLineDTO;
 import mz.multicore.erp.modules.purchases.model.Purchase;
@@ -10,16 +11,15 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Builds a supplier's statement for a period from its purchases and payments, with the opening balance and the
- * running balance per movement.
+ * running balance per movement. Balances are in the base currency (at each document's rate); every movement also
+ * carries its amount in the document currency, and the statement closes with the debt per currency (SPEC §3.3).
  */
 @Component
 public class SupplierStatementMovementBuilder {
@@ -40,27 +40,20 @@ public class SupplierStatementMovementBuilder {
                     : (p.getCreatedAt() != null ? p.getCreatedAt().toLocalDate() : LocalDate.now());
             LocalDateTime ts = p.getCreatedAt() != null ? p.getCreatedAt()
                     : (p.getPurchaseDate() != null ? p.getPurchaseDate() : pDate.atStartOfDay());
-
-            Set<String> bus = p.getLines() != null ? p.getLines().stream()
-                    .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getName() : null)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet()) : Collections.emptySet();
-            String buName = bus.isEmpty() ? null : (bus.size() == 1 ? bus.iterator().next() : "Misto");
-            Long buId = bus.size() == 1 && p.getLines() != null ? p.getLines().stream()
-                    .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getId() : null)
-                    .filter(Objects::nonNull).findFirst().orElse(null) : null;
+            PurchaseBusinessUnit unit = PurchaseBusinessUnit.of(p);
 
             String pNum = p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "-";
             events.add(new RawSupplierMovement(
                     pDate, "V/FT", pNum, "Factura de Fornecedor / Compra", pNum,
-                    BigDecimal.ZERO, p.getTotalAmount() != null ? p.getTotalAmount() : BigDecimal.ZERO,
-                    ts, 1, buId, buName
+                    BigDecimal.ZERO, p.baseTotal(), ts, 1, unit, p,
+                    p.getTotalAmount() != null ? p.getTotalAmount() : BigDecimal.ZERO
             ));
 
             if (p.getAmountPaid() != null && p.getAmountPaid().signum() > 0) {
                 events.add(new RawSupplierMovement(
                         pDate, "PG", "PG/" + pNum, "Pagamento / Liquidação de Factura", pNum,
-                        p.getAmountPaid(), BigDecimal.ZERO, ts.plusSeconds(1), 2, buId, buName
+                        p.getBaseAmountPaid(), BigDecimal.ZERO, ts.plusSeconds(1), 2, unit, p,
+                        p.getAmountPaid().negate()
                 ));
             }
         }
@@ -73,24 +66,29 @@ public class SupplierStatementMovementBuilder {
         BigDecimal totalDebits = BigDecimal.ZERO;
         BigDecimal totalCredits = BigDecimal.ZERO;
         List<SupplierStatementLineDTO> lines = new ArrayList<>();
+        Map<String, CurrencyBalanceDTO> byCurrency = new TreeMap<>();
 
         for (RawSupplierMovement mov : events) {
             if (mov.date().isBefore(from)) {
-                openingBalance = openingBalance.add(mov.credit()).subtract(mov.debit());
+                openingBalance = openingBalance.add(mov.baseChange());
+            }
+            if (!mov.date().isAfter(to)) {
+                byCurrency.merge(mov.purchase().getCurrency(), mov.balanceChange(), SupplierStatementMovementBuilder::sum);
             }
         }
 
         BigDecimal running = openingBalance;
         for (RawSupplierMovement mov : events) {
             if (!mov.date().isBefore(from) && !mov.date().isAfter(to)) {
-                running = running.add(mov.credit()).subtract(mov.debit());
+                running = running.add(mov.baseChange());
                 totalDebits = totalDebits.add(mov.debit());
                 totalCredits = totalCredits.add(mov.credit());
 
                 lines.add(new SupplierStatementLineDTO(
                         mov.date(), mov.type(), mov.documentNumber(), mov.description(),
                         mov.reference(), mov.debit(), mov.credit(), running,
-                        mov.businessUnitId(), mov.businessUnitName()
+                        mov.unit().id(), mov.unit().name(), mov.purchase().getCurrency(),
+                        mov.purchase().getExchangeRate(), mov.signedDocumentAmount().abs()
                 ));
             }
         }
@@ -100,21 +98,28 @@ public class SupplierStatementMovementBuilder {
         return new SupplierStatementDTO(
                 supplier.getId(), supplier.getName(), supplier.getTaxId(),
                 supplier.getAddress(), supplier.getEmail(), supplier.getPhone(),
-                from, to, openingBalance, totalDebits, totalCredits, closingBalance, lines
+                from, to, openingBalance, totalDebits, totalCredits, closingBalance, lines,
+                byCurrency.values().stream().filter(b -> b.outstanding().signum() != 0).toList()
         );
     }
 
+    private static CurrencyBalanceDTO sum(CurrencyBalanceDTO a, CurrencyBalanceDTO b) {
+        return new CurrencyBalanceDTO(a.currency(), a.outstanding().add(b.outstanding()),
+                a.baseOutstanding().add(b.baseOutstanding()));
+    }
+
     private record RawSupplierMovement(
-            LocalDate date,
-            String type,
-            String documentNumber,
-            String description,
-            String reference,
-            BigDecimal debit,
-            BigDecimal credit,
-            LocalDateTime timestamp,
-            int orderPriority,
-            Long businessUnitId,
-            String businessUnitName
-    ) {}
+            LocalDate date, String type, String documentNumber, String description, String reference,
+            BigDecimal debit, BigDecimal credit, LocalDateTime timestamp, int orderPriority,
+            PurchaseBusinessUnit unit, Purchase purchase, BigDecimal signedDocumentAmount
+    ) {
+        /** Variação da dívida em moeda base: compras aumentam, pagamentos baixam. */
+        BigDecimal baseChange() {
+            return credit.subtract(debit);
+        }
+
+        CurrencyBalanceDTO balanceChange() {
+            return new CurrencyBalanceDTO(purchase.getCurrency(), signedDocumentAmount, baseChange());
+        }
+    }
 }

@@ -52,7 +52,8 @@ public class DirectPurchaseService {
         this(
                 new DirectPurchaseRegistrationService(
                         supplierRepository, purchaseRepository, productLookup, warehouseLookup,
-                        companyLookup, inventoryService, financeService, documentNumberService, eventPublisher),
+                        companyLookup, inventoryService, financeService, documentNumberService, eventPublisher,
+                        PurchaseCurrencyResolver.baseCurrencyOnly()),
                 new DirectPurchaseQueryService(purchaseRepository)
         );
     }

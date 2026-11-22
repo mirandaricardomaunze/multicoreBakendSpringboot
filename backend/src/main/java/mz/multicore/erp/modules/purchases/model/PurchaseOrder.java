@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.purchases.model;
 
-import mz.multicore.erp.architecture.BaseEntity;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import jakarta.persistence.*;
@@ -23,7 +22,7 @@ import java.util.List;
         name = "uk_purchase_orders_company_number", columnNames = {"company_id", "order_number"}))
 @Getter
 @Setter
-public class PurchaseOrder extends BaseEntity {
+public class PurchaseOrder extends CurrencyDocument {
 
     public static final String ORDERED = "ORDERED";
     public static final String PARTIALLY_RECEIVED = "PARTIALLY_RECEIVED";

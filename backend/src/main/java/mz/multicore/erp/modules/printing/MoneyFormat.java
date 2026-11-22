@@ -16,6 +16,12 @@ public final class MoneyFormat {
         return formatPlain(value) + " " + PdfTheme.CURRENCY_CODE;
     }
 
+    /** Valor com o código da moeda do documento (ex.: "100,00 USD"), para documentos que não estão em meticais. */
+    public static String format(BigDecimal value, String currencyCode) {
+        return formatPlain(value) + " " + (currencyCode == null || currencyCode.isBlank()
+                ? PdfTheme.CURRENCY_CODE : currencyCode);
+    }
+
     public static String formatPlain(BigDecimal value) {
         return DisplayNumbers.money(value);
     }

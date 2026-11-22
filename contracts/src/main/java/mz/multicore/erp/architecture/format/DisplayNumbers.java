@@ -28,6 +28,12 @@ public final class DisplayNumbers {
         return format("#,##0.###").format(value == null ? BigDecimal.ZERO : value);
     }
 
+    /** Exchange rate with four decimal places: {@code 63,9055}. Null is treated as zero. */
+    public static String rate(BigDecimal value) {
+        BigDecimal safe = value == null ? BigDecimal.ZERO : value.setScale(4, RoundingMode.HALF_UP);
+        return format("#,##0.0000").format(safe);
+    }
+
     private static DecimalFormat format(String pattern) {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(DisplayLocale.NUMBERS);
         symbols.setDecimalSeparator(',');
