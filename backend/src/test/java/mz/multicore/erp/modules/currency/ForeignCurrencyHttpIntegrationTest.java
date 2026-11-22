@@ -2,6 +2,9 @@ package mz.multicore.erp.modules.currency;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.parser.PdfTextExtractor;
+import mz.multicore.erp.architecture.security.ApiRolePolicy;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -20,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -118,6 +122,76 @@ class ForeignCurrencyHttpIntegrationTest {
         assertThat(money(payable, "baseOutstanding")).as("60 × 63,9055").isEqualByComparingTo("3834.33");
     }
 
+    /** FX-13 (SPEC §3.3.1): PDFs de encomenda e compra com moeda e câmbio; só na empresa activa, MANAGER/ADMIN. */
+    @Test
+    void fx13_pdfsDeEncomendaECompraMostramMoedaECambio() throws Exception {
+        Session manager = login("joao", null);
+        Session admin = login("ana", manager.companyId());
+        send(post("/api/exchange-rates"), admin,
+                "{\"currency\":\"USD\",\"rateDate\":\"%s\",\"rate\":63.9055}".formatted(LocalDate.now().minusDays(3)));
+
+        long supplierId = getJson("/api/purchases/suppliers?companyId=" + manager.companyId(), manager).get(0)
+                .get("id").asLong();
+        long warehouseId = getJson("/api/inventory/warehouses/sales?companyId=" + manager.companyId(), manager).get(0)
+                .get("id").asLong();
+        long productId = json(send(post("/api/comercial/products"), manager, """
+                {"sku":"PDF-%s","name":"Motor importado (teste)","unitPrice":10000,"purchasePrice":1,"minStock":0,
+                 "unitsPerBox":1,"saleType":"UNIT"}""".formatted(UUID.randomUUID().toString().substring(0, 8))))
+                .get("id").asLong();
+        String lines = "[{\"productId\":%d,\"quantity\":2,\"unitPrice\":50,\"taxRate\":0}]".formatted(productId);
+
+        JsonNode order = json(send(post("/api/purchases/orders"), manager, """
+                {"supplierId":%d,"warehouseId":%d,"companyId":%s,"currency":"USD","exchangeRate":63.9055,"lines":%s}"""
+                .formatted(supplierId, warehouseId, manager.companyId(), lines)));
+        String orderPdf = pdfText("/api/print/purchase-order/" + order.get("id").asLong(), manager);
+        assertThat(orderPdf).contains("ENCOMENDA A FORNECEDOR", order.get("orderNumber").asText(),
+                "Motor importado (teste)", "Moeda: USD", "Câmbio: 63,9055", "100,00 USD", "6.390,55 MZN");
+
+        JsonNode usd = json(send(post("/api/purchases"), manager, """
+                {"supplierId":%d,"warehouseId":%d,"companyId":%s,"currency":"USD","exchangeRate":63.9055,"lines":%s}"""
+                .formatted(supplierId, warehouseId, manager.companyId(), lines)));
+        String purchasePdf = pdfText("/api/print/purchase/" + usd.get("id").asLong(), manager);
+        assertThat(purchasePdf).contains("COMPRA A FORNECEDOR", usd.get("purchaseNumber").asText(), "Moeda: USD",
+                "Câmbio: 63,9055", "Total em moeda base", "6.390,55 MZN");
+
+        JsonNode mzn = json(send(post("/api/purchases"), manager, """
+                {"supplierId":%d,"warehouseId":%d,"companyId":%s,"lines":%s}"""
+                .formatted(supplierId, warehouseId, manager.companyId(), lines)));
+        String mznPdf = pdfText("/api/print/purchase/" + mzn.get("id").asLong(), manager);
+        assertThat(mznPdf).contains("Moeda: MZN", "100,00 MZN").doesNotContain("Câmbio", "Total em moeda base");
+
+        // documento de outra empresa: a ana, activa na outra empresa, não o vê
+        Session otherCompany = new Session(admin.token(), otherCompanyOf("ana", manager.companyId()));
+        mockMvc.perform(auth(get("/api/print/purchase/" + usd.get("id").asLong()), otherCompany))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(auth(get("/api/print/purchase-order/" + order.get("id").asLong()), otherCompany))
+                .andExpect(status().isBadRequest());
+
+        assertThat(ApiRolePolicy.allows("SELLER", "GET", "/api/print/purchase/1")).isFalse();
+        assertThat(ApiRolePolicy.allows("SELLER", "GET", "/api/print/purchase-order/1")).isFalse();
+        assertThat(ApiRolePolicy.allows("MANAGER", "GET", "/api/print/purchase-order/1")).isTrue();
+    }
+
+    private String pdfText(String path, Session s) throws Exception {
+        byte[] pdf = mockMvc.perform(auth(get(path), s)).andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andReturn().getResponse().getContentAsByteArray();
+        PdfReader reader = new PdfReader(pdf);
+        try {
+            // o cabeçalho escreve o título em maiúsculas e pode quebrá-lo em duas linhas
+            return new PdfTextExtractor(reader).getTextFromPage(1).replaceAll("\\s+", " ");
+        } finally {
+            reader.close();
+        }
+    }
+
+    private String otherCompanyOf(String username, String companyId) throws Exception {
+        for (JsonNode company : loginJson(username).get("companies")) {
+            if (!company.get("id").asText().equals(companyId)) return company.get("id").asText();
+        }
+        throw new IllegalStateException(username + " só tem uma empresa");
+    }
+
     private JsonNode payable(Session s, long purchaseId) throws Exception {
         for (JsonNode payable : getJson("/api/purchases/payables?companyId=" + s.companyId(), s)) {
             if (payable.get("purchaseId").asLong() == purchaseId) return payable;
@@ -134,11 +208,15 @@ class ForeignCurrencyHttpIntegrationTest {
 
     /** joao só tem a empresa PT; ana entra na mesma empresa para os dois perfis verem a mesma tabela. */
     private Session login(String username, String companyId) throws Exception {
-        JsonNode login = read(mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"%s\",\"password\":\"password\"}".formatted(username)))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        JsonNode login = loginJson(username);
         String active = companyId != null ? companyId : login.get("companies").get(0).get("id").asText();
         return new Session(login.get("token").asText(), active);
+    }
+
+    private JsonNode loginJson(String username) throws Exception {
+        return read(mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"%s\",\"password\":\"password\"}".formatted(username)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
     }
 
     private static BigDecimal money(JsonNode node, String field) {

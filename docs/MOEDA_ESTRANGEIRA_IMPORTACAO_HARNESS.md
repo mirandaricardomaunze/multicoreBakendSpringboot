@@ -3,7 +3,7 @@
 > Cenários que provam [MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md](MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12 verdes)
+**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12, FX-13 verdes)
 
 ## Moeda e câmbio (GOAL-008)
 
@@ -21,7 +21,7 @@
 | FX-10 | Diferença cambial lançada em 6601 (perda) ou 7601 (ganho); lançamento equilibrado (§3.4) | `ExchangeDifferenceTest` |
 | FX-11 | Plano de contas com 66/6601 e 76/7601, também nas empresas existentes, sem duplicar (§3.4) | `ExchangeDifferenceAccountsTest` · `MigrationPostgresDialectHarnessTest` |
 | FX-12 | Endpoints de câmbios (criar/corrigir só ADMIN), compra e pagamento em moeda estrangeira; empresa activa (§3) | `ForeignCurrencyHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
-| FX-13 | PDFs novos de encomenda (`/api/print/purchase-order/{id}`) e compra (`/api/print/purchase/{id}`) mostram moeda e câmbio; em moeda estrangeira também o total em moeda base; moeda base sem câmbio; só empresa activa, MANAGER/ADMIN (§3.3.1) | `ForeignCurrencyHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
+| FX-13 | PDFs novos de encomenda (`/api/print/purchase-order/{id}`) e compra (`/api/print/purchase/{id}`) mostram moeda e câmbio; em moeda estrangeira também o total em moeda base; moeda base sem câmbio; só empresa activa, MANAGER/ADMIN (§3.3.1) | `ForeignCurrencyHttpIntegrationTest` (`fx13_pdfsDeEncomendaECompraMostramMoedaECambio`) · `ApiRolePolicyEndpointCoverageHarnessTest` |
 | FX-UI-01 | Moeda e câmbio nos formulários de encomenda/compra; contas a pagar com moeda (§4.5) | `ForeignCurrencyUiHarnessTest` |
 | FX-UI-02 | Pagamento com câmbio e diferença cambial antes de confirmar (§4.5) | `ForeignCurrencyUiHarnessTest` |
 | FX-UI-03 | Configurações: tabela de câmbios e moeda base só leitura com movimentos (§4.5) | `ForeignCurrencyUiHarnessTest` |
