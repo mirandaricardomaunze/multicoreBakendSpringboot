@@ -157,7 +157,10 @@ public class PurchaseController {
             @PathVariable Long id,
             @RequestParam java.math.BigDecimal amount,
             @RequestParam Long financeAccountId,
-            @RequestParam(required = false) String reference) {
-        return ResponseEntity.ok(purchaseService.registerSupplierPayment(id, amount, financeAccountId, reference));
+            @RequestParam(required = false) String reference,
+            /* Câmbio do pagamento numa compra em moeda estrangeira; vazio = o proposto pela tabela (SPEC §3.4). */
+            @RequestParam(required = false) java.math.BigDecimal exchangeRate) {
+        return ResponseEntity.ok(purchaseService.registerSupplierPayment(id, amount, financeAccountId, reference,
+                exchangeRate));
     }
 }

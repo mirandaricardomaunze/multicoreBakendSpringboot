@@ -154,8 +154,17 @@ public class PurchaseService {
         return supplierPaymentService.findPayablesByCompany(companyId);
     }
 
+    /** Pagamento na moeda base, ou em moeda estrangeira ao câmbio proposto pela tabela. */
     @Transactional
     public PurchaseDTO registerSupplierPayment(Long purchaseId, BigDecimal amount, Long financeAccountId, String reference) {
-        return supplierPaymentService.registerSupplierPayment(purchaseId, amount, financeAccountId, reference);
+        return registerSupplierPayment(purchaseId, amount, financeAccountId, reference, null);
+    }
+
+    /** {@code paymentRate}: câmbio do pagamento numa compra em moeda estrangeira; vazio = o proposto (SPEC §3.4). */
+    @Transactional
+    public PurchaseDTO registerSupplierPayment(Long purchaseId, BigDecimal amount, Long financeAccountId,
+                                               String reference, BigDecimal paymentRate) {
+        return supplierPaymentService.registerSupplierPayment(purchaseId, amount, financeAccountId, reference,
+                paymentRate);
     }
 }
