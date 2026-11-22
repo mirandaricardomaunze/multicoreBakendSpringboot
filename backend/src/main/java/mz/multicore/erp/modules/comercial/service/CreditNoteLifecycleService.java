@@ -79,7 +79,8 @@ public class CreditNoteLifecycleService {
             eventPublisher.publishEvent(new CreditNoteApprovedEvent(
                     saved.getCompany().getId(), saved.getId(), saved.getNoteNumber(),
                     saved.getIssueDate().toLocalDate(), saved.getTotalBeforeTax(),
-                    saved.getTaxAmount(), saved.getTotalAmount(), returnedCost));
+                    saved.getTaxAmount(), saved.getTotalAmount(), returnedCost,
+                    CommercialNoteRules.warehouseIdOf(saved.getWarehouse(), saved.getInvoice())));
         }
         auditLogService.logCurrent("CREDIT_NOTE_APPROVE", "Nota de crédito " + saved.getNoteNumber() + " aprovada.");
         return queryService.toDTO(saved);

@@ -51,6 +51,14 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 - Lançamentos automáticos: centro = centro do **armazém do documento de origem** (vendas, POS,
   compras, quebras, ajustes de stock, custos de importação). Evento sem armazém (salários,
   amortizações, combustível da frota, despesas de tesouraria sem centro) usa o **centro por omissão**.
+  Concretização (CC-05): o evento leva o `warehouseId` e as partidas 6/7 sem centro ficam no centro activo desse
+  armazém (`CostCenterService.postingCenterOf`); armazém sem centro activo da empresa cai no centro por omissão, para
+  nunca bloquear a operação. Armazém de cada origem: venda/POS e nota de débito — o da fatura; nota de crédito — o da
+  nota, senão o da fatura; quebra, ajuste, desmancha e lote de produção — o do movimento; ordem de produção — o
+  consumo no armazém de origem e a variação de produção no de destino; diferença de câmbio do pagamento a fornecedor
+  — o da compra; custos de importação — a parte já vendida (6101) repartida pelo armazém da compra de cada linha.
+  A perda em trânsito (entre armazéns) usa o centro por omissão. A anulação de venda ou de recebimento estorna cada
+  partida no centro da original (centro entretanto inactivo cede ao por omissão).
 - Lançamento manual e despesa de tesouraria: o pedido aceita `costCenterId` nas linhas/na despesa;
   vazio numa linha de classe 6/7 usa o **centro por omissão**. O desktop pede o centro com o centro por
   omissão pré-seleccionado.

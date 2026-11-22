@@ -210,16 +210,12 @@ public class ProductionOrderLifecycleService {
             // The finished product is posted by ProductionCompletedEvent; this posts the raw material consumed.
             eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.InventoryValueChangedEvent(companyId,
                     mz.multicore.erp.modules.accounting.model.JournalSource.PRODUCTION_CONSUMPTION, saved.getId(),
-                    saved.getOrderNumber(), saved.getCompletionDate(), actualRawMaterialCost, BigDecimal.ZERO, null));
+                    saved.getOrderNumber(), saved.getCompletionDate(), actualRawMaterialCost, BigDecimal.ZERO, null, null, sourceWhId));
         }
         if (eventPublisher != null) {
-            eventPublisher.publishEvent(new ProductionCompletedEvent(
-                    companyId,
-                    saved.getId(),
-                    saved.getOrderNumber(),
-                    saved.getCompletionDate(),
-                    saved.getTotalProductionCost()
-            ));
+            eventPublisher.publishEvent(new ProductionCompletedEvent(companyId, saved.getId(), saved.getOrderNumber(),
+                    saved.getCompletionDate(), saved.getTotalProductionCost(),
+                    saved.getTargetWarehouse() == null ? null : saved.getTargetWarehouse().getId()));
         }
 
         return toOrderDTO(saved);

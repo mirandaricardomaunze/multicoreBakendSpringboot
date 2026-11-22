@@ -72,6 +72,7 @@ public class CommercialPostingHandler {
 
         goodsAccounts.addSaleCost(entry, event.companyId(), event.invoiceId(), safe(event.costOfGoods()));
 
+        journalService.assignWarehouseCostCenter(entry, event.companyId(), event.warehouseId());
         journalService.save(entry, event.companyId());
     }
 
@@ -106,7 +107,7 @@ public class CommercialPostingHandler {
                 event.receiptId(), event.receiptNumber(), event.date(), "Anulação do recebimento ");
     }
 
-    /** Estorna um lançamento trocando débitos e créditos; o original fica no diário. */
+    /** Estorna trocando débitos e créditos, no centro de cada partida original se activo (CC-05); o original fica. */
     private void postReversal(Long companyId, JournalSource original, JournalSource reversal,
                               Long documentId, String documentNumber, LocalDate date, String description) {
         if (!postingHelper.canPost(companyId)) return;
@@ -119,9 +120,13 @@ public class CommercialPostingHandler {
             entry.setSourceDocumentId(documentId);
             entry.setSourceDocumentNumber(documentNumber);
             for (JournalLine line : posted.getLines()) {
-                entry.addLine(safe(line.getDebit()).signum() > 0
+                JournalLine reversed = safe(line.getDebit()).signum() > 0
                         ? JournalLine.credit(line.getAccount(), line.getDebit(), "Estorno: " + line.getDescription())
-                        : JournalLine.debit(line.getAccount(), line.getCredit(), "Estorno: " + line.getDescription()));
+                        : JournalLine.debit(line.getAccount(), line.getCredit(), "Estorno: " + line.getDescription());
+                if (line.getCostCenter() != null && line.getCostCenter().isActive()) {
+                    reversed.setCostCenter(line.getCostCenter());
+                }
+                entry.addLine(reversed);
             }
             journalService.save(entry, companyId);
         });
@@ -152,6 +157,7 @@ public class CommercialPostingHandler {
         entry.addLine(JournalLine.credit(postingHelper.account(event.companyId(), PgcNirfChart.CLIENTES),
                 total, "Redução da dívida do cliente"));
         goodsAccounts.addReturnCost(entry, event.companyId(), event.noteId(), safe(event.returnedGoodsCost()));
+        journalService.assignWarehouseCostCenter(entry, event.companyId(), event.warehouseId());
         journalService.save(entry, event.companyId());
     }
 
@@ -180,6 +186,7 @@ public class CommercialPostingHandler {
             entry.addLine(JournalLine.credit(postingHelper.account(event.companyId(), PgcNirfChart.IVA_LIQUIDADO),
                     tax, "IVA liquidado"));
         }
+        journalService.assignWarehouseCostCenter(entry, event.companyId(), event.warehouseId());
         journalService.save(entry, event.companyId());
     }
 }

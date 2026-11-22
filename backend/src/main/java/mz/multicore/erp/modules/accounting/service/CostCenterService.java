@@ -117,6 +117,20 @@ public class CostCenterService {
                 });
     }
 
+    /**
+     * Centre of an automatic posting (CC-05, SPEC §3.2): the active centre of the source document's warehouse; the
+     * default centre when the event has no warehouse or the warehouse has no active centre of {@code companyId}.
+     */
+    @Transactional
+    public CostCenter postingCenterOf(Long companyId, Long warehouseId) {
+        if (warehouseId == null) {
+            return requireDefault(companyId);
+        }
+        return repository.findByWarehouseId(warehouseId)
+                .filter(center -> center.belongsTo(companyId) && center.isActive())
+                .orElseGet(() -> requireDefault(companyId));
+    }
+
     /** Makes another active centre of the active company its default centre (CC-03). */
     @Transactional
     public CostCenterDTO setDefault(Long id) {

@@ -60,6 +60,7 @@ public class InventoryPostingService {
             entry.addLine(JournalLine.debit(postingHelper.account(event.companyId(), inAccount), in, "Entrada de existências"));
             entry.addLine(JournalLine.credit(postingHelper.account(event.companyId(), counterpart), in, "Entrada de existências"));
         }
+        journalService.assignWarehouseCostCenter(entry, event.companyId(), event.warehouseId());
         journalService.save(entry, event.companyId());
     }
 

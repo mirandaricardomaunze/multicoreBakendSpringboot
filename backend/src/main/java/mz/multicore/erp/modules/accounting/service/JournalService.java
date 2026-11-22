@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * Diário — onde os lançamentos nascem, manuais ou automáticos.
@@ -96,7 +97,7 @@ public class JournalService {
     @Transactional
     public JournalEntry save(JournalEntry entry, Long companyId) {
         entry.setCompany(companyService.getCurrentCompanyReference(companyId));
-        assignDefaultCostCenter(entry, companyId);
+        fillMissingCostCenters(entry, () -> costCenterService.requireDefault(companyId));
         entry.validateForPosting();
         entry.validateCostCenters();
         if (entry.getEntryNumber() == null) {
@@ -118,15 +119,30 @@ public class JournalService {
         return costCenterId == null ? null : costCenterService.requirePostable(companyId, costCenterId);
     }
 
-    /** Partidas das classes 6/7 sem centro ficam no centro por omissão da empresa (§3.2). */
-    private void assignDefaultCostCenter(JournalEntry entry, Long companyId) {
+    /**
+     * Lançamento automático de um documento com armazém (CC-05, §3.2), antes de {@link #save}: as partidas 6/7 sem
+     * centro ficam no centro do armazém de origem; sem armazém (ou sem centro activo do armazém), no centro por omissão.
+     */
+    @Transactional
+    public void assignWarehouseCostCenter(JournalEntry entry, Long companyId, Long warehouseId) {
+        fillMissingCostCenters(entry, () -> costCenterService.postingCenterOf(companyId, warehouseId));
+    }
+
+    /** Centro de uma partida automática que é de um armazém concreto (ex.: parte vendida dos custos de importação). */
+    @Transactional
+    public CostCenter costCenterOfWarehouse(Long companyId, Long warehouseId) {
+        return costCenterService.postingCenterOf(companyId, warehouseId);
+    }
+
+    /** Partidas das classes 6/7 sem centro recebem o centro dado (só é procurado se houver alguma). */
+    private static void fillMissingCostCenters(JournalEntry entry, Supplier<CostCenter> center) {
         if (!entry.hasLinesMissingCostCenter()) {
             return;
         }
-        CostCenter defaultCenter = costCenterService.requireDefault(companyId);
+        CostCenter resolved = center.get();
         entry.getLines().stream()
                 .filter(line -> line.requiresCostCenter() && line.getCostCenter() == null)
-                .forEach(line -> line.setCostCenter(defaultCenter));
+                .forEach(line -> line.setCostCenter(resolved));
     }
 
     /**
