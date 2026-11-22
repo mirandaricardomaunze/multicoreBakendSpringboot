@@ -10,7 +10,7 @@
 | ID | Garantia | Teste |
 |---|---|---|
 | CC-01 | Centro por empresa com código único, tipo WAREHOUSE/MANUAL; não se apaga com lançamentos; inactivo ou de outra empresa recusa lançamentos (§3.1) | `CostCenterRulesTest` (`cc01_*`) · `MigrationPostgresDialectHarnessTest` |
-| CC-02 | Criar armazém cria o seu centro; armazéns existentes recebem centro; centro de armazém acompanha nome e estado (§3.1) | `CostCenterWarehouseSyncTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
+| CC-02 | Criar armazém cria o seu centro; armazéns existentes recebem centro; centro de armazém acompanha nome e estado (§3.1) | `CostCenterWarehouseSyncTest` (`cc02_*`) · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | CC-03 | Cada empresa tem `ADM — Administração` como centro por omissão, alterável para outro centro activo; o por omissão não se desactiva nem apaga (§3.1) | `CostCenterRulesTest` (`cc03_*`) · `MigrationPostgresDialectHarnessTest` |
 | CC-04 | Linha de classe 6/7 exige centro; classe 1–5 recusa centro; centro de outra empresa recusado (§3.2) | `JournalLineCostCenterTest` |
 | CC-05 | Lançamentos automáticos herdam o centro do armazém de origem; sem armazém usam o centro por omissão (§3.2) | `AutomaticPostingCostCenterTest` |

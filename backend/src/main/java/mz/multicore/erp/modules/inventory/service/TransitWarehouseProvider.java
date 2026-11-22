@@ -15,9 +15,12 @@ import org.springframework.stereotype.Component;
 public class TransitWarehouseProvider {
 
     private final WarehouseRepository warehouseRepository;
+    private final WarehouseCommandService warehouseCommands;
 
-    public TransitWarehouseProvider(WarehouseRepository warehouseRepository) {
+    public TransitWarehouseProvider(WarehouseRepository warehouseRepository,
+                                    WarehouseCommandService warehouseCommands) {
         this.warehouseRepository = warehouseRepository;
+        this.warehouseCommands = warehouseCommands;
     }
 
     public Warehouse named(Company company, String name, String location) {
@@ -31,7 +34,7 @@ public class TransitWarehouseProvider {
                     w.setAllowsSales(false);
                     w.setActive(true);
                     w.setCompany(company);
-                    return warehouseRepository.save(w);
+                    return warehouseCommands.saveWarehouse(w);
                 });
     }
 }

@@ -29,6 +29,9 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
   armazém ligado (só `WAREHOUSE`), `active`.
 - Criar um armazém cria o seu centro (`code` = código do armazém); armazéns existentes recebem centro
   pela migração. Centro de armazém não se edita à mão: acompanha o nome e o estado do armazém.
+  Se o número do armazém falta ou já está ocupado na empresa, o código é `ARM-<id do armazém>`; o código
+  não muda depois (só nome e estado acompanham). Desactivar o armazém cujo centro era o centro por
+  omissão devolve o "por omissão" ao `ADM`.
 - Cada empresa recebe um centro manual **`ADM` — Administração**, que é o **centro por omissão**
   (alterável nas Configurações para outro centro activo). Há sempre um e só um por empresa: o centro
   por omissão não se desactiva nem se apaga sem antes escolher outro; empresa nova recebe o `ADM` ao

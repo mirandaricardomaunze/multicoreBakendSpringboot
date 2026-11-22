@@ -20,6 +20,9 @@ public interface CostCenterRepository extends JpaRepository<CostCenter, Long> {
 
     Optional<CostCenter> findFirstByCompanyIdAndDefaultCenterTrue(Long companyId);
 
+    /** Centro automático do armazém (CC-02); há no máximo um por armazém. */
+    Optional<CostCenter> findByWarehouseId(Long warehouseId);
+
     /** Há linhas de lançamento marcadas com este centro (impede apagar). */
     @Query("select count(l) > 0 from JournalLine l where l.costCenter.id = :costCenterId")
     boolean hasJournalLines(@Param("costCenterId") Long costCenterId);
