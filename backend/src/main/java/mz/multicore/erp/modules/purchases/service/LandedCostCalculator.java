@@ -100,6 +100,26 @@ public class LandedCostCalculator {
         return largest;
     }
 
+    /** Quota de uma linha dividida entre o stock que ainda existe e a parte já vendida (CMV). */
+    public record StockSplit(BigDecimal stockAmount, BigDecimal soldAmount) {
+    }
+
+    /**
+     * Parte para o stock = {@code C × min(1, S / Q)} (2 casas HALF_UP, nunca negativa); o resto da quota é a parte
+     * já vendida (§4.4). Sem stock, ou sem quantidade recebida, a quota toda vai a CMV.
+     */
+    public StockSplit splitByStock(BigDecimal share, BigDecimal receivedQuantity, BigDecimal stockOnHand) {
+        BigDecimal quota = share.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+        BigDecimal stock = stockOnHand == null ? BigDecimal.ZERO : stockOnHand.max(BigDecimal.ZERO);
+        if (receivedQuantity == null || receivedQuantity.signum() <= 0 || stock.signum() == 0) {
+            return new StockSplit(BigDecimal.ZERO.setScale(MONEY_SCALE), quota);
+        }
+        BigDecimal stockAmount = stock.compareTo(receivedQuantity) >= 0
+                ? quota
+                : quota.multiply(stock).divide(receivedQuantity, MONEY_SCALE, RoundingMode.HALF_UP);
+        return new StockSplit(stockAmount, quota.subtract(stockAmount));
+    }
+
     public Totals totals(List<LandedCostCharge> charges) {
         BigDecimal cost = BigDecimal.ZERO.setScale(2);
         BigDecimal vat = BigDecimal.ZERO.setScale(2);

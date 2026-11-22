@@ -142,6 +142,16 @@ por documento:
 - A parte para o stock **sobe o custo médio** do artigo: `novo médio = (S × médio + parte) / S`.
 - A parte já vendida vai a **CMV (6101)**. **Vendas passadas não mudam** (o custo da linha de venda
   é fotografado, ver `MARGEM_CUSTO_HISTORICO_SPEC.md`).
+- Como fica gravado (LC-06): o efeito aplica-se na confirmação do CI (a mesma transacção que grava as
+  dívidas). `Q` é a quantidade da linha de compra; a base VALOR é o valor **sem IVA** da linha em moeda
+  base (`preço × quantidade × câmbio da compra`). Parte para o stock a 2 casas HALF_UP; a parte já vendida
+  é o resto da quota (as duas somam sempre `C`). O custo médio do projecto é **por artigo na empresa**
+  (`WeightedAverageCost`), por isso o `S` da fórmula do médio é o stock do artigo em todos os armazéns da
+  empresa (`novo médio = (stock da empresa × médio + parte) / stock da empresa`, 2 casas HALF_UP); com um
+  só armazém coincide com a fórmula acima. Sem stock no armazém, a quota toda vai a CMV e o médio não muda.
+  Quantidades de stock não mexem. Cada linha fica fotografada em `landed_cost_allocations` (quota, `Q`,
+  `S`, parte para o stock, parte já vendida, médio antes e depois), que o lançamento (LC-07) e a
+  pré-visualização (LC-08) lêem.
 - Lançamento automático equilibrado, na moeda base:
   - Débito **3201** Mercadorias (parte para o stock) e **6101** CMV (parte já vendida);
   - Débito **2432** IVA dedutível (IVA aduaneiro e IVA dos serviços);

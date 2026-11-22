@@ -3,7 +3,7 @@
 > Cenários que provam [MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md](MOEDA_ESTRANGEIRA_IMPORTACAO_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12, FX-13, FX-UI-01, FX-UI-02, FX-UI-03 verdes — GOAL-008 completo; LC-01, LC-02, LC-03, LC-04, LC-05 verdes)
+**Última actualização:** 2026-11-22 (FX-01, FX-02, FX-03, FX-04, FX-05, FX-06, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12, FX-13, FX-UI-01, FX-UI-02, FX-UI-03 verdes — GOAL-008 completo; LC-01, LC-02, LC-03, LC-04, LC-05, LC-06 verdes)
 
 ## Moeda e câmbio (GOAL-008)
 
@@ -35,7 +35,7 @@
 | LC-03 | Custo = linhas não-IVA sem IVA em moeda base; IVA aduaneiro e IVA dos serviços fora do custo (§4.2) | `LandedCostAllocationTest` (`lc03_*`) |
 | LC-04 | Repartição por VALOR, PESO ou QUANTIDADE; PESO sem peso numa linha é erro (§4.3) | `LandedCostAllocationTest` (`lc04_*`) |
 | LC-05 | Arredondamento a 2 casas com resíduo na maior quota; soma igual ao total; empate vai à primeira linha (§4.3) | `LandedCostAllocationTest` (`lc05_*`) |
-| LC-06 | Parte para o stock = C × min(1, S/Q) sobe o custo médio; resto a CMV; vendas passadas inalteradas (§4.4) | `LandedCostStockEffectTest` |
+| LC-06 | Parte para o stock = C × min(1, S/Q) sobe o custo médio (médio por artigo na empresa); resto a CMV; sem stock tudo a CMV; IVA aduaneiro fora; quantidades e vendas passadas inalteradas (§4.4) | `LandedCostStockEffectTest` (`lc06_*`) · `MigrationPostgresDialectHarnessTest` |
 | LC-07 | Lançamento equilibrado: 3201 + 6101 + 2432 a débito, 2201 a crédito (§4.4) | `LandedCostPostingTest` |
 | LC-08 | Pré-visualização por artigo sem gravar; confirmação grava tudo numa transacção; empresa activa; perfis de compras (§4.3, §4.4) | `LandedCostHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
 | LC-UI-01 | Compras › Custos de Importação: compras, linhas, método, pré-visualização e confirmação (§4.5) | `LandedCostUiHarnessTest` |

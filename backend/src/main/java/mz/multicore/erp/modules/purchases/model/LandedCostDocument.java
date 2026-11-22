@@ -67,4 +67,10 @@ public class LandedCostDocument extends BaseEntity {
     @JoinColumn(name = "landed_cost_document_id", nullable = false)
     @OrderColumn(name = "sort_order")
     private List<LandedCostDocumentCharge> charges = new ArrayList<>();
+
+    /** Efeito em cada linha das compras ligadas, pela ordem das compras e das linhas (§4.4). */
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "landed_cost_document_id", nullable = false)
+    @OrderColumn(name = "sort_order")
+    private List<LandedCostAllocation> allocations = new ArrayList<>();
 }

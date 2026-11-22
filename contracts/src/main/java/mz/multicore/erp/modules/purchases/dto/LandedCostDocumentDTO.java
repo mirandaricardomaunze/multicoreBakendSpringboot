@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  * A "Custos de Importação" document (series CI), the purchases it is linked to in the order chosen, and its cost
- * lines with the debt each created to its supplier.
+ * lines with the debt each created to its supplier, and the effect on each purchase line (stock part and sold part).
  */
 public record LandedCostDocumentDTO(
         Long id,
@@ -16,5 +16,6 @@ public record LandedCostDocumentDTO(
         LandedCostAllocationMethod allocationMethod,
         List<Long> purchaseIds,
         List<String> purchaseNumbers,
-        List<LandedCostChargeDTO> charges
+        List<LandedCostChargeDTO> charges,
+        List<LandedCostAllocationDTO> allocations
 ) {}

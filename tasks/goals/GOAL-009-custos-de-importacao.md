@@ -26,7 +26,7 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - [x] LC-05 — arredondamento com resíduo na maior quota — `LandedCostAllocationTest`
 - [x] LC-01 — documento CI numerado e ligado a compras recebidas — `LandedCostDocumentTest`
 - [x] LC-02 — linhas de custo geram dívida a cada fornecedor — `LandedCostDocumentTest`
-- [ ] LC-06 — parte para o stock no custo médio, resto a CMV, vendas passadas intactas — `LandedCostStockEffectTest`
+- [x] LC-06 — parte para o stock no custo médio, resto a CMV, vendas passadas intactas — `LandedCostStockEffectTest`
 - [ ] LC-07 — lançamento 3201/6101/2432 contra 2201, equilibrado — `LandedCostPostingTest`
 - [ ] LC-08 — pré-visualização e confirmação por HTTP, empresa activa, perfis de compras — `LandedCostHttpIntegrationTest`
 - [ ] LC-UI-01 — ecrã Compras › Custos de Importação — `LandedCostUiHarnessTest`
@@ -47,3 +47,4 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - 2026-11-22 · LC-05 · `LandedCostCalculator.allocate` arredonda as quotas a 2 casas HALF_UP e põe o resíduo de cêntimos na linha de maior base (empate: a primeira), soma sempre igual ao total; regra do empate escrita na SPEC §4.3; `LandedCostAllocationTest` 13/13 verde.
 - 2026-11-22 · LC-01 · `LandedCostDocument` (série `CI` em `DocumentSeries.LANDED_COST`, número por empresa, data, método com VALOR por omissão, compras ligadas por ordem), migração V145 e `LandedCostDocumentService.register` (só compras `COMPLETED` da empresa activa, Saldo Inicial recusado, várias CI por compra, perfis MANAGER/ADMIN); `LandedCostDocumentTest` 10/10 verde. Linhas de custo ficam para LC-02.
 - 2026-11-22 · LC-02 · `LandedCostDocumentCharge` (tipo, fornecedor, moeda/câmbio, valor, taxa de IVA %) resolvida por `LandedCostChargeResolver` (fornecedor e taxa da empresa, câmbio pela regra do §3, IVA aduaneiro sem taxa); cada linha cria a dívida `PurchaseDocumentKind.LANDED_COST` `<CI>-n` em `purchases` (sem armazém nem stock, sem evento), listada em contas a pagar e paga por `SupplierPaymentService` ("Custos de Importação …"); migração V146; regra de gravação na SPEC §4.1; `LandedCostDocumentTest` 18/18 verde.
+- 2026-11-22 · LC-06 · `LandedCostStockEffect` reparte o custo capitalizável na confirmação do CI e, por linha, `LandedCostCalculator.splitByStock` dá parte para o stock = C × min(1, S/Q) e o resto a CMV; `AverageCostUpdater.absorbCost` sobe o médio (por artigo na empresa) sem mexer em quantidades; `LandedCostAllocation` fotografa quota/Q/S/partes/médio antes e depois (migração V147) e sai no DTO; regra de gravação na SPEC §4.4; `LandedCostStockEffectTest` 7/7 verde.
