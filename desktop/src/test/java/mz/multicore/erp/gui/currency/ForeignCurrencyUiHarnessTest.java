@@ -32,6 +32,7 @@ import static org.mockito.Mockito.mock;
  * FX-UI-03: Configurações têm a tabela de câmbios (data, moeda, câmbio) e a moeda base da empresa,
  * só de leitura depois de haver movimentos.
  * FX-UI-01: moeda e câmbio nos formulários de encomenda e de compra; contas a pagar com a moeda.
+ * FX-UI-02: pagamento a fornecedor com câmbio do pagamento e a diferença cambial mostrada antes de confirmar.
  */
 class ForeignCurrencyUiHarnessTest {
 
@@ -230,6 +231,85 @@ class ForeignCurrencyUiHarnessTest {
             assertThat(model.getValueAt(1, 3)).as("compra antiga sem moeda = moeda base").isEqualTo("MZN");
             assertThat(footer.getText()).as("total a pagar soma em moeda base").contains("6.890,55");
         });
+    }
+
+    private static PayableDTO usdPayable(String amountPaid, String outstanding, String baseOutstanding) {
+        return new PayableDTO(1L, "V/FT 1", 9L, "Fornecedor USD", new BigDecimal("100.00"), new BigDecimal(amountPaid),
+                new BigDecimal(outstanding), LocalDateTime.of(2026, 11, 20, 10, 0), null, null,
+                "USD", new BigDecimal("63.9055"), new BigDecimal("6390.55"), new BigDecimal(baseOutstanding));
+    }
+
+    @Test
+    @DisplayName("FX-UI-02: Compra na moeda base paga como hoje, sem campo de câmbio")
+    void fxUi02_compraNaMoedaBaseNaoPedeCambio() throws Exception {
+        onEdt(() -> {
+            PayableDTO mzn = new PayableDTO(2L, "V/FT 2", 8L, "Fornecedor MZN", new BigDecimal("500.00"),
+                    BigDecimal.ZERO, new BigDecimal("500.00"), LocalDateTime.of(2026, 11, 21, 10, 0));
+            PaymentExchangeRateField field = new PaymentExchangeRateField(mzn, null);
+            assertThat(field.isForeign()).isFalse();
+            assertThat(field.isVisible()).as("sem câmbio na moeda base").isFalse();
+            assertThat(field.exchangeRate()).as("moeda base não envia câmbio").isNull();
+        });
+    }
+
+    @Test
+    @DisplayName("FX-UI-02: Pagamento em moeda estrangeira mostra câmbio editável e a diferença cambial antes de confirmar")
+    void fxUi02_diferencaCambialVisivelAntesDeConfirmar() throws Exception {
+        onEdt(() -> {
+            PaymentExchangeRateField field = new PaymentExchangeRateField(usdPayable("0", "100.00", "6390.55"), null);
+            assertThat(field.isForeign()).isTrue();
+            assertThat(field.rateField().isEnabled()).isTrue();
+
+            field.applyProposal(new ProposedExchangeRateDTO("USD", LocalDate.now(),
+                    new BigDecimal("65"), LocalDate.of(2026, 11, 21), false));
+            assertThat(field.rateField().getText()).isEqualTo("65,0000");
+            assertThat(field.exchangeRate()).isEqualByComparingTo("65");
+
+            field.updateAmount(new BigDecimal("100.00"));
+            assertThat(field.difference().getText()).as("liquidação ao câmbio maior: perda")
+                    .contains("6.500,00").contains("6.390,55").contains("Perda cambial").contains("6601")
+                    .contains("109,45");
+
+            field.rateField().setText("63");
+            field.updateAmount(new BigDecimal("100.00"));
+            assertThat(field.difference().getText()).as("câmbio menor: ganho")
+                    .contains("Ganho cambial").contains("7601").contains("90,55");
+
+            field.rateField().setText("63,9055");
+            field.updateAmount(new BigDecimal("100.00"));
+            assertThat(field.difference().getText()).contains("Sem diferença cambial");
+
+            field.rateField().setText("");
+            field.updateAmount(new BigDecimal("100.00"));
+            assertThat(field.exchangeRate()).as("vazio: o backend propõe ou recusa").isNull();
+        });
+    }
+
+    @Test
+    @DisplayName("FX-UI-02: Pré-visualização segue a regra do backend — parcial proporcional, liquidação sem resíduos")
+    void fxUi02_previsaoSegueRegraDoBackend() {
+        PaymentExchangeRateField.Preview partial = PaymentExchangeRateField.preview(
+                usdPayable("0", "100.00", "6390.55"), new BigDecimal("40.00"), new BigDecimal("65"));
+        assertThat(partial.treasuryAmount()).isEqualByComparingTo("2600.00");
+        assertThat(partial.supplierReduction()).isEqualByComparingTo("2556.22");
+        assertThat(partial.difference()).isEqualByComparingTo("43.78");
+
+        PaymentExchangeRateField.Preview settle = PaymentExchangeRateField.preview(
+                usdPayable("40.00", "60.00", "3834.33"), new BigDecimal("60.00"), new BigDecimal("63"));
+        assertThat(settle.supplierReduction()).as("liquidação baixa o que restava").isEqualByComparingTo("3834.33");
+        assertThat(settle.treasuryAmount()).isEqualByComparingTo("3780.00");
+        assertThat(settle.difference()).isEqualByComparingTo("-54.33");
+    }
+
+    @Test
+    @DisplayName("FX-UI-02: O diálogo de pagamento usa o campo de câmbio e envia o câmbio do pagamento")
+    void fxUi02_dialogoEnviaCambioDoPagamento() throws Exception {
+        String dialog = Files.readString(gui("SupplierPaymentDialog.java"));
+        assertThat(dialog).contains("new PaymentExchangeRateField(")
+                .contains("registerSupplierPayment(pa.purchaseId(), amount, accountId, reference, paymentRate)");
+        Path client = Path.of("src", "main", "java", "mz", "multicore", "erp", "desktop", "client", "PurchaseApiClient.java");
+        if (!Files.exists(client)) client = Path.of("desktop").resolve(client);
+        assertThat(Files.readString(client)).contains("&exchangeRate=");
     }
 
     private static Path gui(String file) {

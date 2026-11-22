@@ -76,10 +76,17 @@ public class PurchaseApiClient {
     }
 
     public PurchaseDTO registerSupplierPayment(Long id, BigDecimal amount, Long financeAccountId, String reference) {
+        return registerSupplierPayment(id, amount, financeAccountId, reference, null);
+    }
+
+    /** @param exchangeRate payment rate of a foreign purchase; null lets the backend propose it (SPEC FX §3.4). */
+    public PurchaseDTO registerSupplierPayment(Long id, BigDecimal amount, Long financeAccountId, String reference,
+                                               BigDecimal exchangeRate) {
         String path = "/api/purchases/" + id + "/pay?amount=" + amount + "&financeAccountId=" + financeAccountId;
         if (reference != null && !reference.isBlank()) {
             path += "&reference=" + URLEncoder.encode(reference, StandardCharsets.UTF_8);
         }
+        if (exchangeRate != null) path += "&exchangeRate=" + exchangeRate.toPlainString();
         return clientFactory.authenticatedClient().post(path, null, PurchaseDTO.class);
     }
 

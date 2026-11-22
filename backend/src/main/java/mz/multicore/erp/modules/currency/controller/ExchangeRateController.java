@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.currency.controller;
 
+import jakarta.validation.Valid;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.currency.dto.CorrectExchangeRateRequest;
 import mz.multicore.erp.modules.currency.dto.CreateExchangeRateRequest;
@@ -48,13 +49,13 @@ public class ExchangeRateController {
     }
 
     @PostMapping
-    public ResponseEntity<ExchangeRateDTO> create(@RequestBody CreateExchangeRateRequest request) {
+    public ResponseEntity<ExchangeRateDTO> create(@Valid @RequestBody CreateExchangeRateRequest request) {
         return ResponseEntity.ok(exchangeRateService.create(CurrentUserContext.requireCurrentCompanyId(), request));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ExchangeRateDTO> correct(@PathVariable Long id,
-                                                   @RequestBody CorrectExchangeRateRequest request) {
+                                                   @Valid @RequestBody CorrectExchangeRateRequest request) {
         return ResponseEntity.ok(exchangeRateService.correct(CurrentUserContext.requireCurrentCompanyId(), id, request));
     }
 }

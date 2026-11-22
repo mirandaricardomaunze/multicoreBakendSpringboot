@@ -112,7 +112,8 @@ public class Company extends BaseEntity {
      * Moeda base (ISO 4217) em que ficam stock, custo médio, contabilidade e relatórios. MZN por omissão;
      * só muda enquanto a empresa não tem movimentos ({@code CompanyBaseCurrencyService}, V140).
      */
-    @Column(name = "base_currency", length = 3, nullable = false)
+    @Column(name = "base_currency", length = 3, nullable = false,
+            columnDefinition = "varchar(3) default 'MZN' not null")
     private String baseCurrency = CurrencyCode.DEFAULT_CODE;
 
     /** Name printed as the document title: the trade name when set, otherwise the legal name. */

@@ -24,7 +24,7 @@ public class ComprasPanel extends JPanel {
     final InventoryApiClient inventoryApiClient;
     final ComercialApiClient comercialApiClient;
     final FinanceApiClient financeApiClient;
-
+    final ExchangeRateApiClient exchangeRateApiClient; // câmbio proposto no pagamento (SPEC FX §3.4); pode ser null
     private final PurchaseSuppliersPanel suppliersPanel;
     private final PurchaseBusinessUnitsPanel businessUnitsPanel;
     final PurchaseReorderPanel reorderPanel;
@@ -88,8 +88,7 @@ public class ComprasPanel extends JPanel {
     List<TreasuryAccountDTO> accountsList = new ArrayList<>();
     List<ProductDTO> productsList = new ArrayList<>();
 
-    // Draft items
-    final List<CreatePurchaseLineRequest> draftLines = new ArrayList<>();
+    final List<CreatePurchaseLineRequest> draftLines = new ArrayList<>(); // draft items
     BigDecimal draftTotal = BigDecimal.ZERO;
 
     public final DocumentCurrencyField purchaseCurrencyField, poCurrencyField; // moeda e câmbio (SPEC FX §4.5)
@@ -114,6 +113,7 @@ public class ComprasPanel extends JPanel {
         this.inventoryApiClient = inventoryApiClient;
         this.comercialApiClient = comercialApiClient;
         this.financeApiClient = financeApiClient;
+        this.exchangeRateApiClient = exchangeRateApiClient;
         this.suppliersPanel = new PurchaseSuppliersPanel(this);
         this.businessUnitsPanel = new PurchaseBusinessUnitsPanel(this);
         this.reorderPanel = new PurchaseReorderPanel(this);

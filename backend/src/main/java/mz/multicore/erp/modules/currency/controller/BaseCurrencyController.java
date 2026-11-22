@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.currency.controller;
 
+import jakarta.validation.Valid;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.service.CompanyBaseCurrencyService;
 import mz.multicore.erp.modules.currency.dto.BaseCurrencyDTO;
@@ -32,7 +33,7 @@ public class BaseCurrencyController {
     }
 
     @PutMapping
-    public ResponseEntity<BaseCurrencyDTO> change(@RequestBody ChangeBaseCurrencyRequest request) {
+    public ResponseEntity<BaseCurrencyDTO> change(@Valid @RequestBody ChangeBaseCurrencyRequest request) {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         baseCurrencyService.changeBaseCurrency(companyId, request == null ? null : request.currency());
         return ResponseEntity.ok(current(companyId));
