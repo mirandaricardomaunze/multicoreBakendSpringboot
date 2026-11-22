@@ -5,6 +5,7 @@ import mz.multicore.erp.modules.currency.dto.ChangeBaseCurrencyRequest;
 import mz.multicore.erp.modules.currency.dto.CorrectExchangeRateRequest;
 import mz.multicore.erp.modules.currency.dto.CreateExchangeRateRequest;
 import mz.multicore.erp.modules.currency.dto.ExchangeRateDTO;
+import mz.multicore.erp.modules.currency.dto.ProposedExchangeRateDTO;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +36,12 @@ public class ExchangeRateApiClient {
     public ExchangeRateDTO correct(Long id, BigDecimal rate) {
         return clientFactory.authenticatedClient().put("/api/exchange-rates/" + id,
                 new CorrectExchangeRateRequest(rate), ExchangeRateDTO.class);
+    }
+
+    /** Rate proposed for a document of {@code currency} dated {@code date} (SPEC §3.2). */
+    public ProposedExchangeRateDTO propose(String currency, LocalDate date) {
+        return clientFactory.authenticatedClient().get("/api/exchange-rates/proposal?currency=" + currency
+                + "&date=" + date, ProposedExchangeRateDTO.class);
     }
 
     public BaseCurrencyDTO baseCurrency() {

@@ -1,7 +1,9 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.gui.components.QuickPeekPanel;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.modules.company.model.CurrencyCode;
 import mz.multicore.erp.modules.purchases.dto.PayableDTO;
 
 import javax.swing.*;
@@ -13,7 +15,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Coordenador de apresentação, filtros de negócio e Quick Peek para contas a pagar.
+ * Coordenador de apresentação, filtros de negócio e Quick Peek para contas a pagar. Total, pago e dívida na moeda
+ * do documento; a dívida em moeda base e o total a pagar somam em moeda base (SPEC moeda estrangeira §3.3).
  */
 public final class PurchasePayablesViewCoordinator {
 
@@ -25,6 +28,7 @@ public final class PurchasePayablesViewCoordinator {
         if (owner.payablesList == null || modelRow < 0 || modelRow >= owner.payablesList.size()) return;
         PayableDTO pa = owner.payablesList.get(modelRow);
         boolean inDebt = pa.outstanding() != null && pa.outstanding().signum() > 0;
+        String currency = currency(pa);
         peek.setHeaderIcon("fas-file-invoice-dollar", UIHelper.REJECTED_RED);
         peek.setTitle("Compra " + (pa.purchaseNumber() != null ? pa.purchaseNumber() : ""));
         peek.setSubtitle(pa.supplierName() != null ? pa.supplierName() : "-");
@@ -33,13 +37,13 @@ public final class PurchasePayablesViewCoordinator {
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
         items.add(new QuickPeekPanel.PeekItem("Linha de Negócio", pa.businessUnitName() != null ? pa.businessUnitName() : "Geral", false));
         items.add(new QuickPeekPanel.PeekItem("Fornecedor", pa.supplierName() != null ? pa.supplierName() : "-", false));
-        BigDecimal total = pa.totalAmount() != null ? pa.totalAmount() : BigDecimal.ZERO;
-        items.add(new QuickPeekPanel.PeekItem("Total da Compra", String.format("%,.2f MT", total), false));
-        BigDecimal paid = pa.amountPaid() != null ? pa.amountPaid() : BigDecimal.ZERO;
-        items.add(new QuickPeekPanel.PeekItem("Total Já Pago", String.format("%,.2f MT", paid), false));
+        items.add(new QuickPeekPanel.PeekItem("Moeda", pa.exchangeRate() == null ? currency
+                : currency + " · câmbio " + DisplayNumbers.rate(pa.exchangeRate()), false));
+        items.add(new QuickPeekPanel.PeekItem("Total da Compra", amount(pa.totalAmount(), currency), false));
+        items.add(new QuickPeekPanel.PeekItem("Total Já Pago", amount(pa.amountPaid(), currency), false));
         items.add(new QuickPeekPanel.PeekItem("Data da Compra", pa.purchaseDate() != null ? pa.purchaseDate().format(DATE_FORMATTER) : "-", false));
-        BigDecimal debt = pa.outstanding() != null ? pa.outstanding() : BigDecimal.ZERO;
-        items.add(new QuickPeekPanel.PeekItem("Valor em Dívida", String.format("%,.2f MT", debt), true));
+        items.add(new QuickPeekPanel.PeekItem("Em Dívida (moeda base)", DisplayNumbers.money(baseOutstanding(pa)), false));
+        items.add(new QuickPeekPanel.PeekItem("Valor em Dívida", amount(pa.outstanding(), currency), true));
         peek.setItems(items);
 
         if (inDebt) {
@@ -59,12 +63,14 @@ public final class PurchasePayablesViewCoordinator {
         for (PayableDTO pa : owner.payablesList) {
             String bu = (pa.businessUnitName() != null && !pa.businessUnitName().isBlank()) ? pa.businessUnitName() : "Geral";
             bus.add(bu);
-            totalDivida = totalDivida.add(pa.outstanding() != null ? pa.outstanding() : BigDecimal.ZERO);
+            BigDecimal baseOutstanding = baseOutstanding(pa);
+            totalDivida = totalDivida.add(baseOutstanding);
             owner.payablesModel.addRow(new Object[]{
                     pa.purchaseNumber(),
                     bu,
                     pa.supplierName(),
-                    pa.totalAmount(), pa.amountPaid(), pa.outstanding(),
+                    currency(pa),
+                    pa.totalAmount(), pa.amountPaid(), pa.outstanding(), baseOutstanding,
                     pa.purchaseDate() == null ? "-" : pa.purchaseDate().format(DATE_FORMATTER)});
         }
         Object sel = businessUnitCombo.getSelectedItem();
@@ -72,7 +78,21 @@ public final class PurchasePayablesViewCoordinator {
         businessUnitCombo.addItem("Todos os negócios");
         for (String b : bus) businessUnitCombo.addItem(b);
         if (sel != null) businessUnitCombo.setSelectedItem(sel);
-        payablesFooter.setText(String.format("%d fatura(s) em dívida · Total a pagar: %,.2f MT",
-                owner.payablesList.size(), totalDivida));
+        payablesFooter.setText(String.format("%d fatura(s) em dívida · Total a pagar (moeda base): %s",
+                owner.payablesList.size(), DisplayNumbers.money(totalDivida)));
+    }
+
+    /** Compra sem moeda (servidor anterior à moeda estrangeira) está na moeda base. */
+    private static String currency(PayableDTO pa) {
+        return pa.currency() == null || pa.currency().isBlank() ? CurrencyCode.DEFAULT_CODE : pa.currency();
+    }
+
+    private static BigDecimal baseOutstanding(PayableDTO pa) {
+        if (pa.baseOutstanding() != null) return pa.baseOutstanding();
+        return pa.outstanding() != null ? pa.outstanding() : BigDecimal.ZERO;
+    }
+
+    private static String amount(BigDecimal value, String currency) {
+        return DisplayNumbers.money(value) + " " + currency;
     }
 }

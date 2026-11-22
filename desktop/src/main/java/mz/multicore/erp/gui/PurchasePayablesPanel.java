@@ -31,13 +31,13 @@ final class PurchasePayablesPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(Spacing.LG, Spacing.LG, Spacing.LG, Spacing.LG));
-        String[] cols = {"Nº Compra", "Negócio", "Fornecedor", "Total", "Pago", "Em Dívida", "Data"};
+        String[] cols = {"Nº Compra", "Negócio", "Fornecedor", "Moeda", "Total", "Pago", "Em Dívida", "Em Dívida (moeda base)", "Data"};
         owner.payablesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         owner.payablesTable = new JTable(owner.payablesModel);
         UIHelper.styleTable(owner.payablesTable);
-        for (int column : new int[]{3, 4, 5}) {
+        for (int column : new int[]{4, 5, 6, 7}) {
             owner.payablesTable.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
         }
         UIHelper.ensureHeadersFit(owner.payablesTable);
@@ -52,7 +52,7 @@ final class PurchasePayablesPanel {
 
         TableFilter.install(owner.payablesTable, paySearch,
                 List.of(new TableFilter.ColumnFilter(businessUnitCombo, 1)),
-                List.of(new TableFilter.PeriodFilter(payPeriodo, 6)));
+                List.of(new TableFilter.PeriodFilter(payPeriodo, 8)));
 
         JPanel payFilters = TableFilter.bar(
                 paySearch,
