@@ -23,6 +23,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,7 +64,7 @@ class AutomaticPostingCostCenterTest {
     private final CostCenterService costCenterService = mock(CostCenterService.class);
     private final JournalService journalService = new JournalService(journalEntryRepository,
             mock(ChartOfAccountsService.class), documentNumberService, companyService, mock(AuditLogService.class),
-            costCenterService);
+            costCenterService, mock(ApplicationEventPublisher.class));
     private final PostingHelper helper = mock(PostingHelper.class);
 
     private final CostCenter adm = center(1L, null, true);

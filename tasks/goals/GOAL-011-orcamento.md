@@ -24,7 +24,7 @@ Pré-requisito: GOAL-010 em `DONE` (centros nos lançamentos). Se não estiver, 
 - [x] OR-02 — copiar do ano anterior com ajuste, só células vazias — `BudgetRulesTest`
 - [x] OR-03 — real por conta × centro × mês — `BudgetVarianceTest`
 - [x] OR-04 — desvio, desvio % e sentido favorável/desfavorável — `BudgetVarianceTest`
-- [ ] OR-05 — alertas 90%/100% sem repetir — `BudgetAlertTest`
+- [x] OR-05 — alertas 90%/100% sem repetir — `BudgetAlertTest`
 - [ ] OR-06 — aviso ao gravar compra/despesa, sem bloquear — `BudgetAlertTest`
 - [ ] OR-07 — endpoints, perfis, empresa activa e auditoria — `BudgetHttpIntegrationTest`
 - [ ] OR-UI-01 — grelha de orçamento anual — `BudgetUiHarnessTest`
@@ -45,3 +45,4 @@ Pré-requisito: GOAL-010 em `DONE` (centros nos lançamentos). Se não estiver, 
 - 2026-11-24 · OR-02 · `BudgetService.copyFromPreviousYear` (`CopyBudgetRequest`) grava nas células vazias o real do ano anterior por conta × centro × mês (`BudgetActualsCalculator`, sinal por classe) com ajuste % arredondado a 2 casas; não sobrescreve células preenchidas (nem a zero), ignora real ≤ 0 e centros inactivos; `BudgetRulesTest` verde 16/16.
 - 2026-11-24 · OR-03 · `BudgetVarianceService.report` (`BudgetVarianceQuery` → `BudgetVarianceDTO`) dá por conta × centro o orçado e o real do mês ou acumulado de janeiro até ao mês (sinal por classe, só partidas com centro, filtro opcional por centro, ADMIN/MANAGER); `BudgetVarianceTest` verde 8/8.
 - 2026-11-24 · OR-04 · cada linha do real vs orçado traz `variance` (real − orçado), `variancePercent` (÷ orçado × 100, 2 casas meio para cima, vazio com orçado zero) e `direction` (`BudgetVarianceDirection`: custo acima/proveito abaixo `UNFAVORABLE`, inverso `FAVORABLE`, desvio zero `ON_BUDGET`); `BudgetVarianceTest` verde 12/12.
+- 2026-11-24 · OR-05 · `JournalService.save` publica `JournalEntryPostedEvent` com os centros das partidas de classe 6 e o `BudgetAlertService` grava (`BudgetAlert`, V153) um alerta por limiar 90%/100%, centro e mês quando o real dos custos atinge o orçado dos custos, sem nunca repetir; `listAlerts(ano)` só ADMIN/MANAGER da empresa activa; `BudgetAlertTest` verde 10/10.

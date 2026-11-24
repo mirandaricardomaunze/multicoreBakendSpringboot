@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.accounting.service;
 
+import mz.multicore.erp.architecture.events.JournalEntryPostedEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.paging.PageQuery;
 import mz.multicore.erp.architecture.paging.PageResponse;
@@ -9,6 +10,7 @@ import mz.multicore.erp.modules.accounting.dto.CreateJournalEntryRequest;
 import mz.multicore.erp.modules.accounting.dto.JournalEntryDTO;
 import mz.multicore.erp.modules.accounting.dto.JournalLineDTO;
 import mz.multicore.erp.modules.accounting.model.Account;
+import mz.multicore.erp.modules.accounting.model.AccountClass;
 import mz.multicore.erp.modules.accounting.model.CostCenter;
 import mz.multicore.erp.modules.accounting.model.JournalEntry;
 import mz.multicore.erp.modules.accounting.model.JournalLine;
@@ -19,6 +21,7 @@ import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +29,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Diário — onde os lançamentos nascem, manuais ou automáticos.
@@ -44,19 +49,22 @@ public class JournalService {
     private final CompanyService companyService;
     private final AuditLogService auditLogService;
     private final CostCenterService costCenterService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public JournalService(JournalEntryRepository journalEntryRepository,
                           ChartOfAccountsService chartOfAccountsService,
                           DocumentNumberService documentNumberService,
                           CompanyService companyService,
                           AuditLogService auditLogService,
-                          CostCenterService costCenterService) {
+                          CostCenterService costCenterService,
+                          ApplicationEventPublisher eventPublisher) {
         this.journalEntryRepository = journalEntryRepository;
         this.chartOfAccountsService = chartOfAccountsService;
         this.documentNumberService = documentNumberService;
         this.companyService = companyService;
         this.auditLogService = auditLogService;
         this.costCenterService = costCenterService;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Lançamento manual do contabilista. */
@@ -106,7 +114,21 @@ public class JournalService {
         if (entry.getCreatedBy() == null) {
             entry.setCreatedBy(CurrentUserContext.getUsername());
         }
-        return journalEntryRepository.save(entry);
+        JournalEntry saved = journalEntryRepository.save(entry);
+        publishCostCenters(entry, companyId);
+        return saved;
+    }
+
+    /** Avisa os alertas de orçamento (§4.3) dos centros com custos (classe 6) neste lançamento. */
+    private void publishCostCenters(JournalEntry entry, Long companyId) {
+        Set<Long> costCenterIds = entry.getLines().stream()
+                .filter(line -> line.getCostCenter() != null)
+                .filter(line -> line.getAccount().getAccountClass() == AccountClass.CUSTOS_E_PERDAS)
+                .map(line -> line.getCostCenter().getId())
+                .collect(Collectors.toSet());
+        if (!costCenterIds.isEmpty()) {
+            eventPublisher.publishEvent(new JournalEntryPostedEvent(companyId, entry.getEntryDate(), costCenterIds));
+        }
     }
 
     /**

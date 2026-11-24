@@ -30,7 +30,7 @@
 | OR-02 | Copiar do ano anterior com ajuste %, 2 casas, só células vazias (§4.1) | `BudgetRulesTest` (`or02_*`) |
 | OR-03 | Real por conta × centro × mês com sinal por classe (§4.2) | `BudgetVarianceTest` (`or03_*`) |
 | OR-04 | Desvio e desvio %, favorável/desfavorável por classe; orçado zero sem % (§4.2) | `BudgetVarianceTest` (`or04_*`) |
-| OR-05 | Alertas a 90% e 100% dos custos do centro no mês, um por limiar, centro e mês (§4.3) | `BudgetAlertTest` |
+| OR-05 | Alertas a 90% e 100% dos custos (classe 6) do centro no mês, um por limiar, centro e mês, nunca repetidos; avaliados ao gravar lançamento com custos; listados só a ADMIN/MANAGER da empresa activa (§4.3) | `BudgetAlertTest` (`or05_*`) · `MigrationPostgresDialectHarnessTest` · `PostgresSchemaParityHarnessTest` |
 | OR-06 | Compra/despesa que passa um limiar devolve aviso e grava na mesma (§4.3) | `BudgetAlertTest` |
 | OR-07 | Endpoints de orçamento e real vs orçado; ADMIN/MANAGER; empresa activa; auditoria `BUDGET_CHANGE` (§4.1, §4.2) | `BudgetHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | OR-UI-01 | Contabilidade › Orçamento: grelha anual, copiar do ano anterior, gravar (§4.4) | `BudgetUiHarnessTest` |

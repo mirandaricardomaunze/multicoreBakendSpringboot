@@ -143,7 +143,16 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 
 - Por centro e mês: quando o **real dos custos (classe 6)** atinge **90%** e **100%** do **orçado dos
   custos** desse centro nesse mês, gera-se **um** alerta por limiar, centro e mês (não repete).
+  Concretização (OR-05): cada lançamento gravado pela porta única do diário (`JournalService.save`) com partidas de
+  classe 6 publica `JournalEntryPostedEvent` (empresa, data, centros dessas partidas); o `BudgetAlertService` avalia, na
+  mesma transacção, cada centro no mês do lançamento: orçado = soma das células de classe 6 do centro e mês, real = soma
+  das partidas de classe 6 do centro e mês (débito − crédito). Orçado zero ou sem orçamento não gera alerta. O limiar é
+  atingido com real ≥ limiar% × orçado; um real que salte directamente para 100% gera os dois alertas. O alerta fica
+  gravado (`budget_alerts`, V153, único por empresa × centro × ano × mês × limiar) com o orçado e o real do momento e
+  nunca se repete, mesmo que o real desça e volte a subir ou o orçamento mude. Alterar o orçamento não reavalia.
 - O alerta aparece no sino dos perfis ADMIN e MANAGER.
+  Concretização (OR-05): `BudgetAlertService.listAlerts(ano)` devolve os alertas da empresa activa nesse ano (mês mais
+  recente e limiar mais alto primeiro), com texto PT-MZ pronto para o sino; só ADMIN e MANAGER.
 - Ao gravar uma compra ou despesa de tesouraria que faz o centro passar um limiar, a resposta traz um
   **aviso** que o desktop mostra como toast. **Nada é bloqueado**.
 

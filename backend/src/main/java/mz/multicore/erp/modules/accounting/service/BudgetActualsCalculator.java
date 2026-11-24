@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -27,9 +28,18 @@ public class BudgetActualsCalculator {
     }
 
     public Collection<ActualCell> actualsOf(Long companyId, int year) {
+        return actualsBetween(companyId, LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31));
+    }
+
+    /** Actual cells of a single month (budget alerts evaluate one centre and month at a time, §4.3). */
+    public Collection<ActualCell> actualsOfMonth(Long companyId, int year, int month) {
+        YearMonth period = YearMonth.of(year, month);
+        return actualsBetween(companyId, period.atDay(1), period.atEndOfMonth());
+    }
+
+    private Collection<ActualCell> actualsBetween(Long companyId, LocalDate from, LocalDate to) {
         Map<String, ActualCell> cells = new LinkedHashMap<>();
-        for (JournalEntry entry : journalService.findEntriesBetween(companyId,
-                LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31))) {
+        for (JournalEntry entry : journalService.findEntriesBetween(companyId, from, to)) {
             int month = entry.getEntryDate().getMonthValue();
             for (JournalLine line : entry.getLines()) {
                 CostCenter center = line.getCostCenter();

@@ -77,7 +77,7 @@ class JournalLineCostCenterTest {
     private final AuditLogService auditLogService = mock(AuditLogService.class);
     private final CostCenterService costCenterService = mock(CostCenterService.class);
     private final JournalService journalService = new JournalService(journalEntryRepository, chartOfAccountsService,
-            documentNumberService, companyService, auditLogService, costCenterService);
+            documentNumberService, companyService, auditLogService, costCenterService, mock(ApplicationEventPublisher.class));
 
     @BeforeEach
     void setUp() {
