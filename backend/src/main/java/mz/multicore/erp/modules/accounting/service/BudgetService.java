@@ -12,6 +12,7 @@ import mz.multicore.erp.modules.accounting.model.Budget;
 import mz.multicore.erp.modules.accounting.model.BudgetLine;
 import mz.multicore.erp.modules.accounting.model.CostCenter;
 import mz.multicore.erp.modules.accounting.repository.BudgetRepository;
+import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ import java.util.Set;
  * year whose cells use a postable account of class 6 or 7, an active cost centre of the company, a month 1–12 and an
  * amount ≥ 0, with one cell per account × centre × month. Saving sends the whole year and is allowed at any time.
  * Copying from the previous year (OR-02) fills only the empty cells with last year's actual, optionally adjusted.
+ * Reading, saving and copying are for ADMIN/MANAGER; every save or copy is audited as {@code BUDGET_CHANGE} (OR-07).
  */
 @Service
 public class BudgetService {
@@ -45,20 +47,23 @@ public class BudgetService {
     private final CostCenterService costCenterService;
     private final CompanyService companyService;
     private final BudgetActualsCalculator actualsCalculator;
+    private final AuditLogService auditLogService;
 
     public BudgetService(BudgetRepository repository, ChartOfAccountsService chartOfAccountsService,
                          CostCenterService costCenterService, CompanyService companyService,
-                         BudgetActualsCalculator actualsCalculator) {
+                         BudgetActualsCalculator actualsCalculator, AuditLogService auditLogService) {
         this.repository = repository;
         this.chartOfAccountsService = chartOfAccountsService;
         this.costCenterService = costCenterService;
         this.companyService = companyService;
         this.actualsCalculator = actualsCalculator;
+        this.auditLogService = auditLogService;
     }
 
     /** Budget of {@code year} in the active company; a year without a budget returns an empty grid. */
     @Transactional(readOnly = true)
     public BudgetDTO get(int year) {
+        PermissionGuard.requireManagerOrAdmin("consultar o orçamento");
         return repository.findByCompanyIdAndFiscalYear(CurrentUserContext.getCurrentCompanyId(), year)
                 .map(BudgetService::toDTO)
                 .orElseGet(() -> new BudgetDTO(null, year, List.of(), BigDecimal.ZERO, BigDecimal.ZERO));
@@ -74,7 +79,7 @@ public class BudgetService {
 
         Budget budget = budgetOf(companyId, request.year());
         budget.replaceLines(cells);
-        return toDTO(repository.save(budget));
+        return audited("gravado", repository.save(budget));
     }
 
     /**
@@ -104,7 +109,16 @@ public class BudgetService {
                 budget.addLine(cell);
             }
         }
-        return toDTO(repository.save(budget));
+        return audited("copiado do ano anterior", repository.save(budget));
+    }
+
+    /** Audits a save or copy as {@code BUDGET_CHANGE} with the year, both totals and the number of cells. */
+    private BudgetDTO audited(String what, Budget budget) {
+        BudgetDTO dto = toDTO(budget);
+        auditLogService.logCurrent("BUDGET_CHANGE", "Orçamento " + dto.year() + " " + what + ": custos "
+                + dto.totalExpenses().toPlainString() + " MT, proveitos " + dto.totalRevenues().toPlainString()
+                + " MT (" + dto.lines().size() + " células)");
+        return dto;
     }
 
     private static void requireYear(Integer year) {

@@ -121,6 +121,12 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
   do ano destino (criando-o se não existir). Ficam de fora: células já preenchidas (mesmo a zero), real ≤ 0 e centros
   hoje inactivos. Devolve o orçamento resultante.
 - Gerir orçamento: **ADMIN** e **MANAGER**.
+  Concretização (OR-07): em `/api/accounting/budgets`, sempre na empresa activa e só ADMIN/MANAGER (na política HTTP
+  e no Service, também para consultar): `GET ?year=` devolve o orçamento do ano (grelha vazia sem orçamento),
+  `PUT` grava o ano inteiro (`SaveBudgetRequest`), `POST /copy-previous-year` copia do ano anterior
+  (`CopyBudgetRequest`), `GET /variance?year=&month=&cumulative=&costCenterId=` dá o real vs orçado (§4.2) e
+  `GET /alerts?year=` os alertas do sino (§4.3). Regras violadas respondem 400 com a mensagem PT-MZ. Gravar e copiar
+  registam auditoria `BUDGET_CHANGE` com o ano, o total de custos, o total de proveitos e o número de células.
 
 ### 4.2 Real vs orçado
 

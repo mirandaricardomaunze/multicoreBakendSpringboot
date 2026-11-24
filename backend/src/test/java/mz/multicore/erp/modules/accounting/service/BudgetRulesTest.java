@@ -16,6 +16,7 @@ import mz.multicore.erp.modules.accounting.model.JournalLine;
 import mz.multicore.erp.modules.accounting.repository.AccountRepository;
 import mz.multicore.erp.modules.accounting.repository.BudgetRepository;
 import mz.multicore.erp.modules.accounting.repository.CostCenterRepository;
+import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import org.junit.jupiter.api.AfterEach;
@@ -55,10 +56,11 @@ class BudgetRulesTest {
     private final CostCenterRepository costCenterRepository = mock(CostCenterRepository.class);
     private final CompanyService companyService = mock(CompanyService.class);
     private final JournalService journalService = mock(JournalService.class);
+    private final AuditLogService auditLogService = mock(AuditLogService.class);
     private final BudgetService service = new BudgetService(budgetRepository,
             new ChartOfAccountsService(accountRepository, companyService),
             new CostCenterService(costCenterRepository, companyService), companyService,
-            new BudgetActualsCalculator(journalService));
+            new BudgetActualsCalculator(journalService), auditLogService);
 
     private final Account rent = account(10L, "6221", "Rendas", true);
     private final Account sales = account(11L, "7111", "Vendas de mercadorias", true);
