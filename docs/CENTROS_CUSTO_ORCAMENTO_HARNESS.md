@@ -3,7 +3,7 @@
 > Cenários que provam [CENTROS_CUSTO_ORCAMENTO_SPEC.md](CENTROS_CUSTO_ORCAMENTO_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-22
+**Última actualização:** 2026-11-24
 
 ## Centros de custo (GOAL-010)
 
@@ -19,7 +19,7 @@
 | CC-08 | Razão e balancete com filtro opcional por centro: vazio = completo; com centro só as partidas dele, incluindo o saldo inicial do razão (§3.3) | `CostCenterResultReportTest` (`cc08_*`) |
 | CC-09 | Endpoints de centros (`/api/accounting/cost-centers`, ADMIN/MANAGER para gerir) e relatório (`/cost-center-result`, total igual à demonstração); empresa activa; a lista traz sempre o centro por omissão (§3.1, §3.3) | `CostCenterHttpIntegrationTest` (`cc09_*`) · `ApiRolePolicyEndpointCoverageHarnessTest` |
 | CC-UI-01 | Configurações › Centros de Custo: tabela (código, nome, tipo, estado, por omissão), criar/editar só manuais, apagar nunca o por omissão, tornar por omissão só activo, gerir só ADMIN/MANAGER (§3.1, §3.3) | `CostCenterUiHarnessTest` (`ccUi01_*`) |
-| CC-UI-02 | Lançamento manual e despesa pedem o centro com o por omissão pré-seleccionado (§3.2) | `CostCenterUiHarnessTest` |
+| CC-UI-02 | Lançamento manual e despesa pedem o centro com o por omissão pré-seleccionado (só activos; sem lista, "por omissão" que deixa o backend decidir); no lançamento o centro só segue nas partidas 6/7 (§3.2) | `CostCenterUiHarnessTest` (`ccUi02_*`) |
 | CC-UI-03 | Contabilidade › Resultados por centro com período e exportação (§3.3) | `CostCenterUiHarnessTest` |
 
 ## Orçamento (GOAL-011)

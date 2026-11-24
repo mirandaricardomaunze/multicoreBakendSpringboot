@@ -214,7 +214,7 @@ public class MainFrame extends JFrame {
                         if (stockPanel != null) stockPanel.showWarehouseTransfers();
                     });
             financeiroPanel = sellerSession ? null : new FinanceiroPanel(financeApiClient, comercialApiClient, bankReconciliationApiClient, cashFlowForecastApiClient);
-            hrPanel         = sellerSession ? null : new HRPanel(hrApiClient, printApiClient);
+            hrPanel         = sellerSession ? null : new HRPanel(hrApiClient, printApiClient, accountingApiClient);
             crmPanel        = new CRMPanel(crmApiClient, comercialApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient, printApiClient, creditRiskApiClient, accountStatementApiClient);
             fiscalPanel     = sellerSession ? null : new FiscalPanel(fiscalApiClient);

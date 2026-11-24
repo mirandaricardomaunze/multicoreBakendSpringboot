@@ -143,6 +143,54 @@ class CostCenterUiHarnessTest {
         assertThat(Files.readString(client)).contains("/api/accounting/cost-centers");
     }
 
+    @Test
+    @DisplayName("CC-UI-02: O seletor de centro lista só os activos com o centro por omissão pré-seleccionado")
+    void ccUi02_seletorPreSeleccionaOPorOmissao() throws Exception {
+        onEdt(() -> {
+            CostCenterCombo combo = new CostCenterCombo();
+            assertThat(combo.selectedCostCenterId()).as("antes de carregar: por omissão do backend").isNull();
+
+            combo.applyCenters(List.of(
+                    new CostCenterDTO(2L, "A01", "Loja Central", CostCenterType.WAREHOUSE, 7L, true, false),
+                    new CostCenterDTO(3L, "FROTA", "Frota", CostCenterType.MANUAL, null, false, false),
+                    new CostCenterDTO(1L, "ADM", "Administração", CostCenterType.MANUAL, null, true, true)));
+
+            assertThat(combo.getItemCount()).as("inactivo fica de fora").isEqualTo(2);
+            assertThat(combo.selectedCostCenterId()).as("por omissão pré-seleccionado").isEqualTo(1L);
+            combo.setSelectedIndex(0);
+            assertThat(combo.selectedCostCenterId()).isEqualTo(2L);
+
+            combo.applyCenters(List.of());
+            assertThat(combo.getItemCount()).as("sem centros visíveis: fica a opção por omissão").isEqualTo(1);
+            assertThat(combo.selectedCostCenterId()).isNull();
+        });
+    }
+
+    @Test
+    @DisplayName("CC-UI-02: O centro só segue nas partidas das classes 6 e 7")
+    void ccUi02_centroSoNasClasses6e7() {
+        assertThat(CostCenterCombo.centerForAccount("6201", 5L)).isEqualTo(5L);
+        assertThat(CostCenterCombo.centerForAccount(" 7101", 5L)).isEqualTo(5L);
+        assertThat(CostCenterCombo.centerForAccount("1101", 5L)).as("classes 1–5 recusam centro").isNull();
+        assertThat(CostCenterCombo.centerForAccount("4421", 5L)).isNull();
+        assertThat(CostCenterCombo.centerForAccount("6201", null)).isNull();
+        assertThat(CostCenterCombo.centerForAccount(null, 5L)).isNull();
+    }
+
+    @Test
+    @DisplayName("CC-UI-02: Lançamento manual e despesa pedem o centro e enviam-no no pedido")
+    void ccUi02_lancamentoEDespesaPedemCentro() throws Exception {
+        String journal = Files.readString(gui("accounting", "AccountingJournalTab.java"));
+        assertThat(journal).contains("new CostCenterCombo()").contains("\"Centro de custo\"")
+                .contains(".load(accountingApiClient)").contains("CostCenterCombo.centerForAccount(");
+        Path expense = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui", "HrExpenseClaimDialog.java");
+        if (!Files.exists(expense)) expense = Path.of("desktop").resolve(expense);
+        assertThat(Files.readString(expense)).contains("new CostCenterCombo()").contains("\"Centro de custo:\"")
+                .contains("selectedCostCenterId()");
+        String combo = Files.readString(gui("accounting", "CostCenterCombo.java"));
+        assertThat(combo).contains("accountingApiClient.listCostCenters()").doesNotContain("JOptionPane");
+    }
+
     /** Builds and fills the panel in one EDT turn; the table pagination applies its rows in the next one. */
     private static CostCentersPanel loadedPanel(String role) throws Exception {
         AtomicReference<CostCentersPanel> panel = new AtomicReference<>();
