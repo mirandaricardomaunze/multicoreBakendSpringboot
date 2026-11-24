@@ -104,6 +104,9 @@ function Initialize-Worktree {
     # Every git call here goes to Out-Host: anything left on the pipeline would become part of the
     # function's return value and corrupt $work. Stage first and ask the index whether anything
     # really changed, so CRLF warnings on stderr are never mistaken for changed files.
+    # PowerShell 5.1 turns git's stderr (CRLF warnings) into a terminating error under Stop:
+    # relax it for this function only; real failures are still caught through $LASTEXITCODE.
+    $ErrorActionPreference = 'Continue'
     git -C $work add -- $paths 2>&1 | Out-Host
     git -C $work diff --cached --quiet -- $paths
     if ($LASTEXITCODE -ne 0) {
