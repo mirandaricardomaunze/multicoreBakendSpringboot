@@ -155,6 +155,13 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
   recente e limiar mais alto primeiro), com texto PT-MZ pronto para o sino; só ADMIN e MANAGER.
 - Ao gravar uma compra ou despesa de tesouraria que faz o centro passar um limiar, a resposta traz um
   **aviso** que o desktop mostra como toast. **Nada é bloqueado**.
+  Concretização (OR-06): cada alerta **novo** gerado pelo `BudgetAlertService` durante o lançamento de uma operação
+  (compra, custos de importação, pagamento a fornecedor com diferença de câmbio, aprovação da despesa do colaborador
+  ou qualquer outra gravação que lance custos pelo diário) vira um aviso da operação (`OperationWarnings`, com o
+  mesmo texto PT-MZ do sino). O aviso só conta **depois do commit** — uma operação revertida não avisa — e volta na
+  resposta HTTP de sucesso num cabeçalho `X-Operation-Warning` por aviso (UTF-8 codificado em URL), sem mudar o
+  corpo; respostas com erro descartam-no. A operação grava sempre; limiar já alertado não volta a avisar. O toast no
+  desktop fica com o OR-UI-02.
 
 ### 4.4 Desktop
 

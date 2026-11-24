@@ -3,6 +3,7 @@ package mz.multicore.erp.modules.accounting.service;
 import mz.multicore.erp.architecture.events.JournalEntryPostedEvent;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
+import mz.multicore.erp.architecture.warnings.OperationWarnings;
 import mz.multicore.erp.modules.accounting.dto.BudgetAlertDTO;
 import mz.multicore.erp.modules.accounting.model.AccountClass;
 import mz.multicore.erp.modules.accounting.model.Budget;
@@ -25,6 +26,8 @@ import java.util.Optional;
  * Budget alerts (docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §4.3, OR-05): when the actual costs (class 6) of a cost centre
  * in a month reach 90% and 100% of its budgeted costs, one alert is stored per threshold, centre and month and is never
  * raised again. Evaluated on every posting with class 6 lines; listed for ADMIN and MANAGER (the bell).
+ * Each new alert is also a non-blocking warning of the operation that posted it — a purchase, a staff expense —
+ * returned with its response once committed (OR-06).
  */
 @Service
 public class BudgetAlertService {
@@ -43,12 +46,17 @@ public class BudgetAlertService {
         this.actualsCalculator = actualsCalculator;
     }
 
-    /** Runs inside the posting transaction: the alert is born with the entry that caused it. */
+    /**
+     * Runs inside the posting transaction: the alert is born with the entry that caused it, and the operation still
+     * saves — its new alerts only come back as warnings (OR-06).
+     */
     @EventListener
     public void onJournalEntryPosted(JournalEntryPostedEvent event) {
         int year = event.entryDate().getYear();
         int month = event.entryDate().getMonthValue();
-        event.costCenterIds().forEach(centerId -> evaluate(event.companyId(), centerId, year, month));
+        event.costCenterIds().stream()
+                .flatMap(centerId -> evaluate(event.companyId(), centerId, year, month).stream())
+                .forEach(alert -> OperationWarnings.add(alert.message()));
     }
 
     /** Raises the thresholds the centre reached in the month and has not been alerted for yet; returns the new ones. */

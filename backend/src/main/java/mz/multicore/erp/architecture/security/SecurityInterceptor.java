@@ -135,6 +135,7 @@ public class SecurityInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         CurrentUserContext.clear();
+        mz.multicore.erp.architecture.warnings.OperationWarnings.clear();
         org.springframework.security.core.context.SecurityContextHolder.clearContext();
     }
 

@@ -3,6 +3,8 @@ package mz.multicore.erp.modules.accounting.service;
 import mz.multicore.erp.architecture.events.JournalEntryPostedEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.architecture.warnings.OperationWarnings;
+import mz.multicore.erp.architecture.warnings.OperationWarningsResponseAdvice;
 import mz.multicore.erp.modules.accounting.dto.BudgetAlertDTO;
 import mz.multicore.erp.modules.accounting.model.Account;
 import mz.multicore.erp.modules.accounting.model.AccountClass;
@@ -25,8 +27,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.server.ServletServerHttpResponse;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +58,9 @@ import static org.mockito.Mockito.when;
  * month reach 90% and 100% of the budgeted costs of that centre and month, one alert is raised per threshold, centre
  * and month — never repeated. Posting a journal entry with class 6 lines triggers the evaluation of its centres; the
  * alerts are listed for ADMIN and MANAGER of the active company (the bell).
+ *
+ * <p>Harness OR-06 (§4.3): an operation (purchase, staff expense, …) whose posting makes a centre pass a threshold
+ * still saves and returns the new alert as a non-blocking warning ({@code X-Operation-Warning}), only after commit.
  */
 class BudgetAlertTest {
 
@@ -95,6 +106,10 @@ class BudgetAlertTest {
     @AfterEach
     void tearDown() {
         CurrentUserContext.clear();
+        OperationWarnings.clear();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test
@@ -236,6 +251,92 @@ class BudgetAlertTest {
         CurrentUserContext.setCurrentUser("caixa", "CASHIER");
         BusinessRuleException denied = assertThrows(BusinessRuleException.class, () -> service.listAlerts(YEAR));
         assertThat(denied.getMessage()).contains("MANAGER ou ADMIN");
+    }
+
+    @Test
+    void or06_lancamentoQuePassaUmLimiarGravaEDevolveOAviso() {
+        budget(cell(rent, adm, MONTH, "1000"));
+        actuals(entry(LocalDate.of(YEAR, MONTH, 12), debit(rent, adm, "950"), credit(bank, null, "950")));
+
+        service.onJournalEntryPosted(new JournalEntryPostedEvent(COMPANY_ID, LocalDate.of(YEAR, MONTH, 12),
+                Set.of(adm.getId())));
+
+        assertThat(stored).extracting(BudgetAlert::getThresholdPercent).containsExactly(90);
+        List<String> warnings = OperationWarnings.drain();
+        assertEquals(1, warnings.size());
+        assertThat(warnings.get(0)).contains("ADM").contains("90%").contains("03/2027");
+    }
+
+    @Test
+    void or06_semLimiarNovoNaoHaAviso() {
+        budget(cell(rent, adm, MONTH, "1000"));
+        actuals(entry(LocalDate.of(YEAR, MONTH, 12), debit(rent, adm, "500"), credit(bank, null, "500")));
+        JournalEntryPostedEvent event = new JournalEntryPostedEvent(COMPANY_ID, LocalDate.of(YEAR, MONTH, 12),
+                Set.of(adm.getId()));
+
+        service.onJournalEntryPosted(event);
+        assertThat(OperationWarnings.drain()).isEmpty();
+
+        actuals(entry(LocalDate.of(YEAR, MONTH, 12), debit(rent, adm, "920"), credit(bank, null, "920")));
+        service.onJournalEntryPosted(event);
+        assertThat(OperationWarnings.drain()).hasSize(1);
+
+        service.onJournalEntryPosted(event);
+        assertThat(OperationWarnings.drain()).as("o mesmo limiar não volta a avisar").isEmpty();
+    }
+
+    @Test
+    void or06_avisoSoContaDepoisDoCommit() {
+        budget(cell(rent, adm, MONTH, "1000"));
+        actuals(entry(LocalDate.of(YEAR, MONTH, 12), debit(rent, adm, "1000"), credit(bank, null, "1000")));
+        JournalEntryPostedEvent event = new JournalEntryPostedEvent(COMPANY_ID, LocalDate.of(YEAR, MONTH, 12),
+                Set.of(adm.getId()));
+
+        TransactionSynchronizationManager.initSynchronization();
+        service.onJournalEntryPosted(event);
+        assertThat(OperationWarnings.drain()).as("antes do commit").isEmpty();
+        List<TransactionSynchronization> committed = TransactionSynchronizationManager.getSynchronizations();
+        TransactionSynchronizationManager.clearSynchronization();
+        committed.forEach(TransactionSynchronization::afterCommit);
+        assertThat(OperationWarnings.drain()).hasSize(2);
+
+        stored.clear();
+        TransactionSynchronizationManager.initSynchronization();
+        service.onJournalEntryPosted(event);
+        TransactionSynchronizationManager.clearSynchronization();  // rollback: afterCommit never runs
+        assertThat(OperationWarnings.drain()).as("operação revertida não avisa").isEmpty();
+    }
+
+    @Test
+    void or06_respostaComSucessoLevaOAvisoNoCabecalhoSemMexerNoCorpo() {
+        OperationWarningsResponseAdvice advice = new OperationWarningsResponseAdvice();
+        OperationWarnings.add("Centro ADM — Administração atingiu 90% do orçamento de custos de 03/2027.");
+        MockHttpServletResponse servlet = new MockHttpServletResponse();
+        ServletServerHttpResponse response = new ServletServerHttpResponse(servlet);
+        Object body = new Object();
+
+        Object written = advice.beforeBodyWrite(body, null, null, null, null, response);
+
+        assertThat(written).isSameAs(body);
+        List<String> headers = response.getHeaders().get(OperationWarningsResponseAdvice.HEADER);
+        assertThat(headers).hasSize(1);
+        assertEquals("Centro ADM — Administração atingiu 90% do orçamento de custos de 03/2027.",
+                URLDecoder.decode(headers.get(0), StandardCharsets.UTF_8));
+        assertThat(OperationWarnings.drain()).isEmpty();
+    }
+
+    @Test
+    void or06_respostaComErroDescartaOAviso() {
+        OperationWarningsResponseAdvice advice = new OperationWarningsResponseAdvice();
+        OperationWarnings.add("Centro ADM atingiu 100% do orçamento de custos de 03/2027.");
+        MockHttpServletResponse servlet = new MockHttpServletResponse();
+        servlet.setStatus(400);
+        ServletServerHttpResponse response = new ServletServerHttpResponse(servlet);
+
+        advice.beforeBodyWrite("erro", null, null, null, null, response);
+
+        assertThat(response.getHeaders().get(OperationWarningsResponseAdvice.HEADER)).isNull();
+        assertThat(OperationWarnings.drain()).isEmpty();
     }
 
     /** The real posting door with mocked collaborators, to observe the event it publishes. */
