@@ -173,6 +173,16 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 
 - Contabilidade › Orçamento: escolher ano, grelha conta × centro com os 12 meses, copiar do ano
   anterior, gravar.
+  Concretização (OR-UI-01): Contabilidade › "Orçamento", aba logo a seguir a "Razão" (as abas "Demonstrações" e
+  "Resultados por centro" continuam as últimas). Ano (por omissão o corrente) e "Carregar"; grelha com uma linha por
+  conta × centro e as colunas Conta, Centro, Jan…Dez e Total (soma da linha, só leitura). Só as células dos meses se
+  editam: vazia = sem orçamento (não segue no pedido), `0` é célula preenchida; valor negativo ou não numérico fica
+  recusado na célula com mensagem PT-MZ. "Adicionar linha" pede a conta (movimentável e activa das classes 6/7, do
+  plano de contas) e o centro (activos); conta × centro repetida é recusada. "Remover linha" tira a linha
+  seleccionada (sai do orçamento ao gravar). "Copiar do ano anterior" pede o ajuste % (≥ −100; 0 copia o real tal
+  como está), confirma que alterações por gravar se perdem, chama o backend (que já grava, §4.1) e mostra o orçamento
+  devolvido. "Gravar" envia o ano inteiro (`PUT`). Por baixo, os totais de custos e proveitos gravados (do backend).
+  Sem ADMIN/MANAGER os botões de alterar ficam desactivados; o backend é quem decide. Erros no painel de feedback.
 - Contabilidade › Real vs Orçado: mês ou acumulado, filtro por centro, desvios coloridos pelo
   vocabulário de estados do projecto (`StatusTone`).
 

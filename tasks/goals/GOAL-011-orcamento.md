@@ -27,7 +27,7 @@ Pré-requisito: GOAL-010 em `DONE` (centros nos lançamentos). Se não estiver, 
 - [x] OR-05 — alertas 90%/100% sem repetir — `BudgetAlertTest`
 - [x] OR-06 — aviso ao gravar compra/despesa, sem bloquear — `BudgetAlertTest`
 - [x] OR-07 — endpoints, perfis, empresa activa e auditoria — `BudgetHttpIntegrationTest`
-- [ ] OR-UI-01 — grelha de orçamento anual — `BudgetUiHarnessTest`
+- [x] OR-UI-01 — grelha de orçamento anual — `BudgetUiHarnessTest`
 - [ ] OR-UI-02 — real vs orçado e alertas no sino — `BudgetUiHarnessTest`
 
 ## Fora de âmbito
@@ -48,3 +48,5 @@ Pré-requisito: GOAL-010 em `DONE` (centros nos lançamentos). Se não estiver, 
 - 2026-11-24 · OR-05 · `JournalService.save` publica `JournalEntryPostedEvent` com os centros das partidas de classe 6 e o `BudgetAlertService` grava (`BudgetAlert`, V153) um alerta por limiar 90%/100%, centro e mês quando o real dos custos atinge o orçado dos custos, sem nunca repetir; `listAlerts(ano)` só ADMIN/MANAGER da empresa activa; `BudgetAlertTest` verde 10/10.
 - 2026-11-24 · OR-06 · cada alerta novo do `BudgetAlertService` no lançamento de uma operação (compra, despesa do colaborador, …) vira aviso (`OperationWarnings`, só depois do commit) devolvido pelo `OperationWarningsResponseAdvice` no cabeçalho `X-Operation-Warning` das respostas de sucesso, sem bloquear nem mudar o corpo; erros descartam o aviso; `BudgetAlertTest` verde 15/15.
 - 2026-11-24 · OR-07 · `BudgetController` em `/api/accounting/budgets` (`GET ?year=`, `PUT`, `POST /copy-previous-year`, `GET /variance`, `GET /alerts`) na empresa activa, só ADMIN/MANAGER (política HTTP e Service, também na consulta); gravar e copiar auditam `BUDGET_CHANGE` com ano, totais de custos/proveitos e número de células; regras violadas dão 400 PT-MZ; `BudgetHttpIntegrationTest` verde 4/4.
+- 2026-11-24 · OR-UI-01 · Contabilidade › "Orçamento" (aba a seguir ao Razão): `AccountingBudgetTab` com ano e "Carregar", grelha `BudgetGridModel` conta × centro × Jan…Dez + Total (vazio não segue, zero é célula, negativo/texto recusado na célula), "Adicionar linha" (`BudgetLineDialog`: só contas movimentáveis activas 6/7 e centro activo, par repetido recusado), "Remover linha", "Copiar do ano anterior" com ajuste % e confirmação, "Gravar" (`PUT` do ano inteiro); alterar só ADMIN/MANAGER; `BudgetUiHarnessTest` verde 8/8.
+- 2026-11-24 · OR-UI-01 (gate) · DG-03: o combo de contas do `BudgetLineDialog` passa a `UIHelper.createComboBox` em vez de `JComboBox` cru; diff-guard verde, `BudgetUiHarnessTest` e `DesktopThinContextTest` verdes.

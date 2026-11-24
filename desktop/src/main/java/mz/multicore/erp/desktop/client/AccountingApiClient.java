@@ -16,6 +16,7 @@ import java.util.Map;
 public class AccountingApiClient {
 
     private static final String COST_CENTERS = "/api/accounting/cost-centers";
+    private static final String BUDGETS = "/api/accounting/budgets";
 
     private final DesktopClientFactory clientFactory;
 
@@ -100,6 +101,21 @@ public class AccountingApiClient {
 
     public void deleteCostCenter(Long id) {
         clientFactory.authenticatedClient().delete(COST_CENTERS + "/" + id);
+    }
+
+    /** Orçamento anual da empresa activa; ano sem orçamento devolve grelha vazia (SPEC §4.1). */
+    public BudgetDTO getBudget(int year) {
+        return clientFactory.authenticatedClient().get(BUDGETS + "?year=" + year, BudgetDTO.class);
+    }
+
+    /** Grava o ano inteiro: células enviadas criadas/actualizadas, omitidas removidas. */
+    public BudgetDTO saveBudget(SaveBudgetRequest request) {
+        return clientFactory.authenticatedClient().put(BUDGETS, request, BudgetDTO.class);
+    }
+
+    /** Preenche as células vazias com o real do ano anterior (com ajuste %) e devolve o orçamento gravado. */
+    public BudgetDTO copyBudgetFromPreviousYear(CopyBudgetRequest request) {
+        return clientFactory.authenticatedClient().post(BUDGETS + "/copy-previous-year", request, BudgetDTO.class);
     }
 
     public BalanceSheetDTO getBalanceSheet(LocalDate asOf) {
