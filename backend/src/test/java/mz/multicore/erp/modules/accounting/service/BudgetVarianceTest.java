@@ -9,6 +9,7 @@ import mz.multicore.erp.modules.accounting.model.Account;
 import mz.multicore.erp.modules.accounting.model.AccountClass;
 import mz.multicore.erp.modules.accounting.model.Budget;
 import mz.multicore.erp.modules.accounting.model.BudgetLine;
+import mz.multicore.erp.modules.accounting.model.BudgetVarianceDirection;
 import mz.multicore.erp.modules.accounting.model.CostCenter;
 import mz.multicore.erp.modules.accounting.model.CostCenterType;
 import mz.multicore.erp.modules.accounting.model.JournalEntry;
@@ -39,6 +40,8 @@ import static org.mockito.Mockito.when;
  * Harness OR-03 (docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §4.2): the actual of each account × cost centre in a month, or
  * from January up to that month, is the sum of its journal lines signed by class (class 6 debit − credit, class 7
  * credit − debit), shown next to the budgeted amount of the same cells.
+ * Harness OR-04 (§4.2): each row carries the variance (actual − budgeted), the variance % over the budget (2 decimals,
+ * empty when nothing was budgeted) and whether it is favourable or unfavourable for its class.
  */
 class BudgetVarianceTest {
 
@@ -197,6 +200,77 @@ class BudgetVarianceTest {
         assertThrows(BusinessRuleException.class, () -> service.report(new BudgetVarianceQuery(YEAR, 1, false, null)));
         verify(budgetRepository, never()).findByCompanyIdAndFiscalYear(anyLong(), anyInt());
         verify(journalService, never()).findEntriesBetween(any(), any(), any());
+    }
+
+    @Test
+    void or04_custoAcimaDoOrcadoEDesfavoravel_abaixoEFavoravel() {
+        entries(entry(LocalDate.of(YEAR, 8, 1), debit(rent, adm, "1100"), debit(fuel, adm, "300"),
+                credit(bank, null, "1400")));
+        budget(cell(rent, adm, 8, "1000"), cell(fuel, adm, 8, "400"));
+
+        List<BudgetVarianceLineDTO> lines = service.report(new BudgetVarianceQuery(YEAR, 8, false, null)).lines();
+
+        BudgetVarianceLineDTO rentAdm = lines.get(0);
+        assertThat(rentAdm.variance()).isEqualByComparingTo("100");
+        assertThat(rentAdm.variancePercent()).isEqualByComparingTo("10.00");
+        assertEquals(BudgetVarianceDirection.UNFAVORABLE, rentAdm.direction());
+        BudgetVarianceLineDTO fuelAdm = lines.get(1);
+        assertThat(fuelAdm.variance()).isEqualByComparingTo("-100");
+        assertThat(fuelAdm.variancePercent()).isEqualByComparingTo("-25.00");
+        assertEquals(BudgetVarianceDirection.FAVORABLE, fuelAdm.direction());
+    }
+
+    @Test
+    void or04_proveitoAbaixoDoOrcadoEDesfavoravel_acimaEFavoravel() {
+        entries(entry(LocalDate.of(YEAR, 9, 1), credit(sales, shop, "8000"), credit(sales, adm, "1200"),
+                debit(bank, null, "9200")));
+        budget(cell(sales, adm, 9, "1000"), cell(sales, shop, 9, "10000"));
+
+        List<BudgetVarianceLineDTO> lines = service.report(new BudgetVarianceQuery(YEAR, 9, false, null)).lines();
+
+        BudgetVarianceLineDTO salesAdm = lines.get(0);
+        assertThat(salesAdm.variance()).isEqualByComparingTo("200");
+        assertThat(salesAdm.variancePercent()).isEqualByComparingTo("20.00");
+        assertEquals(BudgetVarianceDirection.FAVORABLE, salesAdm.direction());
+        BudgetVarianceLineDTO salesShop = lines.get(1);
+        assertThat(salesShop.variance()).isEqualByComparingTo("-2000");
+        assertThat(salesShop.variancePercent()).isEqualByComparingTo("-20.00");
+        assertEquals(BudgetVarianceDirection.UNFAVORABLE, salesShop.direction());
+    }
+
+    @Test
+    void or04_orcadoZeroSemPercentagem_desvioZeroNoOrcamento_percentagemADuasCasas() {
+        entries(entry(LocalDate.of(YEAR, 10, 1), debit(rent, adm, "500"), debit(fuel, shop, "100"),
+                debit(rent, shop, "200"), credit(bank, null, "800")));
+        budget(cell(rent, adm, 10, "0"), cell(fuel, shop, 10, "100"), cell(rent, shop, 10, "300"));
+
+        List<BudgetVarianceLineDTO> lines = service.report(new BudgetVarianceQuery(YEAR, 10, false, null)).lines();
+
+        BudgetVarianceLineDTO zeroBudget = lines.get(0);
+        assertThat(zeroBudget.variance()).isEqualByComparingTo("500");
+        assertThat(zeroBudget.variancePercent()).isNull();
+        assertEquals(BudgetVarianceDirection.UNFAVORABLE, zeroBudget.direction());
+        BudgetVarianceLineDTO thirds = lines.get(1);
+        assertEquals("6221/LOJA", thirds.accountCode() + "/" + thirds.costCenterCode());
+        assertThat(thirds.variancePercent()).isEqualByComparingTo("-33.33");
+        BudgetVarianceLineDTO onBudget = lines.get(2);
+        assertThat(onBudget.variance()).isEqualByComparingTo("0");
+        assertThat(onBudget.variancePercent()).isEqualByComparingTo("0");
+        assertEquals(BudgetVarianceDirection.ON_BUDGET, onBudget.direction());
+    }
+
+    @Test
+    void or04_desvioNoAcumuladoUsaOsTotaisDoPeriodo() {
+        entries(
+                entry(LocalDate.of(YEAR, 1, 5), debit(rent, adm, "100"), credit(bank, null, "100")),
+                entry(LocalDate.of(YEAR, 2, 5), debit(rent, adm, "233"), credit(bank, null, "233")));
+        budget(cell(rent, adm, 1, "150"), cell(rent, adm, 2, "150"));
+
+        BudgetVarianceLineDTO line = service.report(new BudgetVarianceQuery(YEAR, 2, true, null)).lines().get(0);
+
+        assertThat(line.variance()).isEqualByComparingTo("33");
+        assertThat(line.variancePercent()).isEqualByComparingTo("11.00");
+        assertEquals(BudgetVarianceDirection.UNFAVORABLE, line.direction());
     }
 
     private void entries(JournalEntry... entries) {

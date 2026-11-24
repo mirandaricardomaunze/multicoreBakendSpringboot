@@ -134,6 +134,10 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 - Relatório por centro e conta, para um mês e acumulado do ano: orçado, real, desvio (real − orçado)
   e desvio %. Desvio **desfavorável**: custo acima do orçado ou proveito abaixo; favorável no inverso.
   Orçado zero mostra desvio % vazio, não infinito.
+  Concretização (OR-04): cada linha do relatório traz `variance` = real − orçado, `variancePercent` = desvio ÷ orçado
+  × 100 arredondado a 2 casas (meio para cima; `null` quando o orçado é zero) e `direction`: `UNFAVORABLE` quando o
+  custo (classe 6) fica acima do orçado ou o proveito (classe 7) abaixo, `FAVORABLE` no inverso e `ON_BUDGET` quando o
+  desvio é zero. O desvio % mantém o sinal do desvio (real abaixo do orçado dá % negativa).
 
 ### 4.3 Alertas
 
