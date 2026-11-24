@@ -108,6 +108,9 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 
 - Um orçamento por empresa e ano, com linhas: conta **movimentável das classes 6 ou 7**, centro de
   custo activo, mês (1–12) e valor ≥ 0. Uma linha por conta × centro × mês.
+  Concretização (OR-01): `BudgetService.save` recebe o ano inteiro (`SaveBudgetRequest`, linhas com código da conta,
+  centro, mês e valor); células enviadas são criadas ou actualizadas e as omitidas saem. Valor zero é uma célula
+  preenchida (conta para "só células vazias" no OR-02). Ano sem orçamento devolve grelha vazia.
 - Editável a qualquer momento; cada gravação gera auditoria `BUDGET_CHANGE` com ano e totais.
 - **Copiar do ano anterior**: preenche cada conta × centro × mês com o **real** do mesmo mês do ano
   anterior, com percentagem opcional de ajuste (ex.: +10%), arredondado a 2 casas. Só preenche células

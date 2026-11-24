@@ -1,7 +1,7 @@
 ---
 id: GOAL-011
 title: "Orçamento anual por centro e alertas de excesso"
-status: TODO
+status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md
 harness: docs/CENTROS_CUSTO_ORCAMENTO_HARNESS.md
@@ -20,7 +20,7 @@ Pré-requisito: GOAL-010 em `DONE` (centros nos lançamentos). Se não estiver, 
 
 ## Critérios de aceitação
 
-- [ ] OR-01 — orçamento anual com linhas válidas e únicas — `BudgetRulesTest`
+- [x] OR-01 — orçamento anual com linhas válidas e únicas — `BudgetRulesTest`
 - [ ] OR-02 — copiar do ano anterior com ajuste, só células vazias — `BudgetRulesTest`
 - [ ] OR-03 — real por conta × centro × mês — `BudgetVarianceTest`
 - [ ] OR-04 — desvio, desvio % e sentido favorável/desfavorável — `BudgetVarianceTest`
@@ -41,3 +41,4 @@ Pré-requisito: GOAL-010 em `DONE` (centros nos lançamentos). Se não estiver, 
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-24 · OR-01 · orçamento anual por empresa e ano (`Budget`/`BudgetLine`, V152) com linhas só de contas movimentáveis 6/7, centro activo da empresa, mês 1–12, valor ≥ 0 e únicas por conta × centro × mês; regravar actualiza as mesmas linhas; `BudgetRulesTest` verde 10/10.

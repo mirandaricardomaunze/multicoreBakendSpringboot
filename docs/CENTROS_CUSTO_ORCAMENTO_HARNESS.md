@@ -26,7 +26,7 @@
 
 | ID | Garantia | Teste |
 |---|---|---|
-| OR-01 | Orçamento por empresa e ano; linhas só de contas movimentáveis 6/7, centro activo, mês 1–12, valor ≥ 0, únicas (§4.1) | `BudgetRulesTest` |
+| OR-01 | Orçamento por empresa e ano; linhas só de contas movimentáveis 6/7, centro activo, mês 1–12, valor ≥ 0, únicas (§4.1) | `BudgetRulesTest` (`or01_*`) · `MigrationPostgresDialectHarnessTest` |
 | OR-02 | Copiar do ano anterior com ajuste %, 2 casas, só células vazias (§4.1) | `BudgetRulesTest` |
 | OR-03 | Real por conta × centro × mês com sinal por classe (§4.2) | `BudgetVarianceTest` |
 | OR-04 | Desvio e desvio %, favorável/desfavorável por classe; orçado zero sem % (§4.2) | `BudgetVarianceTest` |
