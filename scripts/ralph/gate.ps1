@@ -33,7 +33,8 @@ $qualityTests = @(
     'ApiRolePolicyEndpointCoverageHarnessTest', 'MigrationPostgresDialectHarnessTest',
     # UI uniformity: colours, icons, KPIs, contrast, panel pattern, thin desktop context
     'UiPrecisionHarnessTest', 'FinalUiUniformityHarnessTest', 'EnterpriseModulesUiUniformityHarnessTest',
-    'IconSystemHarnessTest', 'KpiCardUniformityHarnessTest', 'ButtonIconContrastHarnessTest', 'DesktopThinContextTest'
+    'IconSystemHarnessTest', 'KpiCardUniformityHarnessTest', 'ButtonIconContrastHarnessTest', 'DesktopThinContextTest',
+    'PrintableTextHarnessTest', 'ProductIdentityHarnessTest'
 )
 
 if ($Full) {
