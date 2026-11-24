@@ -218,7 +218,7 @@ public class MainFrame extends JFrame {
             crmPanel        = new CRMPanel(crmApiClient, comercialApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient, printApiClient, creditRiskApiClient, accountStatementApiClient);
             fiscalPanel     = sellerSession ? null : new FiscalPanel(fiscalApiClient);
-            accountingPanel = sellerSession ? null : new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient);
+            accountingPanel = sellerSession ? null : new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient, printApiClient);
             assetsPanel     = sellerSession ? null : new AssetsPanel(assetApiClient, printApiClient);
             manufacturingPanel = sellerSession ? null : new ManufacturingPanel(productionApiClient, comercialApiClient, inventoryApiClient);
             fleetPanel      = sellerSession ? null : new FleetPanel(fleetApiClient);

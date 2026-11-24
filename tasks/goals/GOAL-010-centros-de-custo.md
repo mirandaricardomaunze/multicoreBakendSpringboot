@@ -1,7 +1,7 @@
 ---
 id: GOAL-010
 title: "Resultado por loja, armazém e departamento com centros de custo"
-status: IN_PROGRESS
+status: DONE
 priority: MEDIUM
 spec: docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md
 harness: docs/CENTROS_CUSTO_ORCAMENTO_HARNESS.md
@@ -28,7 +28,7 @@ cada centro. Regras em `docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md` §2–§3.
 - [x] CC-09 — endpoints, perfis e empresa activa — `CostCenterHttpIntegrationTest`
 - [x] CC-UI-01 — gestão de centros e centro por omissão — `CostCenterUiHarnessTest`
 - [x] CC-UI-02 — lançamento manual e despesa pedem o centro — `CostCenterUiHarnessTest`
-- [ ] CC-UI-03 — ecrã de resultados por centro — `CostCenterUiHarnessTest`
+- [x] CC-UI-03 — ecrã de resultados por centro — `CostCenterUiHarnessTest`
 
 ## Fora de âmbito
 
@@ -52,3 +52,4 @@ cada centro. Regras em `docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md` §2–§3.
 - 2026-11-22 · CC-09 · `CostCenterController` (`/api/accounting/cost-centers`: listar, criar, alterar, `/{id}/default`, apagar) e `GET /api/accounting/cost-center-result` no `AccountingController`; área da contabilidade (só ADMIN/MANAGER, EMPLOYEE 403), sempre na empresa activa (centro de outra empresa dá 400); `CostCenterService.list` garante o centro por omissão (primeiro uso); SPEC §3.1 concretizada; CostCenterHttpIntegrationTest verde 3/3, ApiRolePolicyEndpointCoverageHarnessTest, CostCenterRulesTest e CostCenterWarehouseSyncTest verdes.
 - 2026-11-22 · CC-UI-01 · Configurações › "Centros de Custo" (último separador, `ConfigPanel` recebe o `AccountingApiClient`): `CostCentersPanel` lista código/nome/tipo/estado/por omissão num card e mostra o centro por omissão; `CostCenterFormDialog` (`ModernFormDialog`) cria/edita centros manuais; apagar (com `UIHelper.confirm`, nunca o por omissão) e "Tornar por omissão" (só activo); centros de armazém só de leitura; sem ADMIN/MANAGER botões desactivados; `AccountingApiClient` ganha os endpoints `/api/accounting/cost-centers`; SPEC §3.3 concretizada; CostCenterUiHarnessTest verde 5/5, DesktopThinContextTest e harnesses do ConfigPanel verdes.
 - 2026-11-24 · CC-UI-02 · `CostCenterCombo` (só centros activos, por omissão pré-seleccionado; sem lista fica "Centro por omissão da empresa" que não envia centro) no "Novo Lançamento" do diário (`CostCenterCombo.centerForAccount` envia o centro só nas partidas 6/7) e na "Submeter Despesa" do RH (`HRPanel` recebe o `AccountingApiClient`; `CreateExpenseClaimRequest.costCenterId`); CostCenterUiHarnessTest verde 8/8, DesktopThinContextTest e harnesses de UI verdes.
+- 2026-11-24 · CC-UI-03 · Contabilidade › "Resultados por centro" (última aba, `AccountingCostCenterResultTab`): período De/A e "Calcular" chamam `AccountingApiClient.getCostCenterResult` (`/api/accounting/cost-center-result`); tabela num card com código, centro, proveitos, custos e resultado por centro, "Sem centro" e a linha Total igual à demonstração (sem ordenação nem paginação, o Total fica no fim); exportação PDF (`TableExportAction`, `AccountingPanel` passa a receber o `PrintApiClient` do `MainFrame`, construtor de 1 argumento mantido), Excel (`UIHelper.createExportButton`) e CSV no menu de contexto; SPEC §3.3 concretizada; CostCenterUiHarnessTest verde 11/11, DesktopThinContextTest, AccountingPanelDecompositionHarnessTest e harnesses de UI/arquitectura verdes.

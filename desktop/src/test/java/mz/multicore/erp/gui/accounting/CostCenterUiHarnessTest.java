@@ -5,6 +5,8 @@ import mz.multicore.erp.desktop.client.*;
 import mz.multicore.erp.gui.ConfigPanel;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.modules.accounting.dto.CostCenterDTO;
+import mz.multicore.erp.modules.accounting.dto.CostCenterResultDTO;
+import mz.multicore.erp.modules.accounting.dto.CostCenterResultLineDTO;
 import mz.multicore.erp.modules.accounting.model.CostCenterType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,8 +14,10 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
 import java.awt.*;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -24,6 +28,7 @@ import static org.mockito.Mockito.mock;
  * Harness de UI dos centros de custo (docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §3.1–§3.3).
  * CC-UI-01: Configurações › Centros de Custo lista os centros da empresa activa, cria/edita os manuais,
  * apaga e escolhe o centro por omissão; centros de armazém só de leitura; gerir só ADMIN/MANAGER.
+ * CC-UI-02: lançamento manual e despesa pedem o centro. CC-UI-03: Contabilidade › Resultados por centro.
  */
 class CostCenterUiHarnessTest {
 
@@ -189,6 +194,70 @@ class CostCenterUiHarnessTest {
                 .contains("selectedCostCenterId()");
         String combo = Files.readString(gui("accounting", "CostCenterCombo.java"));
         assertThat(combo).contains("accountingApiClient.listCostCenters()").doesNotContain("JOptionPane");
+    }
+
+    @Test
+    @DisplayName("CC-UI-03: Contabilidade ganha a aba Resultados por centro no fim, com ícone")
+    void ccUi03_contabilidadeTemAbaDeResultadosPorCentro() throws Exception {
+        onEdt(() -> {
+            AccountingPanel accounting = new AccountingPanel(mock(AccountingApiClient.class), mock(PrintApiClient.class));
+            JTabbedPane tabs = firstOf(accounting, JTabbedPane.class);
+            int index = tabs.indexOfTab("Resultados por centro");
+            assertThat(index).as("aba \"Resultados por centro\"").isEqualTo(tabs.getTabCount() - 1);
+            assertThat(tabs.getComponentAt(index)).isInstanceOf(AccountingCostCenterResultTab.class);
+            assertThat(tabs.getIconAt(index)).as("ícone pelo UIHelper.icon").isNotNull();
+            assertThat(tabs.indexOfTab("Demonstrações")).isEqualTo(index - 1);
+        });
+    }
+
+    @Test
+    @DisplayName("CC-UI-03: A tabela mostra uma linha por centro, \"Sem centro\" e a linha Total igual à demonstração")
+    void ccUi03_tabelaDeResultadosPorCentro() throws Exception {
+        onEdt(() -> {
+            AccountingCostCenterResultTab tab = new AccountingCostCenterResultTab(mock(AccountingApiClient.class),
+                    mock(PrintApiClient.class), new mz.multicore.erp.gui.components.InlineFeedbackPanel());
+            tab.applyResult(new CostCenterResultDTO(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30), List.of(
+                    new CostCenterResultLineDTO(2L, "A01", "Loja Central", money("1000.00"), money("600.00"), money("400.00")),
+                    new CostCenterResultLineDTO(1L, "ADM", "Administração", money("0.00"), money("150.00"), money("-150.00")),
+                    new CostCenterResultLineDTO(null, null, null, money("50.00"), money("0.00"), money("50.00"))),
+                    money("1050.00"), money("750.00"), money("300.00")));
+
+            JTable table = tab.resultTable();
+            assertThat(table.getColumnCount()).isEqualTo(5);
+            assertThat(table.getColumnName(0)).isEqualTo("Código");
+            assertThat(table.getColumnName(1)).isEqualTo("Centro de custo");
+            assertThat(table.getColumnName(2)).isEqualTo("Proveitos");
+            assertThat(table.getColumnName(3)).isEqualTo("Custos");
+            assertThat(table.getColumnName(4)).isEqualTo("Resultado");
+            javax.swing.table.TableModel model = table.getModel();
+            assertThat(model.getRowCount()).as("três linhas e o Total").isEqualTo(4);
+            assertThat(model.getValueAt(0, 0)).isEqualTo("A01");
+            assertThat(model.getValueAt(0, 4)).isEqualTo(money("400.00"));
+            assertThat(model.getValueAt(2, 1)).isEqualTo("Sem centro");
+            assertThat(model.getValueAt(3, 1)).isEqualTo("Total");
+            assertThat(model.getValueAt(3, 2)).isEqualTo(money("1050.00"));
+            assertThat(model.getValueAt(3, 3)).isEqualTo(money("750.00"));
+            assertThat(model.getValueAt(3, 4)).as("igual à demonstração de resultados").isEqualTo(money("300.00"));
+            assertThat(model.isCellEditable(0, 1)).isFalse();
+            assertThat(tab.summaryLabel().getText()).contains("01/11/2026").contains("30/11/2026").contains("300,00");
+            assertThat(SwingUtilities.getAncestorOfClass(ModernPanel.class, table)).as("tabela num card").isNotNull();
+        });
+    }
+
+    @Test
+    @DisplayName("CC-UI-03: Período, cliente do relatório e exportação pelos meios normais (PDF/Excel/CSV)")
+    void ccUi03_periodoEExportacao() throws Exception {
+        String tab = Files.readString(gui("accounting", "AccountingCostCenterResultTab.java"));
+        assertThat(tab).contains("new DateField()").contains("accountingApiClient.getCostCenterResult(")
+                .contains("UIHelper.createExportButton(").contains("TableExportAction.export(")
+                .contains("UIHelper.tableCardTop(").contains("UIHelper.icon(").doesNotContain("JOptionPane");
+        Path client = Path.of("src", "main", "java", "mz", "multicore", "erp", "desktop", "client", "AccountingApiClient.java");
+        if (!Files.exists(client)) client = Path.of("desktop").resolve(client);
+        assertThat(Files.readString(client)).contains("/api/accounting/cost-center-result");
+    }
+
+    private static BigDecimal money(String value) {
+        return new BigDecimal(value);
     }
 
     /** Builds and fills the panel in one EDT turn; the table pagination applies its rows in the next one. */

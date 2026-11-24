@@ -69,6 +69,12 @@ public class AccountingApiClient {
                 IncomeStatementDTO.class);
     }
 
+    /** "Resultados por centro de custo" do período; o total é igual à demonstração de resultados (SPEC §3.3). */
+    public CostCenterResultDTO getCostCenterResult(LocalDate from, LocalDate to) {
+        return clientFactory.authenticatedClient().get(
+                "/api/accounting/cost-center-result?from=" + from + "&to=" + to, CostCenterResultDTO.class);
+    }
+
     /** Acerta 3201 e 3401 ao stock físico ao custo. */
     public mz.multicore.erp.modules.accounting.dto.InventoryAdjustmentDTO adjustInventory() {
         return clientFactory.authenticatedClient().post("/api/accounting/inventory-adjustment", null,

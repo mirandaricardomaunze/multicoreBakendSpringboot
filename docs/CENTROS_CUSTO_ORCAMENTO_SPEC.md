@@ -97,6 +97,10 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
   e "Editar" (código, nome, estado) só para centros manuais; "Apagar" só manual e nunca o por omissão (com
   confirmação; o backend recusa se tiver lançamentos); "Tornar por omissão" só para centro activo que ainda não o
   é. Sem ADMIN/MANAGER os botões ficam desactivados; o backend é quem decide.
+  Concretização (CC-UI-03): Contabilidade › "Resultados por centro" (última aba): período De/A (por omissão o mês
+  corrente) e "Calcular"; tabela com código, centro, proveitos, custos e resultado, a linha "Sem centro" quando
+  existir e, no fim, a linha "Total" (igual à demonstração de resultados), sem ordenação nem paginação para o Total
+  ficar no fim; exportação PDF com os dados da empresa, Excel e CSV (menu de contexto da tabela).
 
 ## 4. Orçamento (GOAL-011)
 
