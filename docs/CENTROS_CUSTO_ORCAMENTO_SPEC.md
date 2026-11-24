@@ -115,6 +115,11 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 - **Copiar do ano anterior**: preenche cada conta × centro × mês com o **real** do mesmo mês do ano
   anterior, com percentagem opcional de ajuste (ex.: +10%), arredondado a 2 casas. Só preenche células
   vazias, nunca sobrescreve.
+  Concretização (OR-02): `BudgetService.copyFromPreviousYear` (`CopyBudgetRequest`: ano destino e ajuste % opcional,
+  vazio = 0, nunca abaixo de −100%) lê o real do ano anterior por conta × centro × mês (sinal do §4.2, só partidas com
+  centro), arredonda `real × (1 + ajuste/100)` a 2 casas (meio para cima) e **grava** as células em falta no orçamento
+  do ano destino (criando-o se não existir). Ficam de fora: células já preenchidas (mesmo a zero), real ≤ 0 e centros
+  hoje inactivos. Devolve o orçamento resultante.
 - Gerir orçamento: **ADMIN** e **MANAGER**.
 
 ### 4.2 Real vs orçado
