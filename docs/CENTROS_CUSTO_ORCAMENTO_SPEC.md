@@ -126,6 +126,11 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 
 - Real = soma das linhas de lançamento da conta e centro no mês (classe 6: débito − crédito;
   classe 7: crédito − débito).
+  Concretização (OR-03): `BudgetVarianceService.report` (ano, mês 1–12, acumulado sim/não, centro opcional; ADMIN e
+  MANAGER) devolve uma linha por conta × centro com o **orçado** e o **real** do período — só o mês, ou de janeiro até
+  ao mês quando acumulado — da empresa activa. Entram as contas × centros com orçamento **ou** com real no período
+  (falta de um lado vale zero); partidas sem centro ficam de fora (não comparam com o orçamento); centros hoje
+  inactivos continuam a aparecer com o seu histórico. Ordem: código da conta, depois código do centro.
 - Relatório por centro e conta, para um mês e acumulado do ano: orçado, real, desvio (real − orçado)
   e desvio %. Desvio **desfavorável**: custo acima do orçado ou proveito abaixo; favorável no inverso.
   Orçado zero mostra desvio % vazio, não infinito.
