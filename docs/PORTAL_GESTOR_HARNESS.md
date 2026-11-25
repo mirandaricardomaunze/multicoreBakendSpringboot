@@ -3,11 +3,11 @@
 > Cenários que provam [PORTAL_GESTOR_SPEC.md](PORTAL_GESTOR_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-19
+**Última actualização:** 2026-11-25
 
 | ID | Garantia | Teste |
 |---|---|---|
-| PG-01 | Login canal PORTAL só para ADMIN/MANAGER; outro perfil recusado sem token (§3.1) | `PortalLoginTest` |
+| PG-01 | Login canal PORTAL só para ADMIN/MANAGER; outro perfil recusado sem token; só empresas onde é ADMIN/MANAGER (§3.1) — **verde** | `PortalLoginTest` |
 | PG-02 | Conta sem 2FA activo recusada com mensagem PT-MZ; código 2FA pedido (§3.1) | `PortalLoginTest` |
 | PG-03 | Token de portal expira em 12 h ou 30 min sem uso; logout invalida (§3.1) | `PortalSessionTest` |
 | PG-04 | Tentativas falhadas contam no `LoginRateLimiter` (§3.1) | `PortalLoginTest` |

@@ -25,6 +25,9 @@ o que falta em stock e quem deve, e aprovar um desconto ou uma compra sem ir ao 
 
 - Mesmo endpoint de login (`/api/auth/login`) com o indicador de canal `PORTAL`.
 - Perfil que não seja ADMIN nem MANAGER → recusado com mensagem PT-MZ, sem token.
+  O perfil é o de cada empresa a que o utilizador tem acesso: entra quem for ADMIN ou MANAGER em pelo
+  menos uma, e a sessão de portal só lista essas empresas (onde é só EMPLOYEE/SELLER, não aparece).
+  Mensagem: "O portal é só para administradores e gestores. Use o programa da loja."
 - Conta sem 2FA activo → recusada: "Active a verificação em dois passos no programa da loja para
   usar o portal." O código 2FA é pedido como no desktop.
 - O token de portal expira **12 h** depois do login ou **30 min** depois do último pedido, o que vier

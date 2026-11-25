@@ -1,7 +1,7 @@
 ---
 id: GOAL-012
 title: "Gestor vê o negócio e aprova pedidos no telemóvel pelo portal web"
-status: TODO
+status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/PORTAL_GESTOR_SPEC.md
 harness: docs/PORTAL_GESTOR_HARNESS.md
@@ -17,7 +17,7 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 
 ## Critérios de aceitação
 
-- [ ] PG-01 — login PORTAL só ADMIN/MANAGER — `PortalLoginTest`
+- [x] PG-01 — login PORTAL só ADMIN/MANAGER — `PortalLoginTest`
 - [ ] PG-02 — 2FA obrigatório no portal — `PortalLoginTest`
 - [ ] PG-04 — limitador de tentativas partilhado — `PortalLoginTest`
 - [ ] PG-03 — expiração 12 h / 30 min e logout — `PortalSessionTest`
@@ -41,3 +41,4 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-25 · PG-01 · Login com `channel: PORTAL` só entra para quem é ADMIN/MANAGER numa empresa (PortalLoginPolicy); EMPLOYEE recusado sem token com mensagem PT-MZ, sessão de portal só lista essas empresas, login desktop inalterado; PortalLoginTest verde 5/5.
