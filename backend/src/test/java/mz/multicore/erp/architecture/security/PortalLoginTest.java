@@ -20,12 +20,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * PG-01 — login com canal PORTAL só para ADMIN/MANAGER;
  * PG-02 — e só com verificação em dois passos activa, com o código pedido como no desktop
+ * PG-04 — as tentativas falhadas do portal contam no mesmo {@link LoginRateLimiter} do desktop
  * (PORTAL_GESTOR_SPEC §3.1).
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:portal-login;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class PortalLoginTest {
+
+    private static final int MAX_ATTEMPTS = 5;
+    private static final String LOCKED_PREFIX = "Demasiadas tentativas falhadas";
 
     @Autowired
     private MockMvc mockMvc;
@@ -109,6 +113,42 @@ class PortalLoginTest {
                 .andExpect(jsonPath("$.token").isNotEmpty());
     }
 
+    @Test
+    void pg04PortalWrongPasswordLocksPortalAndDesktop() throws Exception {
+        String ip = "198.51.100.41";
+        for (int i = 0; i < MAX_ATTEMPTS; i++) {
+            login("joao", "errada", "PORTAL", null, ip).andExpect(status().is4xxClientError());
+        }
+        expectLocked(login("joao", "password", "PORTAL", null, ip));
+        expectLocked(login("joao", "password", null, null, ip));
+    }
+
+    @Test
+    void pg04DesktopFailuresAlsoLockPortal() throws Exception {
+        String ip = "198.51.100.42";
+        for (int i = 0; i < MAX_ATTEMPTS; i++) {
+            login("ana", "errada", null, null, ip).andExpect(status().is4xxClientError());
+        }
+        expectLocked(login("ana", "password", "PORTAL", null, ip));
+    }
+
+    @Test
+    void pg04PortalWrongTwoFactorCodesCountAndLock() throws Exception {
+        String ip = "198.51.100.43";
+        String secret = enableTwoFactor("ana");
+        String wrong = currentCode(secret).equals("000000") ? "111111" : "000000";
+        for (int i = 0; i < MAX_ATTEMPTS; i++) {
+            login("ana", "password", "PORTAL", wrong, ip).andExpect(status().isBadRequest());
+        }
+        expectLocked(login("ana", "password", "PORTAL", currentCode(secret), ip));
+    }
+
+    private static void expectLocked(ResultActions result) throws Exception {
+        result.andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.startsWith(LOCKED_PREFIX)));
+    }
+
     private String enableTwoFactor(String username) {
         disableTwoFactor(username);
         String secret = accountSecurityService.beginTwoFactorSetup(username).secret();
@@ -135,11 +175,24 @@ class PortalLoginTest {
     }
 
     private ResultActions portalLogin(String username, String channel, String totpCode) throws Exception {
-        String code = totpCode == null ? "null" : "\"" + totpCode + "\"";
+        return login(username, "password", channel, totpCode, "127.0.0.1");
+    }
+
+    /** Cada cenário PG-04 usa a sua origem, para o bloqueio não tocar nos outros testes. */
+    private ResultActions login(String username, String password, String channel, String totpCode,
+                                String clientIp) throws Exception {
         return mockMvc.perform(post("/api/auth/login")
+                .with(request -> {
+                    request.setRemoteAddr(clientIp);
+                    return request;
+                })
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"username":"%s","password":"password","channel":"%s","totpCode":%s}
-                        """.formatted(username, channel, code)));
+                        {"username":"%s","password":"%s","channel":%s,"totpCode":%s}
+                        """.formatted(username, password, jsonOrNull(channel), jsonOrNull(totpCode))));
+    }
+
+    private static String jsonOrNull(String value) {
+        return value == null ? "null" : "\"" + value + "\"";
     }
 }

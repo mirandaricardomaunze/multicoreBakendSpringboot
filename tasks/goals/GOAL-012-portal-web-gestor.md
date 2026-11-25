@@ -19,7 +19,7 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 
 - [x] PG-01 — login PORTAL só ADMIN/MANAGER — `PortalLoginTest`
 - [x] PG-02 — 2FA obrigatório no portal — `PortalLoginTest`
-- [ ] PG-04 — limitador de tentativas partilhado — `PortalLoginTest`
+- [x] PG-04 — limitador de tentativas partilhado — `PortalLoginTest`
 - [ ] PG-03 — expiração 12 h / 30 min e logout — `PortalSessionTest`
 - [ ] PG-05 — token de portal limitado às rotas do portal — `PortalTokenScopeTest`
 - [ ] PG-06 — isolamento de empresa — `PortalHttpIntegrationTest`
@@ -43,3 +43,4 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-25 · PG-01 · Login com `channel: PORTAL` só entra para quem é ADMIN/MANAGER numa empresa (PortalLoginPolicy); EMPLOYEE recusado sem token com mensagem PT-MZ, sessão de portal só lista essas empresas, login desktop inalterado; PortalLoginTest verde 5/5.
 - 2026-11-25 · PG-02 · Portal recusa ADMIN/MANAGER sem verificação em dois passos activa (mensagem PT-MZ da SPEC, sem token) e pede o código como no desktop antes de dar token; código errado recusado; login desktop inalterado; PortalLoginTest verde 9/9.
+- 2026-11-25 · PG-04 · Tentativas falhadas do portal (senha errada e código 2FA errado) contam no mesmo `LoginRateLimiter` do desktop: 5 falhas bloqueiam portal e desktop na mesma origem, e falhas no desktop bloqueiam o portal; o AuthController já partilhava o limitador, os testes fixam a garantia; PortalLoginTest verde 12/12.
