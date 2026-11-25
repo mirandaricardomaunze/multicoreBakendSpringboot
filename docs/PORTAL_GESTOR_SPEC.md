@@ -51,6 +51,18 @@ o que falta em stock e quem deve, e aprovar um desconto ou uma compra sem ir ao 
   - artigos com stock abaixo do mínimo (os 20 mais urgentes);
   - facturas vencidas: total e os 10 clientes com maior valor em atraso;
   - número de aprovações pendentes.
+- Contrato de `GET /api/portal/summary?companyId=` (só leitura, ADMIN/MANAGER, empresa do `X-Company-Id`):
+  - **Vendas**: só vendas realizadas (`Invoice.countsAsSale()`, como o `store-dashboard`), valor a pagar
+    líquido de notas; hoje = dia civil actual, mês = do dia 1 até agora; agrupadas pelo armazém da factura
+    (sem armazém → "Sem loja"), ordenadas pelo valor do mês, e com o total de hoje e do mês.
+  - **Caixas abertas**: sessões `OPEN`, operador actual (o da passagem de turno, senão o que abriu) e
+    abertura, as mais antigas primeiro. A sessão de caixa ainda não guarda a loja (`till_sessions` sem
+    armazém): o campo fica de fora até a caixa a registar — lacuna anotada, não se inventa a loja.
+  - **Stock baixo**: saldos abaixo do mínimo, os 20 mais urgentes = menor cobertura (quantidade ÷ mínimo)
+    primeiro; empate pela maior falta (mínimo − quantidade).
+  - **Vencidas**: facturas cobráveis com dias de atraso > 0 (`Invoice.daysOverdue`), total do valor em
+    dívida (`outstandingAmount`) e os 10 clientes com mais valor em atraso (nº de facturas e maior atraso).
+  - **Aprovações pendentes**: contagem dos pedidos `PENDING` da empresa.
 - Valores com `DisplayNumbers` (`1.460,00 MT`) e datas `dd/mm/aaaa`.
 - Botão "Actualizar"; actualiza sozinho a cada 5 minutos com o ecrã aberto.
 

@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * PG-06 — isolamento de empresa: o portal só abre as empresas do utilizador onde ele é ADMIN ou MANAGER;
  * os pedidos levam {@code X-Company-Id} e respeitam o isolamento existente (PORTAL_GESTOR_SPEC §3.2).
+ * PG-07 — {@code /api/portal/summary} devolve os blocos do painel, só para ADMIN/MANAGER da empresa (§3.3).
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:portal-http;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
@@ -85,11 +86,7 @@ class PortalHttpIntegrationTest {
     void pg06DesktopTokenKeepsSellerCompany() throws Exception {
         long mz = companyId("Multicore Moçambique Lda");
         grantJoao(mz, "SELLER");
-        PortalTwoFactorFixture.disable(jdbc, "joao");
-        String token = objectMapper.readTree(mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"joao\",\"password\":\"password\"}"))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get("token").asText();
+        String token = desktopLogin("joao");
 
         call(get("/api/product-categories"), token, mz).andExpect(status().isOk());
     }
@@ -101,6 +98,40 @@ class PortalHttpIntegrationTest {
         String token = portalLogin("joao").get("token").asText();
 
         call(get("/api/reports/store-dashboard").param("companyId", String.valueOf(mz)), token, mz)
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void pg07PortalSummaryReturnsDashboardBlocks() throws Exception {
+        JsonNode login = portalLogin("joao");
+        long companyId = login.get("companies").get(0).get("id").asLong();
+
+        JsonNode summary = objectMapper.readTree(call(get("/api/portal/summary")
+                        .param("companyId", String.valueOf(companyId)), login.get("token").asText(), companyId)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+
+        assertThat(summary.fieldNames()).toIterable().contains("date", "salesToday", "salesMonth", "salesByStore",
+                "openTills", "lowStock", "overdueTotal", "overdueClients", "pendingApprovals");
+        assertThat(summary.get("lowStock").size()).isLessThanOrEqualTo(20);
+        assertThat(summary.get("overdueClients").size()).isLessThanOrEqualTo(10);
+    }
+
+    @Test
+    void pg07PortalSummaryRefusesOtherCompany() throws Exception {
+        String token = portalLogin("joao").get("token").asText();
+        long otherCompany = companyId("Multicore Moçambique Lda");
+
+        call(get("/api/portal/summary").param("companyId", String.valueOf(otherCompany)), token, otherCompany)
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void pg07PortalSummaryRefusesSellerDesktopToken() throws Exception {
+        long mz = companyId("Multicore Moçambique Lda");
+        grantJoao(mz, "SELLER");
+        String token = desktopLogin("joao");
+
+        call(get("/api/portal/summary").param("companyId", String.valueOf(mz)), token, mz)
                 .andExpect(status().isForbidden());
     }
 
@@ -116,6 +147,14 @@ class PortalHttpIntegrationTest {
     private ResultActions call(MockHttpServletRequestBuilder request, String token, long companyId) throws Exception {
         return mockMvc.perform(request.header("Authorization", "Bearer " + token)
                 .header("X-Company-Id", String.valueOf(companyId)));
+    }
+
+    private String desktopLogin(String username) throws Exception {
+        PortalTwoFactorFixture.disable(jdbc, username);
+        return objectMapper.readTree(mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"%s\",\"password\":\"password\"}".formatted(username)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get("token").asText();
     }
 
     private JsonNode portalLogin(String username) throws Exception {

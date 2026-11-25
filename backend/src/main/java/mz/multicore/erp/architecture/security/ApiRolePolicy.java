@@ -18,7 +18,7 @@ public final class ApiRolePolicy {
             "/api/recurring/contracts", "/api/inventory/counts",
             "/api/inventory/physical-counting", "/api/inventory/waste",
             "/api/inventory/transfers", "/api/inventory/movements",
-            "/api/inventory/warehouses/all", "/api/intelligence", "/api/hr", "/api/quality");
+            "/api/inventory/warehouses/all", "/api/intelligence", "/api/hr", "/api/quality", "/api/portal");
 
     /** Raízes que têm uma decisão deliberada nesta política, mesmo quando a decisão fina é por método. */
     private static final Set<String> EXPLICIT_AREAS = Set.of(
@@ -35,7 +35,7 @@ public final class ApiRolePolicy {
             "/api/hr", "/api/quality", "/api/activity", "/api/units", "/api/pricing", "/api/pickups", "/api/bulk-stock", "/api/projects",
             "/api/advances", "/api/butchery", "/api/expiry", "/api/production-plans",
             "/api/custom-orders", "/api/consignments", "/api/exchange-rates",
-            "/api/returnables", "/api/variants", "/api/weighbridge", "/api/exceptions");
+            "/api/returnables", "/api/variants", "/api/weighbridge", "/api/exceptions", "/api/portal");
 
     /** Business-sector areas (SA-C01..C03): every role may read, only management may change. */
     private static final Set<String> READ_SELLER_WRITE_MANAGER_AREAS = Set.of(

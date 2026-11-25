@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/PORTAL_GESTOR_SPEC.md
 harness: docs/PORTAL_GESTOR_HARNESS.md
-verify: ["PortalLoginTest", "PortalSessionTest", "PortalTokenScopeTest", "PortalHttpIntegrationTest", "PortalSecurityHeadersTest", "PortalStaticAssetsHarnessTest", "ApiRolePolicyEndpointCoverageHarnessTest"]
+verify: ["PortalLoginTest", "PortalSessionTest", "PortalTokenScopeTest", "PortalHttpIntegrationTest", "PortalSummaryServiceTest", "PortalSecurityHeadersTest", "PortalStaticAssetsHarnessTest", "ApiRolePolicyEndpointCoverageHarnessTest"]
 blockedBy: []
 ---
 
@@ -23,7 +23,7 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 - [x] PG-03 — expiração 12 h / 30 min e logout — `PortalSessionTest`
 - [x] PG-05 — token de portal limitado às rotas do portal — `PortalTokenScopeTest`
 - [x] PG-06 — isolamento de empresa — `PortalHttpIntegrationTest`
-- [ ] PG-07 — resumo do painel — `PortalHttpIntegrationTest`
+- [x] PG-07 — resumo do painel — `PortalHttpIntegrationTest`
 - [ ] PG-08 — aprovar/rejeitar com as regras do módulo — `PortalHttpIntegrationTest`
 - [ ] PG-09 — cabeçalhos de segurança — `PortalSecurityHeadersTest`
 - [ ] PG-10 — só HTTPS em produção — `PortalSecurityHeadersTest`
@@ -47,3 +47,4 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 - 2026-11-25 · PG-03 · Sessão de portal marcada na base (migração V154, coluna `portal`): expira 30 min depois do último pedido, deslizando com o uso, e nunca passa das 12 h depois do login; logout invalida o token; sessões do desktop mantêm as 8 h sem limite de inactividade; relógio injectável no `AuthSessionService`; PortalSessionTest verde 6/6, PortalLoginTest 12/12.
 - 2026-11-25 · PG-05 · Token de portal só abre `/api/auth/**`, `/api/reports/store-dashboard`, `/api/approvals/**` e `/api/portal/**` (PortalTokenScope, aplicado no TokenAuthenticationFilter); qualquer outra rota `/api/**` responde 403 com mensagem PT-MZ, incluindo plataforma e monitorização; tokens do desktop inalterados; PortalTokenScopeTest verde 5/5.
 - 2026-11-25 · PG-06 · Pedido com token de portal só entra em empresa onde o utilizador é ADMIN/MANAGER (PortalLoginPolicy.requireCompanyRole no SecurityInterceptor): empresa sem acesso, empresa onde é só EMPLOYEE/SELLER e `companyId` na URL diferente do `X-Company-Id` → 403 com mensagem PT-MZ; token do desktop mantém o acesso actual; PortalHttpIntegrationTest verde 6/6.
+- 2026-11-25 · PG-07 · Novo módulo `portal` com `GET /api/portal/summary` só de leitura (PortalSummaryService pelas portas Lookup): vendas realizadas de hoje e do mês por loja, caixas abertas (operador actual, desde quando), 20 artigos mais urgentes abaixo do mínimo, total vencido e top 10 clientes em atraso, aprovações pendentes; `/api/portal` só ADMIN/MANAGER no ApiRolePolicy; SPEC §3.3 detalha o contrato e anota a lacuna (a caixa ainda não guarda a loja); PortalSummaryServiceTest 5/5, PortalHttpIntegrationTest 9/9.
