@@ -11,7 +11,7 @@
 | PG-02 | Conta sem 2FA activo recusada com mensagem PT-MZ; código 2FA pedido (§3.1) — **verde** | `PortalLoginTest` |
 | PG-03 | Token de portal expira em 12 h ou 30 min sem uso; logout invalida; desktop mantém 8 h sem limite de inactividade (§3.1) — **verde** | `PortalSessionTest` |
 | PG-04 | Tentativas falhadas (senha e código 2FA) contam no `LoginRateLimiter` partilhado com o desktop (§3.1) — **verde** | `PortalLoginTest` |
-| PG-05 | Token de portal só aceite nas rotas do portal; resto 403; tokens desktop inalterados (§3.2) | `PortalTokenScopeTest` |
+| PG-05 | Token de portal só aceite nas rotas do portal; resto 403; tokens desktop inalterados (§3.2) — **verde** | `PortalTokenScopeTest` |
 | PG-06 | Isolamento de empresa: portal só vê empresas do utilizador (§3.2) | `PortalHttpIntegrationTest` |
 | PG-07 | `/api/portal/summary` devolve vendas por loja, caixas abertas, stock baixo (20), vencidas (10), aprovações pendentes (§3.3) | `PortalHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
 | PG-08 | Aprovar/rejeitar pelo portal respeita as regras do módulo; rejeitar exige motivo (§3.4) | `PortalHttpIntegrationTest` |
