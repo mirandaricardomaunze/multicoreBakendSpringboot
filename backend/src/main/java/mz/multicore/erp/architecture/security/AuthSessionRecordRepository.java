@@ -20,6 +20,10 @@ public interface AuthSessionRecordRepository extends JpaRepository<AuthSessionRe
     int deleteByUsername(@Param("username") String username);
 
     @Modifying
+    @Query("update AuthSessionRecord s set s.expiresAt = :expiresAt where s.tokenHash = :tokenHash")
+    int updateExpiresAt(@Param("tokenHash") String tokenHash, @Param("expiresAt") Instant expiresAt);
+
+    @Modifying
     @Query("delete from AuthSessionRecord s where s.expiresAt < :now")
     int deleteExpired(@Param("now") Instant now);
 }

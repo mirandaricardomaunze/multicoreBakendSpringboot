@@ -11,8 +11,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
-import java.time.Instant;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -150,20 +148,15 @@ class PortalLoginTest {
     }
 
     private String enableTwoFactor(String username) {
-        disableTwoFactor(username);
-        String secret = accountSecurityService.beginTwoFactorSetup(username).secret();
-        accountSecurityService.confirmTwoFactorSetup(username, currentCode(secret));
-        // O código da configuração fica gasto; o teste liberta o intervalo para o login seguinte.
-        jdbc.update("update app_users set last_totp_step = null where username = ?", username);
-        return secret;
+        return PortalTwoFactorFixture.enable(accountSecurityService, jdbc, username);
     }
 
     private void disableTwoFactor(String username) {
-        jdbc.update("update app_users set totp_secret = null, last_totp_step = null where username = ?", username);
+        PortalTwoFactorFixture.disable(jdbc, username);
     }
 
     private static String currentCode(String secret) {
-        return TotpCodec.code(secret, Instant.now().getEpochSecond() / 30);
+        return PortalTwoFactorFixture.currentCode(secret);
     }
 
     private ResultActions desktopLogin(String username) throws Exception {

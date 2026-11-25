@@ -70,7 +70,7 @@ public class AuthController {
         loginRateLimiter.recordSuccess(request.username(), clientIp);
         boolean setupRequired = twoFactor && user.getTotpSecret() == null;
         AuthSessionService.AuthSession session = authSessionService.create(
-                user, user.isPasswordChangeRequired() || setupRequired);
+                user, user.isPasswordChangeRequired() || setupRequired, portal); // PG-03: 12 h / 30 min sem uso
 
         // Só empresas acessíveis entram na sessão: activas (suspensão manual) e com assinatura que
         // permita login (não expirada/suspensa). Empresa sem assinatura continua acessível.
