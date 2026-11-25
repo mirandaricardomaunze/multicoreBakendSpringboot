@@ -3,6 +3,7 @@ package mz.multicore.erp.architecture.security;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -30,6 +31,16 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 // Login e logout só precisam do corpo/token; não exigem empresa (o superadmin não tem).
                 .excludePathPatterns("/api/auth/**", "/api/version");
+    }
+
+    /**
+     * Portal web do gestor (PORTAL_GESTOR_SPEC §3.5): {@code /portal} e {@code /portal/} abrem a página estática.
+     * Forward (não redirect) para não gerar um {@code Location} http atrás do proxy HTTPS.
+     */
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addViewController("/portal").setViewName("forward:/portal/index.html");
+        registry.addViewController("/portal/").setViewName("forward:/portal/index.html");
     }
 
     @Override

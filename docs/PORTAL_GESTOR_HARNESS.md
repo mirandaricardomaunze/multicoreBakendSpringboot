@@ -17,5 +17,5 @@
 | PG-08 | Aprovar/rejeitar pelo portal respeita as regras do módulo; rejeitar exige motivo; gestor não decide pedido de administrador nem de outra empresa (§3.4) — **verde** | `PortalHttpIntegrationTest` |
 | PG-09 | Cabeçalhos CSP sem `unsafe-inline`/origens externas, `X-Frame-Options: DENY`, `Referrer-Policy` em `/portal/**` (§3.5) — **verde** | `PortalSecurityHeadersTest` |
 | PG-10 | Em `prod`, `/portal/**` e `/api/portal/**` sem HTTPS (directo ou `X-Forwarded-Proto: https`) → 403 PT-MZ; resto da aplicação e perfis não-prod inalterados (§3.5) — **verde** | `PortalSecurityHeadersTest` |
-| PG-11 | Página: sem CDN nem script inline, token em `sessionStorage`, só `textContent`, manifest e ícone presentes (§3.5) | `PortalStaticAssetsHarnessTest` |
+| PG-11 | Página: sem CDN nem script inline, token em `sessionStorage`, só `textContent`, manifest e ícone presentes; `/portal` e `/portal/` abrem a página (§3.5) — **verde** | `PortalStaticAssetsHarnessTest` |
 | PG-12 | Página: viewport móvel, layout a partir de 360 px, actualização a cada 5 min, números e datas no formato do sistema (§3.3, §3.5) | `PortalStaticAssetsHarnessTest` |
