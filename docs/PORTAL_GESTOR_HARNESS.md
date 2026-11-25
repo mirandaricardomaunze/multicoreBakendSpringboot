@@ -14,7 +14,7 @@
 | PG-05 | Token de portal só aceite nas rotas do portal; resto 403; tokens desktop inalterados (§3.2) — **verde** | `PortalTokenScopeTest` |
 | PG-06 | Isolamento de empresa: portal só vê empresas do utilizador onde é ADMIN/MANAGER; outra empresa ou `companyId` diferente do `X-Company-Id` → 403; desktop inalterado (§3.2) — **verde** | `PortalHttpIntegrationTest` |
 | PG-07 | `/api/portal/summary` devolve vendas por loja, caixas abertas, stock baixo (20), vencidas (10), aprovações pendentes; só ADMIN/MANAGER da empresa (§3.3) — **verde** | `PortalHttpIntegrationTest` · `PortalSummaryServiceTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
-| PG-08 | Aprovar/rejeitar pelo portal respeita as regras do módulo; rejeitar exige motivo (§3.4) | `PortalHttpIntegrationTest` |
+| PG-08 | Aprovar/rejeitar pelo portal respeita as regras do módulo; rejeitar exige motivo; gestor não decide pedido de administrador nem de outra empresa (§3.4) — **verde** | `PortalHttpIntegrationTest` |
 | PG-09 | Cabeçalhos CSP sem `unsafe-inline`/origens externas, `X-Frame-Options: DENY`, `Referrer-Policy` em `/portal/**` (§3.5) | `PortalSecurityHeadersTest` |
 | PG-10 | Em `prod`, portal sem HTTPS recusado (§3.5) | `PortalSecurityHeadersTest` |
 | PG-11 | Página: sem CDN nem script inline, token em `sessionStorage`, só `textContent`, manifest e ícone presentes (§3.5) | `PortalStaticAssetsHarnessTest` |
