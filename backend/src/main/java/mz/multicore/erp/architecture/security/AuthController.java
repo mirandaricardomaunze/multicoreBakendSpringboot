@@ -54,7 +54,7 @@ public class AuthController {
         }
         boolean portal = portalLoginPolicy.isPortal(request.channel());
         if (portal) {
-            portalLoginPolicy.requireAllowed(user); // PG-01: recusado antes de qualquer token
+            portalLoginPolicy.requireAllowed(user); // PG-01/PG-02: recusado antes de qualquer token
         }
         boolean twoFactor = accountSecurityService.mustUseTwoFactor(user);
         if (twoFactor && user.getTotpSecret() != null) {
