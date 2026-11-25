@@ -2,6 +2,7 @@ package mz.multicore.erp.architecture.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -50,7 +51,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   TokenAuthenticationFilter tokenAuthenticationFilter) throws Exception {
+                                                   TokenAuthenticationFilter tokenAuthenticationFilter,
+                                                   Environment environment) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
@@ -74,6 +76,8 @@ public class SecurityConfig {
                 )
                 .exceptionHandling(e -> e.authenticationEntryPoint((request, response, ex) ->
                         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Autenticação necessária.")))
+                // Em prod, o portal só por HTTPS (directo ou X-Forwarded-Proto), antes de qualquer token. PG-10.
+                .addFilterBefore(PortalHttpsOnlyFilter.forEnvironment(environment), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable);

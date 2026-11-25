@@ -55,7 +55,6 @@ public final class PortalSecurityHeaders {
     }
 
     static boolean isPortalPath(HttpServletRequest request) {
-        String path = RequestPaths.withinApplication(request);
-        return path.equals("/portal") || path.startsWith("/portal/");
+        return RequestPaths.isUnder(RequestPaths.withinApplication(request), "/portal");
     }
 }

@@ -26,7 +26,7 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 - [x] PG-07 — resumo do painel — `PortalHttpIntegrationTest`
 - [x] PG-08 — aprovar/rejeitar com as regras do módulo — `PortalHttpIntegrationTest`
 - [x] PG-09 — cabeçalhos de segurança — `PortalSecurityHeadersTest`
-- [ ] PG-10 — só HTTPS em produção — `PortalSecurityHeadersTest`
+- [x] PG-10 — só HTTPS em produção — `PortalSecurityHeadersTest`
 - [ ] PG-11 — página sem CDN/inline, sessionStorage, textContent, PWA — `PortalStaticAssetsHarnessTest`
 - [ ] PG-12 — layout móvel, actualização e formatos — `PortalStaticAssetsHarnessTest`
 
@@ -50,3 +50,4 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 - 2026-11-25 · PG-07 · Novo módulo `portal` com `GET /api/portal/summary` só de leitura (PortalSummaryService pelas portas Lookup): vendas realizadas de hoje e do mês por loja, caixas abertas (operador actual, desde quando), 20 artigos mais urgentes abaixo do mínimo, total vencido e top 10 clientes em atraso, aprovações pendentes; `/api/portal` só ADMIN/MANAGER no ApiRolePolicy; SPEC §3.3 detalha o contrato e anota a lacuna (a caixa ainda não guarda a loja); PortalSummaryServiceTest 5/5, PortalHttpIntegrationTest 9/9.
 - 2026-11-25 · PG-08 · Portal aprova e rejeita pelos endpoints existentes de `/api/approvals` com as regras do módulo (ApprovalLifecycleService, perfil da empresa do `X-Company-Id`): lista pendentes com tipo, pedido por, valor e data; gestor aprova pedido de gestor e fica no histórico; rejeitar sem motivo → 400 com mensagem PT-MZ e pedido continua pendente; motivo gravado; gestor não decide pedido que pede administrador nem pedido de outra empresa; sem código de produção novo, os testes fixam a garantia; PortalHttpIntegrationTest verde 15/15.
 - 2026-11-25 · PG-09 · Respostas de `/portal` e `/portal/**` levam `Content-Security-Policy` só com `'self'`/`'none'` (sem `unsafe-inline` nem origens externas, `frame-ancestors 'none'`), `X-Frame-Options: DENY` e `Referrer-Policy: no-referrer` (PortalSecurityHeaders ligado no SecurityConfig); o resto da aplicação mantém `SAMEORIGIN` para a consola H2; cálculo do caminho do pedido partilhado em `RequestPaths`; PortalSecurityHeadersTest verde 4/4, PortalTokenScopeTest 5/5.
+- 2026-11-25 · PG-10 · Em produção (perfil `prod`) o `PortalHttpsOnlyFilter`, ligado no SecurityConfig antes do filtro de token, recusa `/portal/**` e `/api/portal/**` sem HTTPS (ligação segura ou `X-Forwarded-Proto: https`) com 403 e mensagem PT-MZ; rotas partilhadas com o desktop e perfis não-prod inalterados; teste de segmento inteiro partilhado em `RequestPaths.isUnder`; SPEC §3.5 precisa o âmbito; PortalSecurityHeadersTest verde 8/8, PortalTokenScopeTest 5/5.

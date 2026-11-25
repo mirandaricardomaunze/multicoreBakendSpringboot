@@ -27,6 +27,6 @@ final class PortalTokenScope {
         if (path.equals(STORE_DASHBOARD)) {
             return true;
         }
-        return ALLOWED_PREFIXES.stream().anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
+        return ALLOWED_PREFIXES.stream().anyMatch(prefix -> RequestPaths.isUnder(path, prefix));
     }
 }

@@ -83,6 +83,10 @@ o que falta em stock e quem deve, e aprovar um desconto ou uma compra sem ir ao 
   termina a sessão no browser.
 - Em produção (perfil `prod`), pedido ao portal sem HTTPS (directo ou `X-Forwarded-Proto: https`)
   é recusado.
+  "Portal" = páginas `/portal` e `/portal/**` e o endpoint próprio `/api/portal/**` (segmento inteiro);
+  recusa = **403** com "O portal só abre por ligação segura (https://).", antes de validar o token.
+  As rotas partilhadas com o desktop (`/api/auth/**`, `/api/approvals/**`) não mudam: a página só abre por
+  HTTPS e chama a API na mesma origem (`connect-src 'self'`). Fora de `prod` não há restrição.
 - Texto em PT-MZ; nenhum texto vindo da API é inserido como HTML (só `textContent`).
 
 ## 4. Fora de âmbito
