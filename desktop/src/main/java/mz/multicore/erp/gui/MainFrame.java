@@ -234,7 +234,7 @@ public class MainFrame extends JFrame {
             forensicAuditPanel = sellerSession ? null : new ForensicAuditPanel(forensicAuditApiClient);
             aiAssistantPanel = sellerSession ? null : new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);
             notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient,
-                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient, stockTransferApiClient, qualityApiClient);
+                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient, stockTransferApiClient, qualityApiClient).withBudgetAlerts(accountingApiClient);
             notificationReadStore = new NotificationReadStore();
             notificationsPanel = new NotificationsPanel(notificationFeed, notificationReadStore,
                     this::navigateFromNotification, this::updateNotificationBadge);

@@ -185,6 +185,17 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
   Sem ADMIN/MANAGER os botões de alterar ficam desactivados; o backend é quem decide. Erros no painel de feedback.
 - Contabilidade › Real vs Orçado: mês ou acumulado, filtro por centro, desvios coloridos pelo
   vocabulário de estados do projecto (`StatusTone`).
+  Concretização (OR-UI-02): Contabilidade › "Real vs Orçado", aba logo a seguir a "Orçamento" (as abas "Demonstrações"
+  e "Resultados por centro" continuam as últimas). Filtros ano, mês, período ("Só o mês" / "Acumulado (Jan até ao
+  mês)") e centro ("Todos os centros" ou qualquer centro, inactivos incluídos por terem histórico); "Calcular" chama
+  `GET /variance`. Colunas Conta, Centro, Orçado, Real, Desvio, Desvio % (vazio com orçado zero) e Situação
+  ("Favorável" verde, "Desfavorável" vermelho, "No orçamento" informativo, pelo `StatusTone`); desvio e desvio % ficam
+  na cor da situação da linha. Por baixo, o período e quantas linhas são desfavoráveis. Sem ADMIN/MANAGER não há
+  pedido e "Calcular" fica desactivado. Sino: os alertas do ano corrente (`GET /alerts`) entram no sino só de ADMIN e
+  MANAGER, tipo "Orçamento", com o texto do backend, prioridade mais alta no limiar 100%, e abrem a Contabilidade; uma
+  falha a obter os alertas não esconde as restantes notificações. Toast: cada cabeçalho `X-Operation-Warning` de uma
+  resposta de sucesso, descodificado, aparece como toast de aviso (sem bloquear) e o contador do sino é actualizado;
+  respostas com erro não avisam.
 
 ## 5. Fora de âmbito
 

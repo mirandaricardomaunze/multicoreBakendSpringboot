@@ -3,6 +3,9 @@ package mz.multicore.erp.gui;
 import mz.multicore.erp.gui.components.Spacing;
 import mz.multicore.erp.gui.components.Typography;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.desktop.client.OperationWarningRelay;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.CollapsibleSidebar;
 import mz.multicore.erp.gui.components.TopNavBar;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -29,6 +32,16 @@ final class MainFrameNotificationCoordinator {
         this.notificationReadStore = notificationReadStore;
         this.onNavigate = onNavigate;
         initBadgeLabel();
+        OperationWarningRelay.setListener(this::showOperationWarning);
+    }
+
+    /**
+     * Aviso de uma operação gravada (X-Operation-Warning, ex.: centro passou 90%/100% do orçamento — SPEC §4.3):
+     * toast de aviso, sem bloquear, e o sino volta a contar porque o alerta já está na lista.
+     */
+    private void showOperationWarning(String warning) {
+        ToastManager.show(null, FeedbackType.WARNING, warning);
+        SwingUtilities.invokeLater(this::refreshNotificationBadgeAsync);
     }
 
     void attachNavComponents(TopNavBar topBar, CollapsibleSidebar sidebar) {
@@ -70,9 +83,7 @@ final class MainFrameNotificationCoordinator {
         popup.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
                 BorderFactory.createEmptyBorder(Spacing.XS, Spacing.XS, Spacing.XS, Spacing.XS)));
-        JMenuItem loading = new JMenuItem("A carregar notificações…");
-        loading.setEnabled(false);
-        popup.add(loading);
+        popup.add(NotificationPreviewItems.disabled("A carregar notificações…"));
         popup.show(anchor, -220, anchor.getHeight());
 
         new SwingWorker<List<NotificationFeed.NotificationItem>, Void>() {
@@ -86,27 +97,12 @@ final class MainFrameNotificationCoordinator {
                     List<NotificationFeed.NotificationItem> unread = notificationReadStore.unread(items);
                     updateNotificationBadge(unread.size());
                     popup.removeAll();
-                    if (unread.isEmpty()) {
-                        JMenuItem empty = new JMenuItem("Não há notificações por ler.");
-                        empty.setEnabled(false);
-                        popup.add(empty);
-                    } else {
-                        unread.stream().limit(5).forEach(item -> {
-                            JMenu itemMenu = new JMenu(item.type() + " · " + shorten(item.title(), 44));
-                            itemMenu.setToolTipText(item.detail());
-                            JMenuItem open = new JMenuItem("Abrir módulo", UIHelper.icon("fas-external-link-alt", 12));
-                            open.addActionListener(e -> onNavigate.accept(item.moduleCard()));
-                            JMenuItem markRead = new JMenuItem("Marcar como lida", UIHelper.icon("fas-check", 12));
-                            markRead.addActionListener(e -> {
-                                notificationReadStore.markRead(item);
-                                updateNotificationBadge(notificationReadStore.unreadCount(items));
-                                popup.setVisible(false);
-                            });
-                            itemMenu.add(open);
-                            itemMenu.add(markRead);
-                            popup.add(itemMenu);
-                        });
-                    }
+                    if (unread.isEmpty()) popup.add(NotificationPreviewItems.disabled("Não há notificações por ler."));
+                    unread.stream().limit(5).forEach(item -> popup.add(NotificationPreviewItems.itemMenu(item, onNavigate, () -> {
+                        notificationReadStore.markRead(item);
+                        updateNotificationBadge(notificationReadStore.unreadCount(items));
+                        popup.setVisible(false);
+                    })));
                     popup.addSeparator();
                     JMenuItem markAll = new JMenuItem("Marcar todas como lidas", UIHelper.icon("fas-check-double", 13));
                     markAll.setEnabled(!unread.isEmpty());
@@ -126,9 +122,7 @@ final class MainFrameNotificationCoordinator {
                     popup.show(anchor, -220, anchor.getHeight());
                 } catch (Exception ex) {
                     popup.removeAll();
-                    JMenuItem error = new JMenuItem("Não foi possível carregar as notificações.");
-                    error.setEnabled(false);
-                    popup.add(error);
+                    popup.add(NotificationPreviewItems.disabled("Não foi possível carregar as notificações."));
                     popup.setVisible(false);
                     popup.show(anchor, -260, anchor.getHeight());
                 }
@@ -166,10 +160,5 @@ final class MainFrameNotificationCoordinator {
         if (sidebar != null) {
             sidebar.setBadge("Notificações", count);
         }
-    }
-
-    private static String shorten(String value, int maxLength) {
-        if (value == null || value.length() <= maxLength) return value == null ? "" : value;
-        return value.substring(0, maxLength - 1) + "…";
     }
 }

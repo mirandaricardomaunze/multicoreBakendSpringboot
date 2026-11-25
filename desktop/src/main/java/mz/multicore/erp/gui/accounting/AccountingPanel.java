@@ -11,8 +11,8 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 /**
- * Contabilidade: plano de contas, diário, razão, balancete, orçamento, demonstrações financeiras e resultados por
- * centro.
+ * Contabilidade: plano de contas, diário, razão, balancete, orçamento, real vs orçado, demonstrações financeiras e
+ * resultados por centro.
  *
  * <p>Cliente-fino: tudo por HTTP, nenhuma regra aqui. As cinco abas são leituras do que o
  * backend calcula — a partida dobrada, a natureza dos saldos e os totais vivem lá.
@@ -29,6 +29,7 @@ public final class AccountingPanel extends JPanel {
     private final AccountingTrialBalanceTab trialBalanceTab;
     private final AccountingLedgerTab ledgerTab;
     private final AccountingBudgetTab budgetTab;
+    private final AccountingBudgetVarianceTab budgetVarianceTab;
     private final AccountingStatementsTab statementsTab;
     private final AccountingCostCenterResultTab costCenterResultTab;
 
@@ -60,6 +61,7 @@ public final class AccountingPanel extends JPanel {
         this.trialBalanceTab = new AccountingTrialBalanceTab(accountingApiClient, feedback);
         this.ledgerTab = new AccountingLedgerTab(accountingApiClient, feedback);
         this.budgetTab = new AccountingBudgetTab(accountingApiClient, feedback);
+        this.budgetVarianceTab = new AccountingBudgetVarianceTab(accountingApiClient, feedback);
         this.statementsTab = new AccountingStatementsTab(accountingApiClient, feedback);
         this.costCenterResultTab = new AccountingCostCenterResultTab(accountingApiClient, printApiClient, feedback);
 
@@ -70,6 +72,7 @@ public final class AccountingPanel extends JPanel {
         tabs.addTab("Balancete", UIHelper.icon("fas-balance-scale", 16, UIHelper.APPROVED_GREEN), trialBalanceTab);
         tabs.addTab("Razão", UIHelper.icon("fas-list-alt", 16, UIHelper.PENDING_YELLOW), ledgerTab);
         tabs.addTab("Orçamento", UIHelper.icon("fas-coins", 16, UIHelper.ACCENT_BLUE), budgetTab);
+        tabs.addTab("Real vs Orçado", UIHelper.icon("fas-chart-bar", 16, UIHelper.APPROVED_GREEN), budgetVarianceTab);
         tabs.addTab("Demonstrações", UIHelper.icon("fas-chart-line", 16, UIHelper.ACCENT_CYAN), statementsTab);
         tabs.addTab("Resultados por centro", UIHelper.icon("fas-project-diagram", 16, UIHelper.MODULE_ACCOUNTING),
                 costCenterResultTab);
@@ -83,6 +86,7 @@ public final class AccountingPanel extends JPanel {
         trialBalanceTab.loadTrialBalance();
         ledgerTab.loadLedger();
         budgetTab.onPanelSelected();
+        budgetVarianceTab.onPanelSelected();
     }
 
     /**

@@ -205,6 +205,7 @@ public class DesktopApiClient {
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new ApiClientException(response.statusCode(), errorMessage(response.body()));
             }
+            OperationWarningRelay.relay(response.headers());
             return response;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();

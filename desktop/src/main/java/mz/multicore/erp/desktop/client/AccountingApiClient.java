@@ -118,6 +118,18 @@ public class AccountingApiClient {
         return clientFactory.authenticatedClient().post(BUDGETS + "/copy-previous-year", request, BudgetDTO.class);
     }
 
+    /** Real vs orçado do mês (ou acumulado de janeiro até ao mês), opcionalmente de um só centro (SPEC §4.2). */
+    public BudgetVarianceDTO getBudgetVariance(int year, int month, boolean cumulative, Long costCenterId) {
+        String query = BUDGETS + "/variance?year=" + year + "&month=" + month + "&cumulative=" + cumulative
+                + (costCenterId == null ? "" : "&costCenterId=" + costCenterId);
+        return clientFactory.authenticatedClient().get(query, BudgetVarianceDTO.class);
+    }
+
+    /** Alertas 90%/100% do orçamento no ano, para o sino (SPEC §4.3). */
+    public List<BudgetAlertDTO> getBudgetAlerts(int year) {
+        return clientFactory.authenticatedClient().getList(BUDGETS + "/alerts?year=" + year, BudgetAlertDTO.class);
+    }
+
     public BalanceSheetDTO getBalanceSheet(LocalDate asOf) {
         return clientFactory.authenticatedClient().get(
                 "/api/accounting/balance-sheet?asOf=" + asOf, BalanceSheetDTO.class);
