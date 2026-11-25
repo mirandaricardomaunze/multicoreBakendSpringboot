@@ -55,7 +55,11 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(h -> h.frameOptions(f -> f.sameOrigin())) // H2 console (dev)
+                // Portal web: CSP, DENY e no-referrer; resto: SAMEORIGIN para a consola H2 (dev). PG-09.
+                .headers(h -> {
+                    h.frameOptions(f -> f.disable());
+                    PortalSecurityHeaders.writers().forEach(h::addHeaderWriter);
+                })
                 // Defense-in-depth: o Spring Security recusa /api/** sem token válido (o filtro popula
                 // o SecurityContext). Login/logout e o health check ficam públicos. O SecurityInterceptor
                 // continua a resolver empresa/papel e a auditar por cima disto.

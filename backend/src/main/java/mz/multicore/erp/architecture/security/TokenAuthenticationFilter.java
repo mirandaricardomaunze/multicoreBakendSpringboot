@@ -47,7 +47,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
             // Token de portal só abre as rotas do portal (PORTAL_GESTOR_SPEC §3.2, PG-05).
-            if (session.portal() && !PortalTokenScope.allows(requestPath(request))) {
+            if (session.portal() && !PortalTokenScope.allows(RequestPaths.withinApplication(request))) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, PortalTokenScope.OUT_OF_SCOPE_MESSAGE);
                 return;
             }
@@ -56,12 +56,5 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
         filterChain.doFilter(request, response);
-    }
-
-    private static String requestPath(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        String contextPath = request.getContextPath();
-        return contextPath != null && !contextPath.isEmpty() && uri.startsWith(contextPath)
-                ? uri.substring(contextPath.length()) : uri;
     }
 }
