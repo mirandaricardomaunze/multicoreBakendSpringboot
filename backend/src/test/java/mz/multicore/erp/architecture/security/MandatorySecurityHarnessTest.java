@@ -151,7 +151,7 @@ class MandatorySecurityHarnessTest {
         when(request.getHeader("X-Company-Id")).thenReturn("1");
         when(request.getRequestURI()).thenReturn("/api/comercial/products");
 
-        boolean allowed = new SecurityInterceptor(mock(TenantAccessService.class), sessions).preHandle(request, response, new Object());
+        boolean allowed = new SecurityInterceptor(mock(TenantAccessService.class), sessions, new PortalLoginPolicy()).preHandle(request, response, new Object());
 
         assertThat(allowed).isFalse();
         verify(response).sendError(eq(403), contains("segurança da conta"));

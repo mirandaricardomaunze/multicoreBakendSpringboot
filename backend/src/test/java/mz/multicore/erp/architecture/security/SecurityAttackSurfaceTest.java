@@ -103,7 +103,7 @@ class SecurityAttackSurfaceTest {
     @Test
     void monitoringUsesRealRoleAndCompanyScope() throws Exception {
         TenantAccessService access = mock(TenantAccessService.class);
-        SecurityInterceptor interceptor = new SecurityInterceptor(access, sessions);
+        SecurityInterceptor interceptor = new SecurityInterceptor(access, sessions, new PortalLoginPolicy());
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         AppUser seller = user("vendedor", "SELLER", 1L);

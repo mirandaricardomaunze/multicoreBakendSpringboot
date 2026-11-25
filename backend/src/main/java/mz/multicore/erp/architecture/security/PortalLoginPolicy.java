@@ -18,6 +18,8 @@ public class PortalLoginPolicy {
             "O portal é só para administradores e gestores. Use o programa da loja.";
     static final String TWO_FACTOR_REFUSED_MESSAGE =
             "Active a verificação em dois passos no programa da loja para usar o portal.";
+    static final String COMPANY_REFUSED_MESSAGE =
+            "O portal só abre empresas onde é administrador ou gestor.";
     private static final Set<String> PORTAL_ROLES = Set.of("ADMIN", "MANAGER");
 
     public boolean isPortal(String channel) {
@@ -40,6 +42,13 @@ public class PortalLoginPolicy {
     /** Empresas que entram na sessão de portal: só aquelas onde o perfil é ADMIN ou MANAGER. */
     public boolean allowsCompanyRole(String companyRole) {
         return companyRole != null && PORTAL_ROLES.contains(companyRole.toUpperCase());
+    }
+
+    /** PG-06: um pedido do portal só entra numa empresa onde o perfil é ADMIN ou MANAGER. */
+    public void requireCompanyRole(String companyRole) {
+        if (!allowsCompanyRole(companyRole)) {
+            throw new BusinessRuleException(COMPANY_REFUSED_MESSAGE);
+        }
     }
 
     private boolean allowedPortalRole(AppUser user) {

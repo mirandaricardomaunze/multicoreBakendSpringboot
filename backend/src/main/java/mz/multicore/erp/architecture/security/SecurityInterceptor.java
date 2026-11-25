@@ -14,10 +14,13 @@ public class SecurityInterceptor implements HandlerInterceptor {
 
     private final TenantAccessService tenantAccessService;
     private final AuthSessionService authSessionService;
+    private final PortalLoginPolicy portalLoginPolicy;
 
-    public SecurityInterceptor(TenantAccessService tenantAccessService, AuthSessionService authSessionService) {
+    public SecurityInterceptor(TenantAccessService tenantAccessService, AuthSessionService authSessionService,
+                               PortalLoginPolicy portalLoginPolicy) {
         this.tenantAccessService = tenantAccessService;
         this.authSessionService = authSessionService;
+        this.portalLoginPolicy = portalLoginPolicy;
     }
 
     @Override
@@ -41,10 +44,13 @@ public class SecurityInterceptor implements HandlerInterceptor {
         }
 
         try {
-            String username = usableSessionUser(authorization);
+            var session = usableSession(authorization);
             Long requestedCompanyId = Long.parseLong(companyId);
-            var user = tenantAccessService.requireAccess(username, requestedCompanyId);
+            var user = tenantAccessService.requireAccess(session.username(), requestedCompanyId);
             String role = user.getRoleForCompany(requestedCompanyId);
+            if (session.portal()) {
+                portalLoginPolicy.requireCompanyRole(role); // PG-06
+            }
             if (!ApiRolePolicy.allows(role, request.getMethod(), uri)) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN,
                         "Sem permissão para aceder a esta área com o perfil actual.");
@@ -67,11 +73,15 @@ public class SecurityInterceptor implements HandlerInterceptor {
     }
 
     private String usableSessionUser(String authorization) {
+        return usableSession(authorization).username();
+    }
+
+    private AuthSessionService.AuthSession usableSession(String authorization) {
         var session = authSessionService.requireValid(authorization.substring(7).trim());
         if (session.restricted()) {
             throw new BusinessRuleException("Conclua primeiro a segurança da conta: senha e dupla autenticação.");
         }
-        return session.username();
+        return session;
     }
 
     private boolean handlePlatform(HttpServletRequest request, HttpServletResponse response, String authorization)

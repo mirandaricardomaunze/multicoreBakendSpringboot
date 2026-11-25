@@ -22,7 +22,7 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 - [x] PG-04 — limitador de tentativas partilhado — `PortalLoginTest`
 - [x] PG-03 — expiração 12 h / 30 min e logout — `PortalSessionTest`
 - [x] PG-05 — token de portal limitado às rotas do portal — `PortalTokenScopeTest`
-- [ ] PG-06 — isolamento de empresa — `PortalHttpIntegrationTest`
+- [x] PG-06 — isolamento de empresa — `PortalHttpIntegrationTest`
 - [ ] PG-07 — resumo do painel — `PortalHttpIntegrationTest`
 - [ ] PG-08 — aprovar/rejeitar com as regras do módulo — `PortalHttpIntegrationTest`
 - [ ] PG-09 — cabeçalhos de segurança — `PortalSecurityHeadersTest`
@@ -46,3 +46,4 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 - 2026-11-25 · PG-04 · Tentativas falhadas do portal (senha errada e código 2FA errado) contam no mesmo `LoginRateLimiter` do desktop: 5 falhas bloqueiam portal e desktop na mesma origem, e falhas no desktop bloqueiam o portal; o AuthController já partilhava o limitador, os testes fixam a garantia; PortalLoginTest verde 12/12.
 - 2026-11-25 · PG-03 · Sessão de portal marcada na base (migração V154, coluna `portal`): expira 30 min depois do último pedido, deslizando com o uso, e nunca passa das 12 h depois do login; logout invalida o token; sessões do desktop mantêm as 8 h sem limite de inactividade; relógio injectável no `AuthSessionService`; PortalSessionTest verde 6/6, PortalLoginTest 12/12.
 - 2026-11-25 · PG-05 · Token de portal só abre `/api/auth/**`, `/api/reports/store-dashboard`, `/api/approvals/**` e `/api/portal/**` (PortalTokenScope, aplicado no TokenAuthenticationFilter); qualquer outra rota `/api/**` responde 403 com mensagem PT-MZ, incluindo plataforma e monitorização; tokens do desktop inalterados; PortalTokenScopeTest verde 5/5.
+- 2026-11-25 · PG-06 · Pedido com token de portal só entra em empresa onde o utilizador é ADMIN/MANAGER (PortalLoginPolicy.requireCompanyRole no SecurityInterceptor): empresa sem acesso, empresa onde é só EMPLOYEE/SELLER e `companyId` na URL diferente do `X-Company-Id` → 403 com mensagem PT-MZ; token do desktop mantém o acesso actual; PortalHttpIntegrationTest verde 6/6.

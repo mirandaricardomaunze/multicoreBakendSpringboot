@@ -60,7 +60,7 @@ class SecurityEnterpriseHardeningHarnessTest {
                 authSessionService
         );
 
-        securityInterceptor = new SecurityInterceptor(tenantAccessService, authSessionService);
+        securityInterceptor = new SecurityInterceptor(tenantAccessService, authSessionService, new PortalLoginPolicy());
 
         CurrentUserContext.setCurrentUser("admin", "ADMIN");
         CurrentUserContext.setCurrentCompanyId(1L);
