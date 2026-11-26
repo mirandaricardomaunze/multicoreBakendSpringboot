@@ -1,12 +1,12 @@
 ---
 id: GOAL-016
 title: "Clientes encomendam pela loja online e levantam ou recebem em casa"
-status: TODO
+status: BLOCKED
 priority: LOW
 spec: docs/LOJA_ONLINE_SPEC.md
 harness: docs/LOJA_ONLINE_HARNESS.md
 verify: ["OnlineShopSettingsTest", "OnlineShopCatalogTest", "OnlineShopOrderTest", "OnlineShopExpiryTest", "OnlineShopHttpIntegrationTest", "OnlineShopStaticAssetsHarnessTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "OnlineShopUiHarnessTest"]
-blockedBy: []
+blockedBy: ["GOAL-013 não está DONE (bloqueado em API-08): falta o serviço de criação de encomendas da API pública"]
 ---
 
 # Objectivo
@@ -39,8 +39,18 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 
 ## Perguntas em aberto
 
-(Vazio. A IA escreve aqui quando precisa de decisão humana e passa o goal a BLOCKED.)
+**P1 — Pré-requisito GOAL-013 por cumprir.** LO-06 manda criar a encomenda "pelo mesmo serviço da API
+pública" (`docs/API_PUBLICA_WEBHOOKS_SPEC.md` §3.4), mas o GOAL-013 está `BLOCKED` em API-08 (via da
+encomenda: aprovação vs reserva; nome do cliente novo por NUIT — perguntas P1/P2 do GOAL-013). O goal manda
+terminar com `NEEDS_HUMAN` sem começar.
+
+Opções:
+- **A (recomendada)** — responder às perguntas P1/P2 do GOAL-013; quando o GOAL-013 ficar `DONE`, este goal
+  passa a `TODO` e o loop retoma em LO-01.
+- B — autorizar começar já os critérios que não dependem da API pública (LO-01, LO-02, LO-03) e deixar
+  LO-06/07/08 para depois do GOAL-013.
 
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-26 · pré-requisito · bloqueado: GOAL-013 está `BLOCKED` (API-08), não `DONE`; goal não iniciado, pergunta P1 em `## Perguntas em aberto`.
