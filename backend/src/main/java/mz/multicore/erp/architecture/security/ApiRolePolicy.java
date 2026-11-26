@@ -35,7 +35,9 @@ public final class ApiRolePolicy {
             "/api/hr", "/api/quality", "/api/activity", "/api/units", "/api/pricing", "/api/pickups", "/api/bulk-stock", "/api/projects",
             "/api/advances", "/api/butchery", "/api/expiry", "/api/production-plans",
             "/api/custom-orders", "/api/consignments", "/api/exchange-rates",
-            "/api/returnables", "/api/variants", "/api/weighbridge", "/api/exceptions", "/api/portal");
+            "/api/returnables", "/api/variants", "/api/weighbridge", "/api/exceptions", "/api/portal",
+            // Public API: no user role ever reaches it; each route demands its key permission (PublicApiPermissions).
+            "/api/public");
 
     /** Business-sector areas (SA-C01..C03): every role may read, only management may change. */
     private static final Set<String> READ_SELLER_WRITE_MANAGER_AREAS = Set.of(

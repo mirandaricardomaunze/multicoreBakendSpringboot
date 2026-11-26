@@ -57,6 +57,25 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   da rota → `403` com `code` `API_PERMISSION_DENIED` e `message` PT-MZ que nomeia a permissão em falta.
   Ter `ORDERS_WRITE` não dá `ORDERS_READ` (cada permissão vale só pela sua rota).
 
+#### 3.3.1 Catálogo e stock (API-07)
+
+- **Artigo activo** = associado à empresa da chave (o cadastro não tem outro estado). O artigo de sistema
+  *Adiantamento* nunca aparece (só se vende pelo módulo Adiantamentos).
+- Campos de `GET /products` e `/products/{sku}`: `sku`, `name`, `category` (nome ou `null`), `barcode`,
+  `unit` (unidade base), `vatRatePercent` (ex.: `16.00`), `priceWithVat` (preço de retalho + IVA, 2 casas,
+  o mesmo cálculo dos documentos de venda) e `updatedAt` (ISO 8601 com fuso). Nada de preço de custo, preço de
+  grosso, margens, fornecedores ou unidade de negócio.
+- `updatedSince` (ISO 8601: data, data-hora ou data-hora com fuso): só artigos criados ou alterados a partir
+  desse instante. Valor inválido → recusado.
+- `/products/{sku}` de um SKU inexistente na empresa → `404` `PRODUCT_NOT_FOUND`.
+- `GET /stock`: uma linha por artigo com controlo de stock × armazém de venda da empresa (activo, permite
+  vendas, não é de trânsito), com `sku`, `warehouseCode` (número do armazém ou `null`), `warehouseName` e
+  `available` = quantidade − reservas activas de encomendas nesse armazém, nunca negativa.
+- `warehouse` filtra por número ou nome do armazém (sem distinguir maiúsculas); armazém de venda inexistente
+  → `404` `WAREHOUSE_NOT_FOUND`.
+- Listas paginadas: `page` começa em 0, `size` por omissão 50 e no máximo 100 (acima disso usa-se 100);
+  resposta `{items, page, size, totalItems, totalPages}`, ordenada por SKU (e armazém no stock).
+
 ### 3.4 Criar encomenda
 
 - Corpo: `externalReference` (obrigatório, único por chave), cliente por `nuit` (existente ou criado

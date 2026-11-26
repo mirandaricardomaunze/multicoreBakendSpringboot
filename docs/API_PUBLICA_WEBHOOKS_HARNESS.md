@@ -15,7 +15,7 @@
 | API-04 | Permissões por chave aplicadas por rota; sem permissão → 403 `API_PERMISSION_DENIED` (§3.2, §3.3) — **verde 2026-11-26** | `PublicApiAuthenticationTest` |
 | API-05 | 60 pedidos/min por chave → 429 `RATE_LIMIT_EXCEEDED` com `Retry-After`; limite por chave (§3.2) — **verde 2026-11-26** | `PublicApiRateLimitTest` |
 | API-06 | Erros JSON com `code` e `message` PT-MZ, sem stack trace; paginação máx. 100 (§3.2) | `PublicApiHttpIntegrationTest` |
-| API-07 | Produtos e stock disponível da empresa da chave; sem custos, margens nem fornecedores; `updatedSince` (§3.3) | `PublicApiCatalogTest` |
+| API-07 | Produtos e stock disponível da empresa da chave; sem custos, margens nem fornecedores; `updatedSince`; 404 com `code`; páginas máx. 100 (§3.3, §3.3.1) — **verde 2026-11-26** | `PublicApiCatalogTest` · `PublicApiCatalogHttpTest` |
 | API-08 | Criar encomenda: preços do sistema, cliente por NUIT ou Consumidor Final com contacto, regras do desktop, origem guardada (§3.4) | `PublicApiOrderTest` |
 | API-09 | Idempotência por `externalReference`: igual → 200 sem duplicar, diferente → 409 (§3.4) | `PublicApiOrderTest` |
 | API-10 | Consultar encomenda por número com estado, linhas, totais e factura (§3.3) | `PublicApiOrderTest` |
