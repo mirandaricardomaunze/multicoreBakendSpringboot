@@ -51,6 +51,9 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 | `POST /orders` | `ORDERS_WRITE` | cria encomenda de cliente |
 
 - Só artigos activos da empresa. Custos, margens e fornecedores **nunca** saem pela API.
+- A permissão é verificada por rota (método + caminho) antes do recurso: chave válida sem a permissão
+  da rota → `403` com `code` `API_PERMISSION_DENIED` e `message` PT-MZ que nomeia a permissão em falta.
+  Ter `ORDERS_WRITE` não dá `ORDERS_READ` (cada permissão vale só pela sua rota).
 
 ### 3.4 Criar encomenda
 

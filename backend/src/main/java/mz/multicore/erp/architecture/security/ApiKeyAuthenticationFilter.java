@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import mz.multicore.erp.modules.publicapi.dto.ApiKeyPrincipal;
+import mz.multicore.erp.modules.publicapi.model.ApiKeyPermission;
 import mz.multicore.erp.modules.publicapi.service.ApiKeyAuthenticationService;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,6 +23,7 @@ import java.util.Optional;
  * <p>On {@link PublicApiRoutes#isPublicApi public routes} only {@code X-Api-Key} counts: the key's company is the
  * request's company (no {@code X-Company-Id}) and the {@link ApiKeyPrincipal} becomes the authenticated principal.
  * A user token there, or a missing/unknown/revoked key → 401 with JSON {@code code} + PT-MZ {@code message}.
+ * A valid key without the {@link PublicApiPermissions route's permission} → 403 {@code API_PERMISSION_DENIED} (API-04).
  * On the internal {@code /api/**} an API key is refused (401) — it never stands in for a user token.
  * Not a {@code @Component}, so it is not registered twice: {@link SecurityConfig} creates and wires it.
  */
@@ -59,13 +61,24 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             refuse(response, "API_KEY_INVALID", "Chave de API inválida ou revogada.");
             return;
         }
+        Optional<ApiKeyPermission> required = PublicApiPermissions.required(request.getMethod(), path);
+        if (required.isPresent() && !principal.get().has(required.get())) {
+            refuse(response, HttpServletResponse.SC_FORBIDDEN, "API_PERMISSION_DENIED",
+                    "Esta chave de API não tem a permissão " + required.get().name() + " necessária para este pedido.");
+            return;
+        }
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal.get(), null, AuthorityUtils.NO_AUTHORITIES));
         filterChain.doFilter(request, response);
     }
 
     private static void refuse(HttpServletResponse response, String code, String message) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        refuse(response, HttpServletResponse.SC_UNAUTHORIZED, code, message);
+    }
+
+    private static void refuse(HttpServletResponse response, int status, String code, String message)
+            throws IOException {
+        response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.getWriter().write("{\"code\":\"" + code + "\",\"message\":\"" + message + "\"}");

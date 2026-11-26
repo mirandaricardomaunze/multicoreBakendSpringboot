@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -30,10 +31,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Harness API-03 (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.2): {@code /api/public/v1/**} only opens with the
+ * Harness API-03 and API-04 (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.2, §3.3): {@code /api/public/v1/**} only opens with the
  * {@code X-Api-Key} header and the company is the key's (no {@code X-Company-Id}); user tokens are refused there
  * and API keys are refused on the internal {@code /api/**}. Errors are JSON with a stable {@code code} and a PT-MZ
- * {@code message}.
+ * {@code message}. Each route demands its own key permission; a valid key without it → 403
+ * {@code API_PERMISSION_DENIED}.
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:public-api-auth;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
@@ -60,7 +62,7 @@ class PublicApiAuthenticationTest {
     @AfterEach
     void cleanUp() {
         CurrentUserContext.clear();
-        jdbc.update("delete from api_keys where name like 'API-03%'");
+        jdbc.update("delete from api_keys where name like 'API-03%' or name like 'API-04%'");
     }
 
     @Test
@@ -135,6 +137,50 @@ class PublicApiAuthenticationTest {
         assertThat(PublicApiRoutes.isPublicApi("/api/products")).isFalse();
     }
 
+    @Test
+    void api04EachRouteDemandsItsPermission() {
+        assertThat(PublicApiPermissions.required("GET", "/api/public/v1/products"))
+                .contains(ApiKeyPermission.CATALOG_READ);
+        assertThat(PublicApiPermissions.required("GET", "/api/public/v1/products/SKU-1"))
+                .contains(ApiKeyPermission.CATALOG_READ);
+        assertThat(PublicApiPermissions.required("GET", "/api/public/v1/stock"))
+                .contains(ApiKeyPermission.CATALOG_READ);
+        assertThat(PublicApiPermissions.required("GET", "/api/public/v1/orders/ENC-1"))
+                .contains(ApiKeyPermission.ORDERS_READ);
+        assertThat(PublicApiPermissions.required("POST", "/api/public/v1/orders"))
+                .contains(ApiKeyPermission.ORDERS_WRITE);
+        assertThat(PublicApiPermissions.required("GET", "/api/public/v1/productsx")).isEmpty();
+    }
+
+    @Test
+    void api04KeyWithoutRoutePermissionIsForbiddenWithJsonError() throws Exception {
+        long companyId = anyCompany();
+        String catalogOnly = createKey(companyId, "API-04 Catalogo", EnumSet.of(ApiKeyPermission.CATALOG_READ));
+
+        assertError(mockMvc.perform(get("/api/public/v1/orders/ENC-1").header("X-Api-Key", catalogOnly))
+                .andExpect(status().isForbidden()).andReturn().getResponse(), "API_PERMISSION_DENIED");
+        assertError(mockMvc.perform(post("/api/public/v1/orders").header("X-Api-Key", catalogOnly)
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden()).andReturn().getResponse(), "API_PERMISSION_DENIED");
+
+        String ordersWrite = createKey(companyId, "API-04 Escrita", EnumSet.of(ApiKeyPermission.ORDERS_WRITE));
+        assertError(mockMvc.perform(get("/api/public/v1/orders/ENC-1").header("X-Api-Key", ordersWrite))
+                .andExpect(status().isForbidden()).andReturn().getResponse(), "API_PERMISSION_DENIED");
+        assertError(mockMvc.perform(get("/api/public/v1/products").header("X-Api-Key", ordersWrite))
+                .andExpect(status().isForbidden()).andReturn().getResponse(), "API_PERMISSION_DENIED");
+    }
+
+    @Test
+    void api04KeyWithRoutePermissionPassesTheGate() throws Exception {
+        long companyId = anyCompany();
+        String catalog = createKey(companyId, "API-04 Leitura", EnumSet.of(ApiKeyPermission.CATALOG_READ));
+
+        int status = mockMvc.perform(get("/api/public/v1/products").header("X-Api-Key", catalog))
+                .andReturn().getResponse().getStatus();
+
+        assertThat(status).isNotIn(401, 403);
+    }
+
     private void assertError(MockHttpServletResponse response, String code) throws Exception {
         assertThat(response.getContentType()).startsWith(MediaType.APPLICATION_JSON_VALUE);
         JsonNode error = json(response);
@@ -144,10 +190,13 @@ class PublicApiAuthenticationTest {
     }
 
     private String createKey(long companyId, String name) {
+        return createKey(companyId, name, EnumSet.of(ApiKeyPermission.CATALOG_READ));
+    }
+
+    private String createKey(long companyId, String name, Set<ApiKeyPermission> permissions) {
         asAdmin(companyId);
         try {
-            return apiKeyService.create(new CreateApiKeyRequest(name, EnumSet.of(ApiKeyPermission.CATALOG_READ)))
-                    .secret();
+            return apiKeyService.create(new CreateApiKeyRequest(name, permissions)).secret();
         } finally {
             CurrentUserContext.clear();
         }
