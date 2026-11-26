@@ -54,6 +54,8 @@ import static org.mockito.Mockito.when;
  * DT-04 (MODELOS_DOCUMENTO_SPEC §3.3): os PDFs A4 (factura, nota de crédito, nota de débito, recibo) usam a cor,
  * o logótipo, as notas e as contas bancárias do modelo da empresa; os talões térmicos (factura simplificada e
  * recibo POS) usam só o logótipo, as notas e o rodapé — nunca a cor nem os dados bancários.
+ *
+ * <p>DT-05 (§3.3): a 2.ª via de um documento antigo sai com o modelo actual, sem mudar o conteúdo fiscal.
  */
 class DocumentTemplateRenderingTest {
 
@@ -66,6 +68,12 @@ class DocumentTemplateRenderingTest {
     private static final DocumentTemplateDTO TEMPLATE = new DocumentTemplateDTO(ACCENT, DocumentLogoPosition.LEFT,
             NOTES, List.of(new DocumentBankAccountDTO("BCI", "Empresa Moçambique Lda",
                     "MZ59 0008 0000 1234 5678 9012 3")), true);
+
+    /** Modelo alterado depois da emissão: #1F4E79 = (0.12157, 0.30588, 0.47451), outra posição, sem contas. */
+    private static final String OTHER_NOTES = "Pagamento a 30 dias por transferência.";
+    private static final String OTHER_ACCENT_FILL = "0.12157 0.30588 0.47451 rg";
+    private static final DocumentTemplateDTO OTHER_TEMPLATE = new DocumentTemplateDTO("#1F4E79",
+            DocumentLogoPosition.RIGHT, OTHER_NOTES, List.of(), true);
 
     private final LineRowMapper lineRowMapper = new LineRowMapper(new ProductBatchLookup(mock(ProductBatchRepository.class)));
     private final DocumentConfigService config = mock(DocumentConfigService.class);
@@ -208,6 +216,78 @@ class DocumentTemplateRenderingTest {
                         List.of(new DocumentBankAccountDTO("BCI", "Empresa Moçambique Lda", "MZ59")), false),
                 service.getTemplate(1L, DocumentType.COMMERCIAL));
         assertEquals(DocumentTemplateDTO.defaults(), service.getTemplate(1L, DocumentType.POS_RECEIPT));
+    }
+
+    /** DT-05: 2.ª via de uma factura emitida antes de o modelo existir sai com o modelo de hoje. */
+    @Test
+    void segundaVia_documentoAntigo_usaModeloActual() throws Exception {
+        Invoice old = withLogo(invoice(client()));
+        old.setCreatedAt(LocalDateTime.of(2024, 3, 1, 9, 0));
+        InvoiceLookup lookup = mock(InvoiceLookup.class);
+        when(lookup.require(10L)).thenReturn(old);
+        InvoicePrintService service = new InvoicePrintService(lookup, lineRowMapper, config);
+
+        byte[] before = service.render(10L);
+        when(config.getTemplate(eq(1L), any(DocumentType.class))).thenReturn(OTHER_TEMPLATE);
+        byte[] after = service.render(10L);
+
+        assertTemplatedA4(before);
+        String text = text(after);
+        assertTrue(text.contains("2.ª VIA — DUPLICADO"), "Indicação de 2.ª via em falta:\n" + text);
+        assertTrue(text.contains(OTHER_NOTES), "2.ª via não usa as notas do modelo actual:\n" + text);
+        assertFalse(text.contains(NOTES), "2.ª via ainda mostra as notas do modelo anterior");
+        assertFalse(text.contains("BCI"), "2.ª via ainda mostra as contas do modelo anterior");
+        assertTrue(content(after).contains(OTHER_ACCENT_FILL), "2.ª via não usa a cor do modelo actual");
+        assertFalse(content(after).contains(ACCENT_FILL), "2.ª via ainda usa a cor do modelo anterior");
+    }
+
+    /** DT-05: mudar o modelo só muda o aspecto — o conteúdo fiscal da 2.ª via é o mesmo, palavra a palavra. */
+    @Test
+    void segundaVia_conteudoFiscalNaoMudaComOModelo() throws Exception {
+        Invoice old = withLogo(invoice(client()));
+        old.setCreatedAt(LocalDateTime.of(2024, 3, 1, 9, 0));
+        InvoiceLookup lookup = mock(InvoiceLookup.class);
+        when(lookup.require(10L)).thenReturn(old);
+        InvoicePrintService service = new InvoicePrintService(lookup, lineRowMapper, config);
+
+        String withFirst = fiscalText(service.render(10L), NOTES, BANK_LINE);
+        when(config.getTemplate(eq(1L), any(DocumentType.class))).thenReturn(OTHER_TEMPLATE);
+        String withSecond = fiscalText(service.render(10L), OTHER_NOTES);
+
+        assertEquals(withFirst, withSecond, "O conteúdo fiscal da 2.ª via mudou com o modelo");
+        assertTrue(withSecond.contains("01/03/2024"), "Data de emissão original em falta:\n" + withSecond);
+        assertTrue(withSecond.contains(EXEMPTION), "Motivo de isenção congelado em falta:\n" + withSecond);
+        assertEquals(new BigDecimal("1660.00"), old.getTotalAmount(), "Imprimir não pode alterar o documento");
+        assertEquals(new BigDecimal("160.00"), old.getTaxAmount(), "Imprimir não pode alterar o documento");
+        assertEquals(LocalDateTime.of(2024, 3, 1, 9, 0), old.getCreatedAt(), "Imprimir não pode alterar o documento");
+    }
+
+    /** DT-05: as notas de crédito antigas também saem com o modelo actual em todas as vias. */
+    @Test
+    void segundaVia_notaDeCreditoAntiga_usaModeloActual() throws Exception {
+        CreditNoteService notes = mock(CreditNoteService.class);
+        var note = creditNote();
+        note.setCompany(withLogo(note.getCompany()));
+        note.setIssueDate(LocalDateTime.of(2024, 3, 2, 10, 0));
+        when(notes.loadForPrint(100L)).thenReturn(note);
+        when(config.getTemplate(eq(1L), any(DocumentType.class))).thenReturn(OTHER_TEMPLATE);
+
+        byte[] pdf = new CreditNotePrintService(notes, lineRowMapper, config).render(100L);
+
+        String text = text(pdf);
+        assertTrue(text.contains("2.ª VIA — DUPLICADO"), "Indicação de 2.ª via em falta:\n" + text);
+        assertTrue(text.contains("02/03/2024"), "Data de emissão original em falta:\n" + text);
+        assertTrue(text.contains(OTHER_NOTES), "Nota de crédito antiga sem as notas do modelo actual");
+        assertTrue(content(pdf).contains(OTHER_ACCENT_FILL), "Nota de crédito antiga sem a cor do modelo actual");
+    }
+
+    /** Texto da factura sem os fragmentos que pertencem ao modelo (notas e bloco bancário). */
+    private static String fiscalText(byte[] pdf, String... templateFragments) throws Exception {
+        String text = text(pdf);
+        for (String fragment : templateFragments) {
+            text = text.replace(fragment, "");
+        }
+        return text.replace("DADOS BANCÁRIOS", "").replaceAll("\\s+", " ").trim();
     }
 
     private static void assertTemplatedA4(byte[] pdf) throws Exception {
