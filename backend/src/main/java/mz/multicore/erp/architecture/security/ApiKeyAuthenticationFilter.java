@@ -1,0 +1,73 @@
+package mz.multicore.erp.architecture.security;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import mz.multicore.erp.modules.publicapi.dto.ApiKeyPrincipal;
+import mz.multicore.erp.modules.publicapi.service.ApiKeyAuthenticationService;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
+
+/**
+ * Authentication of the public API (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.2, API-03).
+ *
+ * <p>On {@link PublicApiRoutes#isPublicApi public routes} only {@code X-Api-Key} counts: the key's company is the
+ * request's company (no {@code X-Company-Id}) and the {@link ApiKeyPrincipal} becomes the authenticated principal.
+ * A user token there, or a missing/unknown/revoked key → 401 with JSON {@code code} + PT-MZ {@code message}.
+ * On the internal {@code /api/**} an API key is refused (401) — it never stands in for a user token.
+ * Not a {@code @Component}, so it is not registered twice: {@link SecurityConfig} creates and wires it.
+ */
+public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
+
+    private final ApiKeyAuthenticationService authenticationService;
+
+    public ApiKeyAuthenticationFilter(ApiKeyAuthenticationService authenticationService) {
+        this.authenticationService = authenticationService;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        String path = RequestPaths.withinApplication(request);
+        String apiKey = request.getHeader(PublicApiRoutes.API_KEY_HEADER);
+        if (!PublicApiRoutes.isPublicApi(path)) {
+            if (apiKey != null && path.startsWith("/api/")) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                        "As chaves de API só servem na API pública (" + PublicApiRoutes.PREFIX + ").");
+                return;
+            }
+            filterChain.doFilter(request, response);
+            return;
+        }
+        if (apiKey == null || apiKey.isBlank()) {
+            boolean userToken = request.getHeader("Authorization") != null;
+            refuse(response, userToken ? "USER_TOKEN_NOT_ACCEPTED" : "API_KEY_REQUIRED",
+                    userToken ? "A API pública não aceita sessões de utilizador. Use o cabeçalho X-Api-Key."
+                            : "Indique a chave de API no cabeçalho X-Api-Key.");
+            return;
+        }
+        Optional<ApiKeyPrincipal> principal = authenticationService.authenticate(apiKey);
+        if (principal.isEmpty()) {
+            refuse(response, "API_KEY_INVALID", "Chave de API inválida ou revogada.");
+            return;
+        }
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal.get(), null, AuthorityUtils.NO_AUTHORITIES));
+        filterChain.doFilter(request, response);
+    }
+
+    private static void refuse(HttpServletResponse response, String code, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.getWriter().write("{\"code\":\"" + code + "\",\"message\":\"" + message + "\"}");
+    }
+}

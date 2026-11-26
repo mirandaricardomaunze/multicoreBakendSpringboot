@@ -31,6 +31,12 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         this.authSessionService = authSessionService;
     }
 
+    /** A API pública só aceita {@code X-Api-Key}: um token de utilizador nunca autentica lá (API-03). */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return PublicApiRoutes.isPublicApi(RequestPaths.withinApplication(request));
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {

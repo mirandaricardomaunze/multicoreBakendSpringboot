@@ -25,12 +25,14 @@ public class WebConfig implements WebMvcConfigurer {
         // /api/version para que um cliente bloqueado ainda consiga perguntar qual é a versão boa.
         registry.addInterceptor(clientVersionInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/version");
+                // A API pública é para sistemas externos, não para o desktop: sem verificação de versão.
+                .excludePathPatterns("/api/version", PublicApiRoutes.PATTERN);
 
         registry.addInterceptor(securityInterceptor)
                 .addPathPatterns("/api/**")
                 // Login e logout só precisam do corpo/token; não exigem empresa (o superadmin não tem).
-                .excludePathPatterns("/api/auth/**", "/api/version");
+                // A API pública autentica por X-Api-Key no ApiKeyAuthenticationFilter; a empresa é a da chave. API-03.
+                .excludePathPatterns("/api/auth/**", "/api/version", PublicApiRoutes.PATTERN);
     }
 
     /**

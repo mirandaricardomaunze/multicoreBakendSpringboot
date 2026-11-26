@@ -1,5 +1,6 @@
 package mz.multicore.erp.architecture.security;
 
+import mz.multicore.erp.modules.publicapi.service.ApiKeyAuthenticationService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -52,6 +53,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    TokenAuthenticationFilter tokenAuthenticationFilter,
+                                                   ApiKeyAuthenticationService apiKeyAuthenticationService,
                                                    Environment environment) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -78,6 +80,9 @@ public class SecurityConfig {
                         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Autenticação necessária.")))
                 // Em prod, o portal só por HTTPS (directo ou X-Forwarded-Proto), antes de qualquer token. PG-10.
                 .addFilterBefore(PortalHttpsOnlyFilter.forEnvironment(environment), UsernamePasswordAuthenticationFilter.class)
+                // API pública: só X-Api-Key em /api/public/**; a chave nunca abre o /api/** interno. API-03.
+                .addFilterBefore(new ApiKeyAuthenticationFilter(apiKeyAuthenticationService),
+                        UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable);

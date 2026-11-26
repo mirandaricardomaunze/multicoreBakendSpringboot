@@ -11,7 +11,7 @@
 |---|---|---|
 | API-01 | Chave gerada com prefixo e 32 bytes, mostrada uma vez, guardada só em hash; revogação imediata; último uso (§3.1) — **verde 2026-11-26** | `ApiKeyRulesTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | API-02 | Criar/revogar chave só ADMIN, com auditoria (§3.1) | `PublicApiHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
-| API-03 | `/api/public/v1` só por `X-Api-Key`; token de utilizador recusado aqui e chave recusada em `/api/**` (§3.2) | `PublicApiAuthenticationTest` |
+| API-03 | `/api/public/v1` só por `X-Api-Key`; token de utilizador recusado aqui e chave recusada em `/api/**` (§3.2) — **verde 2026-11-26** | `PublicApiAuthenticationTest` |
 | API-04 | Permissões por chave aplicadas por rota (§3.2, §3.3) | `PublicApiAuthenticationTest` |
 | API-05 | 60 pedidos/min por chave → 429 com `Retry-After` (§3.2) | `PublicApiRateLimitTest` |
 | API-06 | Erros JSON com `code` e `message` PT-MZ, sem stack trace; paginação máx. 100 (§3.2) | `PublicApiHttpIntegrationTest` |
