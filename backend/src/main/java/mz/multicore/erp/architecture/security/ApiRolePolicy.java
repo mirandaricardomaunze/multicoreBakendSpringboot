@@ -63,6 +63,10 @@ public final class ApiRolePolicy {
             return !normalized.isBlank();
         }
         boolean manager = "MANAGER".equals(normalized);
+        if (matches(uri, "/api/documents/template")) {
+            // MODELOS_DOCUMENTO_SPEC §3.3: alterar e pré-visualizar o modelo só ADMIN; consultar a gestão.
+            return manager && "GET".equalsIgnoreCase(method);
+        }
         if (matches(uri, "/api/exchange-rates")) {
             // SPEC moeda estrangeira §3.2: criar/corrigir só ADMIN; consultar quem regista compras.
             return manager && "GET".equalsIgnoreCase(method);

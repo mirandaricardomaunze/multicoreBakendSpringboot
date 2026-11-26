@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.documents.dto.DocumentBankAccountDTO;
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
+import mz.multicore.erp.modules.documents.model.DocumentBankAccount;
 import mz.multicore.erp.modules.documents.model.DocumentColumnConfig;
 import mz.multicore.erp.modules.documents.model.DocumentType;
 import mz.multicore.erp.modules.documents.repository.DocumentColumnConfigRepository;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class DocumentConfigService {
+
+    static final String TEMPLATE_CHANGE_ACTION = "DOCUMENT_TEMPLATE_CHANGE";
 
     private final DocumentColumnConfigRepository repository;
     private final AuditLogService auditLogService;
@@ -57,14 +60,7 @@ public class DocumentConfigService {
             throw new BusinessRuleException("O documento tem de ter pelo menos uma coluna.");
         }
 
-        DocumentColumnConfig config = repository.findByCompanyIdAndDocumentType(companyId, documentType)
-                .orElseGet(() -> {
-                    DocumentColumnConfig created = new DocumentColumnConfig();
-                    created.setCompanyId(companyId);
-                    created.setDocumentType(documentType);
-                    created.setCreatedBy("SYSTEM");
-                    return created;
-                });
+        DocumentColumnConfig config = findOrCreate(companyId, documentType);
 
         config.setShowBarcode(dto.barcode());
         config.setShowReference(dto.reference());
@@ -83,6 +79,57 @@ public class DocumentConfigService {
         auditLogService.logCurrent("DOCUMENT_COLUMNS_UPDATE",
                 "Colunas de documentos actualizadas (" + documentType + ").");
         return toDTO(saved);
+    }
+
+    /**
+     * Grava o modelo visual (MODELOS_DOCUMENTO_SPEC §3.3): só ADMIN, regras de {@link DocumentTemplatePolicy}
+     * e auditoria {@code DOCUMENT_TEMPLATE_CHANGE}. Os documentos impressos a partir de agora usam-no.
+     */
+    @Transactional
+    public DocumentTemplateDTO saveTemplate(Long companyId, DocumentType documentType, DocumentTemplateDTO dto) {
+        DocumentTemplateDTO template = validateTemplate(companyId, dto);
+        DocumentColumnConfig config = findOrCreate(companyId, documentType);
+        config.setAccentColor(template.accentColor());
+        config.setLogoPosition(template.logoPosition());
+        config.setTemplateNotes(template.notes());
+        config.setShowQrCode(template.showQrCode());
+        config.getBankAccounts().clear();
+        template.bankAccounts().forEach(a -> config.getBankAccounts()
+                .add(new DocumentBankAccount(a.bankName(), a.holder(), a.accountNumber())));
+
+        DocumentTemplateDTO saved = toTemplateDTO(repository.save(config));
+        auditLogService.logCurrent(TEMPLATE_CHANGE_ACTION, describe(documentType, saved));
+        return saved;
+    }
+
+    /**
+     * Valida um modelo pedido sem o gravar (pré-visualização, SPEC §3.4): mesma empresa, só ADMIN e mesmas
+     * regras da gravação. Devolve o modelo normalizado.
+     */
+    public DocumentTemplateDTO validateTemplate(Long companyId, DocumentTemplateDTO dto) {
+        CurrentUserContext.requireCompany(companyId);
+        PermissionGuard.requireAdmin("alterar o modelo de documento");
+        return DocumentTemplatePolicy.normalize(dto);
+    }
+
+    private DocumentColumnConfig findOrCreate(Long companyId, DocumentType documentType) {
+        return repository.findByCompanyIdAndDocumentType(companyId, documentType)
+                .orElseGet(() -> {
+                    DocumentColumnConfig created = new DocumentColumnConfig();
+                    created.setCompanyId(companyId);
+                    created.setDocumentType(documentType);
+                    created.setCreatedBy("SYSTEM");
+                    return created;
+                });
+    }
+
+    private static String describe(DocumentType documentType, DocumentTemplateDTO template) {
+        return "Modelo de documento alterado (" + documentType + "): cor "
+                + (template.accentColor() == null ? "por omissão" : template.accentColor())
+                + ", logótipo " + template.logoPosition()
+                + ", " + template.bankAccounts().size() + " conta(s) bancária(s)"
+                + ", QR " + (template.showQrCode() ? "sim" : "não")
+                + (template.notes() == null ? ", sem notas." : ", notas: " + template.notes());
     }
 
     private DocumentColumnsDTO toDTO(DocumentColumnConfig config) {
