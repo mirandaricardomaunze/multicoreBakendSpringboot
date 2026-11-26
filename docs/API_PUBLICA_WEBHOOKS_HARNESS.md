@@ -3,13 +3,13 @@
 > Cenários que provam [API_PUBLICA_WEBHOOKS_SPEC.md](API_PUBLICA_WEBHOOKS_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-19
+**Última actualização:** 2026-11-26
 
 ## API pública (GOAL-013)
 
 | ID | Garantia | Teste |
 |---|---|---|
-| API-01 | Chave gerada com prefixo e 32 bytes, mostrada uma vez, guardada só em hash; revogação imediata; último uso (§3.1) | `ApiKeyRulesTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
+| API-01 | Chave gerada com prefixo e 32 bytes, mostrada uma vez, guardada só em hash; revogação imediata; último uso (§3.1) — **verde 2026-11-26** | `ApiKeyRulesTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | API-02 | Criar/revogar chave só ADMIN, com auditoria (§3.1) | `PublicApiHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest` |
 | API-03 | `/api/public/v1` só por `X-Api-Key`; token de utilizador recusado aqui e chave recusada em `/api/**` (§3.2) | `PublicApiAuthenticationTest` |
 | API-04 | Permissões por chave aplicadas por rota (§3.2, §3.3) | `PublicApiAuthenticationTest` |

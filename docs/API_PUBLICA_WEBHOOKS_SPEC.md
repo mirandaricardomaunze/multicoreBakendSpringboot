@@ -25,7 +25,8 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - Chave por empresa, criada pelo **ADMIN** com nome (ex.: "Loja online") e permissões:
   `CATALOG_READ`, `ORDERS_READ`, `ORDERS_WRITE`.
 - A chave completa (`mk_live_` + 32 bytes aleatórios em base62) é mostrada **uma única vez**; o
-  servidor guarda só o **hash SHA-256** e os primeiros 8 caracteres para identificação.
+  servidor guarda só o **hash SHA-256** e os primeiros 8 caracteres para identificação (os 8 que vêm
+  depois de `mk_live_`, porque o prefixo é igual em todas as chaves; mostrados como `mk_live_XXXXXXXX...`).
 - Revogar é imediato. Cada chave regista a data do último uso.
 - Criar e revogar geram auditoria `API_KEY_CREATE` / `API_KEY_REVOKE`.
 

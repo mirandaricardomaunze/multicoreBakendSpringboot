@@ -1,7 +1,7 @@
 ---
 id: GOAL-013
 title: "Sistemas externos lêem o catálogo e criam encomendas pela API pública"
-status: TODO
+status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
@@ -17,7 +17,7 @@ Regras em `docs/API_PUBLICA_WEBHOOKS_SPEC.md` §2–§3 e §4.4.
 
 ## Critérios de aceitação
 
-- [ ] API-01 — chave gerada, mostrada uma vez, guardada em hash, revogável — `ApiKeyRulesTest`
+- [x] API-01 — chave gerada, mostrada uma vez, guardada em hash, revogável — `ApiKeyRulesTest`
 - [ ] API-03 — autenticação só por `X-Api-Key`, separada da API interna — `PublicApiAuthenticationTest`
 - [ ] API-04 — permissões por chave — `PublicApiAuthenticationTest`
 - [ ] API-05 — limite 60/min com 429 — `PublicApiRateLimitTest`
@@ -41,3 +41,4 @@ Regras em `docs/API_PUBLICA_WEBHOOKS_SPEC.md` §2–§3 e §4.4.
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-26 · API-01 · módulo `publicapi`: chave `mk_live_` + 32 bytes base62 mostrada só na criação, guardada em hash SHA-256 com os 8 caracteres de identificação, revogação imediata, último uso registado, auditoria `API_KEY_CREATE`/`API_KEY_REVOKE`, migração V155 `api_keys`; ApiKeyRulesTest verde 9/9.
