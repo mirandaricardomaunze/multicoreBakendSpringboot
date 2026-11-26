@@ -120,8 +120,8 @@ button.link { background: transparent; color: inherit; padding: 4px 8px; text-de
 .list { list-style: none; margin: 0; padding: 0; }
 .list li { padding: 10px 0; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
 .list li:first-child { border-top: 0; }
-.list .row { display: flex; justify-content: space-between; gap: 12px; }
-.list .row > :last-child { text-align: right; white-space: nowrap; }
+.list .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.list .row > :last-child { margin-left: auto; text-align: right; white-space: nowrap; }
 .list .sub { display: block; color: var(--muted); font-size: 13px; }
 .list .empty { color: var(--muted); }
 

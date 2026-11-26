@@ -13,6 +13,7 @@
   var session = loadSession();
   var pendingLogin = null; // utilizador/senha enquanto se espera o código 2FA
   var refreshTimer = null;
+  var lastRefreshAt = 0; // hora (ms) da última actualização bem-sucedida do painel
 
   var el = function (id) { return document.getElementById(id); };
 
@@ -164,6 +165,13 @@
     refreshTimer = null;
   }
 
+  // Telemóvel bloqueado ou separador escondido não actualiza; ao voltar, se o painel já tem
+  // 5 minutos ou mais, actualiza logo em vez de esperar pelo próximo ciclo.
+  function onVisibilityChange() {
+    if (document.visibilityState !== "visible" || !refreshTimer) return;
+    if (Date.now() - lastRefreshAt >= REFRESH_MS) refresh();
+  }
+
   function endSession(message) {
     saveSession(null);
     pendingLogin = null;
@@ -253,6 +261,7 @@
     ]).then(function (results) {
       renderSummary(results[0]);
       renderApprovals(results[1] || []);
+      lastRefreshAt = Date.now();
       el("updated-at").textContent = "Actualizado às " + new Date().toTimeString().slice(0, 5)
           + " · actualiza sozinho a cada 5 minutos";
     }).catch(handleError).then(function () {
@@ -397,6 +406,7 @@
     el("logout").addEventListener("click", onLogout);
     el("refresh").addEventListener("click", refresh);
     el("company").addEventListener("change", onCompanyChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     if (session && session.token && session.companies && session.companies.length) {
       showApp();

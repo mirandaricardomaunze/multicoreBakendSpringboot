@@ -26,6 +26,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * {@code static/portal/}, sem CDN nem script/estilo inline (a CSP só permite {@code 'self'}), token em
  * {@code sessionStorage} (nunca {@code localStorage} nem cookie), texto da API só por {@code textContent},
  * e {@code manifest.webmanifest} com ícone para instalar no ecrã inicial.
+ *
+ * <p>PG-12 — layout móvel a partir de 360 px sem scroll horizontal, actualização sozinha a cada 5 minutos
+ * com botão "Actualizar", e valores/datas no formato do sistema ({@code 1.460,00 MT}, {@code dd/mm/aaaa})
+ * (SPEC §3.3, §3.5). Sem motor de JS no JDK, a garantia é estática: os formatadores próprios existem com os
+ * separadores do {@code DisplayNumbers} e todo o valor/data mostrado passa por eles.</p>
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:portal-static;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
@@ -140,6 +145,91 @@ class PortalStaticAssetsHarnessTest {
                 "/portal/icon.svg"}) {
             assertThat(mockMvc.perform(get(asset)).andReturn().getResponse().getStatus()).as(asset).isEqualTo(200);
         }
+    }
+
+    @Test
+    @DisplayName("PG-12: viewport móvel sem bloquear o zoom")
+    void pg12MobileViewport() throws IOException {
+        String html = read("index.html");
+
+        assertThat(html).contains("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+        assertThat(html).doesNotContainPattern("(?i)user-scalable\\s*=\\s*no|maximum-scale");
+    }
+
+    @Test
+    @DisplayName("PG-12: layout cabe em 360 px — nenhuma largura fixa acima disso, linhas quebram em vez de transbordar")
+    void pg12LayoutFitsFrom360px() throws IOException {
+        String css = read("portal.css");
+        // Larguras nas regras (não nas condições @media): nenhuma obriga a mais de 360 px.
+        // O max-width do <main> só centra no ecrã largo, não obriga.
+        String rules = css.replaceAll("@media[^{]*\\{", "{");
+        Matcher widths = Pattern.compile("(?i)(?<![a-z-])(min-width|width|flex-basis)\\s*:\\s*(\\d+)px").matcher(rules);
+        while (widths.find()) {
+            assertThat(Integer.parseInt(widths.group(2))).as(widths.group()).isLessThanOrEqualTo(360);
+        }
+        Matcher flexBasis = Pattern.compile("flex\\s*:\\s*\\d+\\s+\\d+\\s+(\\d+)px").matcher(css);
+        while (flexBasis.find()) {
+            assertThat(Integer.parseInt(flexBasis.group(1))).as(flexBasis.group()).isLessThanOrEqualTo(360);
+        }
+        assertThat(css).doesNotContainPattern("(?i)grid-template-columns\\s*:[^;]*\\d+px");
+        assertThat(css).containsPattern("body\\s*\\{[^}]*overflow-x\\s*:\\s*hidden");
+        assertThat(css).containsPattern("\\.list \\.row\\s*\\{[^}]*flex-wrap\\s*:\\s*wrap");
+        assertThat(css).containsPattern("\\.kpis\\s*\\{[^}]*repeat\\(2, minmax\\(0, 1fr\\)\\)");
+        assertThat(css).containsPattern("overflow-wrap\\s*:\\s*anywhere");
+    }
+
+    @Test
+    @DisplayName("PG-12: botão Actualizar e actualização sozinha a cada 5 minutos com o ecrã aberto")
+    void pg12RefreshEveryFiveMinutes() throws IOException {
+        String js = read("portal.js");
+        String html = read("index.html");
+
+        assertThat(html).containsPattern("<button[^>]*id=\"refresh\"[^>]*>Actualizar</button>");
+        assertThat(js).contains("REFRESH_MS = 5 * 60 * 1000");
+        assertThat(js).containsPattern("setInterval\\(function \\(\\) \\{[^}]*refresh\\(\\)[^}]*\\}, REFRESH_MS\\)");
+        assertThat(js).contains("document.visibilityState === \"visible\"");
+        assertThat(js).contains("el(\"refresh\").addEventListener(\"click\", refresh)");
+        // Ao voltar ao ecrã depois de mais de 5 minutos, actualiza logo em vez de esperar pelo próximo ciclo.
+        assertThat(js).contains("addEventListener(\"visibilitychange\"");
+        // Ao sair, o ciclo pára.
+        assertThat(js).containsPattern("function showLogin\\(\\) \\{\\s*stopRefresh\\(\\);");
+    }
+
+    @Test
+    @DisplayName("PG-12: valores em 1.460,00 MT e datas dd/mm/aaaa, como o DisplayNumbers")
+    void pg12SystemFormats() throws IOException {
+        String js = read("portal.js");
+
+        // Separadores do DisplayNumbers: milhares '.', decimais ','; 2 casas no dinheiro, até 3 casas sem
+        // zeros inúteis na quantidade; data dd/mm/aaaa a partir do ISO da API.
+        assertThat(js).contains("digits.replace(/\\B(?=(\\d{3})+(?!\\d))/g, \".\")");
+        assertThat(js).contains("\",\" + parts[1] + \" MT\"");
+        assertThat(js).contains("toFixed(3).replace(/0+$/, \"\")");
+        assertThat(js).contains("match[3] + \"/\" + match[2] + \"/\" + match[1]");
+        // Nada de formatos do browser (dependem do idioma do telemóvel).
+        assertThat(js).doesNotContain("toLocaleString", "toLocaleDateString", "toLocaleTimeString", "Intl.");
+        // toFixed só dentro dos formatadores.
+        assertThat(count(js, "toFixed(")).isEqualTo(2);
+
+        // Todo o valor, quantidade e data mostrados passam pelos formatadores.
+        for (String money : new String[]{"summary.salesToday", "summary.salesMonth", "summary.overdueTotal",
+                "store.month", "store.today", "client.amount", "approval.amount"}) {
+            assertThat(js).as(money).contains("formatMoney(" + money + ")");
+        }
+        for (String qty : new String[]{"stock.quantity", "stock.minStock"}) {
+            assertThat(js).as(qty).contains("formatQty(" + qty + ")");
+        }
+        for (String date : new String[]{"till.openedAt", "approval.createdAt"}) {
+            assertThat(js).as(date).contains("formatDate(" + date + ")");
+        }
+    }
+
+    private static int count(String text, String needle) {
+        int count = 0;
+        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + 1)) {
+            count++;
+        }
+        return count;
     }
 
     private static String read(String file) throws IOException {

@@ -1,7 +1,7 @@
 ---
 id: GOAL-012
 title: "Gestor vê o negócio e aprova pedidos no telemóvel pelo portal web"
-status: IN_PROGRESS
+status: DONE
 priority: MEDIUM
 spec: docs/PORTAL_GESTOR_SPEC.md
 harness: docs/PORTAL_GESTOR_HARNESS.md
@@ -28,7 +28,7 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 - [x] PG-09 — cabeçalhos de segurança — `PortalSecurityHeadersTest`
 - [x] PG-10 — só HTTPS em produção — `PortalSecurityHeadersTest`
 - [x] PG-11 — página sem CDN/inline, sessionStorage, textContent, PWA — `PortalStaticAssetsHarnessTest`
-- [ ] PG-12 — layout móvel, actualização e formatos — `PortalStaticAssetsHarnessTest`
+- [x] PG-12 — layout móvel, actualização e formatos — `PortalStaticAssetsHarnessTest`
 
 ## Fora de âmbito
 
@@ -52,3 +52,4 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 - 2026-11-25 · PG-09 · Respostas de `/portal` e `/portal/**` levam `Content-Security-Policy` só com `'self'`/`'none'` (sem `unsafe-inline` nem origens externas, `frame-ancestors 'none'`), `X-Frame-Options: DENY` e `Referrer-Policy: no-referrer` (PortalSecurityHeaders ligado no SecurityConfig); o resto da aplicação mantém `SAMEORIGIN` para a consola H2; cálculo do caminho do pedido partilhado em `RequestPaths`; PortalSecurityHeadersTest verde 4/4, PortalTokenScopeTest 5/5.
 - 2026-11-25 · PG-10 · Em produção (perfil `prod`) o `PortalHttpsOnlyFilter`, ligado no SecurityConfig antes do filtro de token, recusa `/portal/**` e `/api/portal/**` sem HTTPS (ligação segura ou `X-Forwarded-Proto: https`) com 403 e mensagem PT-MZ; rotas partilhadas com o desktop e perfis não-prod inalterados; teste de segmento inteiro partilhado em `RequestPaths.isUnder`; SPEC §3.5 precisa o âmbito; PortalSecurityHeadersTest verde 8/8, PortalTokenScopeTest 5/5.
 - 2026-11-25 · PG-11 · Página do portal em `static/portal/` (index.html, portal.css, portal.js, manifest.webmanifest, icon.svg) sem CDN nem script/estilo/handlers inline: login com canal PORTAL e código 2FA, escolha de empresa, painel do `/api/portal/summary` e aprovar/rejeitar (motivo obrigatório); token só em `sessionStorage`, texto da API só por `textContent`; `/portal` e `/portal/` fazem forward para a página (WebConfig, sem redirect http atrás do proxy); PortalStaticAssetsHarnessTest verde 7/7, PortalSecurityHeadersTest 8/8.
+- 2026-11-25 · PG-12 · Página do portal fixada para o telemóvel: viewport `width=device-width, initial-scale=1` sem bloquear o zoom, nenhuma largura fixa acima de 360 px, linhas das listas quebram (`flex-wrap`) em vez de cortar, KPIs em 2 colunas; botão "Actualizar" e actualização sozinha a cada 5 minutos com o ecrã visível, e ao voltar ao ecrã com o painel há 5 minutos ou mais actualiza logo (`visibilitychange`); valores `1.460,00 MT`, quantidades até 3 casas e datas `dd/mm/aaaa` pelos formatadores próprios com os separadores do `DisplayNumbers`, sem formatos do browser; PortalStaticAssetsHarnessTest verde 11/11, PortalSecurityHeadersTest 8/8. Goal DONE.
