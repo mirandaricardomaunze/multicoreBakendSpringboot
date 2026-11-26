@@ -18,7 +18,7 @@ Regras em `docs/MODELOS_DOCUMENTO_SPEC.md`. Estende o `DocumentColumnConfig` exi
 ## Critérios de aceitação
 
 - [x] DT-01 — cor validada por contraste — `DocumentTemplateRulesTest`
-- [ ] DT-02 — logótipo, notas, contas bancárias e QR — `DocumentTemplateRulesTest`
+- [x] DT-02 — logótipo, notas, contas bancárias e QR — `DocumentTemplateRulesTest`
 - [ ] DT-03 — elementos fiscais nunca escondidos — `DocumentTemplateFiscalElementsTest`
 - [ ] DT-04 — aplicação em A4 e térmico — `DocumentTemplateRenderingTest`
 - [ ] DT-05 — 2.ª vias com o modelo actual — `DocumentTemplateRenderingTest`
@@ -37,3 +37,4 @@ Regras em `docs/MODELOS_DOCUMENTO_SPEC.md`. Estende o `DocumentColumnConfig` exi
 
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-26 · DT-01 · `DocumentAccentColorPolicy` valida `#RRGGBB` com contraste WCAG ≥ 4,5:1 com branco (mensagens PT-MZ) e `PdfTheme.accentOrDefault` cai no `BRAND` sem cor própria; DocumentTemplateRulesTest 6/6 verde. Persistência da cor fica com o DT-02 (migração das novas colunas).
+- 2026-11-26 · DT-02 · `DocumentTemplatePolicy` (logótipo LEFT/CENTER/RIGHT com omissão LEFT, notas ≤ 500, até 3 contas com banco/titular/NIB-IBAN obrigatórios, QR sim/não), `DocumentTemplateDTO`/`DocumentBankAccountDTO`/`DocumentLogoPosition` em contracts, colunas novas em `DocumentColumnConfig` + tabela `document_template_bank_accounts` (V156); DocumentTemplateRulesTest 12/12, MigrationPostgresDialectHarnessTest e PostgresSchemaParityHarnessTest (PG 18 real) verdes. Ligação ao `DocumentConfigService`/endpoint fica com o DT-06.
