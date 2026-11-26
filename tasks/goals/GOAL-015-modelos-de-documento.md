@@ -1,7 +1,7 @@
 ---
 id: GOAL-015
 title: "Facturas e recibos com a imagem da empresa sem esconder dados fiscais"
-status: TODO
+status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/MODELOS_DOCUMENTO_SPEC.md
 harness: docs/MODELOS_DOCUMENTO_HARNESS.md
@@ -17,7 +17,7 @@ Regras em `docs/MODELOS_DOCUMENTO_SPEC.md`. Estende o `DocumentColumnConfig` exi
 
 ## Critérios de aceitação
 
-- [ ] DT-01 — cor validada por contraste — `DocumentTemplateRulesTest`
+- [x] DT-01 — cor validada por contraste — `DocumentTemplateRulesTest`
 - [ ] DT-02 — logótipo, notas, contas bancárias e QR — `DocumentTemplateRulesTest`
 - [ ] DT-03 — elementos fiscais nunca escondidos — `DocumentTemplateFiscalElementsTest`
 - [ ] DT-04 — aplicação em A4 e térmico — `DocumentTemplateRenderingTest`
@@ -36,3 +36,4 @@ Regras em `docs/MODELOS_DOCUMENTO_SPEC.md`. Estende o `DocumentColumnConfig` exi
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-26 · DT-01 · `DocumentAccentColorPolicy` valida `#RRGGBB` com contraste WCAG ≥ 4,5:1 com branco (mensagens PT-MZ) e `PdfTheme.accentOrDefault` cai no `BRAND` sem cor própria; DocumentTemplateRulesTest 6/6 verde. Persistência da cor fica com o DT-02 (migração das novas colunas).
