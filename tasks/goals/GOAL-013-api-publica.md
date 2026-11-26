@@ -1,12 +1,12 @@
 ---
 id: GOAL-013
 title: "Sistemas externos lêem o catálogo e criam encomendas pela API pública"
-status: IN_PROGRESS
+status: BLOCKED
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
 verify: ["ApiKeyRulesTest", "PublicApiAuthenticationTest", "PublicApiRateLimitTest", "PublicApiCatalogTest", "PublicApiCatalogHttpTest", "PublicApiOrderTest", "PublicApiHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "IntegrationsUiHarnessTest"]
-blockedBy: []
+blockedBy: ["API-08: via da encomenda criada pela API (aprovação vs reserva) e nome do cliente novo por NUIT"]
 ---
 
 # Objectivo
@@ -36,7 +36,25 @@ Regras em `docs/API_PUBLICA_WEBHOOKS_SPEC.md` §2–§3 e §4.4.
 
 ## Perguntas em aberto
 
-(Vazio. A IA escreve aqui quando precisa de decisão humana e passa o goal a BLOCKED.)
+**P1 (API-08) — Por que via entra a encomenda criada pela API?** A SPEC §3.4 pede "stock disponível, reserva,
+limite de crédito, fluxo de aprovação" e "estado inicial o mesmo que uma encomenda nova do desktop", mas o
+desktop tem duas vias e nenhuma faz as quatro coisas:
+- `FORMAL_ORDER` (Encomenda A4, a via por omissão): nasce `PENDING_APPROVAL`, passa pelo motor de aprovações,
+  **não** verifica stock nem reserva na criação; o stock e o crédito só se verificam na facturação (ou na aprovação).
+- `PICKING_REQUEST` (Pedido de separação): verifica stock disponível e **reserva** logo, nasce
+  `AWAITING_SEPARATION`, **sem** aprovação; o crédito é verificado na facturação.
+
+Opções:
+- **A (recomendada)** — `FORMAL_ORDER` com aprovação e estado `PENDING_APPROVAL` como no desktop, **mais**
+  verificação de stock disponível e reserva activa na criação (a loja online não pode vender o que já está
+  prometido; a reserva liberta-se ao facturar/cancelar como hoje). É uma combinação nova, que só a API usa.
+- B — `PICKING_REQUEST` tal como o desktop (reserva, vai directo para separação no armazém, sem aprovação).
+- C — `FORMAL_ORDER` exactamente como no desktop (aprovação, sem reserva; stock só na facturação).
+
+**P2 (API-08) — Nome do cliente novo criado por NUIT.** O corpo da SPEC só tem `nuit`, `contactName` e
+`contactPhone`; o registo manual de cliente exige nome. Recomendação: campo opcional `customerName`, obrigatório
+só quando o NUIT ainda não existe na empresa (sem ele → 400 `CUSTOMER_NAME_REQUIRED`); alternativa: usar o
+`contactName` como nome do cliente.
 
 ## Registo de progresso
 
@@ -46,3 +64,4 @@ Regras em `docs/API_PUBLICA_WEBHOOKS_SPEC.md` §2–§3 e §4.4.
 - 2026-11-26 · API-04 · `PublicApiPermissions` (rota+método → permissão, §3.3) verificado no `ApiKeyAuthenticationFilter` antes do recurso: chave sem a permissão → 403 JSON `API_PERMISSION_DENIED` com a permissão em falta, `ORDERS_WRITE` não dá `ORDERS_READ`; regra do 403 escrita na SPEC §3.3; PublicApiAuthenticationTest verde 9/9.
 - 2026-11-26 · API-05 · `PublicApiRateLimiter` (janela fixa de 1 min por chave, recusados não contam) aplicado no `ApiKeyAuthenticationFilter` depois da autenticação: o 61.º pedido → 429 JSON `RATE_LIMIT_EXCEEDED` com `Retry-After` em segundos (≥ 1); uma chave esgotada não trava outra; regra escrita na SPEC §3.2; PublicApiRateLimitTest verde 3/3.
 - 2026-11-26 · API-07 · `PublicCatalogController` + `PublicCatalogService`: `GET /products`, `/products/{sku}` e `/stock` da empresa da chave, só dados de venda (preço com IVA pelo `LineCalculator`, taxa em %, unidade base, `updatedAt` com fuso), sem custo/grosso/margens/fornecedores; `updatedSince` ISO 8601; stock disponível = quantidade − reservas activas (porta nova `OrderReservationLookup`) nos armazéns de venda, nunca negativo; 404 `PRODUCT_NOT_FOUND`/`WAREHOUSE_NOT_FOUND`; páginas a partir de 0, máx. 100; regra escrita na SPEC §3.3.1; PublicApiCatalogTest 7/7 e PublicApiCatalogHttpTest 2/2 verdes.
+- 2026-11-26 · API-08 · bloqueado: a via da encomenda (aprovação vs reserva) e o nome do cliente novo por NUIT não estão na SPEC §3.4; perguntas P1/P2 em `## Perguntas em aberto`.
