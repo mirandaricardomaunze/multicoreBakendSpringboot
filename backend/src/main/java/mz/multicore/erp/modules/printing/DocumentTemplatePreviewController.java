@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.printing;
 
+import jakarta.validation.Valid;
 import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -23,7 +24,7 @@ public class DocumentTemplatePreviewController {
     }
 
     @PostMapping("/api/documents/template/preview")
-    public ResponseEntity<byte[]> preview(@RequestParam Long companyId, @RequestBody DocumentTemplateDTO dto) {
+    public ResponseEntity<byte[]> preview(@RequestParam Long companyId, @RequestBody @Valid DocumentTemplateDTO dto) {
         byte[] pdf = previewService.preview(companyId, dto);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)

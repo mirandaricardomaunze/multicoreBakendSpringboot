@@ -51,7 +51,7 @@ public class DocumentConfigController {
     public ResponseEntity<DocumentTemplateDTO> saveTemplate(
             @RequestParam Long companyId,
             @RequestParam(defaultValue = "COMMERCIAL") DocumentType documentType,
-            @RequestBody DocumentTemplateDTO dto) {
+            @RequestBody @Valid DocumentTemplateDTO dto) {
         return ResponseEntity.ok(service.saveTemplate(companyId, documentType, dto));
     }
 }

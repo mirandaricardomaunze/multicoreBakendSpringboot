@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.documents.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -49,7 +50,7 @@ public final class DocumentAccentColorPolicy {
         BigDecimal contrast = contrastWithWhite(hex);
         if (contrast.compareTo(MIN_CONTRAST_WITH_WHITE) < 0) {
             throw new BusinessRuleException("A cor " + hex + " tem pouco contraste com branco ("
-                    + contrast.setScale(1, RoundingMode.DOWN).toPlainString().replace('.', ',')
+                    + DisplayNumbers.qty(contrast.setScale(1, RoundingMode.DOWN))
                     + ":1). Escolha uma cor mais escura (mínimo 4,5:1).");
         }
         return hex;

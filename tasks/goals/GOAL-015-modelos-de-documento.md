@@ -1,7 +1,7 @@
 ---
 id: GOAL-015
 title: "Facturas e recibos com a imagem da empresa sem esconder dados fiscais"
-status: IN_PROGRESS
+status: DONE
 priority: MEDIUM
 spec: docs/MODELOS_DOCUMENTO_SPEC.md
 harness: docs/MODELOS_DOCUMENTO_HARNESS.md
@@ -23,7 +23,7 @@ Regras em `docs/MODELOS_DOCUMENTO_SPEC.md`. Estende o `DocumentColumnConfig` exi
 - [x] DT-04 — aplicação em A4 e térmico — `DocumentTemplateRenderingTest`
 - [x] DT-05 — 2.ª vias com o modelo actual — `DocumentTemplateRenderingTest`
 - [x] DT-06 — ADMIN, auditoria e pré-visualização — `DocumentTemplateHttpIntegrationTest`
-- [ ] DT-UI-01 — ecrã Configurações › Documentos — `DocumentTemplateUiHarnessTest`
+- [x] DT-UI-01 — ecrã Configurações › Documentos — `DocumentTemplateUiHarnessTest`
 
 ## Fora de âmbito
 
@@ -43,3 +43,4 @@ Regras em `docs/MODELOS_DOCUMENTO_SPEC.md`. Estende o `DocumentColumnConfig` exi
 - 2026-11-26 · DT-04 (gate) · diff-guard corrigido: sem `@Autowired` (renderers/serviço de recibo com um só construtor, `null` nos testes sem Spring) e sem parâmetros `float` novos (`DocumentTemplateBlocks.LogoSize` e larguras em `float[]`); diff-guard e gate verdes.
 - 2026-11-26 · DT-05 · 2.ª via de factura e nota de crédito antigas (emitidas em 2024) sai com o modelo actual (notas, cor, logótipo, sem as contas do modelo anterior) e o conteúdo fiscal fica igual palavra a palavra ao mudar o modelo, sem alterar o documento; comportamento já garantido pela leitura do modelo no momento da impressão (DT-04), agora provado; DocumentTemplateRenderingTest 13/13 verde.
 - 2026-11-26 · DT-06 · `GET/PUT /api/documents/template` (só ADMIN altera, `DocumentTemplatePolicy` na gravação, auditoria `DOCUMENT_TEMPLATE_CHANGE` com cor/logótipo/contas/QR/notas) e `POST /api/documents/template/preview` (`DocumentTemplatePreviewService`: factura de exemplo em memória pelo `InvoiceA4Renderer` com o modelo pedido, sem gravar nem auditar); `ApiRolePolicy` fecha `/api/documents/template` ao MANAGER excepto GET; DocumentTemplateHttpIntegrationTest 4/4 e ApiRolePolicyEndpointCoverageHarnessTest verdes.
+- 2026-11-26 · DT-UI-01 · Configurações › Colunas dos Documentos ("Documentos") ganha o cartão `ConfigDocumentTemplatePanel`: cor `#RRGGBB` com amostra, posição do logótipo, notas, até 3 contas bancárias, QR, "Pré-visualizar" (PDF de exemplo do backend em `PrintPreviewDialog`, sem gravar) e "Guardar modelo" por tipo de documento; `DocumentConfigApiClient` com GET/PUT/preview do modelo; DocumentTemplateUiHarnessTest 5/5, decomposição do ecrã, harness de UI, DesktopThinContextTest e diff-guard verdes. Goal DONE.
