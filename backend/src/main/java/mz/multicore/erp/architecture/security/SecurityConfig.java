@@ -54,6 +54,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    TokenAuthenticationFilter tokenAuthenticationFilter,
                                                    ApiKeyAuthenticationService apiKeyAuthenticationService,
+                                                   PublicApiRateLimiter publicApiRateLimiter,
                                                    Environment environment) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -80,8 +81,8 @@ public class SecurityConfig {
                         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Autenticação necessária.")))
                 // Em prod, o portal só por HTTPS (directo ou X-Forwarded-Proto), antes de qualquer token. PG-10.
                 .addFilterBefore(PortalHttpsOnlyFilter.forEnvironment(environment), UsernamePasswordAuthenticationFilter.class)
-                // API pública: só X-Api-Key em /api/public/**; a chave nunca abre o /api/** interno. API-03.
-                .addFilterBefore(new ApiKeyAuthenticationFilter(apiKeyAuthenticationService),
+                // API pública: só X-Api-Key em /api/public/**; a chave nunca abre o /api/** interno; 60/min por chave. API-03/05.
+                .addFilterBefore(new ApiKeyAuthenticationFilter(apiKeyAuthenticationService, publicApiRateLimiter),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)

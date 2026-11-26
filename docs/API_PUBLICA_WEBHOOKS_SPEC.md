@@ -35,7 +35,9 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - Prefixo versionado **`/api/public/v1/**`**, autenticação por cabeçalho `X-Api-Key`. Os tokens de
   utilizador **não** servem aqui e as chaves de API **não** servem em `/api/**` interno.
 - A empresa é a da chave; não há `X-Company-Id`.
-- Limite: **60 pedidos por minuto por chave** → `429` com `Retry-After`.
+- Limite: **60 pedidos por minuto por chave** → `429` com `Retry-After`. Janela fixa de 1 minuto que abre no
+  primeiro pedido da chave; os pedidos recusados não contam; `Retry-After` em segundos (≥ 1) até a janela
+  fechar; corpo com `code` `RATE_LIMIT_EXCEEDED`. O limite é por chave: uma chave esgotada não trava outra.
 - Erros em JSON com `code` estável em inglês e `message` em PT-MZ; nunca stack traces.
 - Paginação `page`/`size` (máx. 100), datas ISO 8601, valores com ponto decimal (é API, não ecrã).
 - Documentação OpenAPI (springdoc) só do grupo público, em `/api/public/v1/docs`.

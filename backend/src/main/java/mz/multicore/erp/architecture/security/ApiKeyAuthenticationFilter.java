@@ -16,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 /**
  * Authentication of the public API (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.2, API-03).
@@ -23,16 +24,21 @@ import java.util.Optional;
  * <p>On {@link PublicApiRoutes#isPublicApi public routes} only {@code X-Api-Key} counts: the key's company is the
  * request's company (no {@code X-Company-Id}) and the {@link ApiKeyPrincipal} becomes the authenticated principal.
  * A user token there, or a missing/unknown/revoked key → 401 with JSON {@code code} + PT-MZ {@code message}.
- * A valid key without the {@link PublicApiPermissions route's permission} → 403 {@code API_PERMISSION_DENIED} (API-04).
+ * A key over {@link PublicApiRateLimiter its request limit} → 429 {@code RATE_LIMIT_EXCEEDED} with {@code Retry-After}
+ * (API-05). A valid key without the {@link PublicApiPermissions route's permission} → 403
+ * {@code API_PERMISSION_DENIED} (API-04).
  * On the internal {@code /api/**} an API key is refused (401) — it never stands in for a user token.
  * Not a {@code @Component}, so it is not registered twice: {@link SecurityConfig} creates and wires it.
  */
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
     private final ApiKeyAuthenticationService authenticationService;
+    private final PublicApiRateLimiter rateLimiter;
 
-    public ApiKeyAuthenticationFilter(ApiKeyAuthenticationService authenticationService) {
+    public ApiKeyAuthenticationFilter(ApiKeyAuthenticationService authenticationService,
+                                      PublicApiRateLimiter rateLimiter) {
         this.authenticationService = authenticationService;
+        this.rateLimiter = rateLimiter;
     }
 
     @Override
@@ -59,6 +65,14 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         Optional<ApiKeyPrincipal> principal = authenticationService.authenticate(apiKey);
         if (principal.isEmpty()) {
             refuse(response, "API_KEY_INVALID", "Chave de API inválida ou revogada.");
+            return;
+        }
+        OptionalLong retryAfter = rateLimiter.acquire(principal.get().keyId());
+        if (retryAfter.isPresent()) {
+            response.setHeader("Retry-After", String.valueOf(retryAfter.getAsLong()));
+            refuse(response, 429, "RATE_LIMIT_EXCEEDED", "Limite de " + PublicApiRateLimiter.REQUESTS_PER_MINUTE
+                    + " pedidos por minuto atingido para esta chave. Tente novamente em "
+                    + retryAfter.getAsLong() + " segundo(s).");
             return;
         }
         Optional<ApiKeyPermission> required = PublicApiPermissions.required(request.getMethod(), path);
