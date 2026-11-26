@@ -3,6 +3,9 @@ package mz.multicore.erp.modules.printing;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
+import mz.multicore.erp.modules.documents.model.DocumentType;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,29 +26,40 @@ public class InvoicePrintService {
     private final InvoiceLookup invoiceLookup;
     private final InvoiceA4Renderer a4Renderer;
     private final InvoiceThermalRenderer thermalRenderer;
+    private final DocumentConfigService documentConfigService;
 
     @Autowired
     public InvoicePrintService(InvoiceLookup invoiceLookup, InvoiceA4Renderer a4Renderer,
-                               InvoiceThermalRenderer thermalRenderer) {
+                               InvoiceThermalRenderer thermalRenderer, DocumentConfigService documentConfigService) {
         this.invoiceLookup = invoiceLookup;
         this.a4Renderer = a4Renderer;
         this.thermalRenderer = thermalRenderer;
+        this.documentConfigService = documentConfigService;
     }
 
     /** Preserva a construção usada pelos testes e integrações anteriores à decomposição. */
     public InvoicePrintService(InvoiceLookup invoiceLookup, LineRowMapper lineRowMapper,
-                               DocumentConfigService ignoredDocumentConfigService) {
-        this(invoiceLookup, new InvoiceA4Renderer(lineRowMapper), new InvoiceThermalRenderer());
+                               DocumentConfigService documentConfigService) {
+        this(invoiceLookup, new InvoiceA4Renderer(lineRowMapper), new InvoiceThermalRenderer(), documentConfigService);
     }
 
+    /** A4 com o modelo actual da empresa, também nas 2.ª vias de documentos antigos (SPEC §3.3). */
     @Transactional(readOnly = true)
     public byte[] render(Long invoiceId) {
-        return a4Renderer.render(loadOwned(invoiceId), INVOICE_COPIES);
+        Invoice invoice = loadOwned(invoiceId);
+        return a4Renderer.render(invoice, INVOICE_COPIES, template(invoice));
     }
 
+    /** Talão térmico: do modelo só usa logótipo, notas e rodapé (SPEC §3.3). */
     @Transactional(readOnly = true)
     public byte[] renderThermal(Long invoiceId) {
-        return thermalRenderer.render(loadOwned(invoiceId));
+        Invoice invoice = loadOwned(invoiceId);
+        DocumentColumnsDTO columns = documentConfigService.getColumns(invoice.getCompany().getId(), DocumentType.COMMERCIAL);
+        return thermalRenderer.render(invoice, template(invoice), columns == null ? null : columns.footer());
+    }
+
+    private DocumentTemplateDTO template(Invoice invoice) {
+        return documentConfigService.getTemplate(invoice.getCompany().getId(), DocumentType.COMMERCIAL);
     }
 
     private Invoice loadOwned(Long invoiceId) {

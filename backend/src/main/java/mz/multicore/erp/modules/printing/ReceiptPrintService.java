@@ -45,7 +45,7 @@ public class ReceiptPrintService {
             PosPaymentLookup paymentLookup,
             DocumentConfigService documentConfigService
     ) {
-        this(invoiceLookup, paymentLookup, documentConfigService, new ReceiptDocumentRenderer());
+        this(invoiceLookup, paymentLookup, documentConfigService, new ReceiptDocumentRenderer(documentConfigService));
     }
 
     @Transactional(readOnly = true)

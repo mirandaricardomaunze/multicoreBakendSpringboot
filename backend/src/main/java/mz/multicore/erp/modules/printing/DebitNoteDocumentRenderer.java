@@ -7,6 +7,9 @@ import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.modules.comercial.model.DebitNote;
 import mz.multicore.erp.modules.comercial.model.DebitNoteLine;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
+import mz.multicore.erp.modules.documents.model.DocumentType;
+import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -17,26 +20,35 @@ import java.util.List;
 public class DebitNoteDocumentRenderer {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private final DocumentConfigService documentConfigService;
 
+    /** {@code documentConfigService} nulo (testes sem Spring) imprime com o modelo por omissão. */
+    public DebitNoteDocumentRenderer(DocumentConfigService documentConfigService) {
+        this.documentConfigService = documentConfigService;
+    }
+
+    /** Usa o modelo actual da empresa, também nas 2.ª vias de notas antigas (SPEC §3.3). */
     public byte[] render(DebitNote note, List<String> copies) {
+        return render(note, copies, documentConfigService == null ? null
+                : documentConfigService.getTemplate(note.getCompany().getId(), DocumentType.COMMERCIAL));
+    }
+
+    /** Vias A4 com o modelo actual da empresa (DT-04). */
+    public byte[] render(DebitNote note, List<String> copies, DocumentTemplateDTO template) {
         return PdfDocumentBuilder.buildA4(doc -> {
             for (int i = 0; i < copies.size(); i++) {
                 if (i > 0) {
                     doc.newPage();
                 }
-                renderDebitNoteCopy(doc, note, copies.get(i));
+                renderDebitNoteCopy(doc, note, copies.get(i), template);
             }
         });
     }
 
-    private void renderDebitNoteCopy(com.lowagie.text.Document doc, DebitNote note, String copyLabel) {
-        doc.add(CompanyHeaderRenderer.build(
-                note.getCompany(),
-                "Nota de Débito",
-                note.getNoteNumber(),
-                copyLabel,
-                null
-        ));
+    private void renderDebitNoteCopy(com.lowagie.text.Document doc, DebitNote note, String copyLabel,
+                                     DocumentTemplateDTO template) {
+        doc.add(CompanyHeaderRenderer.build(note.getCompany(), "Nota de Débito", note.getNoteNumber(), copyLabel,
+                null, template));
         doc.add(buildContextBlock(note));
         doc.add(buildLinesTable(note.getLines()));
         doc.add(PdfDocumentBuilder.spacer(6f));
@@ -52,8 +64,9 @@ public class DebitNoteDocumentRenderer {
             doc.add(PdfDocumentBuilder.spacer(10f));
             doc.add(new Paragraph("Observações: " + note.getDescription(), PdfTheme.bodyFont()));
         }
+        DocumentTemplateBlocks.addA4Closing(doc, template);
         doc.add(PdfDocumentBuilder.spacer(24f));
-        doc.add(buildSignatureBlock());
+        doc.add(SignatureBlockRenderer.build("Entidade Emitente", "Cliente"));
     }
 
     private PdfPTable buildContextBlock(DebitNote note) {
@@ -73,22 +86,20 @@ public class DebitNoteDocumentRenderer {
         PdfPCell right = new PdfPCell();
         right.setBorder(PdfPCell.NO_BORDER);
         right.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        Paragraph date = new Paragraph("Data: " + note.getIssueDate().format(DATE_FMT), PdfTheme.bodyFont());
-        date.setAlignment(Element.ALIGN_RIGHT);
-        right.addElement(date);
-        Paragraph reason = new Paragraph("Motivo: " + DocumentLabels.reason(note.getReason()), PdfTheme.bodyFont());
-        reason.setAlignment(Element.ALIGN_RIGHT);
-        right.addElement(reason);
-        Paragraph status = new Paragraph("Estado: " + DocumentLabels.status(note.getStatus()), PdfTheme.boldFont());
-        status.setAlignment(Element.ALIGN_RIGHT);
-        right.addElement(status);
+        addRight(right, "Data: " + note.getIssueDate().format(DATE_FMT), PdfTheme.bodyFont());
+        addRight(right, "Motivo: " + DocumentLabels.reason(note.getReason()), PdfTheme.bodyFont());
+        addRight(right, "Estado: " + DocumentLabels.status(note.getStatus()), PdfTheme.boldFont());
         if (note.getApprovedBy() != null) {
-            Paragraph approved = new Paragraph("Aprovado por: " + note.getApprovedBy(), PdfTheme.smallFont());
-            approved.setAlignment(Element.ALIGN_RIGHT);
-            right.addElement(approved);
+            addRight(right, "Aprovado por: " + note.getApprovedBy(), PdfTheme.smallFont());
         }
         table.addCell(right);
         return table;
+    }
+
+    private void addRight(PdfPCell cell, String text, com.lowagie.text.Font font) {
+        Paragraph paragraph = new Paragraph(text, font);
+        paragraph.setAlignment(Element.ALIGN_RIGHT);
+        cell.addElement(paragraph);
     }
 
     private PdfPTable buildLinesTable(List<DebitNoteLine> lines) {
@@ -109,26 +120,6 @@ public class DebitNoteDocumentRenderer {
             body(table, MoneyFormat.formatPlain(l.getLineTotal()), Element.ALIGN_RIGHT);
         }
         return table;
-    }
-
-    private PdfPTable buildSignatureBlock() {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        try { table.setWidths(new float[]{50f, 50f}); } catch (Exception ignored) {}
-        table.addCell(signatureCell("Entidade Emitente"));
-        table.addCell(signatureCell("Cliente"));
-        return table;
-    }
-
-    private PdfPCell signatureCell(String label) {
-        PdfPCell cell = new PdfPCell();
-        cell.setBorder(PdfPCell.NO_BORDER);
-        cell.setPaddingTop(20f);
-        cell.setPaddingLeft(12f);
-        cell.setPaddingRight(12f);
-        cell.addElement(new Paragraph("____________________________", PdfTheme.bodyFont()));
-        cell.addElement(new Paragraph(label, PdfTheme.smallFont()));
-        return cell;
     }
 
     private void header(PdfPTable table, String text, int align) {

@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static mz.multicore.erp.modules.printing.FiscalDocumentFixtures.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -50,7 +51,6 @@ class DocumentTemplateFiscalElementsTest {
 
     private static final DocumentColumnsDTO ALL_HIDDEN = new DocumentColumnsDTO(
             false, false, false, false, false, false, false, false, false, false, false, null);
-    private static final String EXEMPTION = "Artigo 9.º do CIVA";
 
     private final LineRowMapper lineRowMapper = new LineRowMapper(new ProductBatchLookup(mock(ProductBatchRepository.class)));
 
@@ -91,7 +91,7 @@ class DocumentTemplateFiscalElementsTest {
 
     @Test
     void notaDeDebito_mantemIvaPorTaxa() throws Exception {
-        String text = extract(new DebitNoteDocumentRenderer().render(debitNote(), List.of("1.ª VIA — ORIGINAL (Cliente)")));
+        String text = extract(new DebitNoteDocumentRenderer(null).render(debitNote(), List.of("1.ª VIA — ORIGINAL (Cliente)")));
 
         assertIssuer(text);
         assertContains(text, "ND 2026/001", "04/10/2026", "Cliente Alfa Lda", "NUIT: 400888777",
@@ -103,7 +103,7 @@ class DocumentTemplateFiscalElementsTest {
         Invoice sale = invoice(null);
         sale.setSalesChannel(SalesChannel.POS);
 
-        String text = extract(new ReceiptDocumentRenderer().renderDocument(sale, ALL_HIDDEN, List.of()));
+        String text = extract(new ReceiptDocumentRenderer(null).renderDocument(sale, ALL_HIDDEN, List.of()));
 
         assertIssuer(text);
         assertContains(text, "RECIBO POS", "FT 2026/001", "04/10/2026", "Cliente: Consumidor Final",
@@ -124,7 +124,7 @@ class DocumentTemplateFiscalElementsTest {
         ReceiptLookup lookup = mock(ReceiptLookup.class);
         when(lookup.find(7L)).thenReturn(Optional.of(receipt));
 
-        String text = extract(new ReceiptDocumentPrintService(lookup).render(7L));
+        String text = extract(new ReceiptDocumentPrintService(lookup, null).render(7L));
 
         assertIssuer(text);
         assertContains(text, "RC 2026/007", "05/10/2026", "Consumidor Final", "Subtotal (sem IVA)",
@@ -138,140 +138,6 @@ class DocumentTemplateFiscalElementsTest {
     private static void assertContains(String text, String... fragments) {
         for (String fragment : fragments) {
             assertTrue(text.contains(fragment), "Elemento fiscal em falta: '" + fragment + "' em\n" + text);
-        }
-    }
-
-    private static Company company() {
-        Company company = new Company();
-        company.setId(1L);
-        company.setName("Empresa Moçambique Lda");
-        company.setTaxId("400123456");
-        company.setAddress("Av. Julius Nyerere, Maputo");
-        return company;
-    }
-
-    private static Client client() {
-        Client client = new Client();
-        client.setId(10L);
-        client.setName("Cliente Alfa Lda");
-        client.setTaxId("400888777");
-        return client;
-    }
-
-    private static Product product(String name) {
-        Product product = new Product();
-        product.setName(name);
-        product.setReference("REF-" + name.length());
-        return product;
-    }
-
-    /** 1000 a 16% (IVA 160) + 500 isento com motivo legal: total 1660. */
-    private static Invoice invoice(Client client) {
-        Invoice invoice = new Invoice();
-        invoice.setId(10L);
-        invoice.setInvoiceNumber("FT 2026/001");
-        invoice.setCompany(company());
-        invoice.setClient(client);
-        invoice.setStatus(InvoiceStatus.PAID);
-        invoice.setCreatedAt(LocalDateTime.of(2026, 10, 4, 11, 0));
-        invoice.setTotalBeforeTax(new BigDecimal("1500.00"));
-        invoice.setTaxAmount(new BigDecimal("160.00"));
-        invoice.setTotalAmount(new BigDecimal("1660.00"));
-        List<InvoiceLine> lines = new ArrayList<>();
-        lines.add(invoiceLine(invoice, "Cimento", "0.16", "10", "100.00", "1000.00", null));
-        lines.add(invoiceLine(invoice, "Livro escolar", "0", "5", "100.00", "500.00", EXEMPTION));
-        invoice.setLines(lines);
-        return invoice;
-    }
-
-    private static InvoiceLine invoiceLine(Invoice invoice, String name, String rate, String qty, String price,
-                                           String total, String exemption) {
-        InvoiceLine line = new InvoiceLine();
-        line.setInvoice(invoice);
-        line.setProduct(product(name));
-        line.setQuantity(new BigDecimal(qty));
-        line.setUnitPrice(new BigDecimal(price));
-        line.setTaxRate(new BigDecimal(rate));
-        line.setDiscountPercentage(BigDecimal.ZERO);
-        line.setLineTotal(new BigDecimal(total));
-        line.setExemptionReason(exemption);
-        return line;
-    }
-
-    private static CreditNote creditNote() {
-        Client withoutTaxId = client();
-        withoutTaxId.setTaxId(null);
-        Invoice invoice = invoice(withoutTaxId);
-        CreditNote note = new CreditNote();
-        note.setId(100L);
-        note.setNoteNumber("NC 2026/001");
-        note.setCompany(company());
-        note.setClient(withoutTaxId);
-        note.setInvoice(invoice);
-        note.setReason(CreditNoteReason.RETURN);
-        note.setStatus(NoteStatus.APPROVED);
-        note.setIssueDate(LocalDateTime.of(2026, 10, 4, 12, 0));
-        note.setTotalBeforeTax(new BigDecimal("1500.00"));
-        note.setTaxAmount(new BigDecimal("160.00"));
-        note.setTotalAmount(new BigDecimal("1660.00"));
-        List<CreditNoteLine> lines = new ArrayList<>();
-        for (InvoiceLine source : invoice.getLines()) {
-            CreditNoteLine line = new CreditNoteLine();
-            line.setProduct(source.getProduct());
-            line.setInvoiceLine(source);
-            line.setQuantity(source.getQuantity());
-            line.setUnitPrice(source.getUnitPrice());
-            line.setTaxRate(source.getTaxRate());
-            line.setDiscountPercentage(BigDecimal.ZERO);
-            line.setLineTotal(source.getLineTotal());
-            lines.add(line);
-        }
-        note.setLines(lines);
-        return note;
-    }
-
-    /** 200 a 16% (IVA 32) + 50 isento: total 282. */
-    private static DebitNote debitNote() {
-        DebitNote note = new DebitNote();
-        note.setId(200L);
-        note.setNoteNumber("ND 2026/001");
-        note.setCompany(company());
-        note.setClient(client());
-        Invoice invoice = new Invoice();
-        invoice.setInvoiceNumber("FT 2026/100");
-        note.setInvoice(invoice);
-        note.setReason(DebitNoteReason.FREIGHT);
-        note.setStatus(NoteStatus.APPROVED);
-        note.setIssueDate(LocalDateTime.of(2026, 10, 4, 12, 30));
-        note.setTotalBeforeTax(new BigDecimal("250.00"));
-        note.setTaxAmount(new BigDecimal("32.00"));
-        note.setTotalAmount(new BigDecimal("282.00"));
-        note.setLines(List.of(debitLine(note, "Frete", "200.00", "0.16", "232.00"),
-                debitLine(note, "Taxa isenta", "50.00", "0", "50.00")));
-        return note;
-    }
-
-    private static DebitNoteLine debitLine(DebitNote note, String description, String amount, String rate, String total) {
-        DebitNoteLine line = new DebitNoteLine();
-        line.setDebitNote(note);
-        line.setDescription(description);
-        line.setAmount(new BigDecimal(amount));
-        line.setTaxRate(new BigDecimal(rate));
-        line.setLineTotal(new BigDecimal(total));
-        return line;
-    }
-
-    private static String extract(byte[] pdf) throws Exception {
-        PdfReader reader = new PdfReader(pdf);
-        try {
-            StringBuilder text = new StringBuilder();
-            PdfTextExtractor extractor = new PdfTextExtractor(reader);
-            for (int page = 1; page <= reader.getNumberOfPages(); page++) {
-                text.append(extractor.getTextFromPage(page)).append('\n');
-            }
-            return text.toString();
-        } finally {
-            reader.close();
         }
     }
 }

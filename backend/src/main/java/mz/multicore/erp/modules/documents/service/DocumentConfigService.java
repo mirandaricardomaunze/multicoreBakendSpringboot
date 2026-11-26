@@ -4,7 +4,9 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
+import mz.multicore.erp.modules.documents.dto.DocumentBankAccountDTO;
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
 import mz.multicore.erp.modules.documents.model.DocumentColumnConfig;
 import mz.multicore.erp.modules.documents.model.DocumentType;
 import mz.multicore.erp.modules.documents.repository.DocumentColumnConfigRepository;
@@ -32,6 +34,18 @@ public class DocumentConfigService {
         return repository.findByCompanyIdAndDocumentType(companyId, documentType)
                 .map(this::toDTO)
                 .orElseGet(DocumentColumnsDTO::all);
+    }
+
+    /**
+     * Modelo visual (cor, logótipo, notas, bancos, QR) que os documentos impressos a partir de agora usam
+     * (MODELOS_DOCUMENTO_SPEC §3.3). Sem configuração = {@link DocumentTemplateDTO#defaults()}.
+     */
+    @Transactional(readOnly = true)
+    public DocumentTemplateDTO getTemplate(Long companyId, DocumentType documentType) {
+        CurrentUserContext.requireCompany(companyId);
+        return repository.findByCompanyIdAndDocumentType(companyId, documentType)
+                .map(this::toTemplateDTO)
+                .orElseGet(DocumentTemplateDTO::defaults);
     }
 
     @Transactional
@@ -86,5 +100,16 @@ public class DocumentConfigService {
                 config.isShowSubtotal(),
                 config.getFooterComment()
         );
+    }
+
+    private DocumentTemplateDTO toTemplateDTO(DocumentColumnConfig config) {
+        return new DocumentTemplateDTO(
+                config.getAccentColor(),
+                config.getLogoPosition(),
+                config.getTemplateNotes(),
+                config.getBankAccounts().stream()
+                        .map(a -> new DocumentBankAccountDTO(a.getBankName(), a.getHolder(), a.getAccountNumber()))
+                        .toList(),
+                config.isShowQrCode());
     }
 }

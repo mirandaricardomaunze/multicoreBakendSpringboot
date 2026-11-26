@@ -8,6 +8,7 @@ import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -19,6 +20,11 @@ public class InvoiceThermalRenderer {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     byte[] render(Invoice invoice) {
+        return render(invoice, null, null);
+    }
+
+    /** Talão com notas e rodapé do modelo da empresa; o logótipo sai sempre centrado no cabeçalho. */
+    byte[] render(Invoice invoice, DocumentTemplateDTO template, String footer) {
         return PdfDocumentBuilder.buildReceipt(doc -> {
             ThermalReceiptRenderer.companyHeader(doc, invoice.getCompany());
             ThermalReceiptRenderer.centered(doc, "FATURA SIMPLIFICADA", PdfTheme.boldFont());
@@ -44,9 +50,11 @@ public class InvoiceThermalRenderer {
             ThermalReceiptRenderer.right(doc, "IVA:      " + MoneyFormat.format(invoice.getTaxAmount()), PdfTheme.bodyFont());
             ThermalReceiptRenderer.right(doc, "TOTAL:    " + MoneyFormat.format(invoice.getTotalAmount()), PdfTheme.boldFont());
             ThermalReceiptRenderer.dottedLine(doc);
+            DocumentTemplateBlocks.thermalNotes(doc, template);
             ThermalReceiptRenderer.centered(doc, "Os bens/serviços foram postos à disposição", PdfTheme.smallFont());
             ThermalReceiptRenderer.centered(doc, "na data da emissão do documento.", PdfTheme.smallFont());
             ThermalReceiptRenderer.centered(doc, "Processado por Computador / Multicore ERP", PdfTheme.smallFont());
+            ThermalReceiptRenderer.footer(doc, footer, null);
         });
     }
 

@@ -9,6 +9,8 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
+import mz.multicore.erp.modules.documents.model.DocumentLogoPosition;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -36,42 +38,60 @@ public class InvoiceA4Renderer {
     }
 
     byte[] render(Invoice invoice, List<String> copies) {
-        List<String> bankDetails = companyBankDetails == null || invoice.getCompany() == null
-                ? List.of() : companyBankDetails.forCompany(invoice.getCompany().getId());
+        return render(invoice, copies, DocumentTemplateDTO.defaults());
+    }
+
+    /** Vias A4 com o modelo actual da empresa (DT-04): cor, logótipo, notas e contas do modelo. */
+    byte[] render(Invoice invoice, List<String> copies, DocumentTemplateDTO template) {
+        List<String> bankDetails = bankDetails(invoice, template);
         List<LineItemsTableRenderer.Row> rows = toRows(invoice.getLines());
         InvoicePageFooter footer = new InvoicePageFooter(invoice.getCompany(), copies, invoice.getInvoiceNumber());
         return PdfDocumentBuilder.buildA4(footer, document -> {
             for (int index = 0; index < copies.size(); index++) {
                 if (index > 0) document.newPage();
                 footer.startCopy(index);
-                renderCopy(document, invoice, copies.get(index), rows, bankDetails);
+                renderCopy(document, invoice, copies.get(index), rows, bankDetails, template);
             }
         });
     }
 
+    /** Contas do modelo quando existem; senão as contas bancárias de tesouraria da empresa (SPEC §3.1). */
+    private List<String> bankDetails(Invoice invoice, DocumentTemplateDTO template) {
+        List<String> fromTemplate = DocumentTemplateBlocks.bankAccountLines(template);
+        if (!fromTemplate.isEmpty()) return fromTemplate;
+        return companyBankDetails == null || invoice.getCompany() == null
+                ? List.of() : companyBankDetails.forCompany(invoice.getCompany().getId());
+    }
+
     private void renderCopy(com.lowagie.text.Document document, Invoice invoice, String copy,
-                            List<LineItemsTableRenderer.Row> rows, List<String> bankDetails) {
-        document.add(header(invoice.getCompany(), invoice, copy));
+                            List<LineItemsTableRenderer.Row> rows, List<String> bankDetails,
+                            DocumentTemplateDTO template) {
+        document.add(header(invoice.getCompany(), invoice, copy, template));
         document.add(clientAndMetadata(invoice));
         document.add(LineItemsTableRenderer.buildModelTable(rows));
         document.add(TotalsBlockRenderer.buildModelTotals(
                 invoice.getTotalBeforeTax(), totalDiscount(invoice), invoice.getTaxAmount(),
                 invoice.getTotalAmount(), TotalsBlockRenderer.calculateBreakdowns(rows)));
         document.add(paymentAndNotes(invoice, bankDetails));
+        Paragraph notes = DocumentTemplateBlocks.notes(template);
+        if (notes != null) document.add(notes);
         document.add(legalDisclaimer());
     }
 
-    private PdfPTable header(Company company, Invoice invoice, String copy) {
+    private PdfPTable header(Company company, Invoice invoice, String copy, DocumentTemplateDTO template) {
         PdfPTable table = twoColumns();
         table.setSpacingAfter(10f);
+        DocumentTemplateBlocks.addCenteredLogoRow(table, 2, company, template, DocumentTemplateBlocks.LogoSize.COMPACT);
         PdfPCell companyCell = borderless();
-        CompanyDetailsBlock.addTo(companyCell, company);
+        CompanyDetailsBlock.addTo(companyCell, company, template);
         table.addCell(companyCell);
 
+        java.awt.Color accent = DocumentTemplateBlocks.accent(template);
         PdfPCell documentCell = borderless();
-        addRight(documentCell, "FATURA", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22f, PdfTheme.BRAND));
+        DocumentTemplateBlocks.addLogoIfAt(documentCell, DocumentLogoPosition.RIGHT, company, template, DocumentTemplateBlocks.LogoSize.COMPACT);
+        addRight(documentCell, "FATURA", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22f, accent));
         addRight(documentCell, "N.º " + valueOrDash(invoice.getInvoiceNumber()),
-                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11f, PdfTheme.BRAND));
+                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11f, accent));
         addRight(documentCell, copy, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8.5f, PdfTheme.MUTED));
         table.addCell(documentCell);
         return table;

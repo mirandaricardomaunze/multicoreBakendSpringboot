@@ -10,6 +10,9 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.advances.AdvancePayments;
 import mz.multicore.erp.modules.comercial.model.Receipt;
 import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
+import mz.multicore.erp.modules.documents.model.DocumentType;
+import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +28,12 @@ public class ReceiptDocumentPrintService {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final ReceiptLookup receiptLookup;
+    private final DocumentConfigService documentConfigService;
 
-    public ReceiptDocumentPrintService(ReceiptLookup receiptLookup) {
+    /** {@code documentConfigService} nulo (testes sem Spring) imprime com o modelo por omissão. */
+    public ReceiptDocumentPrintService(ReceiptLookup receiptLookup, DocumentConfigService documentConfigService) {
         this.receiptLookup = receiptLookup;
+        this.documentConfigService = documentConfigService;
     }
 
     @Transactional(readOnly = true)
@@ -40,8 +46,11 @@ public class ReceiptDocumentPrintService {
         boolean offset = AdvancePayments.isOffsetPayment(r.getPaymentMethod());
         var invoice = r.getInvoice();
         var client = invoice.getClient();
+        DocumentTemplateDTO template = documentConfigService == null ? null
+                : documentConfigService.getTemplate(companyId, DocumentType.COMMERCIAL);
         return PdfDocumentBuilder.buildA4(doc -> {
-            doc.add(CompanyHeaderRenderer.build(r.getCompany(), "Recibo", r.getReceiptNumber(), cancelled ? "ANULADO" : null));
+            doc.add(CompanyHeaderRenderer.build(r.getCompany(), "Recibo", r.getReceiptNumber(), null,
+                    cancelled ? "ANULADO" : null, template));
             PdfPTable info = new PdfPTable(4);
             info.setWidthPercentage(100);
             pair(info, "Cliente", FiscalElements.buyerName(invoice.getCustomerName(), client));
@@ -69,6 +78,7 @@ public class ReceiptDocumentPrintService {
                 doc.add(PdfDocumentBuilder.spacer(6f));
                 doc.add(new Paragraph("Recibo anulado. Motivo: " + r.getCancellationReason(), PdfTheme.voidStampFont()));
             }
+            DocumentTemplateBlocks.addA4Closing(doc, template);
             doc.add(PdfDocumentBuilder.spacer(36f));
             doc.add(SignatureBlockRenderer.build("Recebi (a empresa)", "O Cliente"));
         });
