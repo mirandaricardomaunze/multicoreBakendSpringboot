@@ -1,12 +1,12 @@
 ---
 id: GOAL-014
 title: "Webhooks avisam sistemas externos de vendas, encomendas e stock"
-status: TODO
+status: BLOCKED
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
 verify: ["WebhookSubscriptionTest", "WebhookEventTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
-blockedBy: []
+blockedBy: ["Pré-requisito: GOAL-013 ainda BLOCKED (API-08, perguntas P1/P2)"]
 ---
 
 # Objectivo
@@ -36,8 +36,15 @@ iteração termina com `NEEDS_HUMAN` e não começa este goal.
 
 ## Perguntas em aberto
 
-(Vazio. A IA escreve aqui quando precisa de decisão humana e passa o goal a BLOCKED.)
+**P1 — Pré-requisito GOAL-013 por fechar.** Este goal só começa com o GOAL-013 em `DONE`, mas o GOAL-013
+está `BLOCKED` no API-08 à espera das respostas P1 (via da encomenda criada pela API: aprovação vs reserva) e
+P2 (nome do cliente novo por NUIT), escritas em `tasks/goals/GOAL-013-*.md`.
+Opções:
+- **A (recomendada)** — o dono responde a P1/P2 do GOAL-013; o loop fecha o GOAL-013 e depois volta aqui.
+- B — autorizar explicitamente que o GOAL-014 avance já (os webhooks WH-01..WH-07 não dependem da criação de
+  encomendas pela API), alterando o pré-requisito deste goal.
 
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-26 · — · não iniciado: pré-requisito GOAL-013 está BLOCKED (API-08); goal passa a BLOCKED com a pergunta P1.
