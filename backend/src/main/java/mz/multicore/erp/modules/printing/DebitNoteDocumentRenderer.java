@@ -44,6 +44,8 @@ public class DebitNoteDocumentRenderer {
                 note.getTotalBeforeTax(),
                 note.getTaxAmount(),
                 note.getTotalAmount(),
+                TotalsBlockRenderer.calculateBreakdowns(note.getLines().stream().map(l -> FiscalElements.taxRow(
+                        BigDecimal.ONE, l.getAmount(), l.getTaxRate(), BigDecimal.ZERO, l.getAmount(), null)).toList()),
                 "TOTAL DEBITADO"
         ));
         if (note.getDescription() != null && !note.getDescription().isBlank()) {
@@ -63,10 +65,8 @@ public class DebitNoteDocumentRenderer {
         PdfPCell left = new PdfPCell();
         left.setBorder(PdfPCell.NO_BORDER);
         left.addElement(new Paragraph("Cliente", PdfTheme.subtitleFont()));
-        left.addElement(new Paragraph(note.getClient().getName(), PdfTheme.bodyFont()));
-        if (note.getClient().getTaxId() != null) {
-            left.addElement(new Paragraph("NUIT: " + note.getClient().getTaxId(), PdfTheme.bodyFont()));
-        }
+        left.addElement(new Paragraph(FiscalElements.buyerName(null, note.getClient()), PdfTheme.bodyFont()));
+        left.addElement(new Paragraph("NUIT: " + FiscalElements.buyerTaxId(note.getClient()), PdfTheme.bodyFont()));
         left.addElement(new Paragraph("Fatura: " + note.getInvoice().getInvoiceNumber(), PdfTheme.bodyFont()));
         table.addCell(left);
 

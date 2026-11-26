@@ -61,13 +61,16 @@ public class CreditNotePrintService {
                 copyLabel,
                 null
         ));
+        List<LineItemsTableRenderer.Row> rows = toRows(note.getLines());
         doc.add(buildContextBlock(note));
-        doc.add(buildLinesTable(note.getLines(), note.getCompany().getId()));
+        doc.add(LineItemsTableRenderer.buildCompact(rows, documentConfigService.getColumns(
+                note.getCompany().getId(), mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL)));
         doc.add(PdfDocumentBuilder.spacer(6f));
         doc.add(TotalsBlockRenderer.build(
                 note.getTotalBeforeTax(),
                 note.getTaxAmount(),
                 note.getTotalAmount(),
+                TotalsBlockRenderer.calculateBreakdowns(rows),
                 "TOTAL CREDITADO"
         ));
         if (note.getDescription() != null && !note.getDescription().isBlank()) {
@@ -87,10 +90,8 @@ public class CreditNotePrintService {
         PdfPCell left = new PdfPCell();
         left.setBorder(PdfPCell.NO_BORDER);
         left.addElement(new Paragraph("Cliente", PdfTheme.subtitleFont()));
-        left.addElement(new Paragraph(note.getClient().getName(), PdfTheme.bodyFont()));
-        if (note.getClient().getTaxId() != null) {
-            left.addElement(new Paragraph("NUIT: " + note.getClient().getTaxId(), PdfTheme.bodyFont()));
-        }
+        left.addElement(new Paragraph(FiscalElements.buyerName(null, note.getClient()), PdfTheme.bodyFont()));
+        left.addElement(new Paragraph("NUIT: " + FiscalElements.buyerTaxId(note.getClient()), PdfTheme.bodyFont()));
         left.addElement(new Paragraph("Fatura: " + note.getInvoice().getInvoiceNumber(), PdfTheme.bodyFont()));
         if (note.getWarehouse() != null) {
             left.addElement(new Paragraph("Armazém devolução: " + note.getWarehouse().getName(), PdfTheme.smallFont()));
@@ -118,16 +119,17 @@ public class CreditNotePrintService {
         return table;
     }
 
-    private PdfPTable buildLinesTable(List<CreditNoteLine> lines, Long companyId) {
-        return LineItemsTableRenderer.buildCompact(lines.stream().map(l -> lineRowMapper.map(
+    private List<LineItemsTableRenderer.Row> toRows(List<CreditNoteLine> lines) {
+        return lines.stream().map(l -> lineRowMapper.map(
                 l.getProduct(),
                 l.getBatchNumber(),
                 l.getQuantity() == null ? BigDecimal.ZERO : l.getQuantity(),
                 l.getUnitPrice(),
                 l.getTaxRate(),
                 l.getDiscountPercentage(),
-                l.getLineTotal()
-        )).toList(), documentConfigService.getColumns(companyId, mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL));
+                l.getLineTotal(),
+                l.getInvoiceLine() == null ? null : l.getInvoiceLine().effectiveExemptionReason()
+        )).toList();
     }
 
     private PdfPTable buildSignatureBlock() {

@@ -44,7 +44,8 @@ public class ReceiptDocumentRenderer {
         addCentered(doc, "1.ª VIA — ORIGINAL (CLIENTE)", PdfTheme.smallFont());
         addCentered(doc, invoice.getInvoiceNumber(), PdfTheme.bodyFont());
         addCentered(doc, invoice.getCreatedAt() != null ? invoice.getCreatedAt().format(DATE_FMT) : "", PdfTheme.smallFont());
-        addCentered(doc, "Cliente: " + buyerName(invoice), PdfTheme.smallFont());
+        addCentered(doc, "Cliente: " + FiscalElements.buyerName(invoice.getCustomerName(), invoice.getClient()), PdfTheme.smallFont());
+        addCentered(doc, "NUIT Cliente: " + FiscalElements.buyerTaxId(invoice.getClient()), PdfTheme.smallFont());
         addCentered(doc, "Operador: " + (invoice.getCreatedBy() != null ? invoice.getCreatedBy() : "—"), PdfTheme.smallFont());
         doc.add(PdfDocumentBuilder.spacer(4f));
     }
@@ -93,6 +94,7 @@ public class ReceiptDocumentRenderer {
     private void renderTotals(Document doc, Invoice invoice) {
         addDottedLine(doc);
         addRight(doc, "Subtotal: " + MoneyFormat.format(invoice.getTotalBeforeTax()), PdfTheme.bodyFont());
+        FiscalElements.thermalVatByRate(doc, FiscalElements.invoiceBreakdowns(invoice.getLines()));
         addRight(doc, "IVA:      " + MoneyFormat.format(invoice.getTaxAmount()), PdfTheme.bodyFont());
         addRight(doc, "TOTAL:    " + MoneyFormat.format(invoice.getTotalAmount()), PdfTheme.boldFont());
     }
@@ -128,11 +130,6 @@ public class ReceiptDocumentRenderer {
             addRight(doc, "Valor pago: " + MoneyFormat.format(totalTendered), PdfTheme.bodyFont());
             addRight(doc, "Troco:      " + MoneyFormat.format(totalChange), PdfTheme.boldFont());
         }
-    }
-
-    private String buyerName(Invoice invoice) {
-        if (invoice.getCustomerName() != null && !invoice.getCustomerName().isBlank()) return invoice.getCustomerName();
-        return invoice.getClient() != null ? invoice.getClient().getName() : "—";
     }
 
     private String methodLabel(PaymentMethod method) {

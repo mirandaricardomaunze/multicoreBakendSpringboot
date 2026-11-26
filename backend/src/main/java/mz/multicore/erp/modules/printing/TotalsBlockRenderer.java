@@ -38,8 +38,9 @@ public final class TotalsBlockRenderer {
         return build(subtotal, tax, total, null, totalLabel);
     }
 
-    private static PdfPTable build(BigDecimal subtotal, BigDecimal tax, BigDecimal total,
-                                   List<TaxBreakdown> breakdowns, String totalLabel) {
+    /** Totais com o IVA discriminado por taxa e o significado do total neste documento. */
+    public static PdfPTable build(BigDecimal subtotal, BigDecimal tax, BigDecimal total,
+                                  List<TaxBreakdown> breakdowns, String totalLabel) {
         PdfPTable wrapper = new PdfPTable(new float[]{55f, 45f});
         wrapper.setWidthPercentage(100);
         wrapper.setSpacingBefore(6f);

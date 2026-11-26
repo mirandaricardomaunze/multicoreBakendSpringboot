@@ -44,8 +44,8 @@ public class ReceiptDocumentPrintService {
             doc.add(CompanyHeaderRenderer.build(r.getCompany(), "Recibo", r.getReceiptNumber(), cancelled ? "ANULADO" : null));
             PdfPTable info = new PdfPTable(4);
             info.setWidthPercentage(100);
-            pair(info, "Cliente", client == null ? invoice.getCustomerName() : client.getName());
-            pair(info, "NUIT", client == null ? null : client.getTaxId());
+            pair(info, "Cliente", FiscalElements.buyerName(invoice.getCustomerName(), client));
+            pair(info, "NUIT", FiscalElements.buyerTaxId(client));
             pair(info, "Fatura", invoice.getInvoiceNumber());
             pair(info, "Data", r.getReceiptDate() == null ? null : DATE_TIME.format(r.getReceiptDate()));
             pair(info, "Forma de pagamento", offset ? "Compensação de adiantamento" : method(r.getPaymentMethod()));
@@ -58,6 +58,8 @@ public class ReceiptDocumentPrintService {
             doc.add(new Paragraph("Total da fatura: " + DisplayNumbers.money(invoice.getTotalAmount()) + " " + PdfTheme.CURRENCY_CODE
                     + "   ·   Em dívida após este recibo: " + DisplayNumbers.money(invoice.outstandingAmount()) + " " + PdfTheme.CURRENCY_CODE,
                     PdfTheme.bodyFont()));
+            doc.add(TotalsBlockRenderer.build(invoice.getTotalBeforeTax(), invoice.getTaxAmount(), invoice.getTotalAmount(),
+                    FiscalElements.invoiceBreakdowns(invoice.getLines()), "TOTAL DA FATURA"));
             if (offset) {
                 doc.add(PdfDocumentBuilder.spacer(6f));
                 doc.add(new Paragraph("Este recibo desconta um adiantamento já pago e regularizado por nota de crédito. "
