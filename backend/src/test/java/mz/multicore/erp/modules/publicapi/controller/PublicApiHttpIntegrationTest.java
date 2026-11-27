@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import mz.multicore.erp.modules.publicapi.service.PublicCatalogService;
@@ -17,8 +18,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,6 +39,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * through the internal API of the active company, by the ADMIN only, and both changes are audited without the secret.
  * Harness API-06 (§3.2.1): every public API error is JSON with only {@code code} + PT-MZ {@code message}, never a
  * stack trace, and pages are capped at 100.
+ * Harness API-11 (§3.2.2): {@code GET /api/public/v1/docs} is the OpenAPI 3 JSON of exactly the public routes, with the
+ * {@code X-Api-Key} scheme, behind a valid key — and it works with springdoc's internal docs switched off, as in prod
+ * (the {@code test} profile sets {@code springdoc.api-docs.enabled=false}).
  * Seeded users: ana=ADMIN, joao=MANAGER, maria=EMPLOYEE (password "password").
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:public-api-http;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
@@ -47,12 +56,13 @@ class PublicApiHttpIntegrationTest {
     @Autowired private ObjectMapper om;
     @Autowired private JdbcTemplate jdbc;
     @SpyBean private PublicCatalogService catalogService;
+    @Autowired @Qualifier("requestMappingHandlerMapping") private RequestMappingHandlerMapping handlerMapping;
 
     private record Session(String token, String companyId) {}
 
     @AfterEach
     void cleanUp() {
-        jdbc.update("delete from api_keys where name like 'API-02%' or name like 'API-06%'");
+        jdbc.update("delete from api_keys where name like 'API-02%' or name like 'API-06%' or name like 'API-11%'");
     }
 
     @Test
@@ -184,6 +194,68 @@ class PublicApiHttpIntegrationTest {
         for (String field : List.of("items", "page", "size", "totalItems", "totalPages")) {
             assertThat(capped.has(field)).as(field).isTrue();
         }
+    }
+
+    @Test
+    void api11PublicOpenApiDescribesExactlyThePublicRoutes() throws Exception {
+        String key = publicKey("API-11 Documentacao", "\"ORDERS_READ\"");
+
+        MockHttpServletResponse response = mockMvc.perform(get(V1 + "/docs").header("X-Api-Key", key))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        assertThat(response.getContentType()).startsWith(MediaType.APPLICATION_JSON_VALUE);
+        JsonNode doc = read(response.getContentAsString());
+        assertThat(doc.path("openapi").asText()).startsWith("3.");
+        assertThat(doc.path("info").path("title").asText()).isNotBlank();
+
+        Map<String, Set<String>> documented = new TreeMap<>();
+        doc.path("paths").fields().forEachRemaining(path -> {
+            Set<String> methods = new TreeSet<>();
+            path.getValue().fieldNames().forEachRemaining(method -> methods.add(method.toUpperCase()));
+            documented.put(path.getKey(), methods);
+        });
+        assertThat(documented).isEqualTo(publicRoutesServed());
+        assertThat(documented.keySet()).allMatch(path -> path.startsWith(V1 + "/")).doesNotContain(V1 + "/docs");
+
+        JsonNode scheme = doc.path("components").path("securitySchemes").path("ApiKeyAuth");
+        assertThat(scheme.path("type").asText()).isEqualTo("apiKey");
+        assertThat(scheme.path("in").asText()).isEqualTo("header");
+        assertThat(scheme.path("name").asText()).isEqualTo("X-Api-Key");
+        assertThat(doc.path("security").get(0).has("ApiKeyAuth")).isTrue();
+        JsonNode error = doc.path("components").path("schemas").path("PublicApiError").path("properties");
+        assertThat(error.has("code")).isTrue();
+        assertThat(error.has("message")).isTrue();
+        JsonNode schemas = doc.path("components").path("schemas");
+        assertThat(schemas.path("PublicProductDTO").path("properties").has("priceWithVat")).isTrue();
+        assertThat(schemas.path("PublicOrderDTO").path("properties").has("invoiceNumber")).isTrue();
+        assertThat(schemas.path("CreatePublicOrderRequest").path("properties").has("externalReference")).isTrue();
+        assertThat(response.getContentAsString()).doesNotContain("purchasePrice").doesNotContain("costPrice")
+                .doesNotContain("/api/integrations").doesNotContain("/api/auth");
+    }
+
+    @Test
+    void api11PublicOpenApiNeedsAValidKey() throws Exception {
+        assertPublicError(mockMvc.perform(get(V1 + "/docs")).andReturn().getResponse(), 401, "API_KEY_REQUIRED");
+        assertPublicError(mockMvc.perform(get(V1 + "/docs").header("X-Api-Key", "mk_live_naoexiste"))
+                .andReturn().getResponse(), 401, "API_KEY_INVALID");
+
+        Session admin = login("ana", null);
+        JsonNode created = read(send(post(KEYS), admin,
+                "{\"name\":\"API-11 Revogada\",\"permissions\":[\"CATALOG_READ\"]}")
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        send(post(KEYS + "/" + created.get("key").get("id").asLong() + "/revoke"), admin, "")
+                .andExpect(status().isOk());
+        assertPublicError(mockMvc.perform(get(V1 + "/docs").header("X-Api-Key", created.get("secret").asText()))
+                .andReturn().getResponse(), 401, "API_KEY_INVALID");
+    }
+
+    /** Public routes the server really maps (without {@code /docs}), as OpenAPI paths: {@code {*number}} → {@code {number}}. */
+    private Map<String, Set<String>> publicRoutesServed() {
+        Map<String, Set<String>> served = new TreeMap<>();
+        handlerMapping.getHandlerMethods().keySet().forEach(info -> info.getPatternValues().stream()
+                .filter(pattern -> pattern.startsWith(V1 + "/") && !pattern.equals(V1 + "/docs"))
+                .forEach(pattern -> info.getMethodsCondition().getMethods().forEach(method -> served
+                        .computeIfAbsent(pattern.replace("{*", "{"), p -> new TreeSet<>()).add(method.name()))));
+        return served;
     }
 
     private JsonNode publicPage(String key, String size, String page) throws Exception {

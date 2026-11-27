@@ -29,7 +29,8 @@ import java.util.Objects;
  * controllers (not the internal key management of {@link ApiKeyController}) and ahead of the internal API's global
  * handler. Errors raised before a controller is chosen (unknown route, wrong method) are shaped by the global handler.
  */
-@RestControllerAdvice(assignableTypes = {PublicCatalogController.class, PublicOrderController.class})
+@RestControllerAdvice(assignableTypes = {PublicCatalogController.class, PublicOrderController.class,
+        PublicApiDocsController.class})
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class PublicApiExceptionHandler {
 
