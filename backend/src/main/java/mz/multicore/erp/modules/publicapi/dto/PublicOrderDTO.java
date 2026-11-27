@@ -5,8 +5,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
- * A customer order as the public API shows it (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.3, §3.4): number, state, lines
- * and totals; no internal ids, costs or margins.
+ * A customer order as the public API shows it (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.3, §3.4, §3.4.3): number, state, lines
+ * and totals and the number of the invoice once billed ({@code null} before); no internal ids, costs or margins.
  */
 public record PublicOrderDTO(
         String number,
@@ -20,7 +20,8 @@ public record PublicOrderDTO(
         BigDecimal totalBeforeTax,
         BigDecimal taxAmount,
         BigDecimal totalAmount,
-        OffsetDateTime createdAt) {
+        OffsetDateTime createdAt,
+        String invoiceNumber) {
 
     public PublicOrderDTO {
         lines = List.copyOf(lines);

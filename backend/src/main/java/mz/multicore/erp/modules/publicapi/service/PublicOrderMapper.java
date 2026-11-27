@@ -17,7 +17,7 @@ final class PublicOrderMapper {
     private PublicOrderMapper() {
     }
 
-    static PublicOrderDTO toPublic(OrderDTO order, String externalReference) {
+    static PublicOrderDTO toPublic(OrderDTO order, String externalReference, String invoiceNumber) {
         boolean walkIn = WalkInClientProvider.WALK_IN_TAX_ID.equals(order.clientTaxId());
         return new PublicOrderDTO(
                 order.orderNumber(),
@@ -32,7 +32,8 @@ final class PublicOrderMapper {
                 order.totalBeforeTax(),
                 order.taxAmount(),
                 order.totalAmount(),
-                order.createdAt() == null ? null : order.createdAt().atZone(ZoneId.systemDefault()).toOffsetDateTime());
+                order.createdAt() == null ? null : order.createdAt().atZone(ZoneId.systemDefault()).toOffsetDateTime(),
+                invoiceNumber);
     }
 
     private static BigDecimal percent(BigDecimal rate) {

@@ -124,6 +124,19 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   referência e o número da encomenda existente; nada é gravado.
 - A verificação acontece antes de qualquer outra regra do pedido (artigos, armazém, cliente, stock).
 
+#### 3.4.3 Consulta de `GET /orders/{number}` (API-10)
+
+- Mostra qualquer **encomenda de cliente** da empresa da chave (Encomenda A4 ou Pedido de separação), venha ela
+  da API ou do desktop: a permissão `ORDERS_READ` existe para chaves que só lêem. As reposições internas não são
+  encomendas de cliente e não aparecem.
+- Procura pelo número exacto da encomenda (sem espaços nas pontas), que vai tal e qual no caminho, com a barra
+  (ex.: `GET /api/public/v1/orders/ENC-2026/00001`). Número inexistente, de outra empresa ou de
+  uma reposição interna → `404 ORDER_NOT_FOUND` com mensagem PT-MZ (não se revela se existe noutra empresa).
+- Corpo: o mesmo de `POST /orders` (`number`, `externalReference` — `null` nas do desktop —, `status`,
+  `statusLabel`, cliente, armazém, linhas com preço do sistema e IVA em %, totais, `createdAt`) **mais**
+  `invoiceNumber`: o número da factura associada, ou `null` enquanto não estiver facturada. O estado é o actual.
+- Nada de ids internos, custos, margens ou reservas.
+
 ## 4. Webhooks (GOAL-014)
 
 ### 4.1 Subscrições

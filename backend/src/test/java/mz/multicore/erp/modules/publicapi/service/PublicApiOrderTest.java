@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
+import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
@@ -11,6 +12,7 @@ import mz.multicore.erp.modules.comercial.model.OrderOrigin;
 import mz.multicore.erp.modules.comercial.model.OrderStatus;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.InsufficientStockException;
@@ -48,6 +50,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,6 +60,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * customer by NUIT (registered with {@code customerName} when new) or Consumidor Final with contact; origin saved.
  * Harness API-09 (§3.4, §3.4.2): the same {@code externalReference} with the same key and content returns the order
  * already created (200, no duplicate, no second reservation); with different content it is a 409.
+ * Harness API-10 (§3.3, §3.4.3): {@code GET /orders/{number}} shows any customer order of the key's company with its
+ * current state, lines, totals and the invoice number; otherwise 404 {@code ORDER_NOT_FOUND}.
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:public-api-orders;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
@@ -68,6 +73,7 @@ class PublicApiOrderTest {
     @Autowired private PublicOrderService orderService;
     @Autowired private ApiKeyService apiKeyService;
     @Autowired private OrderRepository orderRepository;
+    @Autowired private InvoiceRepository invoiceRepository;
     @Autowired private ClientRepository clientRepository;
     @Autowired private ProductRepository productRepository;
     @Autowired private CompanyRepository companyRepository;
@@ -319,11 +325,96 @@ class PublicApiOrderTest {
         assertThat(conflict.get("message").asText()).isNotBlank();
     }
 
+    @Test
+    void api10ReadsTheOrderByNumberWithCurrentStateLinesTotalsAndInvoiceNumber() {
+        PublicOrderDTO created = orderService.create(key, walkIn("L-" + sku, "2", "Ana Muianga", "840000001"));
+
+        PublicOrderDTO read = orderService.getOrder(key, " " + created.number() + " ");
+        assertThat(read.number()).isEqualTo(created.number());
+        assertThat(read.externalReference()).isEqualTo("L-" + sku);
+        assertThat(read.status()).isEqualTo(OrderStatus.PENDING_APPROVAL.name());
+        assertThat(read.statusLabel()).isNotBlank();
+        assertThat(read.customerName()).isEqualTo("Ana Muianga");
+        assertThat(read.lines()).singleElement().satisfies(line -> {
+            assertThat(line.sku()).isEqualTo(sku);
+            assertThat(line.quantity()).isEqualByComparingTo("2");
+            assertThat(line.unitPrice()).isEqualByComparingTo("60000.00");
+        });
+        assertThat(read.totalAmount()).isEqualByComparingTo(created.totalAmount());
+        assertThat(read.invoiceNumber()).isNull();
+
+        String invoiceNumber = "FT API10-" + sku;
+        transactions.executeWithoutResult(tx -> {
+            Order order = orderByNumber(created.number());
+            Invoice invoice = new Invoice();
+            invoice.setInvoiceNumber(invoiceNumber);
+            invoice.setCompany(order.getCompany());
+            invoice.setClient(order.getClient());
+            order.setInvoiceId(invoiceRepository.save(invoice).getId());
+            order.setStatus(OrderStatus.BILLED.name());
+        });
+        PublicOrderDTO invoiced = orderService.getOrder(key, created.number());
+        assertThat(invoiced.invoiceNumber()).isEqualTo(invoiceNumber);
+        assertThat(invoiced.status()).isEqualTo(OrderStatus.BILLED.name());
+    }
+
+    @Test
+    void api10DesktopOrdersAreVisibleButOtherCompaniesAndInternalReplenishmentsAreNotFound() {
+        PublicOrderDTO created = orderService.create(key, walkIn("D-" + sku, "1", "Ana", "840000001"));
+        jdbc.update("update customer_orders set external_reference = null, origin = 'DESKTOP' where order_number = ?",
+                created.number());
+        assertThat(orderService.getOrder(key, created.number()).externalReference()).isNull();
+
+        ApiKeyPrincipal foreign = new ApiKeyPrincipal(8010L, companyId + 100_000L, "Outra empresa API-08",
+                EnumSet.of(ApiKeyPermission.ORDERS_READ));
+        assertNotFound(() -> orderService.getOrder(foreign, created.number()));
+        assertNotFound(() -> orderService.getOrder(key, "NAO-EXISTE-" + sku));
+
+        jdbc.update("update customer_orders set kind = ? where order_number = ?",
+                OrderKind.INTERNAL_REPLENISHMENT.name(), created.number());
+        assertNotFound(() -> orderService.getOrder(key, created.number()));
+    }
+
+    @Test
+    void api10HttpNeedsOrdersReadAndAnswers404WithCode() throws Exception {
+        String writer = newSecret("API-08 Escrita");
+        String number = objectMapper.readTree(mockMvc.perform(post("/api/public/v1/orders").header("X-Api-Key", writer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(walkIn("G-" + sku, "1", "Ana", "840000001"))))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("number").asText();
+        mockMvc.perform(get("/api/public/v1/orders/" + number).header("X-Api-Key", writer))
+                .andExpect(status().isForbidden());
+
+        String reader = newSecret("API-08 Leitura", ApiKeyPermission.ORDERS_READ);
+        JsonNode read = objectMapper.readTree(mockMvc.perform(get("/api/public/v1/orders/" + number)
+                        .header("X-Api-Key", reader))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(read.get("number").asText()).isEqualTo(number);
+        assertThat(read.has("invoiceNumber")).isTrue();
+        assertThat(read.toString()).doesNotContain("\"id\"").doesNotContainIgnoringCase("purchasePrice")
+                .doesNotContainIgnoringCase("reserved");
+
+        JsonNode missing = objectMapper.readTree(mockMvc.perform(get("/api/public/v1/orders/NAO-" + sku + "/1")
+                        .header("X-Api-Key", reader))
+                .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString());
+        assertThat(missing.get("code").asText()).isEqualTo("ORDER_NOT_FOUND");
+        assertThat(missing.get("message").asText()).isNotBlank();
+    }
+
+    private static void assertNotFound(org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {
+        assertThatThrownBy(call).isInstanceOfSatisfying(PublicApiNotFoundException.class,
+                e -> assertThat(e.code()).isEqualTo("ORDER_NOT_FOUND"));
+    }
+
     private String newSecret(String name) {
+        return newSecret(name, ApiKeyPermission.ORDERS_WRITE);
+    }
+
+    private String newSecret(String name, ApiKeyPermission permission) {
         CurrentUserContext.setCurrentUser("admin", "ADMIN");
         CurrentUserContext.setCurrentCompanyId(companyId);
         try {
-            return apiKeyService.create(new CreateApiKeyRequest(name, Set.of(ApiKeyPermission.ORDERS_WRITE))).secret();
+            return apiKeyService.create(new CreateApiKeyRequest(name, Set.of(permission))).secret();
         } finally {
             CurrentUserContext.clear();
         }

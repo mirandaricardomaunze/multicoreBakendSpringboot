@@ -30,6 +30,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                            @org.springframework.data.repository.query.Param("term") String term);
 
     Optional<Order> findByCompanyIdAndIdempotencyKey(Long companyId, String idempotencyKey);
+    Optional<Order> findByCompanyIdAndOrderNumber(Long companyId, String orderNumber);
     Optional<Order> findFirstByCompanyIdAndInvoiceId(Long companyId, Long invoiceId);
     Optional<Order> findFirstByInvoiceId(Long invoiceId);
 
