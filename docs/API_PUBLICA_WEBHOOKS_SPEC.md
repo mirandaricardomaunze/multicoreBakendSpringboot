@@ -299,6 +299,39 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - Reenviar manualmente uma entrega `FAILED`.
 - **20 falhas seguidas** desactivam a subscrição e avisam o ADMIN no sino.
 
+#### 4.3.1 Envio, assinatura e cabeçalhos (WH-04)
+
+- **Quem envia**: o `AsyncWebhookDispatcher` (executor próprio, §4.2.2) chama `WebhookSender.send(deliveryId)`, que
+  lê a entrega e a subscrição em transacção própria, faz **uma** tentativa e grava o resultado. O HTTP passa por uma
+  porta injectável `WebhookHttpClient` (testes sem rede; a implementação real usa `java.net.http.HttpClient`).
+- **Pedido**: `POST` para o URL da subscrição com o corpo **exactamente** como está em `webhook_deliveries.body`
+  (bytes UTF-8, nunca reconstruído nem reformatado). Cabeçalhos:
+  - `Content-Type: application/json; charset=utf-8`
+  - `User-Agent: Multicore-Webhooks/1`
+  - `X-Multicore-Event`: o código do evento (`invoice.issued`, ...), igual ao `type` do corpo.
+  - `X-Multicore-Delivery`: o `id` da entrega (`webhook_deliveries.id`, em texto); o mesmo em todas as tentativas e
+    reenvios da mesma entrega, para o receptor deduplicar (o `id` do evento no corpo também não muda).
+  - `X-Multicore-Signature: sha256=<hex>` — HMAC-SHA256 dos bytes do corpo com a chave = o segredo completo da
+    subscrição (`whsec_...`, decifrado com `AttachmentCrypto`, em bytes UTF-8); `<hex>` em minúsculas, 64 caracteres.
+    O segredo em claro só existe em memória durante o cálculo; nunca vai para log, `last_error` nem cabeçalho.
+- **Rede**: timeout total de **10 s** (ligação + resposta); redirecções **não** são seguidas (3xx = falha). Antes de
+  ligar, o URL volta a passar pelo `WebhookUrlValidator` (§4.1.1, DNS outra vez): endereço privado/local ou nome que
+  não resolve → falha sem abrir ligação. O corpo da resposta é ignorado (não se guarda).
+- **Resultado gravado** (uma tentativa):
+  - **2xx** → `DELIVERED`, `delivered_at = agora`, `attempts + 1`, `last_http_status`, `last_duration_ms`,
+    `last_error = null`, `next_attempt_at = null`.
+  - **Falha** (não-2xx, timeout, erro de rede, endereço recusado) → `attempts + 1`, `last_http_status` (ou `null` sem
+    resposta), `last_duration_ms`, `last_error` curto em PT-MZ (≤ 500: "Resposta HTTP 500.", "Tempo de resposta
+    excedido (10 s).", "Erro de rede: <classe>.", "Endereço do webhook recusado."); a entrega **continua `PENDING`**.
+    O agendamento das próximas tentativas e o `FAILED` são do WH-05; o contador de falhas seguidas, do WH-07.
+- **Não envia**: entrega que já não está `PENDING` (ex. `DELIVERED`) ou subscrição **inactiva** → nenhum pedido HTTP e
+  nada muda na entrega. Um erro no envio nunca sai do executor (apanhado e registado em `WARN`, sem segredo nem corpo).
+- **Contrato de teste** (`WebhookDeliveryTest`, cliente HTTP falso): corpo enviado = corpo gravado; cabeçalhos com o
+  tipo, o id da entrega e a assinatura igual ao HMAC-SHA256 calculado à parte (vector conhecido); 2xx → `DELIVERED`
+  com código e duração; 500/timeout/erro de rede → `PENDING` com `attempts = 1` e `last_error`; URL que passou a
+  resolver para endereço privado → nenhum pedido e falha registada; subscrição inactiva ou entrega já entregue →
+  nenhum pedido.
+
 ### 4.4 Desktop
 
 - Configurações › Integrações: chaves de API (criar com permissões, mostrar uma vez, revogar, último
