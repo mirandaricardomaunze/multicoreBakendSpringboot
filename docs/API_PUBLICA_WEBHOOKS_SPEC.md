@@ -80,10 +80,17 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 
 - Corpo: `externalReference` (obrigatório, único por chave), cliente por `nuit` (existente ou criado
   com as regras do registo manual) ou, sem NUIT, **Consumidor Final** com `contactName` e
-  `contactPhone` guardados na encomenda; `warehouse`; linhas `sku` + `quantity`; `notes`.
+  `contactPhone` guardados na encomenda; `customerName`; `warehouse`; linhas `sku` + `quantity`; `notes`.
+- **Cliente novo por NUIT (decisão do responsável, 2026-11-27):** `customerName` é opcional, mas
+  obrigatório quando o NUIT ainda não existe na empresa; sem ele → `400 CUSTOMER_NAME_REQUIRED`
+  com mensagem PT-MZ. O `contactName` nunca é usado como nome do cliente.
 - Preço e IVA vêm **sempre do sistema** (o pedido não envia preços).
-- Mesmas regras das encomendas do desktop: stock disponível, reserva, limite de crédito, fluxo de
-  aprovação. Estado inicial o mesmo que uma encomenda nova do desktop.
+- **Via da encomenda (decisão do responsável, 2026-11-27):** a encomenda nasce como `FORMAL_ORDER`
+  (Encomenda A4) em `PENDING_APPROVAL` e passa pelo motor de aprovações como no desktop, **mais**
+  verificação de stock disponível e reserva activa logo na criação (respeitando as reservas de outros
+  pedidos). Sem stock disponível → recusada com mensagem PT-MZ. A reserva liberta-se ao facturar ou
+  cancelar, como hoje; o limite de crédito verifica-se na facturação, como no desktop. Esta combinação
+  só é usada pela API pública e pela loja online.
 - **Idempotente**: repetir o mesmo `externalReference` com a mesma chave devolve a encomenda já
   criada (200), sem duplicar; com conteúdo diferente → `409`.
 - A encomenda guarda a origem (`API` + nome da chave) e aparece no desktop como qualquer outra.

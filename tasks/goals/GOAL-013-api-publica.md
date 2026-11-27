@@ -1,12 +1,12 @@
 ---
 id: GOAL-013
 title: "Sistemas externos lêem o catálogo e criam encomendas pela API pública"
-status: BLOCKED
+status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
 verify: ["ApiKeyRulesTest", "PublicApiAuthenticationTest", "PublicApiRateLimitTest", "PublicApiCatalogTest", "PublicApiCatalogHttpTest", "PublicApiOrderTest", "PublicApiHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "IntegrationsUiHarnessTest"]
-blockedBy: ["API-08: via da encomenda criada pela API (aprovação vs reserva) e nome do cliente novo por NUIT"]
+blockedBy: []
 ---
 
 # Objectivo
@@ -55,6 +55,10 @@ Opções:
 `contactPhone`; o registo manual de cliente exige nome. Recomendação: campo opcional `customerName`, obrigatório
 só quando o NUIT ainda não existe na empresa (sem ele → 400 `CUSTOMER_NAME_REQUIRED`); alternativa: usar o
 `contactName` como nome do cliente.
+
+**Resposta do responsável (2026-11-27):** P1 → opção **A** (`FORMAL_ORDER` com aprovação e reserva activa na
+criação); P2 → `customerName` opcional, obrigatório quando o NUIT é novo (`400 CUSTOMER_NAME_REQUIRED`).
+Regras escritas na SPEC §3.4.
 
 ## Registo de progresso
 

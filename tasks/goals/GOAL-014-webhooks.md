@@ -1,12 +1,12 @@
 ---
 id: GOAL-014
 title: "Webhooks avisam sistemas externos de vendas, encomendas e stock"
-status: BLOCKED
+status: TODO
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
 verify: ["WebhookSubscriptionTest", "WebhookEventTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
-blockedBy: ["Pré-requisito: GOAL-013 ainda BLOCKED (API-08, perguntas P1/P2)"]
+blockedBy: []
 ---
 
 # Objectivo
@@ -43,6 +43,9 @@ Opções:
 - **A (recomendada)** — o dono responde a P1/P2 do GOAL-013; o loop fecha o GOAL-013 e depois volta aqui.
 - B — autorizar explicitamente que o GOAL-014 avance já (os webhooks WH-01..WH-07 não dependem da criação de
   encomendas pela API), alterando o pré-requisito deste goal.
+
+**Resposta do responsável (2026-11-27):** opção **A** — P1/P2 do GOAL-013 respondidas; o loop fecha o
+GOAL-013 primeiro e depois segue para este goal.
 
 ## Registo de progresso
 

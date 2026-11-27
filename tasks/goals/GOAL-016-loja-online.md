@@ -1,12 +1,12 @@
 ---
 id: GOAL-016
 title: "Clientes encomendam pela loja online e levantam ou recebem em casa"
-status: BLOCKED
+status: TODO
 priority: LOW
 spec: docs/LOJA_ONLINE_SPEC.md
 harness: docs/LOJA_ONLINE_HARNESS.md
 verify: ["OnlineShopSettingsTest", "OnlineShopCatalogTest", "OnlineShopOrderTest", "OnlineShopExpiryTest", "OnlineShopHttpIntegrationTest", "OnlineShopStaticAssetsHarnessTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "OnlineShopUiHarnessTest"]
-blockedBy: ["GOAL-013 não está DONE (bloqueado em API-08): falta o serviço de criação de encomendas da API pública"]
+blockedBy: []
 ---
 
 # Objectivo
@@ -49,6 +49,9 @@ Opções:
   passa a `TODO` e o loop retoma em LO-01.
 - B — autorizar começar já os critérios que não dependem da API pública (LO-01, LO-02, LO-03) e deixar
   LO-06/07/08 para depois do GOAL-013.
+
+**Resposta do responsável (2026-11-27):** opção **A** — P1/P2 do GOAL-013 respondidas; este goal começa
+em LO-01 quando o GOAL-013 estiver `DONE`.
 
 ## Registo de progresso
 
