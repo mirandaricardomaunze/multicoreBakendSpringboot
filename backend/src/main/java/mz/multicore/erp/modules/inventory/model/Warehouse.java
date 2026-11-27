@@ -54,4 +54,12 @@ public class Warehouse extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
+
+    /**
+     * Armazém de venda: activo, permite vendas e não é de trânsito — onde a API pública mostra stock e onde os
+     * webhooks de stock olham (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.3.1, §4.2.1).
+     */
+    public boolean isSalesWarehouse() {
+        return active && allowsSales && type != WarehouseType.TRANSIT;
+    }
 }

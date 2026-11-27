@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import mz.multicore.erp.modules.comercial.model.ReservedStock;
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -19,6 +20,12 @@ public class OrderReservationLookup {
 
     public OrderReservationLookup(OrderLineRepository orderLineRepository) {
         this.orderLineRepository = orderLineRepository;
+    }
+
+    /** Quantity of one product held by active order reservations in one warehouse (zero when none). */
+    public BigDecimal activeReservation(Long productId, Long warehouseId) {
+        BigDecimal reserved = orderLineRepository.sumActiveReservations(productId, warehouseId);
+        return reserved == null ? BigDecimal.ZERO : reserved;
     }
 
     /** Active reservations of the company's orders, summed per product and warehouse. */

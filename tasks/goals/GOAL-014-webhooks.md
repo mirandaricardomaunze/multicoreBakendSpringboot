@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
-verify: ["WebhookSubscriptionTest", "ApiKeyRulesTest", "MigrationPostgresDialectHarnessTest", "WebhookEventTest", "OrderStatusChangedEventJpaTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
+verify: ["WebhookSubscriptionTest", "ApiKeyRulesTest", "MigrationPostgresDialectHarnessTest", "WebhookEventTest", "OrderStatusChangedEventJpaTest", "StockAvailabilityChangedEventJpaTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
 blockedBy: []
 ---
 
@@ -21,7 +21,7 @@ iteração termina com `NEEDS_HUMAN` e não começa este goal.
 ## Critérios de aceitação
 
 - [x] WH-01 — subscrição: ADMIN, HTTPS, sem endereços privados, segredo uma vez — `WebhookSubscriptionTest`
-- [ ] WH-02 — os quatro eventos com o corpo definido — `WebhookEventTest` · `OrderStatusChangedEventJpaTest`
+- [ ] WH-02 — os quatro eventos com o corpo definido — `WebhookEventTest` · `OrderStatusChangedEventJpaTest` · `StockAvailabilityChangedEventJpaTest`
 - [ ] WH-03 — envio depois do commit, sem anular a operação — `WebhookEventTest`
 - [ ] WH-04 — assinatura HMAC e cabeçalhos — `WebhookDeliveryTest`
 - [ ] WH-05 — tentativas e `FAILED` — `WebhookDeliveryTest`
@@ -57,3 +57,4 @@ GOAL-013 primeiro e depois segue para este goal.
 - 2026-11-27 · WH-02 · regra do corpo dos eventos escrita na SPEC §4.2.1 (origem nos eventos de domínio, envelope evt_, data por evento, customer só nome/NUIT, só subscrições activas da empresa, sem evento para estado igual ou stock que não cruza o zero) e linha do HARNESS actualizada; implementação na próxima iteração.
 - 2026-11-27 · WH-02 (parcial, critério por marcar) · construção dos corpos e escolha das subscrições implementadas: eventos de domínio novos `OrderStatusChangedEvent` e `StockAvailabilityChangedEvent` (architecture.events); módulo webhooks com `WebhookEventFactory` (envelope evt_/type/occurredAt/companyId/data, dinheiro com 2 casas), `WebhookDomainEventTranslator` (lê cliente/NUIT/canal/factura por InvoiceLookup, InvoiceNoteLookup e OrderLookup; Consumidor Final sem NUIT; estado igual e stock que não cruza o zero → nada) e `WebhookEventService.prepare(...)` (só activas da empresa com o tipo, um corpo por evento, nada construído sem interessados); WebhookEventTest 12/12 verde. Falta para fechar o WH-02: o comercial publicar `OrderStatusChangedEvent` nas mudanças de estado (ComercialOrderLifecycleService, DeliveryGuide*, OrderApprovalCallback, OrderPicking*) e o inventário publicar `StockAvailabilityChangedEvent` (primeiro antes × último depois por artigo × armazém de venda na transacção).
 - 2026-11-27 · WH-02 (parcial, critério por marcar) · o comercial publica `OrderStatusChangedEvent`: listener JPA único `OrderStatusChangePublisher` em `Order` (estado gravado lembrado em @PostLoad/@PostPersist, evento em @PostUpdate só quando muda de facto; criar ou regravar o mesmo estado não publica), cobrindo todos os `setStatus` (ciclo de vida, aprovação, guias, separação); OrderStatusChangedEventJpaTest 4/4 e WebhookEventTest 12/12 verdes. Falta para fechar o WH-02: o inventário publicar `StockAvailabilityChangedEvent` (primeiro antes × último depois por artigo × armazém de venda na transacção).
+- 2026-11-27 · WH-02 (parcial, critério por marcar) · o inventário publica `StockAvailabilityChangedEvent`: listener JPA `StockAvailabilityPublisher` em `Stock` entrega cada linha lida/criada numa transacção de escrita ao `StockAvailabilityTracker`, que antes do commit compara a quantidade do início com a que vai ser gravada (primeiro antes × último depois; linha nova parte de zero), desconta as reservas activas (`OrderReservationLookup.activeReservation`) e publica só quando o disponível cruza o zero em armazém de venda (`Warehouse.isSalesWarehouse`, agora partilhado com a API pública) e artigo com controlo de stock; rollback não publica; StockAvailabilityChangedEventJpaTest 8/8 verde. Falta para fechar o WH-02: mudanças só de reserva (encomenda que reserva/liberta a última unidade) também cruzam o zero e devem publicar, e o "antes" tem de usar a reserva do início da transacção (facturar a última unidade reservada não é OUT_OF_STOCK).

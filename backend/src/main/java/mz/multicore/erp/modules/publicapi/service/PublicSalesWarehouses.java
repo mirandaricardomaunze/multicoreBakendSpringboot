@@ -1,7 +1,6 @@
 package mz.multicore.erp.modules.publicapi.service;
 
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.model.WarehouseType;
 
 import java.util.List;
 import java.util.Locale;
@@ -19,7 +18,7 @@ final class PublicSalesWarehouses {
     /** The company's sales warehouses matching {@code wanted}; all of them when {@code wanted} is blank. */
     static List<Warehouse> matching(List<Warehouse> companyWarehouses, String wanted) {
         return companyWarehouses.stream()
-                .filter(PublicSalesWarehouses::isSalesWarehouse)
+                .filter(Warehouse::isSalesWarehouse)
                 .filter(byCodeOrName(wanted))
                 .toList();
     }
@@ -33,10 +32,6 @@ final class PublicSalesWarehouses {
     static PublicApiNotFoundException notFound(String wanted) {
         return new PublicApiNotFoundException("WAREHOUSE_NOT_FOUND",
                 "Armazém de venda " + (wanted == null ? "" : wanted.trim()) + " não encontrado.");
-    }
-
-    private static boolean isSalesWarehouse(Warehouse warehouse) {
-        return warehouse.isActive() && warehouse.isAllowsSales() && warehouse.getType() != WarehouseType.TRANSIT;
     }
 
     private static Predicate<Warehouse> byCodeOrName(String warehouse) {
