@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.publicapi.controller;
 
+import jakarta.validation.Valid;
 import mz.multicore.erp.modules.publicapi.dto.ApiKeyDTO;
 import mz.multicore.erp.modules.publicapi.dto.CreateApiKeyRequest;
 import mz.multicore.erp.modules.publicapi.dto.CreatedApiKeyDTO;
@@ -35,7 +36,7 @@ public class ApiKeyController {
     }
 
     @PostMapping
-    public ResponseEntity<CreatedApiKeyDTO> create(@RequestBody CreateApiKeyRequest request) {
+    public ResponseEntity<CreatedApiKeyDTO> create(@Valid @RequestBody CreateApiKeyRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(apiKeyService.create(request));
     }
 

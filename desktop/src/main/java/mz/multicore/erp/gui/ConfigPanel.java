@@ -38,6 +38,8 @@ public class ConfigPanel extends JPanel {
     private final mz.multicore.erp.gui.currency.ExchangeRatesPanel exchangeRatesPanel;
     /** Cost centres and the default centre (CC-UI-01); {@code null} in legacy constructors. */
     private final mz.multicore.erp.gui.accounting.CostCentersPanel costCentersPanel;
+    /** Public API keys (API-UI-01); {@code null} in legacy constructors. */
+    private final mz.multicore.erp.gui.integrations.IntegrationsPanel integrationsPanel;
     private UserManagementPanel usersPanel;
 
     // TAB 1: AUDIT LOGS
@@ -100,6 +102,23 @@ public class ConfigPanel extends JPanel {
                        DataImportApiClient dataImportApiClient,
                        ExchangeRateApiClient exchangeRateApiClient,
                        AccountingApiClient accountingApiClient) {
+        this(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient,
+                mySubscriptionApiClient, monitoringApiClient, activityApiClient, dataImportApiClient,
+                exchangeRateApiClient, accountingApiClient, null);
+    }
+
+    /** With the public API keys (API_PUBLICA_WEBHOOKS_SPEC §4.4.1): "Integrações" appended as the last tab. */
+    public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
+                       DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
+                       MySubscriptionApiClient mySubscriptionApiClient,
+                       SystemMonitoringApiClient monitoringApiClient,
+                       mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
+                       DataImportApiClient dataImportApiClient,
+                       ExchangeRateApiClient exchangeRateApiClient,
+                       AccountingApiClient accountingApiClient,
+                       ApiKeyApiClient apiKeyApiClient) {
+        this.integrationsPanel = apiKeyApiClient == null ? null
+                : new mz.multicore.erp.gui.integrations.IntegrationsPanel(apiKeyApiClient);
         this.costCentersPanel = accountingApiClient == null ? null
                 : new mz.multicore.erp.gui.accounting.CostCentersPanel(accountingApiClient);
         this.exchangeRatesPanel = exchangeRateApiClient == null ? null
@@ -152,6 +171,9 @@ public class ConfigPanel extends JPanel {
         if (costCentersPanel != null) {
             tabbedPane.addTab("Centros de Custo", UIHelper.icon("fas-sitemap", 16, UIHelper.ACCENT_ORANGE),
                     costCentersPanel);
+        }
+        if (integrationsPanel != null) {
+            tabbedPane.addTab("Integrações", UIHelper.icon("fas-plug", 16, UIHelper.ACCENT_SKY), integrationsPanel);
         }
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -250,6 +272,7 @@ public class ConfigPanel extends JPanel {
         if (activityPanel != null) activityPanel.refresh();
         if (exchangeRatesPanel != null) exchangeRatesPanel.refresh();
         if (costCentersPanel != null) costCentersPanel.refresh();
+        if (integrationsPanel != null) integrationsPanel.refresh();
     }
 
     void loadAuditLogs() {

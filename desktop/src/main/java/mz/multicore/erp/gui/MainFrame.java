@@ -168,7 +168,7 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.BulkStockApiClient bulkStockApiClient,
             mz.multicore.erp.desktop.client.ProjectsApiClient projectsApiClient,
             mz.multicore.erp.desktop.client.SectorApiClients sectorApiClients,
-            mz.multicore.erp.desktop.client.DataImportApiClient dataImportApiClient, mz.multicore.erp.desktop.client.ExchangeRateApiClient exchangeRateApiClient) {
+            mz.multicore.erp.desktop.client.DataImportApiClient dataImportApiClient, mz.multicore.erp.desktop.client.ExchangeRateApiClient exchangeRateApiClient, mz.multicore.erp.desktop.client.ApiKeyApiClient apiKeyApiClient) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
         this.mySubscriptionApiClient = mySubscriptionApiClient;
@@ -229,7 +229,7 @@ public class MainFrame extends JFrame {
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient,
                     promotionApiClient, scaleBarcodeParser, printApiClient);
             comprasPanel    = sellerSession ? null : new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient, exchangeRateApiClient);
-            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient, activityApiClient, dataImportApiClient, exchangeRateApiClient, accountingApiClient);
+            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient, activityApiClient, dataImportApiClient, exchangeRateApiClient, accountingApiClient, apiKeyApiClient);
             performancePanel = sellerSession ? null : new PerformancePanel(performanceApiClient, desktopSessionStore);
             forensicAuditPanel = sellerSession ? null : new ForensicAuditPanel(forensicAuditApiClient);
             aiAssistantPanel = sellerSession ? null : new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);

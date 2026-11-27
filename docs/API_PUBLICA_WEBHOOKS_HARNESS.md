@@ -20,7 +20,7 @@
 | API-09 | Idempotência por chave + `externalReference`: mesmo conteúdo → 200 sem duplicar nem reservar de novo, diferente → 409 `EXTERNAL_REFERENCE_CONFLICT` (§3.4, §3.4.2) — **verde 2026-11-27** | `PublicApiOrderTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | API-10 | Consultar encomenda por número com estado, linhas, totais e factura; só encomendas de cliente da empresa da chave, senão 404 `ORDER_NOT_FOUND` (§3.3, §3.4.3) — **verde 2026-11-27** | `PublicApiOrderTest` |
 | API-11 | OpenAPI 3 JSON só das rotas `/api/public/v1/**` em `/api/public/v1/docs`, esquema `X-Api-Key`, exige chave válida, também em prod (§3.2, §3.2.2) — **verde 2026-11-27** | `PublicApiHttpIntegrationTest` |
-| API-UI-01 | Configurações › Integrações (último separador): tabela de chaves com identificação, permissões PT-MZ, último uso e estado; "Nova chave" com nome e ≥1 permissão; segredo mostrado uma vez com "Copiar" e descartado ao fechar; "Revogar" só activa e com confirmação; gerir só ADMIN (§4.4, §4.4.1) | `IntegrationsUiHarnessTest` (`apiUi01_*`) · `DesktopThinContextTest` |
+| API-UI-01 | Configurações › Integrações (último separador): tabela de chaves com identificação, permissões PT-MZ, último uso e estado; "Nova chave" com nome e ≥1 permissão; segredo mostrado uma vez com "Copiar" e descartado ao fechar; "Revogar" só activa e com confirmação; gerir só ADMIN (§4.4, §4.4.1) — **verde 2026-11-27** | `IntegrationsUiHarnessTest` (`apiUi01_*`) · `DesktopThinContextTest` |
 
 ## Webhooks (GOAL-014)
 

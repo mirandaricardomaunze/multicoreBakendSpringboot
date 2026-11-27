@@ -51,3 +51,4 @@ GOAL-013 primeiro e depois segue para este goal.
 
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-26 · — · não iniciado: pré-requisito GOAL-013 está BLOCKED (API-08); goal passa a BLOCKED com a pergunta P1.
+- 2026-11-27 · — · gate vermelho corrigido (sem critério novo): @Valid em ApiKeyController.create (BIV-01) e coluna customer_orders.origin com default 'DESKTOP' na entidade para o H2 local com dados (MulticoreServicesTest verde).

@@ -150,7 +150,8 @@ public class Order extends BaseEntity {
     // ─── Origem externa (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.4) ──────────────
     /** Por onde entrou a encomenda; as do desktop ficam {@link OrderOrigin#DESKTOP}. */
     @Enumerated(EnumType.STRING)
-    @Column(name = "origin", nullable = false, length = 20)
+    @Column(name = "origin", nullable = false, length = 20,
+            columnDefinition = "varchar(20) default 'DESKTOP' not null")
     private OrderOrigin origin = OrderOrigin.DESKTOP;
 
     /** Nome da chave de API que a criou (ex.: "Loja online"); nulo nas do desktop. */

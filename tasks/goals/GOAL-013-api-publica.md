@@ -1,11 +1,11 @@
 ---
 id: GOAL-013
 title: "Sistemas externos lêem o catálogo e criam encomendas pela API pública"
-status: IN_PROGRESS
+status: DONE
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
-verify: ["ApiKeyRulesTest", "PublicApiAuthenticationTest", "PublicApiRateLimitTest", "PublicApiCatalogTest", "PublicApiCatalogHttpTest", "PublicApiOrderTest", "PublicApiHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "IntegrationsUiHarnessTest", "GlobalExceptionHandlerTest"]
+verify: ["ApiKeyRulesTest", "PublicApiAuthenticationTest", "PublicApiRateLimitTest", "PublicApiCatalogTest", "PublicApiCatalogHttpTest", "PublicApiOrderTest", "PublicApiHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "IntegrationsUiHarnessTest", "GlobalExceptionHandlerTest", "DesktopThinContextTest"]
 blockedBy: []
 ---
 
@@ -28,7 +28,7 @@ Regras em `docs/API_PUBLICA_WEBHOOKS_SPEC.md` §2–§3 e §4.4.
 - [x] API-02 — criar/revogar só ADMIN com auditoria — `PublicApiHttpIntegrationTest`
 - [x] API-06 — erros e paginação — `PublicApiHttpIntegrationTest`
 - [x] API-11 — OpenAPI do grupo público — `PublicApiHttpIntegrationTest`
-- [ ] API-UI-01 — ecrã de chaves de API — `IntegrationsUiHarnessTest`
+- [x] API-UI-01 — ecrã de chaves de API — `IntegrationsUiHarnessTest`
 
 ## Fora de âmbito
 
@@ -77,3 +77,4 @@ Regras escritas na SPEC §3.4.
 - 2026-11-27 · API-11 · spec primeiro: regra da documentação OpenAPI escrita na SPEC §3.2.2 (OpenAPI 3 JSON em `GET /api/public/v1/docs` só com as rotas `/api/public/v1/**`, esquema `ApiKeyAuth` no cabeçalho `X-Api-Key` e erro `PublicApiError`, exige chave válida de qualquer permissão e conta para o limite, existe em prod independentemente das flags springdoc da documentação interna, sem Swagger UI público); linha do HARNESS actualizada; implementação na próxima iteração.
 - 2026-11-27 · API-11 · `GET /api/public/v1/docs` (`PublicApiDocsController` + `PublicApiDocumentationService`): documento OpenAPI 3 JSON construído no módulo com os modelos do swagger-core (não depende do springdoc, por isso existe em prod com `springdoc.api-docs.enabled=false`), só com `/products`, `/products/{sku}`, `/stock`, `POST /orders` e `/orders/{number}`, esquema `ApiKeyAuth` (`X-Api-Key`) global, `PublicApiError` e esquemas gerados a partir dos DTO públicos; exige chave válida de qualquer permissão (401 `API_KEY_REQUIRED`/`API_KEY_INVALID`) e conta para o limite; o teste compara as rotas documentadas com as rotas que o servidor mapeia; PublicApiHttpIntegrationTest 8/8 verde.
 - 2026-11-27 · API-UI-01 · spec primeiro: ecrã de chaves escrito na SPEC §4.4.1 (Configurações › "Integrações" como último separador, tabela com identificação, permissões em PT-MZ, último uso e estado, "Nova chave" com nome e ≥1 permissão, segredo mostrado uma vez com "Copiar" e descartado ao fechar, "Revogar" só activa com confirmação, gestão só ADMIN, tudo pela API interna §3.1.1); linha do HARNESS actualizada; implementação na próxima iteração.
+- 2026-11-27 · API-UI-01 · Configurações › "Integrações" (último separador, `fas-plug`) com `IntegrationsPanel` › `ApiKeysPanel`: tabela nome, `mk_live_XXXXXXXX...`, permissões PT-MZ (`ApiKeyLabels`), criada em/por, último uso ("Nunca usada") e estado ("Activa"/"Revogada em … por …"), revogadas visíveis; "Nova chave" (`NewApiKeyDialog`, `ModernFormDialog` assíncrono) valida nome e ≥1 permissão com as mensagens do backend; segredo em `ApiKeySecretDialog` só de leitura com "Copiar" e o aviso, descartado ao fechar; "Revogar" só com chave activa e `UIHelper.confirm`; não-ADMIN não pede a lista e vê "Só o administrador gere as chaves de API."; cliente `ApiKeyApiClient` sobre `/api/integrations/api-keys`; `ApiKeyDTO`/`CreateApiKeyRequest`/`CreatedApiKeyDTO`/`ApiKeyPermission` movidos para `contracts` (mesmos pacotes) para o desktop os usar; IntegrationsUiHarnessTest 7/7 e DesktopThinContextTest 2/2 verdes. Goal concluído.
