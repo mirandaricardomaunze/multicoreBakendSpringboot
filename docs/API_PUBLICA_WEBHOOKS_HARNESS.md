@@ -19,7 +19,7 @@
 | API-08 | Criar encomenda: preços do sistema, cliente por NUIT ou Consumidor Final com contacto, regras do desktop, origem guardada (§3.4, §3.4.1) — **verde 2026-11-27** | `PublicApiOrderTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | API-09 | Idempotência por chave + `externalReference`: mesmo conteúdo → 200 sem duplicar nem reservar de novo, diferente → 409 `EXTERNAL_REFERENCE_CONFLICT` (§3.4, §3.4.2) — **verde 2026-11-27** | `PublicApiOrderTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | API-10 | Consultar encomenda por número com estado, linhas, totais e factura; só encomendas de cliente da empresa da chave, senão 404 `ORDER_NOT_FOUND` (§3.3, §3.4.3) — **verde 2026-11-27** | `PublicApiOrderTest` |
-| API-11 | OpenAPI só do grupo público em `/api/public/v1/docs` (§3.2) | `PublicApiHttpIntegrationTest` |
+| API-11 | OpenAPI 3 JSON só das rotas `/api/public/v1/**` em `/api/public/v1/docs`, esquema `X-Api-Key`, exige chave válida, também em prod (§3.2, §3.2.2) | `PublicApiHttpIntegrationTest` |
 | API-UI-01 | Configurações › Integrações: chaves com permissões, mostrar uma vez, revogar, último uso (§4.4) | `IntegrationsUiHarnessTest` |
 
 ## Webhooks (GOAL-014)

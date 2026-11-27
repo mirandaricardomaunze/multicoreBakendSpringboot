@@ -67,6 +67,20 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - Paginação: `page` começa em 0 (negativa conta como 0); `size` por omissão 50, no máximo 100 (acima usa-se
   100; menor que 1 usa-se o por omissão). A resposta diz sempre o `page` e o `size` efectivos.
 
+#### 3.2.2 Documentação OpenAPI (API-11)
+
+- `GET /api/public/v1/docs` devolve o documento **OpenAPI 3** em JSON (`application/json`) do grupo público.
+- Só descreve rotas de `/api/public/v1/**` (produtos, stock, encomendas). Nenhuma rota interna (`/api/**` do
+  desktop, `/api/integrations/**`, autenticação, relatórios) nem o próprio `/docs` aparece.
+- Declara o esquema de segurança `ApiKeyAuth` (`apiKey`, cabeçalho `X-Api-Key`) aplicado a todas as rotas, e o
+  corpo de erro `PublicApiError` (`code`, `message`).
+- Como o resto de `/api/public/**` (§3.2), exige uma chave **válida e não revogada**, de qualquer permissão;
+  sem chave → `401 API_KEY_REQUIRED`, chave inválida/revogada → `401 API_KEY_INVALID`; conta para o limite
+  de 60/min.
+- Existe também em produção, independentemente de `springdoc.api-docs.enabled`/`springdoc.swagger-ui.enabled`,
+  que continuam a controlar só a documentação **interna** (`/v3/api-docs`, desligada em prod).
+- Sem Swagger UI para o grupo público nesta versão (o cliente importa o JSON na sua ferramenta).
+
 ### 3.3 Recursos
 
 | Rota | Permissão | Conteúdo |
