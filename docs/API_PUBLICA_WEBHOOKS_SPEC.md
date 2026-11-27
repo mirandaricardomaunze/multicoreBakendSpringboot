@@ -185,6 +185,33 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   `172.16–31.*`, `127.*`, `169.254.*`) são recusados.
 - Cada subscrição tem um **segredo** gerado pelo sistema, mostrado uma vez.
 
+#### 4.1.1 Regras da subscrição (WH-01)
+
+- **Quem**: só o **ADMIN** cria, lista, activa e desactiva subscrições, sempre na **empresa activa**; qualquer
+  outro perfil → `BusinessRuleException` "Só o administrador gere os webhooks." (a política HTTP `403` é do WH-08).
+- **Campos ao criar**: `url` (obrigatória, ≤ 500 caracteres) e `events` (pelo menos um dos quatro de §4.2,
+  sem repetidos). Nasce **activa**. A URL e os eventos não se editam: para mudar, cria-se outra e desactiva-se
+  a antiga. Activar/desactivar é a única alteração.
+- **URL válida**: absoluta, com host, sem utilizador/senha (`https://u:p@...` recusada). Esquema **`https`**
+  obrigatório com o perfil `prod`; fora de `prod` aceita também `http` (desenvolvimento). Outro esquema → recusa.
+- **Endereços privados/locais recusados** (anti-SSRF): `localhost` e `*.localhost`; IPv4 `0.*`, `10.*`, `127.*`,
+  `169.254.*`, `172.16–31.*`, `192.168.*`; IPv6 `::`, `::1`, `fc00::/7`, `fe80::/10` (e IPv4 mapeado nestes
+  intervalos). Um nome de host é resolvido (DNS) e **todos** os endereços devolvidos são verificados; nome que
+  não resolve → recusa. A resolução passa por uma porta injectável (testes sem rede). A mesma verificação
+  repete-se antes de cada entrega (WH-04/05), para um DNS que mude depois não abrir a rede interna.
+- **Segredo**: `whsec_` + 32 bytes aleatórios em base62 (mesmo gerador das chaves de API, §3.1). Sai **só** na
+  resposta da criação; listas e detalhes nunca o devolvem. Como a assinatura HMAC (§4.3) precisa dele em claro,
+  fica guardado **cifrado em repouso** com a cifra AES-256-GCM existente (`AttachmentCrypto`, prefixo `MCE1`;
+  sem chave configurada fora de prod fica em claro, como os anexos).
+- **Auditoria**: `WEBHOOK_CREATE`, `WEBHOOK_ACTIVATE`, `WEBHOOK_DEACTIVATE` com o utilizador e a URL, **nunca**
+  o segredo. Subscrição de outra empresa → "Subscrição não encontrada."
+- **Mensagens PT-MZ** (o backend devolve-as em `400`):
+  - "Indique o URL do webhook." · "O URL do webhook é inválido." · "O URL do webhook tem de usar https://."
+  - "Não são permitidos endereços privados ou locais no webhook." · "Não foi possível resolver o endereço do webhook."
+  - "Escolha pelo menos um evento." · "Evento de webhook desconhecido: X."
+- **Persistência**: tabela `webhook_subscriptions` (empresa, URL, eventos, segredo cifrado, activa, criada em/por,
+  contador de falhas seguidas para o WH-07), migração Flyway com o próximo número livre, sintaxe PostgreSQL.
+
 ### 4.2 Eventos
 
 | Evento | Quando |

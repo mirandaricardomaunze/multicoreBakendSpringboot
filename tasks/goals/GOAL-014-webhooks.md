@@ -1,7 +1,7 @@
 ---
 id: GOAL-014
 title: "Webhooks avisam sistemas externos de vendas, encomendas e stock"
-status: TODO
+status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
@@ -52,3 +52,4 @@ GOAL-013 primeiro e depois segue para este goal.
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-26 · — · não iniciado: pré-requisito GOAL-013 está BLOCKED (API-08); goal passa a BLOCKED com a pergunta P1.
 - 2026-11-27 · — · gate vermelho corrigido (sem critério novo): @Valid em ApiKeyController.create (BIV-01) e coluna customer_orders.origin com default 'DESKTOP' na entidade para o H2 local com dados (MulticoreServicesTest verde).
+- 2026-11-27 · WH-01 · regra da subscrição escrita na SPEC §4.1.1 (ADMIN, URL/eventos, https em prod, anti-SSRF com DNS, segredo whsec_ cifrado, auditoria, mensagens) e linha do HARNESS actualizada; implementação na próxima iteração.
