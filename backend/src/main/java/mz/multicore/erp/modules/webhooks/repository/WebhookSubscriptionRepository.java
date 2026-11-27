@@ -10,4 +10,7 @@ import java.util.List;
 public interface WebhookSubscriptionRepository extends JpaRepository<WebhookSubscription, Long> {
 
     List<WebhookSubscription> findByCompanyIdOrderByCreatedAtDescIdDesc(Long companyId);
+
+    /** Active subscriptions of the company, candidates to receive an event (WH-02). */
+    List<WebhookSubscription> findByCompanyIdAndActiveTrue(Long companyId);
 }
