@@ -332,6 +332,34 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   resolver para endereço privado → nenhum pedido e falha registada; subscrição inactiva ou entrega já entregue →
   nenhum pedido.
 
+#### 4.3.2 Tentativas e `FAILED` (WH-05)
+
+- **Calendário**: a primeira tentativa é a do despacho logo a seguir ao commit (§4.2.2). Cada falha (§4.3.1) agenda a
+  seguinte a contar do **fim da tentativa que falhou**: depois da 1.ª falha +**1 min**, da 2.ª +**5 min**, da 3.ª
+  +**30 min**, da 4.ª +**2 h**, da 5.ª +**12 h**. A **6.ª falha** (a inicial + 5 novas tentativas) passa a entrega a
+  `FAILED` com `next_attempt_at = null`; o `last_error`, o código e a duração da última tentativa ficam. O calendário
+  vive num só sítio (`WebhookRetryPolicy`, constante, sem configuração) e usa um `java.time.Clock` injectável.
+- **Quem repete**: `WebhookRetryScheduler` (`@Scheduled(fixedDelay)`, intervalo `webhooks.retry.poll-ms`, por omissão
+  30 000; desligável com `webhooks.retry.enabled=false`) procura entregas `PENDING` com `next_attempt_at <= agora` de
+  subscrições **activas**, por `next_attempt_at` crescente, no máximo **50** por volta, e entrega cada id ao
+  `WebhookDispatcher` (o mesmo envio do WH-04). Também apanha entregas que ficaram `PENDING` depois de um reinício (o
+  despacho assíncrono perdeu-se): a primeira tentativa não se perde, só se atrasa.
+- **Sem envios em duplicado**: antes de ligar, a tentativa é **reclamada** numa actualização condicional
+  (`PENDING` e `next_attempt_at <= agora` → `next_attempt_at = agora + 2 min`, um prazo maior que o timeout de 10 s);
+  se outra thread/instância já a reclamou, não há pedido. O resultado da tentativa substitui esse prazo (`DELIVERED` →
+  `null`; falha → próximo do calendário ou `FAILED`). Se o processo morrer a meio, o prazo expira e a tentativa repete
+  (o receptor deduplica por `X-Multicore-Delivery`).
+- **Subscrição inactiva**: as entregas `PENDING` dela não são enviadas nem contadas como falha; ficam à espera e seguem
+  pelo calendário quando a subscrição volta a ficar activa. Desactivar não as passa a `FAILED`.
+- **Timeout** continua o do §4.3.1 (10 s por tentativa); timeout conta como falha igual às outras.
+- `FAILED` é final para o agendador; só o reenvio manual (WH-06) a volta a pôr `PENDING`. O contador de falhas
+  seguidas da subscrição é do WH-07.
+- **Contrato de teste** (`WebhookDeliveryTest`, relógio fixo e cliente HTTP falso): falhas seguidas agendam
+  `next_attempt_at` a +1 min, +5 min, +30 min, +2 h e +12 h do fim de cada tentativa; a 6.ª falha → `FAILED`,
+  `attempts = 6`, `next_attempt_at = null`; sucesso numa repetição → `DELIVERED` sem mais tentativas; o agendador só
+  despacha `PENDING` vencidas de subscrições activas (não as futuras, `DELIVERED`, `FAILED` nem de inactivas) e no
+  máximo 50; uma tentativa já reclamada não volta a ser enviada dentro do prazo e volta a sê-lo depois de ele expirar.
+
 ### 4.4 Desktop
 
 - Configurações › Integrações: chaves de API (criar com permissões, mostrar uma vez, revogar, último
