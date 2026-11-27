@@ -52,7 +52,8 @@ import static org.mockito.Mockito.when;
         "logging.level.org.springframework=WARN"
 })
 @Import({WebhookEventListener.class, WebhookEventService.class, WebhookDomainEventTranslator.class,
-        WebhookEventFactory.class, WebhookDeliveryService.class, WebhookAfterCommitJpaTest.Doubles.class})
+        WebhookEventFactory.class, WebhookDeliveryService.class, WebhookRetryPolicy.class,
+        WebhookAfterCommitJpaTest.Doubles.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class WebhookAfterCommitJpaTest {
 

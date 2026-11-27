@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
-verify: ["WebhookSubscriptionTest", "ApiKeyRulesTest", "MigrationPostgresDialectHarnessTest", "WebhookEventTest", "OrderStatusChangedEventJpaTest", "StockAvailabilityChangedEventJpaTest", "WebhookAfterCommitJpaTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
+verify: ["WebhookSubscriptionTest", "ApiKeyRulesTest", "MigrationPostgresDialectHarnessTest", "WebhookEventTest", "OrderStatusChangedEventJpaTest", "StockAvailabilityChangedEventJpaTest", "WebhookAfterCommitJpaTest", "WebhookDeliveryTest", "WebhookRetryJpaTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
 blockedBy: []
 ---
 
@@ -24,7 +24,7 @@ iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - [x] WH-02 — os quatro eventos com o corpo definido — `WebhookEventTest` · `OrderStatusChangedEventJpaTest` · `StockAvailabilityChangedEventJpaTest`
 - [x] WH-03 — envio depois do commit, sem anular a operação — `WebhookAfterCommitJpaTest` · `WebhookEventTest`
 - [x] WH-04 — assinatura HMAC e cabeçalhos — `WebhookDeliveryTest`
-- [ ] WH-05 — tentativas e `FAILED` — `WebhookDeliveryTest`
+- [x] WH-05 — tentativas e `FAILED` — `WebhookDeliveryTest` · `WebhookRetryJpaTest`
 - [ ] WH-06 — registo de entregas e reenvio — `WebhookDeliveryTest`
 - [ ] WH-07 — desactivação após 20 falhas com aviso — `WebhookDeliveryTest`
 - [ ] WH-08 — endpoints, ADMIN, empresa activa — `WebhookHttpIntegrationTest`
@@ -64,3 +64,4 @@ GOAL-013 primeiro e depois segue para este goal.
 - 2026-11-28 · WH-04 · regra do envio escrita na SPEC §4.3.1 (WebhookSender com porta WebhookHttpClient, corpo gravado tal e qual, cabeçalhos X-Multicore-Event/Delivery/Signature, HMAC-SHA256 hex com o segredo decifrado, timeout 10 s, sem redirecções, anti-SSRF antes de ligar, 2xx → DELIVERED, falha → PENDING com tentativa registada, inactiva/não PENDING → nada) e linha do HARNESS actualizada; implementação na próxima iteração.
 - 2026-11-28 · WH-04 · concluído: `WebhookSender` faz uma tentativa por entrega (lida por `WebhookDeliveryService.startAttempt` só se `PENDING` e subscrição activa; sem transacção aberta durante o HTTP): POST do corpo gravado tal e qual pela porta `WebhookHttpClient` (`JdkWebhookHttpClient`, sem redirecções, timeout 10 s), cabeçalhos Content-Type/User-Agent/X-Multicore-Event/X-Multicore-Delivery/X-Multicore-Signature (`WebhookSignature`, HMAC-SHA256 hex com o segredo decifrado), `WebhookUrlValidator` repetido antes de ligar; 2xx → `DELIVERED`, falha → `PENDING` com tentativa, código, duração e erro curto PT-MZ; `AsyncWebhookDispatcher` chama o sender no executor e apanha qualquer erro em WARN; WebhookDeliveryTest 13/13, WebhookAfterCommitJpaTest 6/6, WebhookSubscriptionTest 12/12, WebhookEventTest 12/12, CleanArchitectureHarnessTest e MulticoreServicesTest verdes.
 - 2026-11-28 · WH-05 · regra das tentativas escrita na SPEC §4.3.2 (calendário +1 min/+5 min/+30 min/+2 h/+12 h a contar do fim da tentativa, 6.ª falha → FAILED, WebhookRetryPolicy com Clock injectável, WebhookRetryScheduler com PENDING vencidas de subscrições activas, máx. 50 por volta, reclamação condicional com prazo de 2 min contra envios em duplicado, inactiva espera sem contar falha) e linha do HARNESS actualizada; implementação na próxima iteração.
+- 2026-11-28 · WH-05 · concluído: `WebhookRetryPolicy` (calendário único +1 min/+5 min/+30 min/+2 h/+12 h do fim da tentativa, 6.ª falha → `FAILED` com `next_attempt_at = null`, relógio injectável, prazo de reclamação 2 min); `WebhookDeliveryService.startAttempt` reclama a tentativa por UPDATE condicional (`WebhookDeliveryRepository.claim`, PENDING e vencida) e `recordFailure` agenda a próxima ou passa a `FAILED`; `WebhookRetryScheduler` (`@Scheduled`, `webhooks.retry.poll-ms` 30 000, `webhooks.retry.enabled`) despacha até 50 PENDING vencidas de subscrições activas por `next_attempt_at` (`findDueIds`), retomando as perdidas num reinício; inactiva espera sem contar falha; WebhookDeliveryTest 23/23, WebhookRetryJpaTest 3/3, WebhookAfterCommitJpaTest 6/6, CleanArchitectureHarnessTest e MulticoreServicesTest verdes.

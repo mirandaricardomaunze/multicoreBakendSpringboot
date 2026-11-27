@@ -5,14 +5,19 @@ import mz.multicore.erp.modules.webhooks.model.WebhookDeliveryStatus;
 import mz.multicore.erp.modules.webhooks.model.WebhookSubscription;
 import mz.multicore.erp.modules.webhooks.repository.WebhookDeliveryRepository;
 import mz.multicore.erp.modules.webhooks.repository.WebhookSubscriptionRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
-/** Records webhook deliveries and their send attempts (docs/API_PUBLICA_WEBHOOKS_SPEC.md §4.2.2, §4.3.1). */
+/**
+ * Records webhook deliveries and their send attempts, retry schedule included (docs/API_PUBLICA_WEBHOOKS_SPEC.md
+ * §4.2.2, §4.3.1, §4.3.2).
+ */
 @Service
 public class WebhookDeliveryService {
 
@@ -20,10 +25,13 @@ public class WebhookDeliveryService {
 
     private final WebhookDeliveryRepository deliveries;
     private final WebhookSubscriptionRepository subscriptions;
+    private final WebhookRetryPolicy retryPolicy;
 
-    public WebhookDeliveryService(WebhookDeliveryRepository deliveries, WebhookSubscriptionRepository subscriptions) {
+    public WebhookDeliveryService(WebhookDeliveryRepository deliveries, WebhookSubscriptionRepository subscriptions,
+                                  WebhookRetryPolicy retryPolicy) {
         this.deliveries = deliveries;
         this.subscriptions = subscriptions;
+        this.retryPolicy = retryPolicy;
     }
 
     /**
@@ -41,19 +49,29 @@ public class WebhookDeliveryService {
         delivery.setBody(prepared.payload().body());
         delivery.setStatus(WebhookDeliveryStatus.PENDING);
         delivery.setAttempts(0);
-        delivery.setNextAttemptAt(LocalDateTime.now());
+        delivery.setNextAttemptAt(retryPolicy.now());
         return deliveries.save(delivery).getId();
     }
 
-    /**
-     * Reads what the next attempt needs (WH-04); empty when the delivery is gone, no longer {@code PENDING} or its
-     * subscription is inactive — then nothing is sent and nothing changes.
-     */
+    /** Ids of the due {@code PENDING} deliveries of active subscriptions, oldest due first (WH-05). */
     @Transactional(readOnly = true)
+    public List<Long> dueDeliveryIds(int limit) {
+        return deliveries.findDueIds(WebhookDeliveryStatus.PENDING, retryPolicy.now(), PageRequest.of(0, limit));
+    }
+
+    /**
+     * Claims the next attempt and reads what it needs (WH-04, WH-05); empty when the delivery is gone, no longer
+     * {@code PENDING}, not yet due, already claimed by another thread, or its subscription is inactive — then nothing
+     * is sent and nothing changes. The claim reserves the attempt for {@link WebhookRetryPolicy#CLAIM_LEASE}.
+     */
+    @Transactional
     public Optional<WebhookAttempt> startAttempt(Long deliveryId) {
+        LocalDateTime now = retryPolicy.now();
         return deliveries.findById(deliveryId)
                 .filter(delivery -> delivery.getStatus() == WebhookDeliveryStatus.PENDING)
                 .filter(delivery -> delivery.getSubscription().isActive())
+                .filter(delivery -> deliveries.claim(delivery.getId(), WebhookDeliveryStatus.PENDING, now,
+                        retryPolicy.claimLeaseUntil(now)) == 1)
                 .map(delivery -> new WebhookAttempt(delivery.getId(), delivery.getSubscription().getUrl(),
                         delivery.getEventType().code(), delivery.getBody(),
                         delivery.getSubscription().getSecretCiphertext()));
@@ -65,20 +83,25 @@ public class WebhookDeliveryService {
         deliveries.findById(deliveryId).ifPresent(delivery -> {
             countAttempt(delivery, httpStatus, durationMs, null);
             delivery.setStatus(WebhookDeliveryStatus.DELIVERED);
-            delivery.setDeliveredAt(LocalDateTime.now());
+            delivery.setDeliveredAt(retryPolicy.now());
             delivery.setNextAttemptAt(null);
             deliveries.save(delivery);
         });
     }
 
     /**
-     * Failed attempt (WH-04): the delivery stays {@code PENDING} with the attempt recorded; the retry schedule and
-     * {@code FAILED} are WH-05.
+     * Failed attempt (WH-04): the attempt is recorded and the next one scheduled from the end of this one; after the
+     * last allowed attempt the delivery becomes {@code FAILED} (WH-05).
      */
     @Transactional
     public void recordFailure(Long deliveryId, Integer httpStatus, long durationMs, String error) {
         deliveries.findById(deliveryId).ifPresent(delivery -> {
             countAttempt(delivery, httpStatus, durationMs, error);
+            Optional<LocalDateTime> next = retryPolicy.nextAttemptAt(delivery.getAttempts(), retryPolicy.now());
+            delivery.setNextAttemptAt(next.orElse(null));
+            if (next.isEmpty()) {
+                delivery.setStatus(WebhookDeliveryStatus.FAILED);
+            }
             deliveries.save(delivery);
         });
     }
