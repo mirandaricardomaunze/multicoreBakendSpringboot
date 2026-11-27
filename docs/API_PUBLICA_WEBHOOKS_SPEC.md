@@ -226,6 +226,38 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - O envio acontece **depois do commit** da transacção que originou o evento; um erro no webhook
   nunca anula a operação.
 
+#### 4.2.1 Corpo dos eventos (WH-02)
+
+- **Origem**: os webhooks escutam os eventos de domínio que já existem (nunca o Repository de outro módulo):
+  `invoice.issued` ← `SaleRegisteredEvent` (factura, factura-recibo e venda POS, já publicados por
+  `ComercialInvoiceLifecycleService` e `PosCheckoutAndPaymentService`); `credit_note.issued` ←
+  `CreditNoteApprovedEvent` (nota de crédito "emitida" = aprovada); `order.status_changed` e
+  `stock.availability_changed` ← eventos novos `OrderStatusChangedEvent` e `StockAvailabilityChangedEvent`
+  (pacote `architecture.events`, só números/textos, nunca entidades). O resumo que falta no evento de domínio
+  (cliente, NUIT, SKU) é lido pelo Service público do módulo dono.
+- **Quem recebe**: só subscrições **activas** da **mesma empresa** do evento que escolheram aquele tipo. Sem
+  subscrição interessada não se constrói corpo nenhum. Um evento gera **um** corpo (mesmo `id`) por subscrição.
+- **Envelope** (JSON, chaves em camelCase, datas ISO 8601 com fuso, valores monetários com 2 casas em número):
+  `{"id": "evt_<32 base62>", "type": "<código §4.2>", "occurredAt": "...", "companyId": 1, "data": {...}}`.
+  `id` único por ocorrência (gerador `SecretTokens`); `occurredAt` = instante do facto.
+- **`data` por evento**:
+  - `invoice.issued`: `invoiceNumber`, `documentDate` (data), `channel` (`MANUAL` | `POS`), `customer`,
+    `totalBeforeTax`, `taxAmount`, `totalAmount`, `amountPaid` (o que entrou no acto).
+  - `credit_note.issued`: `creditNoteNumber`, `invoiceNumber` (factura de origem ou `null`), `customer`,
+    `totalBeforeTax`, `taxAmount`, `totalAmount`.
+  - `order.status_changed`: `orderNumber`, `previousStatus`, `status` (nomes de `OrderStatus`, ex. `BILLED`),
+    `customer`, `totalAmount`, `invoiceNumber` (quando já facturada, senão `null`). Só se publica quando o estado
+    **muda** de facto (mesmo estado → nada); a criação da encomenda não é mudança de estado.
+  - `stock.availability_changed`: `sku`, `productName`, `warehouseCode`, `warehouseName`, `available`
+    (o mesmo cálculo do `GET /stock`, §3.3.1) e `status` (`OUT_OF_STOCK` quando `available` passa de > 0 a 0;
+    `BACK_IN_STOCK` quando passa de 0 a > 0). Só armazéns de venda (§3.3.1) e artigos com controlo de stock;
+    variações que não cruzam o zero não geram evento; várias variações do mesmo artigo × armazém na mesma
+    transacção comparam só o primeiro antes com o último depois.
+  - `customer` = `{"name": ..., "nuit": ...}` (NUIT `null` quando não há; Consumidor Final com o nome guardado
+    no documento). Nenhum outro dado pessoal (telefone, email, morada) nem custos ou margens.
+- **Contrato**: o corpo é construído por `WebhookEventFactory` (módulo webhooks) a partir de um record de
+  domínio, testável sem HTTP; WH-02 cobre a construção e a escolha das subscrições, o envio é do WH-03/04.
+
 ### 4.3 Entrega
 
 - `POST` com cabeçalhos `X-Multicore-Event`, `X-Multicore-Delivery` (id) e

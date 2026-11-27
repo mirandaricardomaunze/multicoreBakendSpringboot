@@ -27,7 +27,7 @@
 | ID | Garantia | Teste |
 |---|---|---|
 | WH-01 | Subscrição só ADMIN na empresa activa; URL + ≥1 evento; HTTPS em prod (http só fora de prod); sem utilizador/senha; endereços privados/locais recusados também após DNS; segredo `whsec_` mostrado uma vez e guardado cifrado; auditoria sem segredo (§4.1, §4.1.1) — **verde 2026-11-27** | `WebhookSubscriptionTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
-| WH-02 | Eventos `invoice.issued`, `credit_note.issued`, `order.status_changed`, `stock.availability_changed` com corpo definido (§4.2) | `WebhookEventTest` |
+| WH-02 | Eventos `invoice.issued`, `credit_note.issued`, `order.status_changed`, `stock.availability_changed` a partir dos eventos de domínio; envelope `id`/`type`/`occurredAt`/`companyId`/`data`; `data` por evento sem dados pessoais além de nome/NUIT; só subscrições activas da empresa com o evento; estado igual ou stock que não cruza o zero não gera evento (§4.2, §4.2.1) | `WebhookEventTest` |
 | WH-03 | Envio só depois do commit; falha do webhook não anula a operação (§4.2) | `WebhookEventTest` |
 | WH-04 | Assinatura HMAC-SHA256 e cabeçalhos de evento e entrega (§4.3) | `WebhookDeliveryTest` |
 | WH-05 | Tentativas a 1 min, 5 min, 30 min, 2 h, 12 h; depois `FAILED`; timeout 10 s (§4.3) | `WebhookDeliveryTest` |
