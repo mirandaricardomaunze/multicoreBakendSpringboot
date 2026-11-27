@@ -66,7 +66,7 @@ loja piloto: código, SPEC, harness, testes e UI acabada. Não entregas protóti
   tolerância de estabilidade, peso mínimo, unidade.
 - Painel "Testar ligação" com leitura ao vivo, estado da ligação e últimas tramas recebidas
   (hex + texto) para diagnóstico de campo.
-- Persistência em `%LOCALAPPDATA%\Multicore\desktop.properties` via `DesktopLocalSettings`
+- Persistência em `%LOCALAPPDATA%\MulticoreERP\desktop.properties` via `DesktopLocalSettings`
   (chaves `desktop.pos.scale.*`). Nunca guardar nada disto no backend.
 
 ### 3. Backend — PLU e formato por empresa

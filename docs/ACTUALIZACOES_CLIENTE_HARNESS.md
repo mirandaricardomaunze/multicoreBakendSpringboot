@@ -1,7 +1,7 @@
 # Actualizações do desktop — harness
 
 Cenários de verificação da [ACTUALIZACOES_CLIENTE_SPEC.md](ACTUALIZACOES_CLIENTE_SPEC.md).
-**AC-01..AC-16** automáticos; **AC-20..AC-24** executados ao vivo; **AC-50..AC-54** por fazer.
+**AC-01..AC-16** automáticos; **AC-20..AC-24** e **AC-59** executados ao vivo; **AC-50..AC-54** por fazer.
 
 ---
 
@@ -100,7 +100,38 @@ chamada ao `sendError` — que era o que os deixava passar com o defeito present
 | AC-57 | Duas lojas em versões diferentes | o rodapé diz "2 versões diferentes em uso: 1.4.0, 1.5.0" |
 | AC-58 | Sistema sem avistamentos ainda | "Ainda não foi registada nenhuma versão." |
 | AC-55 | Instalador `jpackage` por utilizador | ✅ `--win-per-user-install`; `WindowsInstallerHarnessTest` |
-| AC-56 | Actualização preserva `desktop.api.base-url` | ✅ ficheiro externo em `%LOCALAPPDATA%`; instalador não o substitui |
+| AC-56 | Actualização preserva `desktop.api.base-url` | ❌→✅ estava **dentro** da pasta instalada; ver AC-59. Agora em `%LOCALAPPDATA%\MulticoreERP` |
+
+---
+
+## Actualização real por cima — 2026-11-27 (AC-59)
+
+Na máquina de desenvolvimento, sem versão instalada antes. Instaladores gerados numa worktree à parte
+(`mvn versions:set` não toca no `pom.xml` partilhado), instalados com `/quiet /l*v`. Backend no 8080.
+
+| Passo | Resultado |
+|---|---|
+| Instalar a 1.0.0 | ✅ código de saída 0; instala em `%LOCALAPPDATA%\Multicore\`; abre o ecrã "MULTICORE — Entrar" |
+| Configurar o posto | `desktop.properties` com o endereço do servidor e a gaveta em "Microsoft Print to PDF"; preferências no registo |
+| Instalar a 1.0.2 por cima | ✅ código de saída 0; `RemoveExistingProducts` remove a 1.0.0; `Multicore.cfg` fica em 1.0.2 |
+| Preferências no registo (`HKCU\Software\JavaSoft\Prefs\mz\multicore\erp`: último utilizador, impressão, interface) | ✅ iguais, byte a byte |
+| Atalho no ambiente de trabalho | ✅ aponta para o `Multicore.exe` novo |
+| **`desktop.properties` (servidor, gaveta, balança)** | ❌ **apagado** — estava na pasta instalada |
+| Atalho no Menu Iniciar | ⚠️ funciona, mas na pasta **"Unknown"** (faltava `--win-menu-group`) |
+| Conteúdo do instalador | ⚠️ levava `desktop\target` inteiro: `classes`, `test-classes`, o `.jar.original` e, se existissem, jars de outras versões |
+
+Correcções: configuração em `%LOCALAPPDATA%\MulticoreERP` com migração do ficheiro antigo
+(`DesktopLocalSettingsTest`), `--win-menu-group "Multicore"` e entrada do `jpackage` só com o jar
+(`WindowsInstallerHarnessTest`).
+
+**Repetição com a correcção (1.0.3 → 1.0.4):** ✅ a 1.0.3 copiou o ficheiro antigo para
+`MulticoreERP` no primeiro arranque; depois da 1.0.4 por cima, o `desktop.properties` (servidor e gaveta)
+e as preferências do registo ficaram iguais byte a byte. O atalho do Menu Iniciar está em "Multicore"
+(a pasta "Unknown" desapareceu), o atalho do ambiente de trabalho aponta para o executável novo e ambos
+abrem o "MULTICORE — Entrar". A pasta `app` tem só o jar e o `Multicore.cfg`.
+
+**Falta fazer à mão:** entrar com um utilizador real e imprimir um talão. Sem isso, o login e a impressão
+ficam provados só pelos ficheiros preservados, não por uso, e também falta repetir num computador piloto.
 
 Ainda externos: gerar o `.exe` numa máquina com WiX 3, assinar com certificado de code signing e
 publicá-lo num canal HTTPS confiável. Estes passos não devem ser simulados sem certificado e destino.

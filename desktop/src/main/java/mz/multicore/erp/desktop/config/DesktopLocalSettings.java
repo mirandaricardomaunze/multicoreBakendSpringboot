@@ -59,12 +59,33 @@ public final class DesktopLocalSettings {
 
     private DesktopLocalSettings() {}
 
+    /**
+     * {@code %LOCALAPPDATA%\MulticoreERP\desktop.properties}. Never {@code %LOCALAPPDATA%\Multicore}: that is the
+     * jpackage install folder, and the uninstall step of every upgrade deletes it with whatever it contains.
+     */
     public static Path settingsFile() {
+        Path base = localAppDataDir();
+        Path current = base.resolve("MulticoreERP").resolve("desktop.properties");
+        migrateLegacyFile(base.resolve("Multicore").resolve("desktop.properties"), current);
+        return current;
+    }
+
+    private static Path localAppDataDir() {
         String localAppData = System.getenv("LOCALAPPDATA");
-        Path base = localAppData == null || localAppData.isBlank()
+        return localAppData == null || localAppData.isBlank()
                 ? Path.of(System.getProperty("user.home"), "AppData", "Local")
                 : Path.of(localAppData);
-        return base.resolve("Multicore").resolve("desktop.properties");
+    }
+
+    /** Copies the file kept by older versions inside the install folder, once, before an upgrade can delete it. */
+    static void migrateLegacyFile(Path legacy, Path current) {
+        if (Files.exists(current) || !Files.isRegularFile(legacy)) return;
+        try {
+            Files.createDirectories(current.getParent());
+            Files.copy(legacy, current);
+        } catch (IOException error) {
+            // The legacy file stays readable on the next start; a failed copy must not stop the workstation.
+        }
     }
 
     static String readBaseUrl(Path file) {

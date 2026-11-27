@@ -39,6 +39,11 @@ try {
     }
     $icon = Join-Path $workspace "installer\app-icon.ico"
     New-Item -ItemType Directory -Force -Path $output | Out-Null
+    # Só o jar entra no instalador: com desktop\target inteiro iam classes, test-classes e jars de outras versões.
+    $inputStage = Join-Path $output "jpackage-input"
+    if (Test-Path -LiteralPath $inputStage) { Remove-Item -Recurse -Force -LiteralPath $inputStage }
+    New-Item -ItemType Directory -Force -Path $inputStage | Out-Null
+    Copy-Item -LiteralPath $desktopJar.FullName -Destination $inputStage
     jpackage `
         --type exe `
         --name "Multicore" `
@@ -46,13 +51,14 @@ try {
         --vendor "Multicore" `
         --description "Sistema integrado de gestão Multicore" `
         --icon $icon `
-        --input $desktopTarget `
+        --input $inputStage `
         --main-jar $desktopJar.Name `
         --main-class "org.springframework.boot.loader.launch.JarLauncher" `
         --license-file $license `
         --dest $output `
         --win-per-user-install `
         --win-menu `
+        --win-menu-group "Multicore" `
         --win-shortcut `
         --win-dir-chooser
     if ($LASTEXITCODE -ne 0) { throw "A criação do instalador falhou." }

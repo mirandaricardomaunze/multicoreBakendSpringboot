@@ -19,7 +19,7 @@ pagamentos, stock ou documentos fiscais. Substitui, no que colidir, as decisões
 
 ### Balança
 
-- Oculta por omissão. Liga-se por posto em `%LOCALAPPDATA%\Multicore\desktop.properties`, com
+- Oculta por omissão. Liga-se por posto em `%LOCALAPPDATA%\MulticoreERP\desktop.properties`, com
   `desktop.pos.scale-enabled=true`.
 - **Não existe driver de porta série:** `SerialScaleReader` trabalha sempre em simulação. O ponto
   deixa de ficar verde nesse modo, porque sugeria uma balança ligada.

@@ -112,8 +112,13 @@ Implementado em `scripts/build-windows-installer.ps1`:
 2. **Instalar em `%LOCALAPPDATA%`, não em `Program Files`.** `--win-per-user-install` evita que cada actualização
    pede administrador — e na loja ninguém sabe a password. Este detalhe sozinho decide se as
    actualizações acontecem ou ficam por fazer durante um ano.
-3. **A configuração sobrevive à actualização.** `desktop.api.base-url` pode viver em
-   `%LOCALAPPDATA%\Multicore\desktop.properties`, fora da pasta instalada. A variável de ambiente/
+3. **A configuração sobrevive à actualização.** `desktop.api.base-url` vive em
+   `%LOCALAPPDATA%\MulticoreERP\desktop.properties`, ao lado da fila de contingência e das vendas suspensas.
+   **Nunca em `%LOCALAPPDATA%\Multicore`**: é a pasta onde o `jpackage` instala, e a desinstalação da versão
+   anterior, que corre dentro de cada actualização, apaga-a com tudo o que lá estiver (visto ao vivo, AC-59).
+   O programa copia uma vez o ficheiro antigo para o sítio novo quando o encontra. Isto salva os postos que
+   correm a partir do jar, mas não um posto instalado com a 1.0.0, que perde o ficheiro na primeira actualização.
+   A variável de ambiente/
    configuração explícita mantém precedência. O instalador nunca substitui esse ficheiro.
    `desktop.api.base-url` é o que aponta a
    loja ao servidor; se o instalador o reescrever, a loja fica a apontar para `localhost` e pára.

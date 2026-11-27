@@ -33,9 +33,17 @@ class WindowsInstallerHarnessTest {
                 "desktop/src/main/java/mz/multicore/erp/desktop/config/DesktopLocalSettings.java"));
         String config = Files.readString(ROOT.resolve(
                 "desktop/src/main/java/mz/multicore/erp/desktop/config/DesktopApiConfig.java"));
-        assertThat(settings).contains("LOCALAPPDATA", "Multicore", "desktop.properties");
+        assertThat(settings).contains("LOCALAPPDATA", "resolve(\"MulticoreERP\").resolve(\"desktop.properties\")");
         assertThat(config).contains("DesktopLocalSettings.readBaseUrl");
         assertThat(Files.readString(ROOT.resolve("scripts/build-windows-installer.ps1")))
                 .doesNotContain("desktop.properties");
+    }
+
+    /** AC-59: the installer packs only the jar and names its Start-menu folder (it was "Unknown"). */
+    @Test
+    void installer_packsOnlyTheJarAndNamesMenuGroup() throws Exception {
+        String script = Files.readString(ROOT.resolve("scripts/build-windows-installer.ps1"));
+        assertThat(script).contains("--input $inputStage", "--win-menu-group \"Multicore\"");
+        assertThat(script).doesNotContain("--input $desktopTarget");
     }
 }

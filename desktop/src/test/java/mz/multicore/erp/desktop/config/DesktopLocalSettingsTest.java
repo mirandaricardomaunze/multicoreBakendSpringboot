@@ -30,8 +30,44 @@ class DesktopLocalSettingsTest {
 
     @Test
     void settingsFile_livesOutsideInstalledApplication() {
-        assertThat(DesktopLocalSettings.settingsFile().toString())
-                .contains("Multicore")
-                .endsWith("desktop.properties");
+        Path file = DesktopLocalSettings.settingsFile();
+        // %LOCALAPPDATA%\Multicore is the jpackage install folder; an upgrade deletes it (found live, AC-59).
+        assertThat(file.getParent().getFileName().toString()).isEqualTo("MulticoreERP");
+        assertThat(file.getFileName().toString()).isEqualTo("desktop.properties");
+    }
+
+    @Test
+    void migrateLegacyFile_copiesOldFileOnce() throws Exception {
+        Path legacy = tempDir.resolve("Multicore/desktop.properties");
+        Path current = tempDir.resolve("MulticoreERP/desktop.properties");
+        Files.createDirectories(legacy.getParent());
+        Files.writeString(legacy, "desktop.api.base-url=https://erp.exemplo.co.mz\n");
+
+        DesktopLocalSettings.migrateLegacyFile(legacy, current);
+
+        assertThat(DesktopLocalSettings.readBaseUrl(current)).isEqualTo("https://erp.exemplo.co.mz");
+    }
+
+    @Test
+    void migrateLegacyFile_neverOverwritesCurrentFile() throws Exception {
+        Path legacy = tempDir.resolve("Multicore/desktop.properties");
+        Path current = tempDir.resolve("MulticoreERP/desktop.properties");
+        Files.createDirectories(legacy.getParent());
+        Files.createDirectories(current.getParent());
+        Files.writeString(legacy, "desktop.api.base-url=http://antigo\n");
+        Files.writeString(current, "desktop.api.base-url=https://actual\n");
+
+        DesktopLocalSettings.migrateLegacyFile(legacy, current);
+
+        assertThat(DesktopLocalSettings.readBaseUrl(current)).isEqualTo("https://actual");
+    }
+
+    @Test
+    void migrateLegacyFile_withoutLegacyFile_createsNothing() {
+        Path current = tempDir.resolve("MulticoreERP/desktop.properties");
+
+        DesktopLocalSettings.migrateLegacyFile(tempDir.resolve("Multicore/desktop.properties"), current);
+
+        assertThat(current).doesNotExist();
     }
 }

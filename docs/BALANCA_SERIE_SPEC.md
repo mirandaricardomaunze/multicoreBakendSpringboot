@@ -12,7 +12,7 @@
    "desligada" e a ligação tenta reabrir a porta a cada 2 s.
 3. **Modos:** contínuo; por pedido com `W` + CR; por pedido com ENQ (0x05), conforme o manual da balança.
 4. **Configuração por posto:** cada balcão tem a sua porta. Fica no ficheiro local do posto
-   (`%LOCALAPPDATA%\Multicore\desktop.properties`: `desktop.pos.scale-enabled`, `desktop.scale.port`,
+   (`%LOCALAPPDATA%\MulticoreERP\desktop.properties`: `desktop.pos.scale-enabled`, `desktop.scale.port`,
    `desktop.scale.baud`, `desktop.scale.mode`), não no servidor.
 5. **Captura:** só peso estável e positivo. No POS mantém-se o botão "Capturar"; na desmancha, "Ler balança"
    põe o peso no corte seleccionado ou, sem selecção, no peso da carcaça.
