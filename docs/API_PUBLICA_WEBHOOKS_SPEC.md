@@ -360,6 +360,36 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   despacha `PENDING` vencidas de subscrições activas (não as futuras, `DELIVERED`, `FAILED` nem de inactivas) e no
   máximo 50; uma tentativa já reclamada não volta a ser enviada dentro do prazo e volta a sê-lo depois de ele expirar.
 
+#### 4.3.3 Registo de entregas, reenvio e limpeza (WH-06)
+
+- **Quem**: só o **ADMIN**, na **empresa activa** (mesma regra e mensagem do §4.1.1); subscrição ou entrega de outra
+  empresa → "Subscrição não encontrada." / "Entrega não encontrada." (a política HTTP `403`/`404` é do WH-08).
+- **Registo por subscrição**: `WebhookDeliveryService.listDeliveries(subscriptionId, status, page, size)` devolve
+  `WebhookDeliveryDTO` (record na fronteira, nunca a entidade): `id`, `eventId`, `eventType` (código §4.2),
+  `status`, `attempts`, `lastHttpStatus`, `lastDurationMs`, `lastError`, `nextAttemptAt`, `createdAt`,
+  `deliveredAt`. **Nunca** o corpo nem o segredo (o corpo tem nome/NUIT do cliente e não sai do servidor por esta
+  via). Ordem: mais recentes primeiro (`createdAt` decrescente, depois `id` decrescente). `status` opcional
+  (`PENDING` | `DELIVERED` | `FAILED`; desconhecido → "Estado de entrega desconhecido: X."). Paginação: `page` ≥ 0,
+  `size` por omissão 50, máximo 100 (fora disso → "Tamanho de página inválido (1 a 100)."). Uma linha por entrega
+  com os dados da **última** tentativa (não há tabela de tentativas; `attempts` diz quantas houve).
+- **Reenvio manual**: `WebhookDeliveryService.resend(deliveryId)` só para entregas **`FAILED`**; outro estado →
+  "Só se reenviam entregas falhadas." Subscrição **inactiva** → "Active a subscrição antes de reenviar." O reenvio
+  **reutiliza a mesma entrega** (mesmo `id`, logo o mesmo `X-Multicore-Delivery`, mesmo corpo e `event_id`): passa a
+  `PENDING`, `attempts = 0`, `next_attempt_at = agora` (calendário do §4.3.2 recomeça do zero), mantém o
+  `last_error`/código/duração anteriores até à nova tentativa, e é entregue logo ao `WebhookDispatcher` **depois do
+  commit** (assíncrono; se o despacho se perder, o agendador do WH-05 apanha-a). Auditoria `WEBHOOK_RESEND` com o
+  utilizador, a URL e o id da entrega/evento, nunca o corpo nem o segredo. Devolve o `WebhookDeliveryDTO` já `PENDING`.
+  O efeito do reenvio no contador de falhas seguidas é do WH-07.
+- **Guardado 30 dias**: `WebhookDeliveryCleanupJob` (`@Scheduled(cron)`, `webhooks.retention.cron`, por omissão
+  `0 30 3 * * *`; desligável com `webhooks.retention.enabled=false`; `Clock` injectável) apaga as entregas com
+  `created_at` anterior a **agora − 30 dias**, de qualquer estado e de qualquer empresa (inclui `PENDING` à espera de
+  subscrição inactiva: um evento com mais de 30 dias já não se envia). Apaga em lotes (≤ 500 por instrução) para não
+  prender a tabela; regista em `INFO` só o número apagado. As subscrições nunca são apagadas por este job.
+- **Contrato de teste** (`WebhookDeliveryTest`, relógio fixo e cliente HTTP falso): lista só as entregas da
+  subscrição e da empresa activa, mais recentes primeiro, filtro por estado, sem corpo; não-ADMIN recusado; reenviar
+  `FAILED` → `PENDING` com `attempts = 0`, mesmo id e corpo, despacho chamado e auditoria; reenviar `DELIVERED`/
+  `PENDING` ou com subscrição inactiva → recusa e nada muda; limpeza apaga as de 31 dias e mantém as de 29 dias.
+
 ### 4.4 Desktop
 
 - Configurações › Integrações: chaves de API (criar com permissões, mostrar uma vez, revogar, último
