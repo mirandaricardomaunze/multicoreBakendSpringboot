@@ -1,14 +1,21 @@
 package mz.multicore.erp.modules.webhooks.service;
 
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.AttachmentCrypto;
+import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.modules.audit.service.AuditLogService;
+import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.webhooks.dto.WebhookDeliveryDTO;
 import mz.multicore.erp.modules.webhooks.model.WebhookDelivery;
 import mz.multicore.erp.modules.webhooks.model.WebhookDeliveryStatus;
 import mz.multicore.erp.modules.webhooks.model.WebhookEventType;
 import mz.multicore.erp.modules.webhooks.model.WebhookSubscription;
 import mz.multicore.erp.modules.webhooks.repository.WebhookDeliveryRepository;
 import mz.multicore.erp.modules.webhooks.repository.WebhookSubscriptionRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mock.env.MockEnvironment;
 
@@ -28,6 +35,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -39,9 +47,14 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -54,6 +67,11 @@ import static org.mockito.Mockito.when;
  * of each attempt, the 6th is {@code FAILED}; the scheduler dispatches only due {@code PENDING} deliveries of active
  * subscriptions, at most 50; a claimed attempt is not sent again until its lease expires. The real queries are
  * checked against Hibernate in {@code WebhookRetryJpaTest}.
+ * <p>
+ * Harness WH-06 (§4.3.3): the ADMIN sees the delivery log of a subscription of the active company, newest first,
+ * filtered by state, without the body; a {@code FAILED} delivery is resent as the same delivery, back to
+ * {@code PENDING} with the schedule restarted, dispatched after commit and audited; the cleanup deletes deliveries
+ * older than 30 days.
  */
 class WebhookDeliveryTest {
 
@@ -71,12 +89,38 @@ class WebhookDeliveryTest {
     private final Map<Long, WebhookDelivery> byId = new HashMap<>();
     private final MutableClock clock = new MutableClock(LocalDateTime.of(2026, 11, 28, 9, 0));
     private final WebhookRetryPolicy retryPolicy = new WebhookRetryPolicy(clock);
+    private final AuditLogService auditLogService = mock(AuditLogService.class);
+    private final List<Object> published = new ArrayList<>();
+    private final Company company = company(1L);
 
     private WebhookDeliveryService deliveries;
     private WebhookSender sender;
 
     @BeforeEach
     void setUp() throws Exception {
+        CurrentUserContext.setCurrentCompanyId(1L);
+        CurrentUserContext.setCurrentUser("admin", "ADMIN");
+        when(deliveryRepository.save(any(WebhookDelivery.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(subscriptionRepository.findById(any())).thenAnswer(invocation -> byId.values().stream()
+                .map(WebhookDelivery::getSubscription)
+                .filter(s -> s.getId().equals(invocation.getArgument(0)))
+                .findFirst());
+        // Fakes of the delivery-log queries (same WHERE / ORDER BY / page) and of the cleanup batch.
+        when(deliveryRepository.findBySubscriptionIdOrderByCreatedAtDescIdDesc(any(), any()))
+                .thenAnswer(invocation -> log(invocation.getArgument(0), null, invocation.getArgument(1)));
+        when(deliveryRepository.findBySubscriptionIdAndStatusOrderByCreatedAtDescIdDesc(any(), any(), any()))
+                .thenAnswer(invocation -> log(invocation.getArgument(0), invocation.getArgument(1),
+                        invocation.getArgument(2)));
+        when(deliveryRepository.findIdsCreatedBefore(any(), any())).thenAnswer(invocation -> {
+            LocalDateTime cutoff = invocation.getArgument(0);
+            Pageable page = invocation.getArgument(1);
+            return byId.values().stream().filter(d -> d.getCreatedAt().isBefore(cutoff))
+                    .map(WebhookDelivery::getId).sorted().limit(page.getPageSize()).toList();
+        });
+        org.mockito.Mockito.doAnswer(invocation -> {
+            invocation.<Iterable<Long>>getArgument(0).forEach(byId::remove);
+            return null;
+        }).when(deliveryRepository).deleteAllByIdInBatch(any());
         dns.put("loja.example.com", List.of(InetAddress.getByName("93.184.216.34")));
         when(deliveryRepository.findById(any()))
                 .thenAnswer(invocation -> Optional.ofNullable(byId.get(invocation.<Long>getArgument(0))));
@@ -111,8 +155,14 @@ class WebhookDeliveryTest {
             return addresses;
         };
         WebhookUrlValidator validator = new WebhookUrlValidator(new MockEnvironment(), resolver);
-        deliveries = new WebhookDeliveryService(deliveryRepository, subscriptionRepository, retryPolicy);
+        deliveries = new WebhookDeliveryService(deliveryRepository, subscriptionRepository, retryPolicy,
+                auditLogService, published::add);
         sender = new WebhookSender(deliveries, validator, http, crypto);
+    }
+
+    @AfterEach
+    void tearDown() {
+        CurrentUserContext.clear();
     }
 
     @Test
@@ -433,7 +483,216 @@ class WebhookDeliveryTest {
                         Optional.of(end.plusHours(12)), Optional.empty());
     }
 
+
+    // ---- WH-06: registo de entregas, reenvio e limpeza ----
+
+    @Test
+    void wh06_registoMostraSoAsEntregasDaSubscricaoMaisRecentesPrimeiroSemCorpo() {
+        WebhookDelivery older = delivery(80L, "https://loja.example.com/hooks", true);
+        older.setCreatedAt(clock.now().minusHours(2));
+        WebhookDelivery newer = delivery(81L, "https://loja.example.com/hooks", true);
+        newer.setSubscription(older.getSubscription());
+        newer.setCreatedAt(clock.now().minusHours(1));
+        newer.setStatus(WebhookDeliveryStatus.DELIVERED);
+        newer.setAttempts(2);
+        newer.setLastHttpStatus(200);
+        newer.setLastDurationMs(35L);
+        WebhookDelivery sameTime = delivery(82L, "https://loja.example.com/hooks", true);
+        sameTime.setSubscription(older.getSubscription());
+        sameTime.setCreatedAt(clock.now().minusHours(1));
+        delivery(83L, "https://outra.example.com/hooks", true).setCreatedAt(clock.now());
+
+        List<WebhookDeliveryDTO> log = deliveries.listDeliveries(older.getSubscription().getId(), null, 0, null);
+
+        assertThat(log).extracting(WebhookDeliveryDTO::id).containsExactly(82L, 81L, 80L);
+        WebhookDeliveryDTO delivered = log.get(1);
+        assertThat(delivered.eventId()).isEqualTo("evt_abc");
+        assertThat(delivered.eventType()).isEqualTo("invoice.issued");
+        assertThat(delivered.status()).isEqualTo(WebhookDeliveryStatus.DELIVERED);
+        assertThat(delivered.attempts()).isEqualTo(2);
+        assertThat(delivered.lastHttpStatus()).isEqualTo(200);
+        assertThat(delivered.lastDurationMs()).isEqualTo(35L);
+        assertThat(Arrays.stream(WebhookDeliveryDTO.class.getRecordComponents()).map(c -> c.getName()))
+                .doesNotContain("body", "secret", "secretCiphertext");
+        assertThat(log.toString()).doesNotContain("Lojas Ndlovu").doesNotContain(SECRET);
+    }
+
+    @Test
+    void wh06_registoFiltraPorEstadoEPagina() {
+        WebhookDelivery first = delivery(84L, "https://loja.example.com/hooks", true);
+        first.setStatus(WebhookDeliveryStatus.FAILED);
+        IntStream.rangeClosed(85, 87).forEach(i -> {
+            WebhookDelivery d = delivery((long) i, "https://loja.example.com/hooks", true);
+            d.setSubscription(first.getSubscription());
+            d.setCreatedAt(clock.now().plusMinutes(i));
+        });
+        Long subscriptionId = first.getSubscription().getId();
+
+        assertThat(deliveries.listDeliveries(subscriptionId, "failed", 0, null))
+                .extracting(WebhookDeliveryDTO::id).containsExactly(84L);
+        assertThat(deliveries.listDeliveries(subscriptionId, "PENDING", 0, 2))
+                .extracting(WebhookDeliveryDTO::id).containsExactly(87L, 86L);
+        assertThat(deliveries.listDeliveries(subscriptionId, "PENDING", 1, 2))
+                .extracting(WebhookDeliveryDTO::id).containsExactly(85L);
+        assertMessage("Estado de entrega desconhecido: PERDIDA.",
+                () -> deliveries.listDeliveries(subscriptionId, "PERDIDA", 0, null));
+        assertMessage("Tamanho de página inválido (1 a 100).",
+                () -> deliveries.listDeliveries(subscriptionId, null, 0, 101));
+        assertMessage("Tamanho de página inválido (1 a 100).",
+                () -> deliveries.listDeliveries(subscriptionId, null, 0, 0));
+    }
+
+    @Test
+    void wh06_registoSoParaOAdministradorENaEmpresaActiva() {
+        WebhookDelivery delivery = delivery(88L, "https://loja.example.com/hooks", true);
+        Long subscriptionId = delivery.getSubscription().getId();
+
+        CurrentUserContext.setCurrentUser("gerente", "MANAGER");
+        assertMessage("Só o administrador gere os webhooks.",
+                () -> deliveries.listDeliveries(subscriptionId, null, 0, null));
+
+        CurrentUserContext.setCurrentUser("admin", "ADMIN");
+        CurrentUserContext.setCurrentCompanyId(2L);
+        assertMessage("Subscrição não encontrada.", () -> deliveries.listDeliveries(subscriptionId, null, 0, null));
+        assertMessage("Subscrição não encontrada.", () -> deliveries.listDeliveries(9999L, null, 0, null));
+    }
+
+    @Test
+    void wh06_reenviarFalhadaVoltaAPendenteComAMesmaEntregaDespachoEAuditoria() {
+        WebhookDelivery delivery = failed(90L, true);
+        clock.advance(Duration.ofDays(1));
+
+        WebhookDeliveryDTO result = deliveries.resend(90L);
+
+        assertThat(result.id()).isEqualTo(90L);
+        assertThat(result.status()).isEqualTo(WebhookDeliveryStatus.PENDING);
+        assertThat(result.attempts()).isZero();
+        assertThat(delivery.getStatus()).isEqualTo(WebhookDeliveryStatus.PENDING);
+        assertThat(delivery.getAttempts()).isZero();
+        assertThat(delivery.getNextAttemptAt()).isEqualTo(clock.now());
+        assertThat(delivery.getBody()).isEqualTo(BODY);
+        assertThat(delivery.getEventId()).isEqualTo("evt_abc");
+        assertThat(delivery.getLastError()).as("fica até à nova tentativa").isEqualTo("Resposta HTTP 500.");
+        assertThat(delivery.getLastHttpStatus()).isEqualTo(500);
+        assertThat(published).containsExactly(new WebhookResendRequested(90L));
+        ArgumentCaptor<String> details = ArgumentCaptor.forClass(String.class);
+        verify(auditLogService).logCurrent(eq("WEBHOOK_RESEND"), details.capture());
+        assertThat(details.getValue()).contains("https://loja.example.com/hooks", "90", "evt_abc")
+                .doesNotContain(SECRET).doesNotContain("Lojas Ndlovu");
+
+        http.status = 500;
+        sender.send(90L);
+        assertThat(http.requests).hasSize(1);
+        assertThat(http.requests.get(0).headers()).containsEntry("X-Multicore-Delivery", "90");
+        assertThat(new String(http.requests.get(0).body(), StandardCharsets.UTF_8)).isEqualTo(BODY);
+        assertThat(delivery.getAttempts()).isEqualTo(1);
+        assertThat(delivery.getNextAttemptAt()).as("calendário recomeça").isEqualTo(clock.now().plusMinutes(1));
+    }
+
+    @Test
+    void wh06_soSeReenviamFalhadasDeSubscricoesActivasDaEmpresa() {
+        WebhookDelivery delivered = delivery(91L, "https://loja.example.com/hooks", true);
+        delivered.setStatus(WebhookDeliveryStatus.DELIVERED);
+        delivery(92L, "https://loja.example.com/hooks", true);
+        failed(93L, false);
+        failed(94L, true);
+
+        assertMessage("Só se reenviam entregas falhadas.", () -> deliveries.resend(91L));
+        assertMessage("Só se reenviam entregas falhadas.", () -> deliveries.resend(92L));
+        assertMessage("Active a subscrição antes de reenviar.", () -> deliveries.resend(93L));
+        assertMessage("Entrega não encontrada.", () -> deliveries.resend(9999L));
+        CurrentUserContext.setCurrentCompanyId(2L);
+        assertMessage("Entrega não encontrada.", () -> deliveries.resend(94L));
+        CurrentUserContext.setCurrentCompanyId(1L);
+        CurrentUserContext.setCurrentUser("gerente", "MANAGER");
+        assertMessage("Só o administrador gere os webhooks.", () -> deliveries.resend(94L));
+
+        assertThat(delivered.getStatus()).isEqualTo(WebhookDeliveryStatus.DELIVERED);
+        assertThat(byId.get(93L).getStatus()).isEqualTo(WebhookDeliveryStatus.FAILED);
+        assertThat(byId.get(94L).getStatus()).isEqualTo(WebhookDeliveryStatus.FAILED);
+        assertThat(byId.get(94L).getAttempts()).isEqualTo(6);
+        assertThat(published).isEmpty();
+        verify(auditLogService, never()).logCurrent(anyString(), anyString());
+    }
+
+    @Test
+    void wh06_reenvioDespachaSoDepoisDoCommitPeloListener() {
+        List<Long> dispatched = new ArrayList<>();
+        WebhookEventListener listener = new WebhookEventListener(mock(WebhookEventService.class), deliveries,
+                dispatched::add);
+
+        listener.onResend(new WebhookResendRequested(95L));
+
+        assertThat(dispatched).containsExactly(95L);
+    }
+
+    @Test
+    void wh06_limpezaApagaAsDeMaisDe30DiasEMantemAsMaisNovas() {
+        delivery(96L, "https://loja.example.com/hooks", true).setCreatedAt(clock.now().minusDays(31));
+        failed(97L, false).setCreatedAt(clock.now().minusDays(31));
+        delivery(98L, "https://loja.example.com/hooks", false).setCreatedAt(clock.now().minusDays(45));
+        delivery(99L, "https://loja.example.com/hooks", true).setCreatedAt(clock.now().minusDays(29));
+        delivery(100L, "https://loja.example.com/hooks", true).setCreatedAt(clock.now());
+
+        new WebhookDeliveryCleanupJob(deliveries, retryPolicy).purge();
+
+        assertThat(byId.keySet()).containsExactlyInAnyOrder(99L, 100L);
+    }
+
+    @Test
+    void wh06_limpezaApagaEmLotesDeNoMaximo500() {
+        IntStream.rangeClosed(1, 1203).forEach(i -> delivery(10_000L + i, "https://loja.example.com/hooks", true)
+                .setCreatedAt(clock.now().minusDays(40)));
+        List<Integer> batches = new ArrayList<>();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            LocalDateTime cutoff = invocation.getArgument(0);
+            Pageable page = invocation.getArgument(1);
+            List<Long> ids = byId.values().stream().filter(d -> d.getCreatedAt().isBefore(cutoff))
+                    .map(WebhookDelivery::getId).sorted().limit(page.getPageSize()).toList();
+            batches.add(ids.size());
+            return ids;
+        }).when(deliveryRepository).findIdsCreatedBefore(any(), any());
+
+        new WebhookDeliveryCleanupJob(deliveries, retryPolicy).purge();
+
+        assertThat(byId).isEmpty();
+        assertThat(batches).containsExactly(500, 500, 203);
+    }
+
     // ---- helpers ----
+
+    private List<WebhookDelivery> log(Long subscriptionId, WebhookDeliveryStatus status, Pageable page) {
+        return byId.values().stream()
+                .filter(d -> d.getSubscription().getId().equals(subscriptionId))
+                .filter(d -> status == null || d.getStatus() == status)
+                .sorted(Comparator.comparing(WebhookDelivery::getCreatedAt).thenComparing(WebhookDelivery::getId)
+                        .reversed())
+                .skip(page.getOffset())
+                .limit(page.getPageSize())
+                .toList();
+    }
+
+    private WebhookDelivery failed(Long id, boolean activeSubscription) {
+        WebhookDelivery delivery = delivery(id, "https://loja.example.com/hooks", activeSubscription);
+        delivery.setStatus(WebhookDeliveryStatus.FAILED);
+        delivery.setAttempts(6);
+        delivery.setNextAttemptAt(null);
+        delivery.setLastHttpStatus(500);
+        delivery.setLastDurationMs(12L);
+        delivery.setLastError("Resposta HTTP 500.");
+        return delivery;
+    }
+
+    private static Company company(Long id) {
+        Company company = new Company();
+        company.setId(id);
+        return company;
+    }
+
+    private static void assertMessage(String expected, Runnable action) {
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, action::run);
+        assertThat(error.getMessage()).isEqualTo(expected);
+    }
 
     private void assertPendingFailure(WebhookDelivery delivery, Integer httpStatus, String error) {
         assertThat(delivery.getStatus()).isEqualTo(WebhookDeliveryStatus.PENDING);
@@ -454,6 +713,7 @@ class WebhookDeliveryTest {
     private WebhookDelivery delivery(Long id, String url, boolean active) {
         WebhookSubscription subscription = new WebhookSubscription();
         subscription.setId(id + 1000);
+        subscription.setCompany(company);
         subscription.setUrl(url);
         subscription.setActive(active);
         subscription.setEvents(EnumSet.of(WebhookEventType.INVOICE_ISSUED));
@@ -461,6 +721,8 @@ class WebhookDeliveryTest {
         WebhookDelivery delivery = new WebhookDelivery();
         delivery.setId(id);
         delivery.setSubscription(subscription);
+        delivery.setCompany(company);
+        delivery.setCreatedAt(clock.now());
         delivery.setEventId("evt_abc");
         delivery.setEventType(WebhookEventType.INVOICE_ISSUED);
         delivery.setBody(BODY);

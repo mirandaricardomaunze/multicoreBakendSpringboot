@@ -56,6 +56,17 @@ public class WebhookEventListener {
         deliver(WebhookEventType.STOCK_AVAILABILITY_CHANGED, event.companyId(), () -> events.prepare(event));
     }
 
+    /** Manual resend (WH-06): sent only after the resend commits; a lost dispatch is picked up by the scheduler. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onResend(WebhookResendRequested event) {
+        try {
+            dispatcher.dispatch(event.deliveryId());
+        } catch (RuntimeException e) {
+            log.warn("Reenvio da entrega de webhook {} falhou ao despachar: {}", event.deliveryId(),
+                    e.getClass().getSimpleName());
+        }
+    }
+
     private void deliver(WebhookEventType type, Long companyId, Supplier<List<PreparedWebhookEvent>> prepare) {
         List<PreparedWebhookEvent> prepared;
         try {

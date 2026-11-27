@@ -3,7 +3,6 @@ package mz.multicore.erp.modules.webhooks.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.AttachmentCrypto;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.webhooks.dto.CreateWebhookSubscriptionRequest;
@@ -98,9 +97,7 @@ public class WebhookSubscriptionService {
     }
 
     private static void requireAdmin() {
-        if (!PermissionGuard.isAdmin()) {
-            throw new BusinessRuleException("Só o administrador gere os webhooks.");
-        }
+        WebhookAdmin.require();
     }
 
     private static Set<WebhookEventType> requireEvents(List<String> raw) {

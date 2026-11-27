@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.webhooks.service;
 
+import mz.multicore.erp.modules.audit.service.AuditLogService;
+
 import jakarta.persistence.EntityManager;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.webhooks.model.WebhookDelivery;
@@ -13,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +29,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * Harness WH-05 (docs/API_PUBLICA_WEBHOOKS_SPEC.md §4.3.2) against real Hibernate: the due query returns only
  * {@code PENDING} deliveries of active subscriptions whose {@code next_attempt_at} has arrived, oldest first and within
  * the page size; the conditional claim succeeds once and moves {@code next_attempt_at} to the 2-minute lease, so a
  * second claim — another thread or instance — gets nothing until the lease expires.
+ * <p>
+ * Harness WH-06 (§4.3.3): the delivery-log queries return one subscription's deliveries newest first, optionally of
+ * one state, paged; the 30-day cleanup deletes only deliveries created before the cutoff, in batches.
  */
 @DataJpaTest(showSql = false, properties = {
         "spring.flyway.enabled=false",
@@ -90,7 +97,55 @@ class WebhookRetryJpaTest {
         assertThat(nextAttemptAt(future)).isEqualTo(NOW.plusMinutes(1));
     }
 
+    @Test
+    void theDeliveryLogIsNewestFirstFilteredByStateAndPaged() {
+        Long subscription = subscription(true);
+        Long other = subscription(true);
+        Long oldest = delivery(subscription, WebhookDeliveryStatus.FAILED, null);
+        Long middle = delivery(subscription, WebhookDeliveryStatus.PENDING, NOW.plusDays(1));
+        Long newest = delivery(subscription, WebhookDeliveryStatus.PENDING, NOW.plusDays(1));
+        delivery(other, WebhookDeliveryStatus.PENDING, NOW.plusDays(1));
+        setCreatedAt(oldest, NOW.minusDays(2));
+        setCreatedAt(middle, NOW.minusDays(1));
+        setCreatedAt(newest, NOW.minusDays(1));
+
+        assertThat(repository.findBySubscriptionIdOrderByCreatedAtDescIdDesc(subscription, PageRequest.of(0, 50)))
+                .extracting(WebhookDelivery::getId).containsExactly(newest, middle, oldest);
+        assertThat(repository.findBySubscriptionIdOrderByCreatedAtDescIdDesc(subscription, PageRequest.of(1, 2)))
+                .extracting(WebhookDelivery::getId).containsExactly(oldest);
+        assertThat(repository.findBySubscriptionIdAndStatusOrderByCreatedAtDescIdDesc(subscription,
+                WebhookDeliveryStatus.FAILED, PageRequest.of(0, 50)))
+                .extracting(WebhookDelivery::getId).containsExactly(oldest);
+    }
+
+    @Test
+    void theCleanupDeletesOnlyDeliveriesCreatedBeforeTheCutoff() {
+        Long subscription = subscription(false);
+        Long old = delivery(subscription, WebhookDeliveryStatus.PENDING, NOW);
+        Long oldFailed = delivery(subscription, WebhookDeliveryStatus.FAILED, null);
+        Long recent = delivery(subscription, WebhookDeliveryStatus.DELIVERED, null);
+        setCreatedAt(old, NOW.minusDays(31));
+        setCreatedAt(oldFailed, NOW.minusDays(40));
+        setCreatedAt(recent, NOW.minusDays(29));
+
+        assertThat(repository.findIdsCreatedBefore(NOW.minusDays(30), PageRequest.of(0, 1))).containsExactly(old);
+        while (deliveries.deleteBatchCreatedBefore(NOW.minusDays(30)) > 0) {
+            // one batch per transaction until nothing older is left
+        }
+
+        assertThat(repository.findById(old)).isEmpty();
+        assertThat(repository.findById(oldFailed)).isEmpty();
+        assertThat(repository.findById(recent)).isPresent();
+        assertThat(entityManager.find(WebhookSubscription.class, subscription)).as("subscrição fica").isNotNull();
+    }
+
     // ---- helpers ----
+
+    /** created_at is set by @PrePersist; tests move it back with a direct update. */
+    private void setCreatedAt(Long id, LocalDateTime createdAt) {
+        inTransaction(em -> em.createQuery("update WebhookDelivery d set d.createdAt = :at where d.id = :id")
+                .setParameter("at", createdAt).setParameter("id", id).executeUpdate());
+    }
 
     private int claim(Long id, LocalDateTime now) {
         return new TransactionTemplate(transactionManager).execute(status ->
@@ -146,6 +201,11 @@ class WebhookRetryJpaTest {
 
     @TestConfiguration
     static class FixedClock {
+        @Bean
+        AuditLogService auditLogService() {
+            return mock(AuditLogService.class);
+        }
+
         @Bean
         WebhookRetryPolicy webhookRetryPolicy() {
             return new WebhookRetryPolicy(Clock.fixed(NOW.toInstant(ZoneOffset.UTC), ZoneOffset.UTC));

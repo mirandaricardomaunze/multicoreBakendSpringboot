@@ -30,4 +30,16 @@ public interface WebhookDeliveryRepository extends JpaRepository<WebhookDelivery
             + "and d.nextAttemptAt <= :now")
     int claim(@Param("id") Long id, @Param("status") WebhookDeliveryStatus status, @Param("now") LocalDateTime now,
               @Param("leaseUntil") LocalDateTime leaseUntil);
+
+    /** Delivery log of one subscription, newest first (§4.3.3, WH-06). */
+    List<WebhookDelivery> findBySubscriptionIdOrderByCreatedAtDescIdDesc(Long subscriptionId, Pageable page);
+
+    /** Delivery log of one subscription in one state, newest first (§4.3.3, WH-06). */
+    List<WebhookDelivery> findBySubscriptionIdAndStatusOrderByCreatedAtDescIdDesc(Long subscriptionId,
+                                                                                 WebhookDeliveryStatus status,
+                                                                                 Pageable page);
+
+    /** Ids of deliveries created before the cutoff, one batch for the 30-day cleanup (§4.3.3, WH-06). */
+    @Query("select d.id from WebhookDelivery d where d.createdAt < :cutoff order by d.id asc")
+    List<Long> findIdsCreatedBefore(@Param("cutoff") LocalDateTime cutoff, Pageable page);
 }

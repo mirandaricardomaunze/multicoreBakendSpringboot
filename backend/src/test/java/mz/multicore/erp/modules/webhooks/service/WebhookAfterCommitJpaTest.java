@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.webhooks.service;
 
+import mz.multicore.erp.modules.audit.service.AuditLogService;
+
 import jakarta.persistence.EntityManager;
 import mz.multicore.erp.architecture.events.OrderStatusChangedEvent;
 import mz.multicore.erp.architecture.events.StockAvailabilityChangedEvent;
@@ -275,6 +277,11 @@ class WebhookAfterCommitJpaTest {
         RecordingDispatcher recordingDispatcher(EntityManager entityManager,
                                                 PlatformTransactionManager transactionManager) {
             return new RecordingDispatcher(entityManager, transactionManager);
+        }
+
+        @Bean
+        AuditLogService auditLogService() {
+            return mock(AuditLogService.class);
         }
 
         @Bean
