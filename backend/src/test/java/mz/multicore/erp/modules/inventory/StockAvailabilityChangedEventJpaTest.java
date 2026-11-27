@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.service.OrderReservationLookup;
+import mz.multicore.erp.modules.comercial.service.OrderReservationWatcher;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
@@ -43,7 +44,7 @@ import static org.assertj.core.api.Assertions.tuple;
         "logging.level.org.hibernate.SQL=OFF",
         "logging.level.org.springframework=WARN"
 })
-@Import({StockAvailabilityTracker.class, OrderReservationLookup.class})
+@Import({StockAvailabilityTracker.class, OrderReservationLookup.class, OrderReservationWatcher.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @RecordApplicationEvents
 class StockAvailabilityChangedEventJpaTest {
@@ -166,6 +167,54 @@ class StockAvailabilityChangedEventJpaTest {
     }
 
     @Test
+    void reservingTheLastUnitsPublishesOutOfStock() {
+        Fixture f = fixture(salesWarehouse(), true, "5");
+
+        inTransaction(em -> persistReservedOrder(em, f, "5"));
+
+        assertThat(published()).extracting(StockAvailabilityChangedEvent::wentOutOfStock,
+                        e -> e.availableBefore().intValue(), e -> e.availableAfter().intValue())
+                .containsExactly(tuple(true, 5, 0));
+    }
+
+    @Test
+    void releasingAReservationWithoutTouchingItsLinesPublishesBackInStock() {
+        Fixture f = fixture(salesWarehouse(), true, "5");
+        Long orderId = reserve(f, "5");
+
+        inTransaction(em -> em.find(Order.class, orderId).setReservationActive(false));
+
+        assertThat(published()).extracting(StockAvailabilityChangedEvent::cameBackInStock,
+                        e -> e.availableBefore().intValue(), e -> e.availableAfter().intValue())
+                .containsExactly(tuple(true, 0, 5));
+    }
+
+    @Test
+    void freeingPartOfAReservedLinePublishesBackInStock() {
+        Fixture f = fixture(salesWarehouse(), true, "5");
+        Long orderId = reserve(f, "5");
+
+        inTransaction(em -> em.find(Order.class, orderId).getLines().get(0).setReservedQuantity(new BigDecimal("3")));
+
+        assertThat(published()).extracting(StockAvailabilityChangedEvent::cameBackInStock,
+                        e -> e.availableAfter().intValue())
+                .containsExactly(tuple(true, 2));
+    }
+
+    @Test
+    void billingTheLastReservedUnitsIsNotOutOfStock() {
+        Fixture f = fixture(salesWarehouse(), true, "5");
+        Long orderId = reserve(f, "5");
+
+        inTransaction(em -> {
+            em.find(Stock.class, f.stockId()).setQuantity(BigDecimal.ZERO);
+            em.find(Order.class, orderId).setReservationActive(false);
+        });
+
+        assertThat(published()).isEmpty();
+    }
+
+    @Test
     void aRolledBackTransactionPublishesNothing() {
         Fixture f = fixture(salesWarehouse(), true, "3");
 
@@ -233,32 +282,38 @@ class StockAvailabilityChangedEventJpaTest {
         return new Fixture(ids[0], ids[1], ids[2], ids[3], "FAR-" + n, "A" + n);
     }
 
-    private void reserve(Fixture f, String quantity) {
-        int n = SEQ.incrementAndGet();
-        inTransaction(em -> {
-            Client client = new Client();
-            client.setName("Padaria Central");
-            client.setTaxId("stock-client-" + n);
-            client.setEmail("padaria." + n + "@example.test");
-            em.persist(client);
-            Order order = new Order();
-            order.setCompany(em.find(Company.class, f.companyId()));
-            order.setClient(client);
-            order.setOrderNumber("EC-STK/" + n);
-            order.setWarehouse(em.find(Warehouse.class, f.warehouseId()));
-            order.setReservationActive(true);
-            OrderLine line = new OrderLine();
-            line.setOrder(order);
-            line.setProduct(em.find(Product.class, f.productId()));
-            line.setQuantity(new BigDecimal(quantity));
-            line.setReservedQuantity(new BigDecimal(quantity));
-            line.setUnitPrice(BigDecimal.TEN);
-            line.setTaxRate(BigDecimal.ZERO);
-            line.setLineTotal(BigDecimal.TEN);
-            order.getLines().add(line);
-            em.persist(order);
-        });
+    /** Order reserving {@code quantity} of the fixture's product, committed without events; returns its id. */
+    private Long reserve(Fixture f, String quantity) {
+        Long[] id = new Long[1];
+        inTransaction(em -> id[0] = persistReservedOrder(em, f, quantity));
         events.clear();
+        return id[0];
+    }
+
+    private Long persistReservedOrder(EntityManager em, Fixture f, String quantity) {
+        int n = SEQ.incrementAndGet();
+        Client client = new Client();
+        client.setName("Padaria Central");
+        client.setTaxId("stock-client-" + n);
+        client.setEmail("padaria." + n + "@example.test");
+        em.persist(client);
+        Order order = new Order();
+        order.setCompany(em.find(Company.class, f.companyId()));
+        order.setClient(client);
+        order.setOrderNumber("EC-STK/" + n);
+        order.setWarehouse(em.find(Warehouse.class, f.warehouseId()));
+        order.setReservationActive(true);
+        OrderLine line = new OrderLine();
+        line.setOrder(order);
+        line.setProduct(em.find(Product.class, f.productId()));
+        line.setQuantity(new BigDecimal(quantity));
+        line.setReservedQuantity(new BigDecimal(quantity));
+        line.setUnitPrice(BigDecimal.TEN);
+        line.setTaxRate(BigDecimal.ZERO);
+        line.setLineTotal(BigDecimal.TEN);
+        order.getLines().add(line);
+        em.persist(order);
+        return order.getId();
     }
 
     private record Fixture(Long companyId, Long warehouseId, Long productId, Long stockId,

@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
+import mz.multicore.erp.modules.comercial.service.OrderReservationWatcher;
 import mz.multicore.erp.modules.comercial.service.OrderStatusChangePublisher;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
@@ -21,7 +22,7 @@ import java.util.Optional;
 @Entity
 @Table(name = "customer_orders", uniqueConstraints = @UniqueConstraint(
         name = "uk_customer_orders_company_number", columnNames = {"company_id", "order_number"}))
-@EntityListeners(OrderStatusChangePublisher.class)
+@EntityListeners({OrderStatusChangePublisher.class, OrderReservationWatcher.class})
 @Getter
 @Setter
 public class Order extends BaseEntity {
