@@ -3,7 +3,7 @@
 > Cenários que provam [API_PUBLICA_WEBHOOKS_SPEC.md](API_PUBLICA_WEBHOOKS_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-27
+**Última actualização:** 2026-11-28
 
 ## API pública (GOAL-013)
 
@@ -28,7 +28,7 @@
 |---|---|---|
 | WH-01 | Subscrição só ADMIN na empresa activa; URL + ≥1 evento; HTTPS em prod (http só fora de prod); sem utilizador/senha; endereços privados/locais recusados também após DNS; segredo `whsec_` mostrado uma vez e guardado cifrado; auditoria sem segredo (§4.1, §4.1.1) — **verde 2026-11-27** | `WebhookSubscriptionTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | WH-02 | Eventos `invoice.issued`, `credit_note.issued`, `order.status_changed`, `stock.availability_changed` a partir dos eventos de domínio; envelope `id`/`type`/`occurredAt`/`companyId`/`data`; `data` por evento sem dados pessoais além de nome/NUIT; só subscrições activas da empresa com o evento; estado igual ou stock que não cruza o zero não gera evento (§4.2, §4.2.1) — **verde 2026-11-28** (corpos, `order.status_changed` pelo comercial, `stock.availability_changed` por quantidade e por reserva, com a reserva do início da transacção no "antes") | `WebhookEventTest` · `OrderStatusChangedEventJpaTest` · `StockAvailabilityChangedEventJpaTest` |
-| WH-03 | Envio só depois do commit; falha do webhook não anula a operação (§4.2) | `WebhookEventTest` |
+| WH-03 | Depois do commit (rollback → nada), em transacção nova, uma entrega `PENDING` por subscrição interessada com o corpo já serializado em `webhook_deliveries`; despacho assíncrono fora da thread do negócio; qualquer erro do webhook é apanhado e registado sem anular a operação (§4.2, §4.2.2) | `WebhookEventTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | WH-04 | Assinatura HMAC-SHA256 e cabeçalhos de evento e entrega (§4.3) | `WebhookDeliveryTest` |
 | WH-05 | Tentativas a 1 min, 5 min, 30 min, 2 h, 12 h; depois `FAILED`; timeout 10 s (§4.3) | `WebhookDeliveryTest` |
 | WH-06 | Registo de entregas 30 dias; reenviar `FAILED` (§4.3) | `WebhookDeliveryTest` |

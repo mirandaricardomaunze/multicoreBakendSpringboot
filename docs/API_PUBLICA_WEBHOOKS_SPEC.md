@@ -258,6 +258,36 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - **Contrato**: o corpo é construído por `WebhookEventFactory` (módulo webhooks) a partir de um record de
   domínio, testável sem HTTP; WH-02 cobre a construção e a escolha das subscrições, o envio é do WH-03/04.
 
+#### 4.2.2 Envio depois do commit (WH-03)
+
+- **Quando**: os webhooks escutam os quatro eventos de domínio com `@TransactionalEventListener(phase =
+  AFTER_COMMIT)`. Transacção que faz **rollback** → nenhuma entrega registada nem enviada. Evento publicado fora
+  de transacção (`fallbackExecution = true`) conta como já confirmado.
+- **Registo primeiro, envio depois**: depois do commit, numa transacção **nova** (`REQUIRES_NEW`, porque a
+  original já fechou), `WebhookEventService.prepare(...)` escolhe as subscrições (§4.2.1) e grava **uma entrega
+  por subscrição** em `webhook_deliveries` com estado `PENDING`, `attempts = 0`, `next_attempt_at = agora` e o
+  corpo JSON já serializado (o corpo não volta a ser construído: reenvios e tentativas mandam exactamente o mesmo
+  texto, mesmo `id` de evento). Sem subscrição interessada → nenhuma linha.
+- **Envio fora da thread do negócio**: gravadas as entregas, cada uma é entregue a uma porta
+  `WebhookDispatcher` que corre num executor próprio (assíncrono). A operação do utilizador (factura, POS,
+  aprovação, guia) nunca espera pelo HTTP. O POST, a assinatura e os cabeçalhos são do WH-04; as tentativas e o
+  `FAILED` do WH-05. Até lá a entrega fica `PENDING`.
+- **Um erro no webhook nunca anula a operação**: qualquer excepção no caminho do webhook (leitura do resumo,
+  serialização, gravação da entrega, despacho) é apanhada no listener e registada em log `WARN` com o tipo do
+  evento e a empresa (nunca o segredo nem o corpo); a operação de negócio já está confirmada e não é afectada, e
+  os outros eventos/subscrições seguem. Uma subscrição que falha a gravação não impede as outras.
+- **Janela aceite**: se o processo morrer entre o commit e a gravação da entrega, esse evento perde-se (não há
+  outbox na transacção de negócio, para um erro do webhook nunca a poder anular). Fica documentado; não se
+  reconstrói depois.
+- **Persistência**: tabela `webhook_deliveries` (empresa, subscrição, `event_id`, `event_type`, corpo,
+  estado `PENDING` | `DELIVERED` | `FAILED`, tentativas, próxima tentativa, último código HTTP, última duração
+  em ms, último erro curto, criada em, entregue em), índices por (estado, próxima tentativa) e por (subscrição,
+  criada em); migração Flyway com o próximo número livre, sintaxe PostgreSQL. A limpeza aos 30 dias é do WH-06.
+- **Contrato de teste** (`WebhookEventTest`): commit com subscrição interessada → uma entrega `PENDING` por
+  subscrição com o mesmo `event_id` e despacho chamado depois do commit; rollback → zero entregas e nenhum
+  despacho; falha forçada no caminho do webhook → a operação fica confirmada e não sai excepção para quem
+  chamou; sem interessados → zero entregas.
+
 ### 4.3 Entrega
 
 - `POST` com cabeçalhos `X-Multicore-Event`, `X-Multicore-Delivery` (id) e
