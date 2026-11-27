@@ -30,6 +30,16 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - Revogar é imediato. Cada chave regista a data do último uso.
 - Criar e revogar geram auditoria `API_KEY_CREATE` / `API_KEY_REVOKE`.
 
+#### 3.1.1 Gestão das chaves (API-02)
+
+- Rotas **internas** (login de utilizador + `X-Company-Id`, nunca `X-Api-Key`), sempre na empresa activa:
+  `GET /api/integrations/api-keys` (lista sem segredo nem hash), `POST /api/integrations/api-keys`
+  (`{name, permissions}` → `201` com a chave e o segredo completo, a única vez que sai) e
+  `POST /api/integrations/api-keys/{id}/revoke` (→ `200` com a chave revogada).
+- Só o **ADMIN** lista, cria e revoga: qualquer outro perfil → `403` (política HTTP e guarda do Service).
+- Chave de outra empresa ou já revogada, nome vazio ou sem permissões → `400` com mensagem PT-MZ.
+- A auditoria regista o utilizador, o nome e a identificação `mk_live_XXXXXXXX...` da chave, **nunca** o segredo.
+
 ### 3.2 Pedidos
 
 - Prefixo versionado **`/api/public/v1/**`**, autenticação por cabeçalho `X-Api-Key`. Os tokens de

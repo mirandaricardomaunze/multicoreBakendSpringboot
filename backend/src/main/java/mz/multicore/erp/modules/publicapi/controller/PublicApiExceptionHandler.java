@@ -18,9 +18,10 @@ import java.util.Objects;
 
 /**
  * Errors of the public API controllers (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.2, §3.4.1): JSON with a stable
- * {@code code} and a PT-MZ {@code message}. Scoped to this package and ahead of the internal API's global handler.
+ * {@code code} and a PT-MZ {@code message}. Scoped to the public controllers (not the internal key management of
+ * {@link ApiKeyController}) and ahead of the internal API's global handler.
  */
-@RestControllerAdvice(basePackageClasses = PublicApiExceptionHandler.class)
+@RestControllerAdvice(assignableTypes = {PublicCatalogController.class, PublicOrderController.class})
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class PublicApiExceptionHandler {
 

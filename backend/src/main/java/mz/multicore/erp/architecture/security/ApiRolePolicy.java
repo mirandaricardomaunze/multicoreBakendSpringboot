@@ -37,7 +37,9 @@ public final class ApiRolePolicy {
             "/api/custom-orders", "/api/consignments", "/api/exchange-rates",
             "/api/returnables", "/api/variants", "/api/weighbridge", "/api/exceptions", "/api/portal",
             // Public API: no user role ever reaches it; each route demands its key permission (PublicApiPermissions).
-            "/api/public");
+            "/api/public",
+            // Integrations (API keys, webhooks): ADMIN only (API_PUBLICA_WEBHOOKS_SPEC §3.1.1, §4.1).
+            "/api/integrations");
 
     /** Business-sector areas (SA-C01..C03): every role may read, only management may change. */
     private static final Set<String> READ_SELLER_WRITE_MANAGER_AREAS = Set.of(
@@ -54,7 +56,8 @@ public final class ApiRolePolicy {
         if (uri == null || method == null) {
             return false;
         }
-        if (matches(uri, "/api/backup") || matches(uri, "/api/data-import") || (matches(uri, "/api/users")
+        if (matches(uri, "/api/backup") || matches(uri, "/api/data-import") || matches(uri, "/api/integrations")
+                || (matches(uri, "/api/users")
                 && !"/api/users/verify-pin".equals(uri))) {
             return false;
         }
