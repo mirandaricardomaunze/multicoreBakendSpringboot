@@ -13,6 +13,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 /**
  * Encomendas de sistemas externos (API pública, loja online — docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.4): nascem como
  * {@link OrderKind#FORMAL_ORDER} com as regras e a aprovação do desktop e, além disso, reservam logo o stock
@@ -46,7 +48,15 @@ public class ExternalOrderPlacementService {
         order.setOriginName(source.originName());
         order.setExternalReference(source.externalReference());
         order.setIdempotencyKey(source.idempotencyKey());
+        order.setRequestFingerprint(source.requestFingerprint());
         order.setContactPhone(source.contactPhone());
         return orderLifecycleService.toDTO(orderRepository.save(order));
+    }
+
+    /** A encomenda externa já criada com esta chave de idempotência na empresa (SPEC §3.4.2), se existir. */
+    @Transactional(readOnly = true)
+    public Optional<PlacedExternalOrder> findPlaced(Long companyId, String idempotencyKey) {
+        return orderRepository.findByCompanyIdAndIdempotencyKey(companyId, idempotencyKey)
+                .map(order -> new PlacedExternalOrder(orderLifecycleService.toDTO(order), order.getRequestFingerprint()));
     }
 }

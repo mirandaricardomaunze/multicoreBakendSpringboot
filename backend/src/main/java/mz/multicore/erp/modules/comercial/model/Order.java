@@ -165,6 +165,10 @@ public class Order extends BaseEntity {
     @Column(name = "contact_phone", length = 40)
     private String contactPhone;
 
+    /** SHA-256 do corpo que criou a encomenda pela API (§3.4.2): repetição igual → 200, diferente → 409. */
+    @Column(name = "request_fingerprint", length = 64)
+    private String requestFingerprint;
+
     @Version
     private long version;
 

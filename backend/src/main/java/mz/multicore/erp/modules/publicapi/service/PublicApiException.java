@@ -22,6 +22,11 @@ public class PublicApiException extends BusinessRuleException {
         return new PublicApiException(400, code, message);
     }
 
+    /** 409: the request collides with something already recorded (e.g. {@code EXTERNAL_REFERENCE_CONFLICT}). */
+    public static PublicApiException conflict(String code, String message) {
+        return new PublicApiException(409, code, message);
+    }
+
     public int status() {
         return status;
     }

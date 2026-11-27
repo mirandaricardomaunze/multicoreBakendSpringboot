@@ -26,6 +26,7 @@ import mz.multicore.erp.modules.publicapi.dto.CreateApiKeyRequest;
 import mz.multicore.erp.modules.publicapi.dto.CreatePublicOrderRequest;
 import mz.multicore.erp.modules.publicapi.dto.PublicOrderDTO;
 import mz.multicore.erp.modules.publicapi.dto.PublicOrderLineRequest;
+import mz.multicore.erp.modules.publicapi.dto.PublicOrderSubmission;
 import mz.multicore.erp.modules.publicapi.model.ApiKeyPermission;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +55,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Harness API-08 (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.4, §3.4.1): an order created by an API key is a formal order
  * (A4) of the key's company with the desktop's approval flow, system prices and VAT, and stock reserved on creation;
  * customer by NUIT (registered with {@code customerName} when new) or Consumidor Final with contact; origin saved.
+ * Harness API-09 (§3.4, §3.4.2): the same {@code externalReference} with the same key and content returns the order
+ * already created (200, no duplicate, no second reservation); with different content it is a 409.
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:public-api-orders;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
@@ -256,6 +259,74 @@ class PublicApiOrderTest {
                 .andExpect(status().isBadRequest()).andReturn().getResponse().getContentAsString());
         assertThat(invalid.get("code").asText()).isEqualTo("VALIDATION_ERROR");
         assertThat(invalid.get("message").asText()).isNotBlank();
+    }
+
+    @Test
+    void api09SameExternalReferenceAndContentReturnsTheExistingOrderWithoutDuplicating() {
+        PublicOrderSubmission first = orderService.submit(key, walkIn("I-" + sku, "3", "Ana", "840000001"));
+        // Same content with cosmetic differences (spaces, 3 vs 3.000) is the same order.
+        CreatePublicOrderRequest retry = new CreatePublicOrderRequest("  I-" + sku + " ", null, null, " Ana ",
+                "840000001", store.getName(), List.of(new PublicOrderLineRequest(sku, new BigDecimal("3.000"))),
+                "Entregar à tarde");
+        PublicOrderSubmission second = orderService.submit(key, retry);
+
+        assertThat(first.created()).isTrue();
+        assertThat(second.created()).isFalse();
+        assertThat(second.order().number()).isEqualTo(first.order().number());
+        Long saved = jdbc.queryForObject("select count(*) from customer_orders where external_reference = ?",
+                Long.class, "I-" + sku);
+        assertThat(saved).isEqualTo(1L);
+        // The replay did not reserve again: 7 of the 10 units are still free.
+        assertThat(orderService.create(key, walkIn("I2-" + sku, "7", "Rui", "840000002")).number()).isNotBlank();
+    }
+
+    @Test
+    void api09SameExternalReferenceWithDifferentContentIsAConflictAndOtherKeysAreIndependent() {
+        PublicOrderDTO first = orderService.create(key, walkIn("K-" + sku, "2", "Ana", "840000001"));
+
+        assertThatThrownBy(() -> orderService.create(key, walkIn("K-" + sku, "5", "Ana", "840000001")))
+                .isInstanceOfSatisfying(PublicApiException.class, e -> {
+                    assertThat(e.status()).isEqualTo(409);
+                    assertThat(e.code()).isEqualTo("EXTERNAL_REFERENCE_CONFLICT");
+                    assertThat(e.getMessage()).contains("K-" + sku).contains(first.number());
+                });
+
+        ApiKeyPrincipal otherKey = new ApiKeyPrincipal(8009L, companyId, "Contabilista API-08",
+                EnumSet.of(ApiKeyPermission.ORDERS_WRITE));
+        PublicOrderSubmission other = orderService.submit(otherKey, walkIn("K-" + sku, "1", "Ana", "840000001"));
+        assertThat(other.created()).isTrue();
+        assertThat(other.order().number()).isNotEqualTo(first.number());
+    }
+
+    @Test
+    void api09HttpReplayIs200AndConflictIs409() throws Exception {
+        String secret = newSecret("API-08 Idempotente");
+        String body = objectMapper.writeValueAsString(walkIn("HI-" + sku, "1", "Ana", "840000001"));
+
+        String number = objectMapper.readTree(mockMvc.perform(post("/api/public/v1/orders").header("X-Api-Key", secret)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("number").asText();
+        JsonNode replay = objectMapper.readTree(mockMvc.perform(post("/api/public/v1/orders")
+                        .header("X-Api-Key", secret).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(replay.get("number").asText()).isEqualTo(number);
+
+        JsonNode conflict = objectMapper.readTree(mockMvc.perform(post("/api/public/v1/orders")
+                        .header("X-Api-Key", secret).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(walkIn("HI-" + sku, "2", "Ana", "840000001"))))
+                .andExpect(status().isConflict()).andReturn().getResponse().getContentAsString());
+        assertThat(conflict.get("code").asText()).isEqualTo("EXTERNAL_REFERENCE_CONFLICT");
+        assertThat(conflict.get("message").asText()).isNotBlank();
+    }
+
+    private String newSecret(String name) {
+        CurrentUserContext.setCurrentUser("admin", "ADMIN");
+        CurrentUserContext.setCurrentCompanyId(companyId);
+        try {
+            return apiKeyService.create(new CreateApiKeyRequest(name, Set.of(ApiKeyPermission.ORDERS_WRITE))).secret();
+        } finally {
+            CurrentUserContext.clear();
+        }
     }
 
     private CreatePublicOrderRequest walkIn(String reference, String quantity, String contactName, String phone) {

@@ -111,6 +111,19 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   inválido → `400 VALIDATION_ERROR`. Mensagens em PT-MZ.
 - Uma encomenda com reserva activa rejeitada no motor de aprovações fica cancelada e **liberta a reserva**.
 
+#### 3.4.2 Idempotência de `POST /orders` (API-09)
+
+- A unicidade é por **chave + `externalReference`** (sem espaços nas pontas): duas chaves da mesma empresa
+  podem usar a mesma referência sem colidir.
+- O "conteúdo" é a impressão digital SHA-256 do corpo normalizado: todos os campos do corpo, sem espaços nas
+  pontas (vazio = ausente), quantidades sem zeros à direita (`3` = `3.000`), linhas pela ordem enviada. É
+  guardada na encomenda (`request_fingerprint`).
+- Repetição com o mesmo conteúdo → `200` com a encomenda já criada **no estado actual**, sem nova encomenda,
+  sem nova reserva e sem registar cliente.
+- Mesma referência com conteúdo diferente → `409 EXTERNAL_REFERENCE_CONFLICT` com mensagem PT-MZ que indica a
+  referência e o número da encomenda existente; nada é gravado.
+- A verificação acontece antes de qualquer outra regra do pedido (artigos, armazém, cliente, stock).
+
 ## 4. Webhooks (GOAL-014)
 
 ### 4.1 Subscrições

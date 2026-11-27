@@ -17,7 +17,7 @@
 | API-06 | Erros JSON com `code` e `message` PT-MZ, sem stack trace; paginação máx. 100 (§3.2) | `PublicApiHttpIntegrationTest` |
 | API-07 | Produtos e stock disponível da empresa da chave; sem custos, margens nem fornecedores; `updatedSince`; 404 com `code`; páginas máx. 100 (§3.3, §3.3.1) — **verde 2026-11-26** | `PublicApiCatalogTest` · `PublicApiCatalogHttpTest` |
 | API-08 | Criar encomenda: preços do sistema, cliente por NUIT ou Consumidor Final com contacto, regras do desktop, origem guardada (§3.4, §3.4.1) — **verde 2026-11-27** | `PublicApiOrderTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
-| API-09 | Idempotência por `externalReference`: igual → 200 sem duplicar, diferente → 409 (§3.4) | `PublicApiOrderTest` |
+| API-09 | Idempotência por chave + `externalReference`: mesmo conteúdo → 200 sem duplicar nem reservar de novo, diferente → 409 `EXTERNAL_REFERENCE_CONFLICT` (§3.4, §3.4.2) — **verde 2026-11-27** | `PublicApiOrderTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | API-10 | Consultar encomenda por número com estado, linhas, totais e factura (§3.3) | `PublicApiOrderTest` |
 | API-11 | OpenAPI só do grupo público em `/api/public/v1/docs` (§3.2) | `PublicApiHttpIntegrationTest` |
 | API-UI-01 | Configurações › Integrações: chaves com permissões, mostrar uma vez, revogar, último uso (§4.4) | `IntegrationsUiHarnessTest` |

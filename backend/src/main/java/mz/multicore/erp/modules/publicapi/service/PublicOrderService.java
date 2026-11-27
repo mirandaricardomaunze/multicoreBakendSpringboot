@@ -11,11 +11,13 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.ExternalOrderPlacementService;
+import mz.multicore.erp.modules.comercial.service.PlacedExternalOrder;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.publicapi.dto.ApiKeyPrincipal;
 import mz.multicore.erp.modules.publicapi.dto.CreatePublicOrderRequest;
 import mz.multicore.erp.modules.publicapi.dto.PublicOrderDTO;
+import mz.multicore.erp.modules.publicapi.dto.PublicOrderSubmission;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,9 +52,19 @@ public class PublicOrderService {
         this.placementService = placementService;
     }
 
+    /**
+     * Creates the order, or replays the one this key already created with the same {@code externalReference} and
+     * content (SPEC §3.4.2); the same reference with different content is a {@code 409}.
+     */
+    @Transactional
+    public PublicOrderSubmission submit(ApiKeyPrincipal key, CreatePublicOrderRequest request) {
+        return CurrentUserContext.runAs(actorName(key), ACTOR_ROLE, key.companyId(), () -> replayOrPlace(key, request));
+    }
+
+    /** {@link #submit} when only the order matters, not whether this call created it. */
     @Transactional
     public PublicOrderDTO create(ApiKeyPrincipal key, CreatePublicOrderRequest request) {
-        return CurrentUserContext.runAs(actorName(key), ACTOR_ROLE, key.companyId(), () -> place(key, request));
+        return submit(key, request).order();
     }
 
     /** Audit name of the key acting on the order, e.g. {@code API · Loja online}. */
@@ -60,7 +72,27 @@ public class PublicOrderService {
         return "API · " + key.keyName();
     }
 
-    private PublicOrderDTO place(ApiKeyPrincipal key, CreatePublicOrderRequest request) {
+    private PublicOrderSubmission replayOrPlace(ApiKeyPrincipal key, CreatePublicOrderRequest request) {
+        String reference = request.externalReference().trim();
+        String idempotencyKey = "API:" + key.keyId() + ":" + reference;
+        String fingerprint = PublicOrderFingerprint.of(request);
+        return placementService.findPlaced(key.companyId(), idempotencyKey)
+                .map(placed -> replay(placed, fingerprint, reference))
+                .orElseGet(() -> new PublicOrderSubmission(
+                        place(key, request, new ExternalOrderSource(key.keyName(), reference, idempotencyKey,
+                                fingerprint, trimToNull(request.contactPhone()))), true));
+    }
+
+    private static PublicOrderSubmission replay(PlacedExternalOrder placed, String fingerprint, String reference) {
+        if (!fingerprint.equals(placed.requestFingerprint())) {
+            throw PublicApiException.conflict("EXTERNAL_REFERENCE_CONFLICT",
+                    "A referência externa " + reference + " já foi usada na encomenda " + placed.order().orderNumber()
+                            + " com outro conteúdo. Use uma referência nova ou repita o pedido original.");
+        }
+        return new PublicOrderSubmission(PublicOrderMapper.toPublic(placed.order(), reference), false);
+    }
+
+    private PublicOrderDTO place(ApiKeyPrincipal key, CreatePublicOrderRequest request, ExternalOrderSource source) {
         Long companyId = key.companyId();
         Warehouse warehouse = PublicSalesWarehouses.require(warehouseLookup.listForCompany(companyId), request.warehouse());
         List<CreateInvoiceLineRequest> lines = request.lines().stream().map(line -> {
@@ -68,15 +100,13 @@ public class PublicOrderService {
             return new CreateInvoiceLineRequest(product.getId(), line.quantity(), product.effectiveTaxRate(),
                     BigDecimal.ZERO, null, null);
         }).toList();
-        String reference = request.externalReference().trim();
         boolean walkIn = isBlank(request.nuit());
         Long clientId = walkIn ? requireContact(request) : customerFor(companyId, request);
         CreateOrderRequest order = new CreateOrderRequest(clientId, walkIn ? request.contactName().trim() : null,
                 companyId, warehouse.getId(), lines, OrderKind.FORMAL_ORDER, null, null, null, null,
                 trimToNull(request.notes()));
-        ExternalOrderSource source = new ExternalOrderSource(key.keyName(), reference,
-                "API:" + key.keyId() + ":" + reference, trimToNull(request.contactPhone()));
-        return PublicOrderMapper.toPublic(placementService.placeReservedFormalOrder(order, source), reference);
+        return PublicOrderMapper.toPublic(placementService.placeReservedFormalOrder(order, source),
+                source.externalReference());
     }
 
     /** Consumidor Final: no client record, but the order must say who to call. */

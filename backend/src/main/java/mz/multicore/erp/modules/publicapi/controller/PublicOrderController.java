@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import mz.multicore.erp.modules.publicapi.dto.ApiKeyPrincipal;
 import mz.multicore.erp.modules.publicapi.dto.CreatePublicOrderRequest;
 import mz.multicore.erp.modules.publicapi.dto.PublicOrderDTO;
+import mz.multicore.erp.modules.publicapi.dto.PublicOrderSubmission;
 import mz.multicore.erp.modules.publicapi.service.PublicOrderService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Public API orders (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.4, API-08). Authentication, {@code ORDERS_WRITE} and the
+ * Public API orders (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.4, API-08, API-09): {@code 201} when created, {@code 200}
+ * when the same reference and content is replayed. Authentication, {@code ORDERS_WRITE} and the
  * rate limit are applied before this runs.
  */
 @RestController
@@ -30,6 +32,8 @@ public class PublicOrderController {
     @PostMapping
     public ResponseEntity<PublicOrderDTO> create(@AuthenticationPrincipal ApiKeyPrincipal key,
                                                  @RequestBody @Valid CreatePublicOrderRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.create(key, request));
+        PublicOrderSubmission submission = orderService.submit(key, request);
+        return ResponseEntity.status(submission.created() ? HttpStatus.CREATED : HttpStatus.OK)
+                .body(submission.order());
     }
 }
