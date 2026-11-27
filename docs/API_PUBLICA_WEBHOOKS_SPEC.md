@@ -390,6 +390,39 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   `FAILED` → `PENDING` com `attempts = 0`, mesmo id e corpo, despacho chamado e auditoria; reenviar `DELIVERED`/
   `PENDING` ou com subscrição inactiva → recusa e nada muda; limpeza apaga as de 31 dias e mantém as de 29 dias.
 
+#### 4.3.4 Desactivação após 20 falhas seguidas e aviso (WH-07)
+
+- **O que conta como falha**: uma **entrega** que passa a `FAILED` (esgotou as 6 tentativas do §4.3.2), não cada
+  tentativa falhada. Assim um receptor parado alguns minutos com muitos eventos não desliga a subscrição: só desliga
+  depois de 20 eventos seguidos sem nenhum chegar (cada um já tentado ~15 h). É a interpretação do
+  `consecutive_failures` da V159 ("failed deliveries in a row").
+- **Contador** (`webhook_subscriptions.consecutive_failures`): `+1` quando uma entrega da subscrição passa a
+  `FAILED`; volta a **0** quando qualquer entrega da subscrição fica `DELIVERED` (inclui uma repetição ou um reenvio
+  que acerta). O incremento é uma actualização atómica na base de dados (`consecutive_failures = consecutive_failures
+  + 1`), na mesma transacção que grava o `FAILED`, para envios em paralelo não perderem contagens. O reenvio manual
+  (WH-06) **não** mexe no contador: conta outra vez só se voltar a `FAILED` (+1) ou se for entregue (0).
+- **Desactivação**: quando o contador chega a **20** (≥ 20) e a subscrição está activa, passa a **inactiva**
+  automaticamente com `auto_disabled_at = agora` (coluna nova, `null` enquanto não houver desactivação automática),
+  por actualização condicional (`active = true` e `consecutive_failures >= 20`) para que só uma thread a desactive e
+  avise uma vez. Depois disso vale o §4.3.2: as `PENDING` dela ficam à espera, sem contar falha.
+- **Auditoria**: `WEBHOOK_AUTO_DEACTIVATE` com utilizador `sistema`, a URL e o número de falhas seguidas; nunca o
+  segredo nem corpos.
+- **Aviso ao ADMIN (sino)**: `WebhookSubscriptionService.autoDisabledAlerts()` — só ADMIN, empresa activa (mesma regra
+  do §4.1.1) — devolve `WebhookAlertDTO(subscriptionId, url, consecutiveFailures, disabledAt, message)` das
+  subscrições da empresa com `auto_disabled_at` preenchido e ainda inactivas, mais recentes primeiro, com a mensagem
+  PT-MZ "O webhook <url> foi desactivado após 20 entregas falhadas seguidas. Corrija o receptor e active-o de novo."
+  O endpoint é do WH-08 e a entrada no sino do desktop (que o lê para o ADMIN e leva a Configurações › Integrações) é
+  do WH-UI-01. O `WebhookSubscriptionDTO` passa a trazer também `autoDisabledAt`.
+- **Reactivar** (`activate`, §4.1.1): põe `consecutive_failures = 0` e `auto_disabled_at = null`; o aviso desaparece.
+  Desactivar à mão nunca preenche `auto_disabled_at` (não gera aviso).
+- **Persistência**: migração Flyway com o próximo número livre (`auto_disabled_at TIMESTAMP NULL` em
+  `webhook_subscriptions`), sintaxe PostgreSQL.
+- **Contrato de teste** (`WebhookDeliveryTest`, relógio fixo e cliente HTTP falso): 19 entregas `FAILED` seguidas →
+  activa com contador 19; a 20.ª → inactiva, `auto_disabled_at` preenchido, auditoria e um aviso na lista; uma
+  entrega `DELIVERED` pelo meio repõe o contador a 0; tentativas falhadas que ainda ficam `PENDING` não contam;
+  reactivar limpa contador e aviso; desactivação manual não gera aviso; não-ADMIN recusado ao pedir os avisos;
+  avisos só da empresa activa.
+
 ### 4.4 Desktop
 
 - Configurações › Integrações: chaves de API (criar com permissões, mostrar uma vez, revogar, último
