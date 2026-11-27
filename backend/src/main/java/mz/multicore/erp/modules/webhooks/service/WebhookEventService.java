@@ -8,6 +8,7 @@ import mz.multicore.erp.modules.webhooks.model.WebhookEventType;
 import mz.multicore.erp.modules.webhooks.model.WebhookSubscription;
 import mz.multicore.erp.modules.webhooks.repository.WebhookSubscriptionRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -17,7 +18,8 @@ import java.util.function.Supplier;
 /**
  * Chooses who receives each webhook event and builds its body (docs/API_PUBLICA_WEBHOOKS_SPEC.md §4.2, §4.2.1,
  * WH-02): only <b>active</b> subscriptions of the event's company that chose that type. With nobody interested no body
- * is built; otherwise one body (same {@code id}) goes to each subscription. Sending after commit is WH-03.
+ * is built; otherwise one body (same {@code id}) goes to each subscription. Called after the business commit
+ * (WH-03), so it reads in a transaction of its own instead of joining the one that has just committed.
  */
 @Service
 public class WebhookEventService {
@@ -33,24 +35,24 @@ public class WebhookEventService {
         this.factory = factory;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
     public List<PreparedWebhookEvent> prepare(SaleRegisteredEvent event) {
         return prepare(event.companyId(), WebhookEventType.INVOICE_ISSUED, () -> translator.invoiceIssued(event));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
     public List<PreparedWebhookEvent> prepare(CreditNoteApprovedEvent event) {
         return prepare(event.companyId(), WebhookEventType.CREDIT_NOTE_ISSUED,
                 () -> translator.creditNoteIssued(event));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
     public List<PreparedWebhookEvent> prepare(OrderStatusChangedEvent event) {
         return prepare(event.companyId(), WebhookEventType.ORDER_STATUS_CHANGED,
                 () -> translator.orderStatusChanged(event));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
     public List<PreparedWebhookEvent> prepare(StockAvailabilityChangedEvent event) {
         return prepare(event.companyId(), WebhookEventType.STOCK_AVAILABILITY_CHANGED,
                 () -> translator.stockAvailabilityChanged(event));

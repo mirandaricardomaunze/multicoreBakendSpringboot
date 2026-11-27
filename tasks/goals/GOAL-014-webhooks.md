@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
-verify: ["WebhookSubscriptionTest", "ApiKeyRulesTest", "MigrationPostgresDialectHarnessTest", "WebhookEventTest", "OrderStatusChangedEventJpaTest", "StockAvailabilityChangedEventJpaTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
+verify: ["WebhookSubscriptionTest", "ApiKeyRulesTest", "MigrationPostgresDialectHarnessTest", "WebhookEventTest", "OrderStatusChangedEventJpaTest", "StockAvailabilityChangedEventJpaTest", "WebhookAfterCommitJpaTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
 blockedBy: []
 ---
 
@@ -22,7 +22,7 @@ iteração termina com `NEEDS_HUMAN` e não começa este goal.
 
 - [x] WH-01 — subscrição: ADMIN, HTTPS, sem endereços privados, segredo uma vez — `WebhookSubscriptionTest`
 - [x] WH-02 — os quatro eventos com o corpo definido — `WebhookEventTest` · `OrderStatusChangedEventJpaTest` · `StockAvailabilityChangedEventJpaTest`
-- [ ] WH-03 — envio depois do commit, sem anular a operação — `WebhookEventTest`
+- [x] WH-03 — envio depois do commit, sem anular a operação — `WebhookAfterCommitJpaTest` · `WebhookEventTest`
 - [ ] WH-04 — assinatura HMAC e cabeçalhos — `WebhookDeliveryTest`
 - [ ] WH-05 — tentativas e `FAILED` — `WebhookDeliveryTest`
 - [ ] WH-06 — registo de entregas e reenvio — `WebhookDeliveryTest`
@@ -60,3 +60,4 @@ GOAL-013 primeiro e depois segue para este goal.
 - 2026-11-27 · WH-02 (parcial, critério por marcar) · o inventário publica `StockAvailabilityChangedEvent`: listener JPA `StockAvailabilityPublisher` em `Stock` entrega cada linha lida/criada numa transacção de escrita ao `StockAvailabilityTracker`, que antes do commit compara a quantidade do início com a que vai ser gravada (primeiro antes × último depois; linha nova parte de zero), desconta as reservas activas (`OrderReservationLookup.activeReservation`) e publica só quando o disponível cruza o zero em armazém de venda (`Warehouse.isSalesWarehouse`, agora partilhado com a API pública) e artigo com controlo de stock; rollback não publica; StockAvailabilityChangedEventJpaTest 8/8 verde. Falta para fechar o WH-02: mudanças só de reserva (encomenda que reserva/liberta a última unidade) também cruzam o zero e devem publicar, e o "antes" tem de usar a reserva do início da transacção (facturar a última unidade reservada não é OUT_OF_STOCK).
 - 2026-11-28 · WH-02 · concluído: as mudanças só de reserva também publicam `stock.availability_changed` — listener JPA `OrderReservationWatcher` (comercial) em `Order`/`OrderLine` lembra a reserva do início da transacção (encomenda activa × armazém, quantidade reservada por linha; criadas partem de zero, removidas acabam em zero) e `OrderReservationLookup.reservationChangesInCurrentTransaction()` devolve a variação líquida por artigo × armazém; o `StockAvailabilityTracker` junta essas linhas às de stock tocadas e usa no "antes" a reserva do início (facturar a última unidade reservada não é OUT_OF_STOCK); StockAvailabilityChangedEventJpaTest 12/12, OrderStatusChangedEventJpaTest 4/4 e WebhookEventTest 12/12 verdes.
 - 2026-11-28 · WH-03 · regra do envio depois do commit escrita na SPEC §4.2.2 (AFTER_COMMIT, rollback → nada, entrega PENDING por subscrição em transacção nova com o corpo serializado em webhook_deliveries, despacho assíncrono por WebhookDispatcher, erros apanhados e registados sem anular a operação, janela de perda aceite) e linha do HARNESS actualizada; implementação na próxima iteração.
+- 2026-11-28 · WH-03 · concluído: `WebhookEventListener` escuta os quatro eventos de domínio em AFTER_COMMIT (fallbackExecution), `WebhookEventService.prepare` lê em transacção nova e `WebhookDeliveryService.registerPending` grava uma entrega `PENDING` por subscrição (REQUIRES_NEW, corpo já serializado, attempts 0, next_attempt_at agora) em `webhook_deliveries` (V160); cada entrega vai para a porta `WebhookDispatcher` (`AsyncWebhookDispatcher` com executor próprio; o POST é do WH-04); qualquer erro é apanhado e registado em WARN sem segredo nem corpo; WebhookAfterCommitJpaTest 6/6, WebhookEventTest 12/12, StockAvailabilityChangedEventJpaTest 12/12, OrderStatusChangedEventJpaTest 4/4 e MigrationPostgresDialectHarnessTest verdes.

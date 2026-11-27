@@ -283,7 +283,8 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   estado `PENDING` | `DELIVERED` | `FAILED`, tentativas, próxima tentativa, último código HTTP, última duração
   em ms, último erro curto, criada em, entregue em), índices por (estado, próxima tentativa) e por (subscrição,
   criada em); migração Flyway com o próximo número livre, sintaxe PostgreSQL. A limpeza aos 30 dias é do WH-06.
-- **Contrato de teste** (`WebhookEventTest`): commit com subscrição interessada → uma entrega `PENDING` por
+- **Contrato de teste** (`WebhookAfterCommitJpaTest`, com Hibernate e commits reais; `WebhookEventTest` continua a
+  provar os corpos): commit com subscrição interessada → uma entrega `PENDING` por
   subscrição com o mesmo `event_id` e despacho chamado depois do commit; rollback → zero entregas e nenhum
   despacho; falha forçada no caminho do webhook → a operação fica confirmada e não sai excepção para quem
   chamou; sem interessados → zero entregas.
