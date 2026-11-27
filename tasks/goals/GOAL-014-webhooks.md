@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
-verify: ["WebhookSubscriptionTest", "ApiKeyRulesTest", "MigrationPostgresDialectHarnessTest", "WebhookEventTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
+verify: ["WebhookSubscriptionTest", "ApiKeyRulesTest", "MigrationPostgresDialectHarnessTest", "WebhookEventTest", "OrderStatusChangedEventJpaTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
 blockedBy: []
 ---
 
@@ -21,7 +21,7 @@ iteração termina com `NEEDS_HUMAN` e não começa este goal.
 ## Critérios de aceitação
 
 - [x] WH-01 — subscrição: ADMIN, HTTPS, sem endereços privados, segredo uma vez — `WebhookSubscriptionTest`
-- [ ] WH-02 — os quatro eventos com o corpo definido — `WebhookEventTest`
+- [ ] WH-02 — os quatro eventos com o corpo definido — `WebhookEventTest` · `OrderStatusChangedEventJpaTest`
 - [ ] WH-03 — envio depois do commit, sem anular a operação — `WebhookEventTest`
 - [ ] WH-04 — assinatura HMAC e cabeçalhos — `WebhookDeliveryTest`
 - [ ] WH-05 — tentativas e `FAILED` — `WebhookDeliveryTest`
@@ -56,3 +56,4 @@ GOAL-013 primeiro e depois segue para este goal.
 - 2026-11-27 · WH-01 · subscrição implementada (módulo webhooks: WebhookSubscriptionService só ADMIN na empresa activa, WebhookUrlValidator com https em prod e anti-SSRF após DNS por porta injectável, segredo whsec_ cifrado com AttachmentCrypto, auditoria WEBHOOK_CREATE/ACTIVATE/DEACTIVATE sem segredo, V159__webhook_subscriptions); gerador base62 partilhado em SecretTokens; WebhookSubscriptionTest 12/12 verde.
 - 2026-11-27 · WH-02 · regra do corpo dos eventos escrita na SPEC §4.2.1 (origem nos eventos de domínio, envelope evt_, data por evento, customer só nome/NUIT, só subscrições activas da empresa, sem evento para estado igual ou stock que não cruza o zero) e linha do HARNESS actualizada; implementação na próxima iteração.
 - 2026-11-27 · WH-02 (parcial, critério por marcar) · construção dos corpos e escolha das subscrições implementadas: eventos de domínio novos `OrderStatusChangedEvent` e `StockAvailabilityChangedEvent` (architecture.events); módulo webhooks com `WebhookEventFactory` (envelope evt_/type/occurredAt/companyId/data, dinheiro com 2 casas), `WebhookDomainEventTranslator` (lê cliente/NUIT/canal/factura por InvoiceLookup, InvoiceNoteLookup e OrderLookup; Consumidor Final sem NUIT; estado igual e stock que não cruza o zero → nada) e `WebhookEventService.prepare(...)` (só activas da empresa com o tipo, um corpo por evento, nada construído sem interessados); WebhookEventTest 12/12 verde. Falta para fechar o WH-02: o comercial publicar `OrderStatusChangedEvent` nas mudanças de estado (ComercialOrderLifecycleService, DeliveryGuide*, OrderApprovalCallback, OrderPicking*) e o inventário publicar `StockAvailabilityChangedEvent` (primeiro antes × último depois por artigo × armazém de venda na transacção).
+- 2026-11-27 · WH-02 (parcial, critério por marcar) · o comercial publica `OrderStatusChangedEvent`: listener JPA único `OrderStatusChangePublisher` em `Order` (estado gravado lembrado em @PostLoad/@PostPersist, evento em @PostUpdate só quando muda de facto; criar ou regravar o mesmo estado não publica), cobrindo todos os `setStatus` (ciclo de vida, aprovação, guias, separação); OrderStatusChangedEventJpaTest 4/4 e WebhookEventTest 12/12 verdes. Falta para fechar o WH-02: o inventário publicar `StockAvailabilityChangedEvent` (primeiro antes × último depois por artigo × armazém de venda na transacção).
