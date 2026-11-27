@@ -52,6 +52,21 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - Paginação `page`/`size` (máx. 100), datas ISO 8601, valores com ponto decimal (é API, não ecrã).
 - Documentação OpenAPI (springdoc) só do grupo público, em `/api/public/v1/docs`.
 
+#### 3.2.1 Erros e paginação (API-06)
+
+- **Todo** o erro em `/api/public/**` sai em JSON (`application/json`) com só dois campos: `code` e `message`
+  (PT-MZ). Nunca stack trace, nome de classe Java, SQL ou outro detalhe interno; esse detalhe fica no log.
+- Códigos comuns a todas as rotas (além dos próprios de cada recurso, §3.2–§3.4.3):
+  - `400 VALIDATION_ERROR` — corpo que não é JSON, campo inválido, parâmetro em falta ou com tipo errado
+    (ex.: `page=abc`), data de `updatedSince` que não é ISO 8601; a `message` diz o que está mal.
+  - `404 NOT_FOUND` — rota que não existe na API pública (com chave válida; sem chave é o `401` da §3.2).
+  - `405 METHOD_NOT_ALLOWED` — método que a rota não aceita, com o cabeçalho `Allow`.
+  - `409 CONFLICT` — o pedido colidiu com outro gravado em simultâneo (ex.: dois `POST /orders` iguais ao
+    mesmo tempo); nada fica duplicado e o cliente pode repetir.
+  - `500 INTERNAL_ERROR` — avaria inesperada, com mensagem genérica.
+- Paginação: `page` começa em 0 (negativa conta como 0); `size` por omissão 50, no máximo 100 (acima usa-se
+  100; menor que 1 usa-se o por omissão). A resposta diz sempre o `page` e o `size` efectivos.
+
 ### 3.3 Recursos
 
 | Rota | Permissão | Conteúdo |

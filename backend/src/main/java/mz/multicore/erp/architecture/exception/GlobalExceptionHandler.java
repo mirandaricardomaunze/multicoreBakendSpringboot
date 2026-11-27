@@ -1,5 +1,6 @@
 package mz.multicore.erp.architecture.exception;
 
+import mz.multicore.erp.architecture.security.PublicApiRoutes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
@@ -121,6 +124,14 @@ public class GlobalExceptionHandler {
      * depende.
      */
     @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<?> notFound(NoResourceFoundException ex) {
+        if (!isPublicApiRequest()) return handleNotFound(ex);
+        log.warn("API pública: caminho inexistente: {}", ex.getResourcePath());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new PublicApiError("NOT_FOUND",
+                "Este endereço não existe na API pública. Consulte a documentação em "
+                        + PublicApiRoutes.PREFIX + "/v1/docs."));
+    }
+
     public ResponseEntity<ErrorResponse> handleNotFound(NoResourceFoundException ex) {
         log.warn("Caminho inexistente: {}", ex.getResourcePath());
         ErrorResponse response = new ErrorResponse(
@@ -166,14 +177,33 @@ public class GlobalExceptionHandler {
      * programa", não "erro interno".
      */
     @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<?> methodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        if (!isPublicApiRequest()) return handleMethodNotSupported(ex);
+        log.warn("API pública: método não suportado: {}", ex.getMessage());
+        return methodNotAllowed(ex).body(new PublicApiError("METHOD_NOT_ALLOWED",
+                "Este endereço da API pública não aceita " + ex.getMethod() + "."));
+    }
+
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
         log.warn("Método não suportado: {}", ex.getMessage());
-        ErrorResponse response = new ErrorResponse(LocalDateTime.now(), HttpStatus.METHOD_NOT_ALLOWED.value(),
+        return methodNotAllowed(ex).body(new ErrorResponse(LocalDateTime.now(), HttpStatus.METHOD_NOT_ALLOWED.value(),
                 "Method Not Allowed", "Este endereço não aceita " + ex.getMethod()
-                + ". Se o erro aparece no programa, actualize-o: a versão instalada é anterior à do servidor.");
+                + ". Se o erro aparece no programa, actualize-o: a versão instalada é anterior à do servidor."));
+    }
+
+    private static ResponseEntity.BodyBuilder methodNotAllowed(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
         ResponseEntity.BodyBuilder builder = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
         if (ex.getSupportedHttpMethods() != null) builder.allow(ex.getSupportedHttpMethods().toArray(new org.springframework.http.HttpMethod[0]));
-        return builder.body(response);
+        return builder;
+    }
+
+    /**
+     * Unknown route or wrong method under {@code /api/public/**} fail before any public controller is chosen, so the
+     * public API's own handler never sees them; they still answer its {@link PublicApiError} shape (§3.2.1, API-06).
+     */
+    private static boolean isPublicApiRequest() {
+        return RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes
+                && PublicApiRoutes.isPublicApi(attributes.getRequest());
     }
 
     @ExceptionHandler(Exception.class)

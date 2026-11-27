@@ -8,6 +8,9 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
  */
 public class PublicApiException extends BusinessRuleException {
 
+    /** The request body or a parameter is malformed (§3.2.1). */
+    public static final String VALIDATION_ERROR = "VALIDATION_ERROR";
+
     private final int status;
     private final String code;
 

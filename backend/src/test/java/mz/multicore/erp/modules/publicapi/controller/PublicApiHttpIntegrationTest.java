@@ -7,14 +7,23 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import mz.multicore.erp.modules.publicapi.service.PublicCatalogService;
+import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,6 +31,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Harness API-02 over HTTP (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.1, §3.1.1): API keys are listed, created and revoked
  * through the internal API of the active company, by the ADMIN only, and both changes are audited without the secret.
+ * Harness API-06 (§3.2.1): every public API error is JSON with only {@code code} + PT-MZ {@code message}, never a
+ * stack trace, and pages are capped at 100.
  * Seeded users: ana=ADMIN, joao=MANAGER, maria=EMPLOYEE (password "password").
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:public-api-http;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
@@ -30,16 +41,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PublicApiHttpIntegrationTest {
 
     private static final String KEYS = "/api/integrations/api-keys";
+    private static final String V1 = "/api/public/v1";
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper om;
     @Autowired private JdbcTemplate jdbc;
+    @SpyBean private PublicCatalogService catalogService;
 
     private record Session(String token, String companyId) {}
 
     @AfterEach
     void cleanUp() {
-        jdbc.update("delete from api_keys where name like 'API-02%'");
+        jdbc.update("delete from api_keys where name like 'API-02%' or name like 'API-06%'");
     }
 
     @Test
@@ -118,6 +131,85 @@ class PublicApiHttpIntegrationTest {
         assertThat(read(mockMvc.perform(auth(get(KEYS), elsewhere)).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString()).findValuesAsText("name"))
                 .doesNotContain("API-02 Outra empresa");
+    }
+
+    @Test
+    void api06ClientErrorsAreJsonWithStableCodeAndNoInternals() throws Exception {
+        String key = publicKey("API-06 Erros", "\"CATALOG_READ\",\"ORDERS_WRITE\"");
+
+        assertPublicError(mockMvc.perform(get(V1 + "/products").param("page", "abc").header("X-Api-Key", key))
+                .andReturn().getResponse(), 400, "VALIDATION_ERROR");
+        assertPublicError(mockMvc.perform(get(V1 + "/products").param("updatedSince", "ontem")
+                .header("X-Api-Key", key)).andReturn().getResponse(), 400, "VALIDATION_ERROR");
+        assertPublicError(mockMvc.perform(post(V1 + "/orders").header("X-Api-Key", key)
+                .contentType(MediaType.APPLICATION_JSON).content("{nao e json")).andReturn().getResponse(),
+                400, "VALIDATION_ERROR");
+        assertPublicError(mockMvc.perform(get(V1 + "/nao-existe").header("X-Api-Key", key))
+                .andReturn().getResponse(), 404, "NOT_FOUND");
+        MockHttpServletResponse notAllowed = mockMvc.perform(delete(V1 + "/products").header("X-Api-Key", key))
+                .andReturn().getResponse();
+        assertPublicError(notAllowed, 405, "METHOD_NOT_ALLOWED");
+        assertThat(notAllowed.getHeader("Allow")).contains("GET");
+    }
+
+    @Test
+    void api06ServerFailuresAreGenericWithoutStackTrace() throws Exception {
+        String key = publicKey("API-06 Avaria", "\"CATALOG_READ\"");
+
+        doThrow(new IllegalStateException("SELECT purchase_price FROM products -- detalhe interno"))
+                .when(catalogService).listStock(any(), any(), any(), any());
+        MockHttpServletResponse failure = mockMvc.perform(get(V1 + "/stock").header("X-Api-Key", key))
+                .andReturn().getResponse();
+        assertPublicError(failure, 500, "INTERNAL_ERROR");
+        assertThat(failure.getContentAsString()).doesNotContain("SELECT").doesNotContain("purchase_price");
+
+        doThrow(new DataIntegrityViolationException("uk_customer_orders_company_idempotency"))
+                .when(catalogService).listStock(any(), any(), any(), any());
+        MockHttpServletResponse conflict = mockMvc.perform(get(V1 + "/stock").header("X-Api-Key", key))
+                .andReturn().getResponse();
+        assertPublicError(conflict, 409, "CONFLICT");
+        assertThat(conflict.getContentAsString()).doesNotContain("uk_customer_orders");
+    }
+
+    @Test
+    void api06PagesStartAtZeroAndAreCappedAtOneHundred() throws Exception {
+        String key = publicKey("API-06 Paginas", "\"CATALOG_READ\"");
+
+        JsonNode capped = publicPage(key, "500", "0");
+        assertThat(capped.get("size").asInt()).isEqualTo(100);
+        assertThat(capped.get("items").size()).isLessThanOrEqualTo(100);
+        JsonNode defaults = publicPage(key, "0", "-3");
+        assertThat(defaults.get("size").asInt()).isEqualTo(50);
+        assertThat(defaults.get("page").asInt()).isZero();
+        for (String field : List.of("items", "page", "size", "totalItems", "totalPages")) {
+            assertThat(capped.has(field)).as(field).isTrue();
+        }
+    }
+
+    private JsonNode publicPage(String key, String size, String page) throws Exception {
+        return read(mockMvc.perform(get(V1 + "/products").param("size", size).param("page", page)
+                        .header("X-Api-Key", key))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    }
+
+    private String publicKey(String name, String permissions) throws Exception {
+        return read(send(post(KEYS), login("ana", null),
+                "{\"name\":\"%s\",\"permissions\":[%s]}".formatted(name, permissions))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString())
+                .get("secret").asText();
+    }
+
+    private void assertPublicError(MockHttpServletResponse response, int status, String code) throws Exception {
+        String body = response.getContentAsString();
+        assertThat(response.getStatus()).as(body).isEqualTo(status);
+        assertThat(response.getContentType()).as(body).startsWith(MediaType.APPLICATION_JSON_VALUE);
+        JsonNode json = read(body);
+        assertThat(json.path("code").asText()).as(body).isEqualTo(code);
+        assertThat(json.path("message").asText()).as(body).isNotBlank();
+        List<String> fields = new java.util.ArrayList<>();
+        json.fieldNames().forEachRemaining(fields::add);
+        assertThat(fields).as(body).containsExactlyInAnyOrder("code", "message");
+        assertThat(body).doesNotContain("Exception").doesNotContain("at mz.").doesNotContainIgnoringCase("trace");
     }
 
     // --- HTTP ---

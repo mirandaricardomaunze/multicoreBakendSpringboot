@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.publicapi.service;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.publicapi.dto.PublicPage;
 
 import java.time.LocalDate;
@@ -33,7 +32,7 @@ final class PublicApiQuery {
     /**
      * An ISO 8601 date, local date-time or offset date-time as a server-local date-time; {@code null} when absent.
      *
-     * @throws BusinessRuleException when the value is not ISO 8601
+     * @throws PublicApiException {@code 400 VALIDATION_ERROR} when the value is not ISO 8601 (§3.2.1)
      */
     static LocalDateTime instant(String name, String value) {
         if (value == null || value.isBlank()) {
@@ -53,7 +52,7 @@ final class PublicApiQuery {
         try {
             return LocalDate.parse(text).atStartOfDay();
         } catch (DateTimeParseException e) {
-            throw new BusinessRuleException("O parâmetro " + name
+            throw PublicApiException.badRequest(PublicApiException.VALIDATION_ERROR, "O parâmetro " + name
                     + " tem de ser uma data ISO 8601 (ex.: 2026-11-01 ou 2026-11-01T08:00:00+02:00).");
         }
     }

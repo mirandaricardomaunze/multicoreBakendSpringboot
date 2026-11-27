@@ -14,7 +14,7 @@
 | API-03 | `/api/public/v1` só por `X-Api-Key`; token de utilizador recusado aqui e chave recusada em `/api/**` (§3.2) — **verde 2026-11-26** | `PublicApiAuthenticationTest` |
 | API-04 | Permissões por chave aplicadas por rota; sem permissão → 403 `API_PERMISSION_DENIED` (§3.2, §3.3) — **verde 2026-11-26** | `PublicApiAuthenticationTest` |
 | API-05 | 60 pedidos/min por chave → 429 `RATE_LIMIT_EXCEEDED` com `Retry-After`; limite por chave (§3.2) — **verde 2026-11-26** | `PublicApiRateLimitTest` |
-| API-06 | Erros JSON com `code` e `message` PT-MZ, sem stack trace; paginação máx. 100 (§3.2) | `PublicApiHttpIntegrationTest` |
+| API-06 | Erros JSON só com `code` e `message` PT-MZ, sem stack trace; `400 VALIDATION_ERROR`, `404 NOT_FOUND`, `405 METHOD_NOT_ALLOWED`, `409 CONFLICT`, `500 INTERNAL_ERROR`; paginação máx. 100 (§3.2, §3.2.1) — **verde 2026-11-27** | `PublicApiHttpIntegrationTest` · `GlobalExceptionHandlerTest` |
 | API-07 | Produtos e stock disponível da empresa da chave; sem custos, margens nem fornecedores; `updatedSince`; 404 com `code`; páginas máx. 100 (§3.3, §3.3.1) — **verde 2026-11-26** | `PublicApiCatalogTest` · `PublicApiCatalogHttpTest` |
 | API-08 | Criar encomenda: preços do sistema, cliente por NUIT ou Consumidor Final com contacto, regras do desktop, origem guardada (§3.4, §3.4.1) — **verde 2026-11-27** | `PublicApiOrderTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | API-09 | Idempotência por chave + `externalReference`: mesmo conteúdo → 200 sem duplicar nem reservar de novo, diferente → 409 `EXTERNAL_REFERENCE_CONFLICT` (§3.4, §3.4.2) — **verde 2026-11-27** | `PublicApiOrderTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |

@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
-verify: ["ApiKeyRulesTest", "PublicApiAuthenticationTest", "PublicApiRateLimitTest", "PublicApiCatalogTest", "PublicApiCatalogHttpTest", "PublicApiOrderTest", "PublicApiHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "IntegrationsUiHarnessTest"]
+verify: ["ApiKeyRulesTest", "PublicApiAuthenticationTest", "PublicApiRateLimitTest", "PublicApiCatalogTest", "PublicApiCatalogHttpTest", "PublicApiOrderTest", "PublicApiHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "IntegrationsUiHarnessTest", "GlobalExceptionHandlerTest"]
 blockedBy: []
 ---
 
@@ -26,7 +26,7 @@ Regras em `docs/API_PUBLICA_WEBHOOKS_SPEC.md` §2–§3 e §4.4.
 - [x] API-09 — idempotência por `externalReference` — `PublicApiOrderTest`
 - [x] API-10 — consultar encomenda — `PublicApiOrderTest`
 - [x] API-02 — criar/revogar só ADMIN com auditoria — `PublicApiHttpIntegrationTest`
-- [ ] API-06 — erros e paginação — `PublicApiHttpIntegrationTest`
+- [x] API-06 — erros e paginação — `PublicApiHttpIntegrationTest`
 - [ ] API-11 — OpenAPI do grupo público — `PublicApiHttpIntegrationTest`
 - [ ] API-UI-01 — ecrã de chaves de API — `IntegrationsUiHarnessTest`
 
@@ -73,3 +73,4 @@ Regras escritas na SPEC §3.4.
 - 2026-11-27 · API-09 · idempotência por chave + `externalReference`: impressão digital SHA-256 do corpo normalizado (`PublicOrderFingerprint`, espaços nas pontas e zeros à direita ignorados) guardada em `customer_orders.request_fingerprint` (V158); a verificação corre antes de qualquer outra regra (`ExternalOrderPlacementService.findPlaced`): mesmo conteúdo → 200 com a encomenda no estado actual, sem duplicar nem reservar de novo; conteúdo diferente → 409 `EXTERNAL_REFERENCE_CONFLICT` com a referência e o número existente; chaves diferentes não colidem; regra escrita na SPEC §3.4.2; PublicApiOrderTest 9/9 verde. Nota: dois pedidos iguais em simultâneo esbarram no índice único `uk_customer_orders_company_idempotency` (o segundo falha sem duplicar).
 - 2026-11-27 · API-10 · `GET /api/public/v1/orders/{número}` (`PublicOrderController` com `{*number}`, porque o número tem barra: `ENC-2026/00001`) com `ORDERS_READ`: `CustomerOrderTrackingService` (comercial) devolve qualquer Encomenda A4 ou Pedido de separação da empresa da chave, da API ou do desktop, no estado actual, com linhas, totais e `invoiceNumber` (`null` antes de facturar); outra empresa, número inexistente ou reposição interna → 404 `ORDER_NOT_FOUND`; a repetição idempotente do POST também mostra o estado actual com a factura; regra escrita na SPEC §3.4.3; PublicApiOrderTest 12/12 verde.
 - 2026-11-27 · API-02 · `ApiKeyController` interno em `/api/integrations/api-keys` (listar, criar → 201 com o segredo uma única vez, `POST /{id}/revoke`) sobre o `ApiKeyService`; `/api/integrations` classificada no `ApiRolePolicy` como só ADMIN (MANAGER/EMPLOYEE → 403, nada gravado); chave de outra empresa, já revogada, nome vazio ou sem permissões → 400 PT-MZ; auditoria `API_KEY_CREATE`/`API_KEY_REVOKE` com o utilizador e `mk_live_XXXXXXXX...`, nunca o segredo; `PublicApiExceptionHandler` restrito aos controllers públicos para não apanhar a gestão interna; regra escrita na SPEC §3.1.1; PublicApiHttpIntegrationTest 3/3 verde.
+- 2026-11-27 · API-06 · todo o erro em `/api/public/**` sai como `PublicApiError` `{code, message}` PT-MZ, sem stack trace nem SQL: `PublicApiExceptionHandler` passa a cobrir parâmetro com tipo errado/em falta e `updatedSince` inválido → `400 VALIDATION_ERROR`, gravação simultânea → `409 CONFLICT`, avaria → `500 INTERNAL_ERROR` genérico (detalhe só no log); rota inexistente → `404 NOT_FOUND` e método errado → `405 METHOD_NOT_ALLOWED` com `Allow` tratados no `GlobalExceptionHandler` só quando o pedido é da API pública (`PublicApiRoutes.isPublicApi(request)`), resto do servidor igual; paginação `page` ≥ 0, `size` 50 por omissão e máx. 100; regra escrita na SPEC §3.2.1; PublicApiHttpIntegrationTest 6/6 e GlobalExceptionHandlerTest 6/6 verdes.
