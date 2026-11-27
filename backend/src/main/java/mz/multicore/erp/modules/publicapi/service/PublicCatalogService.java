@@ -7,7 +7,6 @@ import mz.multicore.erp.modules.comercial.service.OrderReservationLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.model.WarehouseType;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.publicapi.dto.PublicPage;
@@ -21,10 +20,8 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -63,21 +60,21 @@ public class PublicCatalogService {
     }
 
     public PublicProductDTO getProduct(Long companyId, String sku) {
+        return PublicCatalogMapper.toProduct(requireProduct(companyId, sku));
+    }
+
+    /** A product the API may show or sell, or 404 {@code PRODUCT_NOT_FOUND}. Also used by order creation. */
+    Product requireProduct(Long companyId, String sku) {
         return productLookup.findBySkuForCompany(sku, companyId)
                 .filter(PublicCatalogService::isPublic)
-                .map(PublicCatalogMapper::toProduct)
                 .orElseThrow(() -> new PublicApiNotFoundException("PRODUCT_NOT_FOUND",
                         "Artigo com o SKU " + sku + " não encontrado."));
     }
 
     public PublicPage<PublicStockDTO> listStock(Long companyId, String warehouse, Integer page, Integer size) {
-        List<Warehouse> salesWarehouses = warehouseLookup.listForCompany(companyId).stream()
-                .filter(PublicCatalogService::isSalesWarehouse)
-                .filter(byCodeOrName(warehouse))
-                .toList();
+        List<Warehouse> salesWarehouses = PublicSalesWarehouses.matching(warehouseLookup.listForCompany(companyId), warehouse);
         if (warehouse != null && !warehouse.isBlank() && salesWarehouses.isEmpty()) {
-            throw new PublicApiNotFoundException("WAREHOUSE_NOT_FOUND",
-                    "Armazém de venda " + warehouse.trim() + " não encontrado.");
+            throw PublicSalesWarehouses.notFound(warehouse);
         }
         Set<Long> warehouseIds = salesWarehouses.stream().map(Warehouse::getId).collect(Collectors.toSet());
         Map<String, BigDecimal> reserved = reservedByProductAndWarehouse(companyId);
@@ -116,21 +113,5 @@ public class PublicCatalogService {
     private static boolean changedSince(Product product, LocalDateTime since) {
         LocalDateTime changed = PublicCatalogMapper.lastChange(product);
         return changed != null && !changed.isBefore(since);
-    }
-
-    private static boolean isSalesWarehouse(Warehouse warehouse) {
-        return warehouse.isActive() && warehouse.isAllowsSales() && warehouse.getType() != WarehouseType.TRANSIT;
-    }
-
-    private static Predicate<Warehouse> byCodeOrName(String warehouse) {
-        if (warehouse == null || warehouse.isBlank()) {
-            return w -> true;
-        }
-        String wanted = warehouse.trim().toLowerCase(Locale.ROOT);
-        return w -> wanted.equals(lower(w.getWarehouseNumber())) || wanted.equals(lower(w.getName()));
-    }
-
-    private static String lower(String value) {
-        return value == null ? null : value.trim().toLowerCase(Locale.ROOT);
     }
 }

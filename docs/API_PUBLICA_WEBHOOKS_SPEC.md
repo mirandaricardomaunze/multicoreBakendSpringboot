@@ -95,6 +95,22 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   criada (200), sem duplicar; com conteúdo diferente → `409`.
 - A encomenda guarda a origem (`API` + nome da chave) e aparece no desktop como qualquer outra.
 
+#### 3.4.1 Detalhe de `POST /orders` (API-08)
+
+- Campos: `externalReference` (obrigatório, até 80 caracteres), `warehouse` (obrigatório: número ou nome de um
+  armazém de venda, como no `GET /stock`), `lines` (pelo menos uma; `sku` e `quantity` > 0), `nuit`,
+  `customerName`, `contactName`, `contactPhone`, `notes` (até 1000).
+- Sem `nuit`: `contactName` e `contactPhone` são obrigatórios (Consumidor Final precisa de contacto) →
+  `400 CONTACT_REQUIRED`. Com `nuit` válido (9 dígitos): cliente da empresa com esse NUIT; se não existir,
+  é registado com `customerName` pelas regras do registo manual (NUIT inválido → `400`).
+- A encomenda é criada em nome da chave (utilizador `API · <nome da chave>`, perfil de vendedor) e na empresa
+  dela; o motor de aprovações trata-a como uma encomenda de vendedor.
+- Respostas: `201` com a encomenda (`number`, `externalReference`, `status`, linhas com preço do sistema e
+  totais); SKU inexistente → `404 PRODUCT_NOT_FOUND`; armazém → `404 WAREHOUSE_NOT_FOUND`; stock disponível
+  insuficiente → `422 INSUFFICIENT_STOCK`; outra regra de negócio → `422 BUSINESS_RULE_VIOLATION`; corpo
+  inválido → `400 VALIDATION_ERROR`. Mensagens em PT-MZ.
+- Uma encomenda com reserva activa rejeitada no motor de aprovações fica cancelada e **liberta a reserva**.
+
 ## 4. Webhooks (GOAL-014)
 
 ### 4.1 Subscrições

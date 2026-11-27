@@ -22,7 +22,7 @@ Regras em `docs/API_PUBLICA_WEBHOOKS_SPEC.md` §2–§3 e §4.4.
 - [x] API-04 — permissões por chave — `PublicApiAuthenticationTest`
 - [x] API-05 — limite 60/min com 429 — `PublicApiRateLimitTest`
 - [x] API-07 — catálogo e stock disponível sem dados internos — `PublicApiCatalogTest` · `PublicApiCatalogHttpTest`
-- [ ] API-08 — criar encomenda com as regras do desktop — `PublicApiOrderTest`
+- [x] API-08 — criar encomenda com as regras do desktop — `PublicApiOrderTest`
 - [ ] API-09 — idempotência por `externalReference` — `PublicApiOrderTest`
 - [ ] API-10 — consultar encomenda — `PublicApiOrderTest`
 - [ ] API-02 — criar/revogar só ADMIN com auditoria — `PublicApiHttpIntegrationTest`
@@ -69,3 +69,4 @@ Regras escritas na SPEC §3.4.
 - 2026-11-26 · API-05 · `PublicApiRateLimiter` (janela fixa de 1 min por chave, recusados não contam) aplicado no `ApiKeyAuthenticationFilter` depois da autenticação: o 61.º pedido → 429 JSON `RATE_LIMIT_EXCEEDED` com `Retry-After` em segundos (≥ 1); uma chave esgotada não trava outra; regra escrita na SPEC §3.2; PublicApiRateLimitTest verde 3/3.
 - 2026-11-26 · API-07 · `PublicCatalogController` + `PublicCatalogService`: `GET /products`, `/products/{sku}` e `/stock` da empresa da chave, só dados de venda (preço com IVA pelo `LineCalculator`, taxa em %, unidade base, `updatedAt` com fuso), sem custo/grosso/margens/fornecedores; `updatedSince` ISO 8601; stock disponível = quantidade − reservas activas (porta nova `OrderReservationLookup`) nos armazéns de venda, nunca negativo; 404 `PRODUCT_NOT_FOUND`/`WAREHOUSE_NOT_FOUND`; páginas a partir de 0, máx. 100; regra escrita na SPEC §3.3.1; PublicApiCatalogTest 7/7 e PublicApiCatalogHttpTest 2/2 verdes.
 - 2026-11-26 · API-08 · bloqueado: a via da encomenda (aprovação vs reserva) e o nome do cliente novo por NUIT não estão na SPEC §3.4; perguntas P1/P2 em `## Perguntas em aberto`.
+- 2026-11-27 · API-08 · `POST /api/public/v1/orders` (`PublicOrderController` + `PublicOrderService`): a chave actua como vendedor na sua empresa (`CurrentUserContext.runAs`), SKU/armazém de venda traduzidos, preço e IVA do sistema; nasce `FORMAL_ORDER` com o motor de aprovações e reserva o stock livre na criação (`ExternalOrderPlacementService`, `OrderStockAvailability.requireAndReserve`), sem stock → 422 `INSUFFICIENT_STOCK` sem gravar nada; cliente por NUIT (novo exige `customerName` → 400 `CUSTOMER_NAME_REQUIRED`) ou Consumidor Final com contacto (400 `CONTACT_REQUIRED`); origem `API` + nome da chave, referência externa e telefone gravados (V157); rejeição na aprovação liberta a reserva; detalhe na SPEC §3.4.1; PublicApiOrderTest 6/6 verde.

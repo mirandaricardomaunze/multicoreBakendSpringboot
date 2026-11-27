@@ -121,9 +121,18 @@ public final class CurrentUserContext {
 
     /** Value-returning variant of {@link #runAsSystem(Long, Runnable)}. */
     public static <T> T runAsSystem(Long companyId, Supplier<T> task) {
+        return runAs(SYSTEM_USERNAME, "ADMIN", companyId, task);
+    }
+
+    /**
+     * Runs {@code task} as an explicit non-human actor, such as a public API key acting with the seller role
+     * (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.4.1), restoring the previous context afterward even if the task throws.
+     * The role is never inferred: the caller names it, so elevation stays visible at the call site.
+     */
+    public static <T> T runAs(String username, String role, Long companyId, Supplier<T> task) {
         UserSession previousUser = userSessionThreadLocal.get();
         Long previousCompanyId = companyIdThreadLocal.get();
-        setCurrentUser(SYSTEM_USERNAME, "ADMIN");
+        setCurrentUser(username, role);
         if (companyId != null) {
             setCurrentCompanyId(companyId);
         }

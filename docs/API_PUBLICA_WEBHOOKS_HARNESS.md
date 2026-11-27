@@ -3,7 +3,7 @@
 > Cenários que provam [API_PUBLICA_WEBHOOKS_SPEC.md](API_PUBLICA_WEBHOOKS_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-26
+**Última actualização:** 2026-11-27
 
 ## API pública (GOAL-013)
 
@@ -16,7 +16,7 @@
 | API-05 | 60 pedidos/min por chave → 429 `RATE_LIMIT_EXCEEDED` com `Retry-After`; limite por chave (§3.2) — **verde 2026-11-26** | `PublicApiRateLimitTest` |
 | API-06 | Erros JSON com `code` e `message` PT-MZ, sem stack trace; paginação máx. 100 (§3.2) | `PublicApiHttpIntegrationTest` |
 | API-07 | Produtos e stock disponível da empresa da chave; sem custos, margens nem fornecedores; `updatedSince`; 404 com `code`; páginas máx. 100 (§3.3, §3.3.1) — **verde 2026-11-26** | `PublicApiCatalogTest` · `PublicApiCatalogHttpTest` |
-| API-08 | Criar encomenda: preços do sistema, cliente por NUIT ou Consumidor Final com contacto, regras do desktop, origem guardada (§3.4) | `PublicApiOrderTest` |
+| API-08 | Criar encomenda: preços do sistema, cliente por NUIT ou Consumidor Final com contacto, regras do desktop, origem guardada (§3.4, §3.4.1) — **verde 2026-11-27** | `PublicApiOrderTest` · `PostgresSchemaParityHarnessTest` · `MigrationPostgresDialectHarnessTest` |
 | API-09 | Idempotência por `externalReference`: igual → 200 sem duplicar, diferente → 409 (§3.4) | `PublicApiOrderTest` |
 | API-10 | Consultar encomenda por número com estado, linhas, totais e factura (§3.3) | `PublicApiOrderTest` |
 | API-11 | OpenAPI só do grupo público em `/api/public/v1/docs` (§3.2) | `PublicApiHttpIntegrationTest` |

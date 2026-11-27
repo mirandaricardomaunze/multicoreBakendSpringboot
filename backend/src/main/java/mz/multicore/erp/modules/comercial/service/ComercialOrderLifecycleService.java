@@ -396,10 +396,7 @@ public class ComercialOrderLifecycleService {
         }
         approvalService.cancelPendingForDocument("ORDER", order.getId(), reason);
         order.setStatus(OrderStatus.CANCELLED.name());
-        if (order.isReservationActive()) {
-            order.setReservationActive(false);
-            order.getLines().forEach(line -> line.setReservedQuantity(BigDecimal.ZERO));
-        }
+        order.releaseReservation();
         orderRepository.save(order);
         auditLogService.logCurrent("ORDER_CANCEL", "Encomenda " + order.getOrderNumber() + " cancelada. Motivo: " + reason);
     }

@@ -147,8 +147,35 @@ public class Order extends BaseEntity {
     @Column(name = "reservation_active", nullable = false)
     private boolean reservationActive;
 
+    // ─── Origem externa (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.4) ──────────────
+    /** Por onde entrou a encomenda; as do desktop ficam {@link OrderOrigin#DESKTOP}. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origin", nullable = false, length = 20)
+    private OrderOrigin origin = OrderOrigin.DESKTOP;
+
+    /** Nome da chave de API que a criou (ex.: "Loja online"); nulo nas do desktop. */
+    @Column(name = "origin_name", length = 120)
+    private String originName;
+
+    /** Referência do sistema externo (número da encomenda na loja online); nulo nas do desktop. */
+    @Column(name = "external_reference", length = 80)
+    private String externalReference;
+
+    /** Telefone de contacto do Consumidor Final que encomendou por um sistema externo. */
+    @Column(name = "contact_phone", length = 40)
+    private String contactPhone;
+
     @Version
     private long version;
+
+    /** Liberta o stock que a encomenda tinha prometido; nada muda se não houver reserva activa. */
+    public void releaseReservation() {
+        if (!reservationActive) {
+            return;
+        }
+        reservationActive = false;
+        lines.forEach(line -> line.setReservedQuantity(BigDecimal.ZERO));
+    }
 
     public void addLine(OrderLine line) {
         lines.add(line);

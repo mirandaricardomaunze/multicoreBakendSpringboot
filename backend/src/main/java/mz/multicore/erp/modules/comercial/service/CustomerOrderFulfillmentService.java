@@ -16,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -88,12 +87,8 @@ public class CustomerOrderFulfillmentService {
         OrderDTO created = comercialService.createOrder(request.order(), OrderKind.PICKING_REQUEST);
         Order order = pickingCoordinator.requireOrder(created.id());
         // Somado por artigo: duas linhas do mesmo produto não podem, cada uma, caber no stock livre.
-        OrderStockAvailability.require(order, order.getWarehouse(), order.getLines().stream()
-                .map(l -> new OrderStockAvailability.Outgoing(l.getProduct(), l.getQuantity())).toList(),
-                inventoryService, orderLineRepository);
-        order.getLines().forEach(line -> line.setReservedQuantity(line.getQuantity()));
+        OrderStockAvailability.requireAndReserve(order, inventoryService, orderLineRepository);
         order.setIdempotencyKey(key);
-        order.setReservationActive(true);
         String previous = order.getStatus();
         order.setStatus(OrderFulfillmentStatus.AWAITING_SEPARATION.name());
         orderRepository.save(order);

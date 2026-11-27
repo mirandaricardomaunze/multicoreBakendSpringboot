@@ -45,6 +45,8 @@ public class OrderApprovalCallback implements ApprovalCallback {
         orderRepository.findById(documentId).ifPresent(order -> {
             if (OrderStatus.is(order.getStatus(), OrderStatus.PENDING_APPROVAL)) {
                 order.setStatus(OrderStatus.CANCELLED.name());
+                // Encomendas da API reservam na criação (API_PUBLICA_WEBHOOKS_SPEC §3.4.1): rejeitada, liberta.
+                order.releaseReservation();
                 orderRepository.save(order);
             }
         });
