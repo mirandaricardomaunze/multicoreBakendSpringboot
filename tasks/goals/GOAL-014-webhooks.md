@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
-verify: ["WebhookSubscriptionTest", "WebhookEventTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
+verify: ["WebhookSubscriptionTest", "ApiKeyRulesTest", "MigrationPostgresDialectHarnessTest", "WebhookEventTest", "WebhookDeliveryTest", "WebhookHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "IntegrationsUiHarnessTest"]
 blockedBy: []
 ---
 
@@ -20,7 +20,7 @@ iteração termina com `NEEDS_HUMAN` e não começa este goal.
 
 ## Critérios de aceitação
 
-- [ ] WH-01 — subscrição: ADMIN, HTTPS, sem endereços privados, segredo uma vez — `WebhookSubscriptionTest`
+- [x] WH-01 — subscrição: ADMIN, HTTPS, sem endereços privados, segredo uma vez — `WebhookSubscriptionTest`
 - [ ] WH-02 — os quatro eventos com o corpo definido — `WebhookEventTest`
 - [ ] WH-03 — envio depois do commit, sem anular a operação — `WebhookEventTest`
 - [ ] WH-04 — assinatura HMAC e cabeçalhos — `WebhookDeliveryTest`
@@ -53,3 +53,4 @@ GOAL-013 primeiro e depois segue para este goal.
 - 2026-11-26 · — · não iniciado: pré-requisito GOAL-013 está BLOCKED (API-08); goal passa a BLOCKED com a pergunta P1.
 - 2026-11-27 · — · gate vermelho corrigido (sem critério novo): @Valid em ApiKeyController.create (BIV-01) e coluna customer_orders.origin com default 'DESKTOP' na entidade para o H2 local com dados (MulticoreServicesTest verde).
 - 2026-11-27 · WH-01 · regra da subscrição escrita na SPEC §4.1.1 (ADMIN, URL/eventos, https em prod, anti-SSRF com DNS, segredo whsec_ cifrado, auditoria, mensagens) e linha do HARNESS actualizada; implementação na próxima iteração.
+- 2026-11-27 · WH-01 · subscrição implementada (módulo webhooks: WebhookSubscriptionService só ADMIN na empresa activa, WebhookUrlValidator com https em prod e anti-SSRF após DNS por porta injectável, segredo whsec_ cifrado com AttachmentCrypto, auditoria WEBHOOK_CREATE/ACTIVATE/DEACTIVATE sem segredo, V159__webhook_subscriptions); gerador base62 partilhado em SecretTokens; WebhookSubscriptionTest 12/12 verde.
