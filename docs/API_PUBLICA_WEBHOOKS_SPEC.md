@@ -214,6 +214,27 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - Configurações › Integrações: chaves de API (criar com permissões, mostrar uma vez, revogar, último
   uso) e webhooks (URL, eventos, segredo mostrado uma vez, registo de entregas, reenviar).
 
+#### 4.4.1 Ecrã de chaves de API (API-UI-01)
+
+- Configurações › separador **"Integrações"** (último, ícone `fas-plug`), com a secção "Chaves de API"; os
+  webhooks (WH-UI-01, GOAL-014) entram depois no mesmo separador. Tudo pela API interna de §3.1.1
+  (`/api/integrations/api-keys`), sempre na empresa activa; o desktop nunca gera nem guarda segredos.
+- Tabela: nome, identificação `mk_live_XXXXXXXX...`, permissões (rótulos PT-MZ: "Ler catálogo",
+  "Ler encomendas", "Criar encomendas"), criada em / por, último uso ("Nunca usada" quando vazio) e estado
+  ("Activa" ou "Revogada em dd/MM/yyyy HH:mm por X"). Datas em `dd/MM/yyyy HH:mm`. Chaves revogadas continuam
+  visíveis (histórico). Botão "Actualizar" relê a lista.
+- **"Nova chave"**: diálogo com nome (obrigatório) e uma caixa por permissão (pelo menos uma); validação
+  local com as mesmas mensagens do backend, mas o backend decide (`400` mostrado tal como vem).
+- **Mostrar uma vez**: depois do `201`, diálogo modal com o segredo completo num campo só de leitura,
+  botão "Copiar" (área de transferência) e o aviso "Esta chave não volta a ser mostrada. Guarde-a agora.";
+  ao fechar, o segredo é descartado da memória do ecrã e a tabela recarrega sem ele.
+- **"Revogar"**: só com uma chave **activa** seleccionada; pede confirmação ("A chave X deixa de funcionar
+  imediatamente. Revogar?") e recarrega a tabela.
+- Só o **ADMIN** gere chaves: para outro perfil, "Nova chave" e "Revogar" ficam desactivados e a lista não é
+  pedida (mostra "Só o administrador gere as chaves de API."); o backend continua a ser quem decide (`403`).
+- UI uniforme: tokens do tema e `UIHelper` (ícones `UIHelper.icon`, nunca emojis), como os outros
+  separadores de Configurações.
+
 ## 5. Fora de âmbito
 
 - OAuth, chaves por utilizador, escrita de artigos/preços/clientes pela API.
