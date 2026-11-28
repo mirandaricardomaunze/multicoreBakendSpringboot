@@ -36,6 +36,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 /**
  * Harness LO-04 (docs/LOJA_ONLINE_SPEC.md §3.2): {@code /api/shop/{code}/**} answers without login; a disabled or
@@ -45,6 +46,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * <p>Harness LO-09 (§3.3): the customer follows the order with its number and the checkout phone
  * ({@code POST /api/shop/{code}/orders/lookup}); a wrong or malformed phone and an unknown number all answer the same
  * "Encomenda não encontrada.", so the answer never reveals whether the order exists.
+ *
+ * <p>Harness LO-UI-01 (§3.5): the desktop reads and saves the settings by {@code GET}/{@code PUT
+ * /api/online-shop/settings}, ADMIN only (403 for the other roles), with the LO-01 messages unchanged.
+ * Seeded users: ana=ADMIN, joao=MANAGER, maria=EMPLOYEE (password "password").
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:online-shop-http;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
@@ -54,6 +59,7 @@ class OnlineShopHttpIntegrationTest {
     private static final String CODE = "lo04-montra";
     private static final String SERVICE_SKU = "LO09-MONTAGEM";
     private static final String NOT_FOUND = "Encomenda não encontrada.";
+    private static final String SETTINGS = "/api/online-shop/settings";
 
     @Autowired private ProductLookup productLookup;
     @Autowired private ProductCommandService productCommandService;
@@ -201,6 +207,71 @@ class OnlineShopHttpIntegrationTest {
     @Test
     void lo09_consultaNaoContaParaOLimiteDeEncomendas() {
         assertThat(OnlineShopRoutes.isOrderPlacement("POST", "/api/shop/mercearia-baixa/orders/lookup")).isFalse();
+    }
+
+    @Test
+    void loUi01_adminLeEGravaAsDefinicoesPeloDesktop() throws Exception {
+        String[] admin = login("ana");
+        long companyId = Long.parseLong(admin[1]);
+        CurrentUserContext.setCurrentUser("ana", "ADMIN");
+        CurrentUserContext.setCurrentCompanyId(companyId);
+        Long pickup;
+        try {
+            pickup = warehouseService.getSalesWarehousesByCompany(companyId).get(0).getId();
+        } finally {
+            CurrentUserContext.clear();
+        }
+        String body = "{\"enabled\":true,\"publicCode\":\" LoUi01-Definicoes \",\"pickupWarehouseIds\":[" + pickup
+                + "],\"deliveryZones\":[{\"name\":\"Matola\",\"fee\":150}],\"contactPhone\":\"841234567\","
+                + "\"autoCancelDays\":null}";
+
+        MockHttpServletResponse saved = settings(put(SETTINGS), admin, body);
+        assertThat(saved.getStatus()).as(saved.getContentAsString(StandardCharsets.UTF_8)).isEqualTo(200);
+        MockHttpServletResponse read = settings(get(SETTINGS), admin, "");
+        assertThat(read.getStatus()).isEqualTo(200);
+        JsonNode dto = objectMapper.readTree(read.getContentAsString(StandardCharsets.UTF_8));
+        assertThat(dto.get("enabled").asBoolean()).isTrue();
+        assertThat(dto.get("publicCode").asText()).isEqualTo("loui01-definicoes");
+        assertThat(dto.get("pickupWarehouseIds").get(0).asLong()).isEqualTo(pickup);
+        assertThat(dto.get("deliveryZones").get(0).get("name").asText()).isEqualTo("Matola");
+        assertThat(dto.get("autoCancelDays").asInt()).as("7 por omissão").isEqualTo(7);
+
+        MockHttpServletResponse refused = settings(put(SETTINGS), admin,
+                "{\"enabled\":true,\"publicCode\":\"  \",\"pickupWarehouseIds\":[" + pickup + "]}");
+        assertThat(refused.getStatus()).isEqualTo(400);
+        assertThat(message(refused)).as("mensagem do backend sem alteração")
+                .isEqualTo("Indique o código público da loja.");
+
+        assertThat(settings(put(SETTINGS), admin, "{\"enabled\":false,\"publicCode\":\"loui01-definicoes\"}")
+                .getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    void loUi01_soOAdminChegaAsDefinicoes() throws Exception {
+        String companyId = login("ana")[1];
+        for (String user : List.of("joao", "maria")) {
+            String[] other = {login(user)[0], companyId};
+            assertThat(settings(get(SETTINGS), other, "").getStatus()).as(user + " GET").isEqualTo(403);
+            assertThat(settings(put(SETTINGS), other, "{\"enabled\":false}").getStatus()).as(user + " PUT")
+                    .isEqualTo(403);
+        }
+    }
+
+    private MockHttpServletResponse settings(MockHttpServletRequestBuilder request, String[] session, String body)
+            throws Exception {
+        return mockMvc.perform(request.header("Authorization", "Bearer " + session[0])
+                        .header("X-Company-Id", session[1])
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andReturn().getResponse();
+    }
+
+    /** @return token and the first company of the user */
+    private String[] login(String username) throws Exception {
+        JsonNode login = objectMapper.readTree(mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"%s\",\"password\":\"password\"}".formatted(username)))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
+        return new String[]{login.get("token").asText(), login.get("companies").get(0).get("id").asText()};
     }
 
     private JsonNode placeServiceOrder(String ip, Long pickup) throws Exception {

@@ -133,8 +133,26 @@ public class ConfigPanel extends JPanel {
                        AccountingApiClient accountingApiClient,
                        ApiKeyApiClient apiKeyApiClient,
                        mz.multicore.erp.desktop.client.WebhookApiClient webhookApiClient) {
+        this(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient,
+                mySubscriptionApiClient, monitoringApiClient, activityApiClient, dataImportApiClient,
+                exchangeRateApiClient, accountingApiClient, apiKeyApiClient, webhookApiClient, null);
+    }
+
+    /** With the online shop settings too (LOJA_ONLINE_SPEC §3.5): third section of "Integrações". */
+    public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
+                       DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
+                       MySubscriptionApiClient mySubscriptionApiClient,
+                       SystemMonitoringApiClient monitoringApiClient,
+                       mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
+                       DataImportApiClient dataImportApiClient,
+                       ExchangeRateApiClient exchangeRateApiClient,
+                       AccountingApiClient accountingApiClient,
+                       ApiKeyApiClient apiKeyApiClient,
+                       mz.multicore.erp.desktop.client.WebhookApiClient webhookApiClient,
+                       mz.multicore.erp.desktop.client.OnlineShopApiClient onlineShopApiClient) {
         this.integrationsPanel = apiKeyApiClient == null ? null
-                : new mz.multicore.erp.gui.integrations.IntegrationsPanel(apiKeyApiClient, webhookApiClient);
+                : new mz.multicore.erp.gui.integrations.IntegrationsPanel(apiKeyApiClient, webhookApiClient,
+                onlineShopApiClient);
         this.costCentersPanel = accountingApiClient == null ? null
                 : new mz.multicore.erp.gui.accounting.CostCentersPanel(accountingApiClient);
         this.exchangeRatesPanel = exchangeRateApiClient == null ? null

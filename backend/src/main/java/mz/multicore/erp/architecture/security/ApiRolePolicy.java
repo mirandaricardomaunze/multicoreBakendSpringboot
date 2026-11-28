@@ -41,7 +41,9 @@ public final class ApiRolePolicy {
             // Online shop: public without login, per-IP limits (LOJA_ONLINE_SPEC §3.2); no user role reaches it.
             "/api/shop",
             // Integrations (API keys, webhooks): ADMIN only (API_PUBLICA_WEBHOOKS_SPEC §3.1.1, §4.1).
-            "/api/integrations");
+            "/api/integrations",
+            // Online shop back office: settings ADMIN only (LOJA_ONLINE_SPEC §3.5, LO-UI-01).
+            "/api/online-shop");
 
     /** Business-sector areas (SA-C01..C03): every role may read, only management may change. */
     private static final Set<String> READ_SELLER_WRITE_MANAGER_AREAS = Set.of(
@@ -59,6 +61,7 @@ public final class ApiRolePolicy {
             return false;
         }
         if (matches(uri, "/api/backup") || matches(uri, "/api/data-import") || matches(uri, "/api/integrations")
+                || matches(uri, "/api/online-shop/settings")
                 || (matches(uri, "/api/users")
                 && !"/api/users/verify-pin".equals(uri))) {
             return false;
