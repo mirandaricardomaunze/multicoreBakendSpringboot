@@ -20,7 +20,12 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.ExternalOrderPlacementService;
+import mz.multicore.erp.modules.comercial.model.ReservedStock;
+import mz.multicore.erp.modules.comercial.service.OrderReservationLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.inventory.model.Stock;
+import mz.multicore.erp.modules.inventory.model.Warehouse;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.fiscal.model.TaxRate;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopOrderDTO;
@@ -30,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +56,8 @@ import static org.mockito.Mockito.when;
  * {@code LEVANTAMENTO} or a zone of the shop and an address for {@code ENTREGA}.
  * Harness LO-06 (§3.3): the order is placed through the public API's placement service — system prices and VAT,
  * reserved stock, client by NUIT or Consumidor Final with the contact on the order, origin {@code LOJA_ONLINE}.
+ * Harness LO-07 (§3.3): the order's store is the pickup store, or for delivery the first pickup store with free stock
+ * for the whole cart; without stock the order is refused and nothing is created.
  */
 class OnlineShopOrderTest {
 
@@ -157,8 +165,17 @@ class OnlineShopOrderTest {
     private final ClientLookup clientLookup = mock(ClientLookup.class);
     private final ComercialService comercialService = mock(ComercialService.class);
     private final ExternalOrderPlacementService placementService = mock(ExternalOrderPlacementService.class);
-    private final OnlineShopOrderService orderService = new OnlineShopOrderService(
-            settingsRepository, productLookup, clientLookup, comercialService, placementService);
+    private final StockLookup stockLookup = mock(StockLookup.class);
+    private final OrderReservationLookup reservationLookup = mock(OrderReservationLookup.class);
+    private final List<Stock> stockLines = new ArrayList<>();
+    private final List<ReservedStock> reservations = new ArrayList<>();
+    private final OnlineShopOrderService orderService = new OnlineShopOrderService(settingsRepository, productLookup,
+            clientLookup, comercialService, placementService, stockLookup, reservationLookup);
+
+    {
+        when(stockLookup.listForCompany(COMPANY_ID)).thenReturn(stockLines);
+        when(reservationLookup.activeReservationsForCompany(COMPANY_ID)).thenReturn(reservations);
+    }
 
     @Test
     void lo06_consumidorFinalPeloServicoDaApiPublicaComOrigemLojaOnline() {
@@ -273,8 +290,165 @@ class OnlineShopOrderTest {
         assertEquals(List.of("number", "statusLabel", "lines", "totalAmount"), fields);
     }
 
-    private void stubShop() {
+    // ─── LO-07: armazém da encomenda e recusa sem stock ──────────────────────
+
+    @Test
+    void lo07_levantamentoUsaALojaEscolhidaQuandoTemStock() {
+        openShopWithArroz();
+        stock(PICKUP_A, "100");
+        stock(PICKUP_B, "2");
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", pickup(PICKUP_B, CART));
+
+        assertEquals(PICKUP_B, placedOrder().warehouseId());
+    }
+
+    @Test
+    void lo07_levantamentoSemStockNaLojaEscolhidaRecusaComOsArtigosENadaECriado() {
+        openShopWithArroz();
+        Product oleo = product(2L, "OLEO-1L", "Óleo 1 L");
+        when(productLookup.findBySkuForCompany("OLEO-1L", COMPANY_ID)).thenReturn(Optional.of(oleo));
+        stock(PICKUP_A, "100");
+        stock(PICKUP_B, "1");
+        stockLines.add(stockLine(oleo, PICKUP_B, "5"));
+        reservations.add(new ReservedStock(2L, PICKUP_B, new BigDecimal("5")));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> orderService.placeOrder(
+                "mercearia-baixa", pickup(PICKUP_B, List.of(
+                        new OnlineShopOrderLineRequest("ARROZ-5KG", new BigDecimal("2")),
+                        new OnlineShopOrderLineRequest("OLEO-1L", BigDecimal.ONE)))));
+
+        assertEquals("Sem stock suficiente na loja escolhida para: Arroz 5 kg, Óleo 1 L.", ex.getMessage());
+        verify(placementService, never()).placeReservedFormalOrder(any(), any());
+        verify(comercialService, never()).createClient(any());
+    }
+
+    @Test
+    void lo07_linhasRepetidasDoMesmoArtigoSomamAQuantidade() {
+        openShopWithArroz();
+        stock(PICKUP_A, "3");
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> orderService.placeOrder(
+                "mercearia-baixa", pickup(PICKUP_A, List.of(
+                        new OnlineShopOrderLineRequest("ARROZ-5KG", new BigDecimal("2")),
+                        new OnlineShopOrderLineRequest("ARROZ-5KG", new BigDecimal("2"))))));
+
+        assertEquals("Sem stock suficiente na loja escolhida para: Arroz 5 kg.", ex.getMessage());
+        verify(placementService, never()).placeReservedFormalOrder(any(), any());
+    }
+
+    @Test
+    void lo07_entregaUsaAPrimeiraLojaDeLevantamentoComTodoOStock() {
+        openShopWithArroz();
+        stock(PICKUP_A, "5");
+        reservations.add(new ReservedStock(1L, PICKUP_A, new BigDecimal("4")));
+        stock(PICKUP_B, "2");
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", delivery("Matola", "Rua X"));
+
+        assertEquals(PICKUP_B, placedOrder().warehouseId(), "na loja A só 1 está livre; a B tem as 2");
+    }
+
+    @Test
+    void lo07_entregaPrefereAPrimeiraLojaQuandoAmbasTemStock() {
+        openShopWithArroz();
+        stock(PICKUP_A, "2");
+        stock(PICKUP_B, "50");
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", delivery("Matola", "Rua X"));
+
+        assertEquals(PICKUP_A, placedOrder().warehouseId());
+    }
+
+    @Test
+    void lo07_entregaSemLojaComTodoOStockRecusaENadaECriado() {
+        openShopWithArroz();
+        stock(PICKUP_A, "1");
+        stock(PICKUP_B, "3");
+        reservations.add(new ReservedStock(1L, PICKUP_B, new BigDecimal("2")));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
+                () -> orderService.placeOrder("mercearia-baixa", delivery("Matola", "Rua X")));
+
+        assertEquals("Não há stock suficiente para entrega.", ex.getMessage());
+        verify(placementService, never()).placeReservedFormalOrder(any(), any());
+    }
+
+    @Test
+    void lo07_stockForaDasLojasDeLevantamentoNaoConta() {
+        openShopWithArroz();
+        stock(99L, "500");
+
+        assertEquals("Não há stock suficiente para entrega.", assertThrows(BusinessRuleException.class,
+                () -> orderService.placeOrder("mercearia-baixa", delivery("Matola", "Rua X"))).getMessage());
+        verify(placementService, never()).placeReservedFormalOrder(any(), any());
+    }
+
+    @Test
+    void lo07_servicoSemControloDeStockNaoPrecisaDeStock() {
+        openShop();
+        Product service = product(3L, "MONTAGEM", "Montagem");
+        service.setStockTracked(false);
+        when(productLookup.findBySkuForCompany("MONTAGEM", COMPANY_ID)).thenReturn(Optional.of(service));
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", new PlaceOnlineShopOrderRequest("Ana", "841234567", null,
+                OnlineShopFulfilment.ENTREGA, null, "Matola", "Rua X", null,
+                List.of(new OnlineShopOrderLineRequest("MONTAGEM", BigDecimal.ONE))));
+
+        assertEquals(PICKUP_A, placedOrder().warehouseId());
+    }
+
+    private void openShopWithArroz() {
+        openShop();
+        when(productLookup.findBySkuForCompany("ARROZ-5KG", COMPANY_ID)).thenReturn(Optional.of(onSale(1L, null)));
+    }
+
+    private CreateOrderRequest placedOrder() {
+        ArgumentCaptor<CreateOrderRequest> order = ArgumentCaptor.forClass(CreateOrderRequest.class);
+        verify(placementService).placeReservedFormalOrder(order.capture(), any());
+        return order.getValue();
+    }
+
+    private static PlaceOnlineShopOrderRequest pickup(Long warehouseId, List<OnlineShopOrderLineRequest> lines) {
+        return new PlaceOnlineShopOrderRequest("Ana", "841234567", null, OnlineShopFulfilment.LEVANTAMENTO,
+                warehouseId, null, null, null, lines);
+    }
+
+    /** Stock of ARROZ-5KG (product 1) in a store. */
+    private void stock(Long warehouseId, String quantity) {
+        stockLines.add(stockLine(onSale(1L, null), warehouseId, quantity));
+    }
+
+    private static Stock stockLine(Product product, Long warehouseId, String quantity) {
+        Warehouse warehouse = new Warehouse();
+        warehouse.setId(warehouseId);
+        Stock stock = new Stock();
+        stock.setProduct(product);
+        stock.setWarehouse(warehouse);
+        stock.setQuantity(new BigDecimal(quantity));
+        return stock;
+    }
+
+    private static Product product(Long id, String sku, String name) {
+        Product product = onSale(id, null);
+        product.setSku(sku);
+        product.setName(name);
+        return product;
+    }
+
+    private void openShop() {
         when(settingsRepository.findByPublicCode("mercearia-baixa")).thenReturn(Optional.of(shop()));
+    }
+
+    /** Open shop with plenty of ARROZ-5KG in both pickup stores (LO-06 scenarios). */
+    private void stubShop() {
+        openShop();
+        stock(PICKUP_A, "100");
+        stock(PICKUP_B, "100");
     }
 
     private static Product onSale(Long id, BigDecimal taxRate) {

@@ -25,7 +25,7 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - [x] LO-03 — Disponível/Esgotado sem dados internos — `OnlineShopCatalogTest`
 - [x] LO-05 — validação do checkout — `OnlineShopOrderTest`
 - [x] LO-06 — encomenda pelo serviço da API pública — `OnlineShopOrderTest`
-- [ ] LO-07 — escolha do armazém e recusa sem stock — `OnlineShopOrderTest`
+- [x] LO-07 — escolha do armazém e recusa sem stock — `OnlineShopOrderTest`
 - [ ] LO-08 — taxa de entrega por zona — `OnlineShopOrderTest`
 - [ ] LO-10 — cancelamento automático — `OnlineShopExpiryTest`
 - [ ] LO-04 — endpoints públicos, limites e honeypot — `OnlineShopHttpIntegrationTest`
@@ -62,3 +62,4 @@ em LO-01 quando o GOAL-013 estiver `DONE`.
 - 2026-11-28 · LO-03 · concluído: cada artigo da montra traz só Disponível/Esgotado (`available`), Disponível quando stock − reservas activas > 0 em pelo menos uma loja de levantamento (serviços sem controlo de stock sempre disponíveis; stock noutros armazéns não conta), lido pelo StockLookup e OrderReservationLookup; o DTO não tem quantidades, custos nem fornecedores; OnlineShopCatalogTest 11/11 verde.
 - 2026-11-28 · LO-05 · concluído: OnlineShopCheckoutRules valida o checkout (PlaceOnlineShopOrderRequest): nome obrigatório (≤150), telemóvel moçambicano normalizado como no pagamento móvel (258 opcional, 9 dígitos, 82–87), NUIT opcional mas válido (módulo 11), modo LEVANTAMENTO numa loja de levantamento da loja ou ENTREGA com zona da loja e morada (≤255), notas ≤500 e carrinho não vazio com quantidades > 0; OnlineShopOrderTest 10/10 verde.
 - 2026-11-28 · LO-06 · concluído: OnlineShopOrderService cria a encomenda pelo ExternalOrderPlacementService da API pública (Encomenda A4 em aprovação com reserva, preços e IVA do sistema, só artigos publicados), cliente por NUIT (registado com o nome do checkout quando novo) ou Consumidor Final, telemóvel guardado na encomenda, nova origem `LOJA_ONLINE` (ExternalOrderSource passa a levar a origem), a loja actua como vendedor "Loja online · {código}"; o nome do checkout passa a ≤120 (limite do comprador na encomenda); a resposta traz só número, estado, resumo e total; OnlineShopOrderTest 16/16 verde.
+- 2026-11-28 · LO-07 · concluído: o armazém da encomenda é a loja de levantamento escolhida (sem stock livre para algum artigo → "Sem stock suficiente na loja escolhida para: …" com a lista dos artigos) ou, na entrega, a primeira loja de levantamento com stock livre (stock − reservas, quantidades somadas por artigo, serviços sem controlo de stock dispensados) para todo o carrinho, senão "Não há stock suficiente para entrega."; nada é criado quando recusa; cálculo do stock livre partilhado com a montra (PickupFreeStock); OnlineShopOrderTest 24/24 verde.

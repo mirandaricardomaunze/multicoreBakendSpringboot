@@ -5,11 +5,9 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.advances.AdvancePayments;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.model.ReservedStock;
 import mz.multicore.erp.modules.comercial.service.OrderReservationLookup;
 import mz.multicore.erp.modules.comercial.service.ProductCommandService;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopProductDTO;
 import mz.multicore.erp.modules.onlineshop.model.OnlineShopSettings;
@@ -18,11 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Catalogue of the public online shop (docs/LOJA_ONLINE_SPEC.md §3.1, LO-02): only the company's active products
@@ -59,10 +53,11 @@ public class OnlineShopCatalogService {
     public List<OnlineShopProductDTO> listProducts(String publicCode) {
         OnlineShopSettings shop = OpenOnlineShops.require(settingsRepository, publicCode);
         Long companyId = shop.getCompany().getId();
-        Set<Long> inStock = productsWithFreeStock(companyId, Set.copyOf(shop.getPickupWarehouseIds()));
+        PickupFreeStock freeStock = PickupFreeStock.load(companyId, shop.getPickupWarehouseIds(), stockLookup,
+                reservationLookup);
         return productLookup.listForCompany(companyId).stream()
                 .filter(OnlineShopCatalogService::isOnSale)
-                .map(p -> toDTO(p, !p.isStockTracked() || inStock.contains(p.getId())))
+                .map(p -> toDTO(p, !p.isStockTracked() || freeStock.anyFree(p.getId())))
                 .toList();
     }
 
@@ -77,34 +72,6 @@ public class OnlineShopCatalogService {
         productCommandService.saveProduct(product);
         auditLogService.logCurrent("ONLINE_SHOP_PUBLISH", "Artigo " + product.getSku()
                 + (published ? " publicado na" : " retirado da") + " loja online");
-    }
-
-    /** Products with stock minus active reservations above zero in at least one of the pickup shops. */
-    private Set<Long> productsWithFreeStock(Long companyId, Set<Long> pickupWarehouseIds) {
-        Map<String, BigDecimal> reserved = new HashMap<>();
-        for (ReservedStock r : reservationLookup.activeReservationsForCompany(companyId)) {
-            if (r.quantity() != null) {
-                reserved.merge(key(r.productId(), r.warehouseId()), r.quantity(), BigDecimal::add);
-            }
-        }
-        Set<Long> inStock = new HashSet<>();
-        for (Stock stock : stockLookup.listForCompany(companyId)) {
-            if (stock.getProduct() == null || stock.getWarehouse() == null || stock.getQuantity() == null
-                    || !pickupWarehouseIds.contains(stock.getWarehouse().getId())) {
-                continue;
-            }
-            Long productId = stock.getProduct().getId();
-            BigDecimal free = stock.getQuantity()
-                    .subtract(reserved.getOrDefault(key(productId, stock.getWarehouse().getId()), BigDecimal.ZERO));
-            if (free.signum() > 0) {
-                inStock.add(productId);
-            }
-        }
-        return inStock;
-    }
-
-    private static String key(Long productId, Long warehouseId) {
-        return productId + ":" + warehouseId;
     }
 
     /** Published and not the system advance product: the only products the shop shows and sells. */
