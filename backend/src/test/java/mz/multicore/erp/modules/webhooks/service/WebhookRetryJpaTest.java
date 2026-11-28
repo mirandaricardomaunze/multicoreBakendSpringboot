@@ -46,7 +46,7 @@ import static org.mockito.Mockito.mock;
         "logging.level.org.hibernate.SQL=OFF",
         "logging.level.org.springframework=WARN"
 })
-@Import({WebhookDeliveryService.class, WebhookRetryJpaTest.FixedClock.class})
+@Import({WebhookDeliveryService.class, WebhookFailureStreak.class, WebhookRetryJpaTest.FixedClock.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class WebhookRetryJpaTest {
 

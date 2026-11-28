@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.webhooks.dto.CreateWebhookSubscriptionRequest;
 import mz.multicore.erp.modules.webhooks.dto.CreatedWebhookSubscriptionDTO;
+import mz.multicore.erp.modules.webhooks.dto.WebhookAlertDTO;
 import mz.multicore.erp.modules.webhooks.dto.WebhookSubscriptionDTO;
 import mz.multicore.erp.modules.webhooks.model.WebhookEventType;
 import mz.multicore.erp.modules.webhooks.model.WebhookSubscription;
@@ -50,6 +51,18 @@ public class WebhookSubscriptionService {
                 .stream().map(WebhookSubscriptionService::toDTO).toList();
     }
 
+    /**
+     * Subscriptions of the active company switched off after 20 failed deliveries in a row and still off, newest
+     * first (§4.3.4, WH-07): the ADMIN's bell. Reactivating one makes its alert disappear.
+     */
+    @Transactional(readOnly = true)
+    public List<WebhookAlertDTO> autoDisabledAlerts() {
+        requireAdmin();
+        return repository.findByCompanyIdAndActiveFalseAndAutoDisabledAtNotNullOrderByAutoDisabledAtDescIdDesc(
+                        CurrentUserContext.requireCurrentCompanyId())
+                .stream().map(WebhookSubscriptionService::toAlert).toList();
+    }
+
     @Transactional
     public CreatedWebhookSubscriptionDTO create(CreateWebhookSubscriptionRequest request) {
         requireAdmin();
@@ -91,6 +104,11 @@ public class WebhookSubscriptionService {
             return toDTO(subscription);
         }
         subscription.setActive(active);
+        if (active) {
+            // Reactivating starts a new streak and clears the automatic-deactivation alert (§4.3.4).
+            subscription.setConsecutiveFailures(0);
+            subscription.setAutoDisabledAt(null);
+        }
         WebhookSubscription saved = repository.save(subscription);
         auditLogService.logCurrent(auditAction, describe(saved));
         return toDTO(saved);
@@ -123,6 +141,14 @@ public class WebhookSubscriptionService {
     private static WebhookSubscriptionDTO toDTO(WebhookSubscription subscription) {
         return new WebhookSubscriptionDTO(subscription.getId(), subscription.getUrl(),
                 Set.copyOf(subscription.getEvents()), subscription.isActive(),
-                subscription.getConsecutiveFailures(), subscription.getCreatedAt(), subscription.getCreatedBy());
+                subscription.getConsecutiveFailures(), subscription.getCreatedAt(), subscription.getCreatedBy(),
+                subscription.getAutoDisabledAt());
+    }
+
+    private static WebhookAlertDTO toAlert(WebhookSubscription subscription) {
+        return new WebhookAlertDTO(subscription.getId(), subscription.getUrl(), subscription.getConsecutiveFailures(),
+                subscription.getAutoDisabledAt(), "O webhook " + subscription.getUrl() + " foi desactivado após "
+                        + WebhookFailureStreak.THRESHOLD
+                        + " entregas falhadas seguidas. Corrija o receptor e active-o de novo.");
     }
 }

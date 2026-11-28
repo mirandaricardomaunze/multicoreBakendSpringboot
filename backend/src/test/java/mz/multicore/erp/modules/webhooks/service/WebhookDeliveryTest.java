@@ -5,6 +5,8 @@ import mz.multicore.erp.architecture.security.AttachmentCrypto;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.company.service.CompanyService;
+import mz.multicore.erp.modules.webhooks.dto.WebhookAlertDTO;
 import mz.multicore.erp.modules.webhooks.dto.WebhookDeliveryDTO;
 import mz.multicore.erp.modules.webhooks.model.WebhookDelivery;
 import mz.multicore.erp.modules.webhooks.model.WebhookDeliveryStatus;
@@ -72,6 +74,10 @@ import static org.mockito.Mockito.when;
  * filtered by state, without the body; a {@code FAILED} delivery is resent as the same delivery, back to
  * {@code PENDING} with the schedule restarted, dispatched after commit and audited; the cleanup deletes deliveries
  * older than 30 days.
+ * <p>
+ * Harness WH-07 (§4.3.4): only deliveries that become {@code FAILED} count; a {@code DELIVERED} one resets the streak;
+ * the 20th in a row switches the subscription off once, with {@code auto_disabled_at}, a system audit and an ADMIN
+ * alert of the active company; reactivating clears both, a manual deactivation raises no alert.
  */
 class WebhookDeliveryTest {
 
@@ -94,6 +100,7 @@ class WebhookDeliveryTest {
     private final Company company = company(1L);
 
     private WebhookDeliveryService deliveries;
+    private WebhookSubscriptionService subscriptionService;
     private WebhookSender sender;
 
     @BeforeEach
@@ -155,8 +162,46 @@ class WebhookDeliveryTest {
             return addresses;
         };
         WebhookUrlValidator validator = new WebhookUrlValidator(new MockEnvironment(), resolver);
+        // Fakes of the WH-07 bulk updates on webhook_subscriptions (same SET / WHERE clauses).
+        when(subscriptionRepository.incrementConsecutiveFailures(any())).thenAnswer(invocation ->
+                subscription(invocation.getArgument(0)).map(s -> {
+                    s.setConsecutiveFailures(s.getConsecutiveFailures() + 1);
+                    return 1;
+                }).orElse(0));
+        when(subscriptionRepository.resetConsecutiveFailures(any())).thenAnswer(invocation ->
+                subscription(invocation.getArgument(0)).filter(s -> s.getConsecutiveFailures() != 0).map(s -> {
+                    s.setConsecutiveFailures(0);
+                    return 1;
+                }).orElse(0));
+        when(subscriptionRepository.autoDisable(any(), org.mockito.ArgumentMatchers.anyInt(), any()))
+                .thenAnswer(invocation -> subscription(invocation.getArgument(0))
+                        .filter(s -> s.isActive() && s.getConsecutiveFailures() >= invocation.<Integer>getArgument(1))
+                        .map(s -> {
+                            s.setActive(false);
+                            s.setAutoDisabledAt(invocation.getArgument(2));
+                            return 1;
+                        }).orElse(0));
+        when(subscriptionRepository.consecutiveFailures(any())).thenAnswer(invocation ->
+                subscription(invocation.getArgument(0)).orElseThrow().getConsecutiveFailures());
+        when(subscriptionRepository
+                .findByCompanyIdAndActiveFalseAndAutoDisabledAtNotNullOrderByAutoDisabledAtDescIdDesc(any()))
+                .thenAnswer(invocation -> byId.values().stream().map(WebhookDelivery::getSubscription).distinct()
+                        .filter(s -> s.getCompany().getId().equals(invocation.getArgument(0)))
+                        .filter(s -> !s.isActive() && s.getAutoDisabledAt() != null)
+                        .sorted(Comparator.comparing(WebhookSubscription::getAutoDisabledAt)
+                                .thenComparing(WebhookSubscription::getId).reversed())
+                        .toList());
+        when(subscriptionRepository.findByCompanyIdOrderByCreatedAtDescIdDesc(any()))
+                .thenAnswer(invocation -> byId.values().stream().map(WebhookDelivery::getSubscription).distinct()
+                        .filter(s -> s.getCompany().getId().equals(invocation.getArgument(0)))
+                        .toList());
+        when(subscriptionRepository.save(any(WebhookSubscription.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         deliveries = new WebhookDeliveryService(deliveryRepository, subscriptionRepository, retryPolicy,
-                auditLogService, published::add);
+                auditLogService, published::add,
+                new WebhookFailureStreak(subscriptionRepository, retryPolicy, auditLogService));
+        subscriptionService = new WebhookSubscriptionService(subscriptionRepository, validator, crypto,
+                mock(CompanyService.class), auditLogService);
         sender = new WebhookSender(deliveries, validator, http, crypto);
     }
 
@@ -659,7 +704,174 @@ class WebhookDeliveryTest {
         assertThat(batches).containsExactly(500, 500, 203);
     }
 
+    // ---- WH-07: desactivação após 20 falhas seguidas ----
+
+    @Test
+    void wh07_aVigesimaEntregaFalhadaSeguidaDesactivaComAvisoEAuditoriaUmaSoVez() {
+        WebhookSubscription subscription = subscriptionOf(2001L, true);
+        http.status = 500;
+        failDeliveries(subscription, 19);
+
+        assertThat(subscription.isActive()).isTrue();
+        assertThat(subscription.getConsecutiveFailures()).isEqualTo(19);
+        assertThat(subscription.getAutoDisabledAt()).isNull();
+        assertThat(subscriptionService.autoDisabledAlerts()).isEmpty();
+        verify(auditLogService, never()).logEvent(anyString(), any(), eq("WEBHOOK_AUTO_DEACTIVATE"), anyString());
+
+        failDeliveries(subscription, 1);
+
+        assertThat(subscription.isActive()).isFalse();
+        assertThat(subscription.getConsecutiveFailures()).isEqualTo(20);
+        assertThat(subscription.getAutoDisabledAt()).isEqualTo(clock.now());
+        ArgumentCaptor<String> details = ArgumentCaptor.forClass(String.class);
+        verify(auditLogService).logEvent(eq("sistema"), eq(1L), eq("WEBHOOK_AUTO_DEACTIVATE"), details.capture());
+        assertThat(details.getValue()).contains("https://loja.example.com/hooks", "20")
+                .doesNotContain(SECRET).doesNotContain("Lojas Ndlovu");
+
+        List<WebhookAlertDTO> alerts = subscriptionService.autoDisabledAlerts();
+        assertThat(alerts).hasSize(1);
+        WebhookAlertDTO alert = alerts.get(0);
+        assertThat(alert.subscriptionId()).isEqualTo(2001L);
+        assertThat(alert.url()).isEqualTo("https://loja.example.com/hooks");
+        assertThat(alert.consecutiveFailures()).isEqualTo(20);
+        assertThat(alert.disabledAt()).isEqualTo(clock.now());
+        assertThat(alert.message()).isEqualTo("O webhook https://loja.example.com/hooks foi desactivado após 20 "
+                + "entregas falhadas seguidas. Corrija o receptor e active-o de novo.");
+        assertThat(subscriptionService.list()).singleElement()
+                .satisfies(dto -> assertThat(dto.autoDisabledAt()).isEqualTo(clock.now()));
+
+        // Uma entrega que acabe FAILED depois (ex.: reclamada antes) não desactiva nem avisa outra vez.
+        subscription.setActive(true);
+        WebhookDelivery late = lastAttempt(5000L, subscription);
+        subscription.setActive(false);
+        deliveries.recordFailure(late.getId(), 500, 5L, "Resposta HTTP 500.");
+        verify(auditLogService).logEvent(eq("sistema"), eq(1L), eq("WEBHOOK_AUTO_DEACTIVATE"), anyString());
+    }
+
+    @Test
+    void wh07_entregaEntreguePeloMeioRepoeOContador() {
+        WebhookSubscription subscription = subscriptionOf(2002L, true);
+        http.status = 500;
+        failDeliveries(subscription, 15);
+        assertThat(subscription.getConsecutiveFailures()).isEqualTo(15);
+
+        http.status = 200;
+        sender.send(lastAttempt(6000L, subscription).getId());
+        assertThat(subscription.getConsecutiveFailures()).isZero();
+
+        http.status = 500;
+        failDeliveries(subscription, 19);
+        assertThat(subscription.isActive()).as("19 seguidas depois do sucesso").isTrue();
+        assertThat(subscription.getConsecutiveFailures()).isEqualTo(19);
+    }
+
+    @Test
+    void wh07_tentativasFalhadasQueFicamPendentesNaoContam() {
+        WebhookSubscription subscription = subscriptionOf(2003L, true);
+        http.status = 500;
+        for (long id = 7000L; id < 7030L; id++) {
+            sender.send(deliveryOf(id, subscription).getId());
+        }
+
+        assertThat(byId.values()).filteredOn(d -> d.getSubscription() == subscription)
+                .allMatch(d -> d.getStatus() == WebhookDeliveryStatus.PENDING && d.getAttempts() == 1);
+        assertThat(subscription.getConsecutiveFailures()).isZero();
+        assertThat(subscription.isActive()).isTrue();
+    }
+
+    @Test
+    void wh07_reenvioNaoMexeNoContador() {
+        WebhookSubscription subscription = subscriptionOf(2004L, true);
+        http.status = 500;
+        failDeliveries(subscription, 3);
+        WebhookDelivery failed = byId.values().stream().filter(d -> d.getSubscription() == subscription)
+                .findFirst().orElseThrow();
+
+        deliveries.resend(failed.getId());
+
+        assertThat(subscription.getConsecutiveFailures()).isEqualTo(3);
+    }
+
+    @Test
+    void wh07_reactivarLimpaContadorEAvisoEDesactivarAMaoNaoAvisa() {
+        WebhookSubscription subscription = subscriptionOf(2005L, true);
+        http.status = 500;
+        failDeliveries(subscription, 20);
+        assertThat(subscriptionService.autoDisabledAlerts()).hasSize(1);
+
+        var reactivated = subscriptionService.activate(2005L);
+
+        assertThat(reactivated.active()).isTrue();
+        assertThat(reactivated.consecutiveFailures()).isZero();
+        assertThat(reactivated.autoDisabledAt()).isNull();
+        assertThat(subscription.getConsecutiveFailures()).isZero();
+        assertThat(subscription.getAutoDisabledAt()).isNull();
+        assertThat(subscriptionService.autoDisabledAlerts()).isEmpty();
+
+        subscriptionService.deactivate(2005L);
+        assertThat(subscription.isActive()).isFalse();
+        assertThat(subscription.getAutoDisabledAt()).isNull();
+        assertThat(subscriptionService.autoDisabledAlerts()).as("desactivação manual sem aviso").isEmpty();
+    }
+
+    @Test
+    void wh07_avisosSoParaOAdministradorEDaEmpresaActiva() {
+        WebhookSubscription subscription = subscriptionOf(2006L, true);
+        http.status = 500;
+        failDeliveries(subscription, 20);
+
+        CurrentUserContext.setCurrentUser("gerente", "MANAGER");
+        assertMessage("Só o administrador gere os webhooks.", () -> subscriptionService.autoDisabledAlerts());
+
+        CurrentUserContext.setCurrentUser("admin", "ADMIN");
+        CurrentUserContext.setCurrentCompanyId(2L);
+        assertThat(subscriptionService.autoDisabledAlerts()).isEmpty();
+        CurrentUserContext.setCurrentCompanyId(1L);
+        assertThat(subscriptionService.autoDisabledAlerts()).extracting(WebhookAlertDTO::subscriptionId)
+                .containsExactly(2006L);
+    }
+
     // ---- helpers ----
+
+    private Optional<WebhookSubscription> subscription(Long id) {
+        return byId.values().stream().map(WebhookDelivery::getSubscription)
+                .filter(s -> s.getId().equals(id)).findFirst();
+    }
+
+    private WebhookSubscription subscriptionOf(Long id, boolean active) {
+        WebhookSubscription subscription = new WebhookSubscription();
+        subscription.setId(id);
+        subscription.setCompany(company);
+        subscription.setUrl("https://loja.example.com/hooks");
+        subscription.setActive(active);
+        subscription.setEvents(EnumSet.of(WebhookEventType.INVOICE_ISSUED));
+        subscription.setSecretCiphertext(WebhookSecrets.seal(crypto, SECRET));
+        return subscription;
+    }
+
+    private WebhookDelivery deliveryOf(Long id, WebhookSubscription subscription) {
+        WebhookDelivery delivery = delivery(id, subscription.getUrl(), subscription.isActive());
+        delivery.setSubscription(subscription);
+        return delivery;
+    }
+
+    /** A pending delivery of the subscription whose next attempt is the last one allowed (5 already failed). */
+    private WebhookDelivery lastAttempt(Long id, WebhookSubscription subscription) {
+        WebhookDelivery delivery = deliveryOf(id, subscription);
+        delivery.setAttempts(5);
+        return delivery;
+    }
+
+    private long nextFailingId = 8000L;
+
+    /** {@code count} deliveries of the subscription that each fail their last attempt and become FAILED. */
+    private void failDeliveries(WebhookSubscription subscription, int count) {
+        for (int i = 0; i < count; i++) {
+            WebhookDelivery delivery = lastAttempt(nextFailingId++, subscription);
+            sender.send(delivery.getId());
+            assertThat(delivery.getStatus()).isEqualTo(WebhookDeliveryStatus.FAILED);
+        }
+    }
 
     private List<WebhookDelivery> log(Long subscriptionId, WebhookDeliveryStatus status, Pageable page) {
         return byId.values().stream()

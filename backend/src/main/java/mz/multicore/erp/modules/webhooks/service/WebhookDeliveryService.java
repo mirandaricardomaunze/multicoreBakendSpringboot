@@ -40,15 +40,17 @@ public class WebhookDeliveryService {
     private final WebhookRetryPolicy retryPolicy;
     private final AuditLogService auditLogService;
     private final ApplicationEventPublisher events;
+    private final WebhookFailureStreak failureStreak;
 
     public WebhookDeliveryService(WebhookDeliveryRepository deliveries, WebhookSubscriptionRepository subscriptions,
                                   WebhookRetryPolicy retryPolicy, AuditLogService auditLogService,
-                                  ApplicationEventPublisher events) {
+                                  ApplicationEventPublisher events, WebhookFailureStreak failureStreak) {
         this.deliveries = deliveries;
         this.subscriptions = subscriptions;
         this.retryPolicy = retryPolicy;
         this.auditLogService = auditLogService;
         this.events = events;
+        this.failureStreak = failureStreak;
     }
 
     /**
@@ -152,7 +154,7 @@ public class WebhookDeliveryService {
                         delivery.getSubscription().getSecretCiphertext()));
     }
 
-    /** 2xx: the delivery is done (WH-04). */
+    /** 2xx: the delivery is done (WH-04) and the subscription's streak of failed deliveries ends (WH-07). */
     @Transactional
     public void recordDelivered(Long deliveryId, int httpStatus, long durationMs) {
         deliveries.findById(deliveryId).ifPresent(delivery -> {
@@ -161,12 +163,14 @@ public class WebhookDeliveryService {
             delivery.setDeliveredAt(retryPolicy.now());
             delivery.setNextAttemptAt(null);
             deliveries.save(delivery);
+            failureStreak.delivered(delivery.getSubscription());
         });
     }
 
     /**
      * Failed attempt (WH-04): the attempt is recorded and the next one scheduled from the end of this one; after the
-     * last allowed attempt the delivery becomes {@code FAILED} (WH-05).
+     * last allowed attempt the delivery becomes {@code FAILED} (WH-05) and counts towards the 20 failed deliveries in
+     * a row that switch the subscription off (WH-07).
      */
     @Transactional
     public void recordFailure(Long deliveryId, Integer httpStatus, long durationMs, String error) {
@@ -178,6 +182,9 @@ public class WebhookDeliveryService {
                 delivery.setStatus(WebhookDeliveryStatus.FAILED);
             }
             deliveries.save(delivery);
+            if (next.isEmpty()) {
+                failureStreak.failed(delivery.getSubscription());
+            }
         });
     }
 

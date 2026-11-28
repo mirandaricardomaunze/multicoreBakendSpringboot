@@ -15,6 +15,7 @@ import lombok.Setter;
 import mz.multicore.erp.architecture.BaseEntity;
 import mz.multicore.erp.modules.company.model.Company;
 
+import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -53,4 +54,8 @@ public class WebhookSubscription extends BaseEntity {
     /** Consecutive failed deliveries; 20 deactivate the subscription (WH-07). */
     @Column(name = "consecutive_failures", nullable = false)
     private int consecutiveFailures;
+
+    /** Set only by the automatic deactivation after 20 failures (WH-07); drives the ADMIN alert. */
+    @Column(name = "auto_disabled_at")
+    private LocalDateTime autoDisabledAt;
 }
