@@ -11,6 +11,9 @@ public interface OnlineShopSettingsRepository extends JpaRepository<OnlineShopSe
 
     Optional<OnlineShopSettings> findByCompanyId(Long companyId);
 
+    /** The shop behind {@code /loja/{code}} (docs/LOJA_ONLINE_SPEC.md §3.1). */
+    Optional<OnlineShopSettings> findByPublicCode(String publicCode);
+
     /** The public code is unique in the whole system (docs/LOJA_ONLINE_SPEC.md §3.1). */
     boolean existsByPublicCodeAndCompanyIdNot(String publicCode, Long companyId);
 }
