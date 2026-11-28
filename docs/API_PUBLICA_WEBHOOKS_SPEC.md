@@ -486,6 +486,47 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - UI uniforme: tokens do tema e `UIHelper` (ícones `UIHelper.icon`, nunca emojis), como os outros
   separadores de Configurações.
 
+#### 4.4.2 Ecrã de webhooks (WH-UI-01)
+
+- **Onde**: no mesmo separador "Integrações" (§4.4.1), uma segunda secção **"Webhooks"** por baixo de "Chaves de API"
+  (`IntegrationsPanel` passa a ter as duas: `ApiKeysPanel` e `WebhooksPanel`; `refresh()` relê as duas). Tudo pela
+  API interna do §4.3.5 (`/api/integrations/webhooks`) por um cliente próprio `WebhookApiClient` (desktop), sempre na
+  empresa activa; o desktop nunca gera, guarda nem regista segredos; usa só os DTO de `contracts`.
+- **Tabela de subscrições**: URL, eventos (rótulos PT-MZ separados por vírgula: `invoice.issued` → "Factura emitida",
+  `credit_note.issued` → "Nota de crédito emitida", `order.status_changed` → "Estado da encomenda",
+  `stock.availability_changed` → "Disponibilidade de stock"), falhas seguidas, criada em / por e estado:
+  "Activa", "Inactiva" ou "Desactivada automaticamente em dd/MM/yyyy HH:mm" (quando `autoDisabledAt` vem preenchido).
+  Datas em `dd/MM/yyyy HH:mm`. Botão "Actualizar" relê a lista.
+- **"Novo webhook"**: diálogo com URL (obrigatória) e uma caixa por evento, com os rótulos acima (pelo menos uma);
+  validação local com as mensagens do backend ("Indique o URL do webhook." / "Escolha pelo menos um evento."), mas
+  quem decide é o backend (`400` — URL privada, http em prod, … — mostrado tal como vem). Envia os códigos de evento.
+- **Mostrar uma vez**: depois do `201`, diálogo modal com o segredo `whsec_` num campo só de leitura, botão "Copiar" e
+  o aviso "Este segredo não volta a ser mostrado. Guarde-o agora para validar a assinatura X-Multicore-Signature.";
+  ao fechar, o segredo é descartado e a tabela recarrega sem ele (mesmo padrão do `ApiKeySecretDialog`, reutilizado
+  ou generalizado — nunca duplicado).
+- **"Activar" / "Desactivar"**: um botão que muda de rótulo pela subscrição seleccionada (activa → "Desactivar", com
+  confirmação "O webhook X deixa de receber avisos. Desactivar?"; inactiva → "Activar", sem confirmação). Sem
+  selecção, desactivado. Recarrega a tabela depois.
+- **Registo de entregas**: com uma subscrição seleccionada, uma segunda tabela (abaixo) mostra as entregas dela
+  (`/{id}/deliveries`, 50 mais recentes): evento (rótulo PT-MZ), estado PT-MZ ("Pendente" / "Entregue" / "Falhada"),
+  tentativas, último código HTTP ("—" quando não há), duração em ms, último erro, próxima tentativa, criada em e
+  entregue em. Um filtro de estado ("Todos", "Pendente", "Entregue", "Falhada") relê a lista com `status`.
+- **"Reenviar"**: só com uma entrega **`FAILED`** seleccionada (para as outras fica desactivado); pede confirmação
+  ("A entrega X volta a ser enviada. Reenviar?"), chama `/deliveries/{deliveryId}/resend` e relê o registo.
+- **Sino**: o ADMIN vê no sino uma notificação por cada aviso de `/alerts` (tipo "Webhook", texto PT-MZ do backend,
+  quando = `disabledAt`, prioridade alta) que abre Configurações (`config`) — novo fornecedor do `NotificationFeed`
+  como os outros (`NotificationWebhookAlertProvider`); um erro do pedido nunca parte o sino; outro perfil → sem pedido.
+- **Só o ADMIN**: para outro perfil, "Novo webhook", "Activar/Desactivar" e "Reenviar" ficam desactivados, a lista
+  não é pedida e mostra "Só o administrador gere os webhooks."; o backend continua a decidir (`403`).
+- UI uniforme como §4.4.1: tokens do tema, `UIHelper` (ícones `fas-satellite-dish` na secção, `fas-plus`,
+  `fas-sync-alt`, `fas-power-off`, `fas-redo`, `fas-copy`; nunca emojis), diálogos com o mesmo estilo dos das chaves.
+- **Contrato de teste** (`IntegrationsUiHarnessTest`, métodos `whUi01_*`, sem rede — cliente falso): o separador
+  Integrações tem a secção Webhooks; a tabela mostra os rótulos PT-MZ e o estado de desactivação automática;
+  validação local do "Novo webhook"; segredo mostrado uma vez e descartado; Activar/Desactivar muda pela selecção;
+  "Reenviar" só para `FAILED`; o filtro passa o `status`; não-ADMIN não pede a lista e tem os botões desactivados;
+  o sino traz o aviso só para o ADMIN e leva a `config`; ícones por `UIHelper.icon` sem emojis.
+  `DesktopThinContextTest` verde.
+
 ## 5. Fora de âmbito
 
 - OAuth, chaves por utilizador, escrita de artigos/preços/clientes pela API.
