@@ -18,6 +18,12 @@
 
 ## Ao vivo
 
+**Estado (2026-11-28): por fazer.** Já verificado: a 1.0.5 instalada recebe `jpackage.app-path` (sem ele a
+actualização ficaria indisponível); `publicar-instalador.sh` recusa um manifesto de outra versão e publica
+o correcto. O clique no programa (AU-50..53) ficou por fazer. Para repetir: instalar uma versão com esta
+funcionalidade, publicar uma mais recente e servir `/downloads/` e uma `/api/version` mais recente no mesmo
+endereço do posto. Na máquina de desenvolvimento serve de VPS um proxy local, fora do repositório.
+
 | ID | Cenário | Esperado |
 |---|---|---|
 | AU-50 | Instalado 1.0.x, servidor publica 1.0.y; clicar no rodapé, "Reiniciar e instalar agora" | ERP fecha, instala, reabre em 1.0.y; configuração intacta |
