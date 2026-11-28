@@ -13,9 +13,10 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import java.util.List;
 
 /**
- * Cabeçalhos de segurança das páginas do portal web do gestor (PORTAL_GESTOR_SPEC §3.5, PG-09).
+ * Cabeçalhos de segurança das páginas web servidas pelo backend: o portal do gestor (PORTAL_GESTOR_SPEC §3.5, PG-09)
+ * e a página pública da loja online, que segue as mesmas regras técnicas (LOJA_ONLINE_SPEC §3.2, LO-11).
  *
- * <p>Em {@code /portal} e {@code /portal/**}: {@code Content-Security-Policy} só com {@code 'self'}/{@code 'none'}
+ * <p>Em {@code /portal}, {@code /loja} e tudo o que está por baixo: {@code Content-Security-Policy} só com {@code 'self'}/{@code 'none'}
  * (sem {@code unsafe-inline} nem origens externas), {@code X-Frame-Options: DENY} e
  * {@code Referrer-Policy: no-referrer}. O resto da aplicação mantém o {@code SAMEORIGIN} de que a consola
  * H2 precisa em desenvolvimento.
@@ -35,7 +36,10 @@ public final class PortalSecurityHeaders {
             "form-action 'self'",
             "frame-ancestors 'none'");
 
-    /** Corresponde a {@code /portal} e a tudo o que está por baixo, segmento inteiro ({@code /portalx} fica de fora). */
+    /**
+     * Corresponde a {@code /portal} e {@code /loja} e a tudo o que está por baixo, segmento inteiro ({@code /portalx} e
+     * {@code /lojax} ficam de fora).
+     */
     public static final RequestMatcher PORTAL_PAGES = PortalSecurityHeaders::isPortalPath;
 
     private PortalSecurityHeaders() {
@@ -55,6 +59,7 @@ public final class PortalSecurityHeaders {
     }
 
     static boolean isPortalPath(HttpServletRequest request) {
-        return RequestPaths.isUnder(RequestPaths.withinApplication(request), "/portal");
+        String path = RequestPaths.withinApplication(request);
+        return RequestPaths.isUnder(path, "/portal") || RequestPaths.isUnder(path, "/loja");
     }
 }

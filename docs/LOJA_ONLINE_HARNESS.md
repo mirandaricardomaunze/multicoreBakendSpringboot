@@ -3,7 +3,7 @@
 > Cenários que provam [LOJA_ONLINE_SPEC.md](LOJA_ONLINE_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-28 (LO-01 verde: `OnlineShopSettingsTest`, migração V162; LO-02 verde: `OnlineShopCatalogTest`, migração V163; LO-03 verde: `OnlineShopCatalogTest`; LO-05, LO-06 e LO-07 verdes: `OnlineShopOrderTest`; LO-08 verde: `OnlineShopOrderTest` · `OnlineShopSettingsTest`; LO-10 verde: `OnlineShopExpiryTest`; LO-04 verde: `OnlineShopHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest`; LO-09 verde: `OnlineShopHttpIntegrationTest`, `POST /api/shop/{código}/orders/lookup`)
+**Última actualização:** 2026-11-28 (LO-01 verde: `OnlineShopSettingsTest`, migração V162; LO-02 verde: `OnlineShopCatalogTest`, migração V163; LO-03 verde: `OnlineShopCatalogTest`; LO-05, LO-06 e LO-07 verdes: `OnlineShopOrderTest`; LO-08 verde: `OnlineShopOrderTest` · `OnlineShopSettingsTest`; LO-10 verde: `OnlineShopExpiryTest`; LO-04 verde: `OnlineShopHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest`; LO-09 verde: `OnlineShopHttpIntegrationTest`, `POST /api/shop/{código}/orders/lookup`; LO-11 verde: `OnlineShopStaticAssetsHarnessTest`, página `/loja/{código}` em `static/loja/` e `GET /api/shop/{código}`)
 
 | ID | Garantia | Teste |
 |---|---|---|
@@ -17,5 +17,5 @@
 | LO-08 | Linha "Taxa de entrega — zona" com a taxa e o IVA normal; artigo de serviço da zona criado na activação (§3.3) | `OnlineShopOrderTest` · `OnlineShopSettingsTest` |
 | LO-09 | Consulta por número + telemóvel (`POST /api/shop/{código}/orders/lookup`, só encomendas `LOJA_ONLINE` da loja); telemóvel errado ou inválido responde como número inexistente, "Encomenda não encontrada." (§3.3) | `OnlineShopHttpIntegrationTest` |
 | LO-10 | Cancelamento automático após o prazo (encomendas `LOJA_ONLINE` canceláveis, de hora a hora, como SYSTEM da empresa), liberta reserva, com auditoria `ORDER_CANCEL` (§3.4) | `OnlineShopExpiryTest` |
-| LO-11 | Página pública: sem CDN/inline, CSP, `textContent`, 360 px, carrinho só com SKUs e quantidades (§3.2) | `OnlineShopStaticAssetsHarnessTest` |
+| LO-11 | Página pública `/loja/{código}` (`static/loja/`): sem CDN/inline, CSP só `'self'`, `textContent`, 360 px, pesquisa/categoria/Disponível-Esgotado, carrinho no `localStorage` só com SKUs e quantidades, honeypot escondido; `GET /api/shop/{código}` só com nome, contacto, lojas de levantamento e zonas (§3.2) | `OnlineShopStaticAssetsHarnessTest` |
 | LO-UI-01 | Desktop: activação e definições da loja, publicar artigo, encomendas marcadas "Loja online" com alerta (§3.1, §3.4) | `OnlineShopUiHarnessTest` |

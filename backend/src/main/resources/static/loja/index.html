@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f3a5f">
+  <title>Loja online</title>
+  <link rel="icon" href="/loja/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/loja/loja.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand" id="shop-name">Loja online</span>
+    <span class="contact" id="shop-contact"></span>
+    <a class="cart-link" href="#cart-view" id="cart-count">Carrinho (0)</a>
+  </header>
+
+  <main>
+    <p class="alert" id="message" role="alert" hidden></p>
+
+    <section id="shop-view" hidden>
+      <section class="card">
+        <div class="filters">
+          <label class="grow">Pesquisar
+            <input id="search" type="search" autocomplete="off" placeholder="Nome do artigo">
+          </label>
+          <label class="grow">Categoria
+            <select id="category"></select>
+          </label>
+        </div>
+      </section>
+
+      <ul class="products" id="products"></ul>
+      <p class="muted" id="products-empty" hidden>Nenhum artigo encontrado.</p>
+
+      <section class="card" id="cart-view">
+        <h2>Carrinho</h2>
+        <ul class="list" id="cart-lines"></ul>
+        <p class="total" id="cart-total"></p>
+        <p class="muted">O preço final é o do sistema no momento da encomenda. Paga ao levantar ou receber.</p>
+      </section>
+
+      <section class="card">
+        <h2>Encomendar</h2>
+        <form id="checkout-form" autocomplete="on" novalidate>
+          <label>Nome *
+            <input id="customer-name" name="name" autocomplete="name" maxlength="120" required>
+          </label>
+          <label>Telemóvel *
+            <input id="phone" name="tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required>
+          </label>
+          <label>NUIT (opcional)
+            <input id="nuit" name="nuit" inputmode="numeric" maxlength="9">
+          </label>
+          <label>Como quer receber
+            <select id="fulfilment">
+              <option value="LEVANTAMENTO">Levantar na loja (grátis)</option>
+              <option value="ENTREGA">Entrega ao domicílio</option>
+            </select>
+          </label>
+          <div id="pickup-fields">
+            <label>Loja de levantamento
+              <select id="pickup"></select>
+            </label>
+          </div>
+          <div id="delivery-fields" hidden>
+            <label>Zona de entrega
+              <select id="zone"></select>
+            </label>
+            <label>Morada *
+              <input id="address" name="address" autocomplete="street-address" maxlength="255">
+            </label>
+          </div>
+          <label>Notas
+            <textarea id="notes" maxlength="500"></textarea>
+          </label>
+          <div class="hp" aria-hidden="true">
+            <label>Website <input name="website" id="website" type="text" tabindex="-1" autocomplete="off"></label>
+          </div>
+          <button type="submit" id="checkout-submit">Enviar encomenda</button>
+        </form>
+      </section>
+
+      <section class="card" id="order-view" hidden>
+        <h2>Encomenda <span id="order-number"></span></h2>
+        <p id="order-status"></p>
+        <ul class="list" id="order-lines"></ul>
+        <p class="total" id="order-total"></p>
+      </section>
+
+      <section class="card">
+        <h2>Consultar encomenda</h2>
+        <form id="lookup-form" novalidate>
+          <label>Número da encomenda
+            <input id="lookup-number" maxlength="60" autocomplete="off">
+          </label>
+          <label>Telemóvel
+            <input id="lookup-phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20">
+          </label>
+          <button type="submit" class="secondary" id="lookup-submit">Consultar</button>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <script src="/loja/loja.js" defer></script>
+</body>
+</html>

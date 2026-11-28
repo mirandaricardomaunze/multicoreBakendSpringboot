@@ -44,6 +44,10 @@ public class WebConfig implements WebMvcConfigurer {
     public void addViewControllers(ViewControllerRegistry registry) {
         registry.addViewController("/portal").setViewName("forward:/portal/index.html");
         registry.addViewController("/portal/").setViewName("forward:/portal/index.html");
+        // Loja online (LOJA_ONLINE_SPEC §3.1–3.2, LO-11): /loja/{código} abre a mesma página, que lê o código do
+        // endereço. O código só tem minúsculas, números e hífen, por isso /loja/loja.js e afins não são apanhados.
+        registry.addViewController("/loja/{code:[a-z0-9-]+}").setViewName("forward:/loja/index.html");
+        registry.addViewController("/loja/{code:[a-z0-9-]+}/").setViewName("forward:/loja/index.html");
     }
 
     @Override
