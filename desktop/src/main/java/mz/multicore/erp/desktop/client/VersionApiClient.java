@@ -24,6 +24,11 @@ public class VersionApiClient {
         this.clientFactory = clientFactory;
     }
 
+    /** The configured server, from which the one-click update takes its fixed download addresses. */
+    public mz.multicore.erp.desktop.config.DesktopApiConfig apiConfig() {
+        return clientFactory.config();
+    }
+
     public ServerVersionDTO getServerVersion() {
         return clientFactory.anonymousClient().get("/api/version", ServerVersionDTO.class);
     }

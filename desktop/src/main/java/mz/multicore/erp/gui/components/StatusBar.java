@@ -20,6 +20,8 @@ public class StatusBar extends JPanel {
     /** Aviso de versão nova. Fica invisível enquanto não houver nada a dizer. */
     private final JLabel updateLabel   = slimLabel("");
     private final JLabel updateIcon    = iconLabel("fas-arrow-circle-up", UIHelper.ACCENT);
+    private Runnable onUpdateClick;
+    private boolean updateScheduled;
 
     public StatusBar() {
         setLayout(new BorderLayout(0, 0));
@@ -33,6 +35,12 @@ public class StatusBar extends JPanel {
         updateIcon.setVisible(false);
         updateLabel.setVisible(false);
         updateLabel.setForeground(UIHelper.ACCENT);
+        updateLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (onUpdateClick != null && !updateScheduled && updateLabel.isVisible()) onUpdateClick.run();
+            }
+        });
         right.add(updateIcon);
         right.add(updateLabel);
         right.add(iconLabel("fas-clock", UIHelper.TEXT_MUTED));
@@ -87,14 +95,34 @@ public class StatusBar extends JPanel {
      * @param newVersion versão disponível no servidor; {@code null} esconde o aviso
      */
     public void setUpdateAvailable(String newVersion) {
+        if (updateScheduled) return;
         boolean show = newVersion != null && !newVersion.isBlank();
+        boolean clickable = show && onUpdateClick != null;
         updateLabel.setText(show ? "Versão " + newVersion + " disponível" : "");
-        updateLabel.setToolTipText(show
-                ? "Há uma versão mais recente no servidor. Actualize quando for conveniente — "
-                  + "o programa continua a funcionar."
-                : null);
+        updateLabel.setToolTipText(!show ? null : clickable
+                ? "Clique para actualizar. Escolhe depois se instala já ou quando fechar o programa."
+                : "Há uma versão mais recente no servidor. Actualize quando for conveniente — "
+                  + "o programa continua a funcionar.");
+        updateLabel.setCursor(clickable ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
         updateIcon.setVisible(show);
         updateLabel.setVisible(show);
+        revalidate();
+        repaint();
+    }
+
+    /** What a click on the version notice does (the one-click update). */
+    public void setOnUpdateClick(Runnable action) {
+        this.onUpdateClick = action;
+    }
+
+    /** The update is verified and waits for the program to close: say so, and stop offering it. */
+    public void setUpdateScheduled(String version) {
+        updateScheduled = true;
+        updateLabel.setText("Versão " + version + " será instalada ao fechar");
+        updateLabel.setToolTipText("O instalador já foi verificado. Corre quando sair do programa.");
+        updateLabel.setCursor(Cursor.getDefaultCursor());
+        updateIcon.setVisible(true);
+        updateLabel.setVisible(true);
         revalidate();
         repaint();
     }

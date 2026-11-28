@@ -18,6 +18,13 @@ public record DesktopApiConfig(String baseUrl) {
         return baseUrl + "/downloads/" + INSTALLER_FILE;
     }
 
+    /** Nome fixo do manifesto (versão, SHA-256, tamanho) publicado ao lado do instalador. */
+    public static final String MANIFEST_FILE = "Multicore-instalador.json";
+
+    public String manifestUrl() {
+        return baseUrl + "/downloads/" + MANIFEST_FILE;
+    }
+
     public static DesktopApiConfig from(Environment environment) {
         String configured = environment.getProperty("desktop.api.base-url", "http://localhost:8080");
         String persisted = DesktopLocalSettings.readBaseUrl(DesktopLocalSettings.settingsFile());

@@ -64,8 +64,16 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "A criação do instalador falhou." }
     # Nome fixo para publicar em <servidor>/downloads/ (scripts/publicar-instalador.sh).
     $built = Join-Path $output "Multicore-$Version.exe"
-    Copy-Item -LiteralPath $built -Destination (Join-Path $output "Multicore-instalador.exe") -Force
-    Write-Host "Instalador $Version pronto: $output\Multicore-instalador.exe"
+    $published = Join-Path $output "Multicore-instalador.exe"
+    Copy-Item -LiteralPath $built -Destination $published -Force
+    # Manifesto da actualização de um clique (docs/ACTUALIZACAO_UM_CLIQUE_SPEC.md §3): o posto só instala
+    # um ficheiro com exactamente esta versão, este SHA-256 e este tamanho.
+    $sha = (Get-FileHash -Algorithm SHA256 -LiteralPath $published).Hash.ToLowerInvariant()
+    $size = (Get-Item -LiteralPath $published).Length
+    $manifest = "{`"version`":`"$Version`",`"sha256`":`"$sha`",`"size`":$size}"
+    [System.IO.File]::WriteAllText((Join-Path $output "Multicore-instalador.json"), $manifest)
+    Write-Host "Instalador $Version pronto: $published"
+    Write-Host "Manifesto: $output\Multicore-instalador.json (sha256 $sha)"
 } finally {
     Pop-Location
 }

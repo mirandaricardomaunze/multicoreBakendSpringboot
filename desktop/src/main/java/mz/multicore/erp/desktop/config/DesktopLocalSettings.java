@@ -65,9 +65,14 @@ public final class DesktopLocalSettings {
      */
     public static Path settingsFile() {
         Path base = localAppDataDir();
-        Path current = base.resolve("MulticoreERP").resolve("desktop.properties");
+        Path current = localDataDir().resolve("desktop.properties");
         migrateLegacyFile(base.resolve("Multicore").resolve("desktop.properties"), current);
         return current;
+    }
+
+    /** {@code %LOCALAPPDATA%\MulticoreERP}: workstation data that must survive upgrades (settings, updates). */
+    public static Path localDataDir() {
+        return localAppDataDir().resolve("MulticoreERP");
     }
 
     private static Path localAppDataDir() {

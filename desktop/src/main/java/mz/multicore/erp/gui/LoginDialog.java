@@ -161,7 +161,7 @@ public class LoginDialog extends JFrame {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
                     setBusy(false);
                     credentialsCard.setError(cause.getMessage());
-                    ClientUpdatePrompt.offerIfOutdated(LoginDialog.this, cause, authApiClient.installerUrl());
+                    ClientUpdatePrompt.offerIfOutdated(LoginDialog.this, cause, authApiClient.apiConfig());
                     credentialsCard.getPasswordField().setText("");
                     credentialsCard.getPasswordField().requestFocusInWindow();
                 }

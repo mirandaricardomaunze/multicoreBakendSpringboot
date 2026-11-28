@@ -22,6 +22,10 @@ public class DesktopClientFactory {
         return new DesktopApiClient(config, sessionStore.requireSession());
     }
 
+    public DesktopApiConfig config() {
+        return config;
+    }
+
     public boolean isSuperAdmin() {
         return sessionStore.requireSession().superAdmin();
     }

@@ -267,6 +267,10 @@ public class MainFrame extends JFrame {
         if (notificationCoordinator != null) notificationCoordinator.attachNavComponents(topBar, sidebar);
         breadcrumb = new MainFrameBreadcrumb(topBar, contentPanel);
         statusBar = new mz.multicore.erp.gui.components.StatusBar();
+        if (versionApiClient != null) {
+            statusBar.setOnUpdateClick(new MainFrameClientUpdate(this, statusBar, versionApiClient, posApiClient,
+                    desktopSessionStore)::start);
+        }
 
         JPanel centerContainer = new JPanel(new BorderLayout());
         centerContainer.setOpaque(false);

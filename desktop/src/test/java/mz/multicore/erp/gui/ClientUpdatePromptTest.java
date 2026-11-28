@@ -22,4 +22,11 @@ class ClientUpdatePromptTest {
         assertEquals("https://erp.exemplo.co.mz/downloads/Multicore-instalador.exe",
                 new DesktopApiConfig("https://erp.exemplo.co.mz/").installerUrl());
     }
+
+    /** AU-07: the manifest address comes only from the configured server, never from a server response. */
+    @Test
+    void manifestoVemDoProprioServidor() {
+        assertEquals("https://erp.exemplo.co.mz/downloads/Multicore-instalador.json",
+                new DesktopApiConfig("https://erp.exemplo.co.mz/").manifestUrl());
+    }
 }
