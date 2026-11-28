@@ -1,7 +1,7 @@
 ---
 id: GOAL-016
 title: "Clientes encomendam pela loja online e levantam ou recebem em casa"
-status: TODO
+status: IN_PROGRESS
 priority: LOW
 spec: docs/LOJA_ONLINE_SPEC.md
 harness: docs/LOJA_ONLINE_HARNESS.md
@@ -20,7 +20,7 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 
 ## Critérios de aceitação
 
-- [ ] LO-01 — activação e definições da loja — `OnlineShopSettingsTest`
+- [x] LO-01 — activação e definições da loja — `OnlineShopSettingsTest`
 - [ ] LO-02 — só artigos publicados — `OnlineShopCatalogTest`
 - [ ] LO-03 — Disponível/Esgotado sem dados internos — `OnlineShopCatalogTest`
 - [ ] LO-05 — validação do checkout — `OnlineShopOrderTest`
@@ -57,3 +57,4 @@ em LO-01 quando o GOAL-013 estiver `DONE`.
 
 <!-- uma linha por iteração: data · critério · resultado -->
 - 2026-11-26 · pré-requisito · bloqueado: GOAL-013 está `BLOCKED` (API-08), não `DONE`; goal não iniciado, pergunta P1 em `## Perguntas em aberto`.
+- 2026-11-28 · LO-01 · concluído: OnlineShopSettingsService (só ADMIN) grava a loja da empresa com código público único (minúsculas, números, hífen), lojas de levantamento entre os armazéns de venda, zonas com taxa ≥ 0 e prazo (omissão 7), com auditoria ONLINE_SHOP_SETTINGS; migração V162; OnlineShopSettingsTest 9/9 verde.
