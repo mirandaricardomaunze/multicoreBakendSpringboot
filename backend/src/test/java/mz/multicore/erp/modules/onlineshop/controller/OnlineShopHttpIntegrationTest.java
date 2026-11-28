@@ -53,6 +53,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * <p>Harness LO-UI-02 (§3.5): the product form reads "Publicar na loja online" by {@code GET} and changes it by
  * {@code PUT /api/online-shop/products/{id}/published}; who edits products (MANAGER, ADMIN) may publish, the others
  * get 403.
+ *
+ * <p>Harness LO-UI-03 (§3.5): the bell reads {@code GET /api/online-shop/orders/unbilled}, the active company's
+ * {@code LOJA_ONLINE} orders not billed nor cancelled; the sales roles read it, the others get 403.
  * Seeded users: ana=ADMIN, joao=MANAGER, maria=EMPLOYEE (password "password").
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:online-shop-http;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
@@ -289,6 +292,37 @@ class OnlineShopHttpIntegrationTest {
         assertThat(settings(get(url), employee, "").getStatus()).as("maria GET").isEqualTo(403);
         assertThat(settings(put(url), employee, "{\"published\":false}").getStatus()).as("maria PUT").isEqualTo(403);
         assertThat(settings(put(url), manager, "{\"published\":false}").getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    void loUi03_vendasLeemAsEncomendasOnlinePorFacturar() throws Exception {
+        Long pickup = openShop(true);
+        JsonNode placed = placeServiceOrder("10.13.0.1", pickup);
+        String number = placed.get("number").asText();
+        String company = String.valueOf(companyId());
+        String url = "/api/online-shop/orders/unbilled";
+
+        String[] manager = {login("joao")[0], company};
+        MockHttpServletResponse read = settings(get(url), manager, "");
+        assertThat(read.getStatus()).as(read.getContentAsString(StandardCharsets.UTF_8)).isEqualTo(200);
+        JsonNode orders = objectMapper.readTree(read.getContentAsString(StandardCharsets.UTF_8));
+        JsonNode mine = null;
+        for (JsonNode order : orders) {
+            if (number.equals(order.get("number").asText())) mine = order;
+        }
+        assertThat(mine).as("encomenda online por facturar").isNotNull();
+        assertThat(mine.get("customerName").asText()).isNotBlank();
+        assertThat(mine.get("fulfilmentLabel").asText()).startsWith("Levantamento — ");
+        assertThat(mine.get("orderId").asLong()).isPositive();
+
+        jdbc.update("update customer_orders set status = 'CANCELLED' where order_number = ?", number);
+        JsonNode after = objectMapper.readTree(settings(get(url), manager, "").getContentAsString(StandardCharsets.UTF_8));
+        for (JsonNode order : after) {
+            assertThat(order.get("number").asText()).as("cancelada sai do sino").isNotEqualTo(number);
+        }
+
+        String[] employee = {login("maria")[0], company};
+        assertThat(settings(get(url), employee, "").getStatus()).as("maria GET").isEqualTo(403);
     }
 
     private Long unpublishedProduct(String sku, long companyId) {

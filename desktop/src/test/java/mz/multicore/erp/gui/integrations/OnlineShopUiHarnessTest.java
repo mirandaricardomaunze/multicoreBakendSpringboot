@@ -3,11 +3,17 @@ package mz.multicore.erp.gui.integrations;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.*;
 import mz.multicore.erp.gui.ConfigPanel;
+import mz.multicore.erp.gui.NotificationFeed;
+import mz.multicore.erp.gui.commercial.OnlineShopOrderInfo;
+import mz.multicore.erp.gui.components.RecordDetailsDialog;
+import mz.multicore.erp.modules.comercial.dto.OrderDTO;
+import mz.multicore.erp.modules.comercial.model.OrderKind;
 import mz.multicore.erp.gui.OnlineShopPublishBox;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopDeliveryZoneDTO;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopSettingsDTO;
+import mz.multicore.erp.modules.onlineshop.dto.OnlineShopUnbilledOrderDTO;
 import mz.multicore.erp.modules.onlineshop.dto.SaveOnlineShopSettingsRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import javax.swing.*;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -39,6 +46,8 @@ import static org.mockito.Mockito.when;
  * LO-UI-02: a ficha do artigo tem a caixa "Publicar na loja online", desligada por omissão e sempre desligada no
  * artigo novo até ser gravado; o estado vem do servidor e só se grava por
  * {@code PUT /api/online-shop/products/{id}/published} quando a caixa mudou.
+ * LO-UI-03: a lista de encomendas marca "Loja online" na coluna "Origem" e o detalhe mostra contacto, entrega e morada;
+ * o sino dos perfis de vendas tem uma linha por encomenda online por facturar ({@code GET /api/online-shop/orders/unbilled}).
  */
 class OnlineShopUiHarnessTest {
 
@@ -284,6 +293,89 @@ class OnlineShopUiHarnessTest {
                 "OnlineShopApiClient.java");
         if (!Files.exists(client)) client = Path.of("desktop").resolve(client);
         assertThat(Files.readString(client)).contains("/api/online-shop/products/").contains("\"/published\"");
+    }
+
+    @Test
+    @DisplayName("LO-UI-03: A coluna Origem marca Loja online e o detalhe mostra contacto, entrega e morada")
+    void loUi03_marcaEDetalhe() {
+        OrderDTO online = order("LOJA_ONLINE", "Loja online", "841234567", "Entrega — Matola", "Rua da Paz, 12", null);
+        assertThat(OnlineShopOrderInfo.originColumn(online)).isEqualTo("Loja online");
+        assertThat(OnlineShopOrderInfo.details(online))
+                .extracting(RecordDetailsDialog.PropertyItem::label, RecordDetailsDialog.PropertyItem::value)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("Contacto", "841234567"),
+                        org.assertj.core.groups.Tuple.tuple("Entrega", "Entrega — Matola"),
+                        org.assertj.core.groups.Tuple.tuple("Morada", "Rua da Paz, 12"));
+
+        OrderDTO pickup = order("LOJA_ONLINE", "Loja online", "841234567", "Levantamento — Loja Baixa", null, null);
+        assertThat(OnlineShopOrderInfo.details(pickup)).extracting(RecordDetailsDialog.PropertyItem::label)
+                .as("sem morada no levantamento").containsExactly("Contacto", "Entrega");
+
+        OrderDTO desktop = order("DESKTOP", "Desktop", null, null, null, null);
+        assertThat(OnlineShopOrderInfo.originColumn(desktop)).as("sem marca nas do desktop").isEqualTo("Directa");
+        assertThat(OnlineShopOrderInfo.originColumn(order("DESKTOP", "Desktop", null, null, null, "COT-7")))
+                .isEqualTo("Cotação COT-7");
+        assertThat(OnlineShopOrderInfo.details(desktop)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("LO-UI-03: A lista e o detalhe das encomendas usam a marca e as linhas da loja online")
+    void loUi03_listaEDetalheUsamAInfo() throws Exception {
+        assertThat(Files.readString(gui("..", "CommercialOrderOperations.java")))
+                .contains("OnlineShopOrderInfo.originColumn(order)");
+        assertThat(Files.readString(gui("..", "commercial", "OrderDetailsDialog.java")))
+                .contains("OnlineShopOrderInfo.details(order)");
+        assertThat(Files.readString(gui("..", "MainFrame.java"))).contains(".withOnlineShopOrders(onlineShopApiClient)");
+        Path client = Path.of("src", "main", "java", "mz", "multicore", "erp", "desktop", "client",
+                "OnlineShopApiClient.java");
+        if (!Files.exists(client)) client = Path.of("desktop").resolve(client);
+        assertThat(Files.readString(client)).contains("/api/online-shop/orders/unbilled");
+    }
+
+    @Test
+    @DisplayName("LO-UI-03: O sino dos perfis de vendas tem uma linha por encomenda online por facturar")
+    void loUi03_sinoDosPerfisDeVendas() throws Exception {
+        OnlineShopApiClient client = mock(OnlineShopApiClient.class);
+        when(client.unbilledOrders()).thenReturn(List.of(
+                new OnlineShopUnbilledOrderDTO(9L, "ENC-0009", "Ana Machava", "Entrega — Matola",
+                        LocalDateTime.of(2026, 11, 28, 10, 30)),
+                new OnlineShopUnbilledOrderDTO(10L, "ENC-0010", "Consumidor Final", "Levantamento — Loja Baixa", null)));
+        for (String role : List.of("SELLER", "MANAGER", "ADMIN")) {
+            CurrentUserContext.setCurrentUser("u", role);
+            List<NotificationFeed.NotificationItem> items = feed(client).load(1L);
+            assertThat(items).as(role).hasSize(2);
+            NotificationFeed.NotificationItem first = items.stream()
+                    .filter(i -> i.detail().startsWith("ENC-0009")).findFirst().orElseThrow();
+            assertThat(first.type()).isEqualTo("Loja online");
+            assertThat(first.title()).isEqualTo("Encomenda da loja online por facturar");
+            assertThat(first.detail()).isEqualTo("ENC-0009 — Ana Machava · Entrega — Matola");
+            assertThat(first.priority()).isEqualTo(2);
+            assertThat(first.moduleCard()).as("abre o card das encomendas").isEqualTo("comercial");
+        }
+        verify(client, org.mockito.Mockito.times(3)).unbilledOrders();
+
+        OnlineShopApiClient other = mock(OnlineShopApiClient.class);
+        CurrentUserContext.setCurrentUser("maria", "EMPLOYEE");
+        assertThat(feed(other).load(1L)).as("outro perfil").isEmpty();
+        verify(other, never()).unbilledOrders();
+
+        OnlineShopApiClient failing = mock(OnlineShopApiClient.class);
+        when(failing.unbilledOrders()).thenThrow(new RuntimeException("offline"));
+        CurrentUserContext.setCurrentUser("u", "SELLER");
+        assertThat(feed(failing).load(1L)).as("o sino não falha").isEmpty();
+        CurrentUserContext.clear();
+    }
+
+    private static NotificationFeed feed(OnlineShopApiClient client) {
+        return new NotificationFeed(null, null, null, null).withOnlineShopOrders(client);
+    }
+
+    private static OrderDTO order(String origin, String originLabel, String phone, String fulfilment, String address,
+                                  String quotation) {
+        return new OrderDTO(1L, "ENC-1", 2L, "Consumidor Final", null, "Ana Machava", BigDecimal.TEN, BigDecimal.ONE,
+                BigDecimal.TEN, "PENDING_APPROVAL", null, List.of(), LocalDateTime.now(), null, 0, null,
+                OrderKind.FORMAL_ORDER, OrderKind.FORMAL_ORDER.label(), "Pendente de aprovação", null, quotation, null,
+                null, null, false, null, null, null, null, null, null, 0L, null, null, null, origin, originLabel, phone,
+                fulfilment, address);
     }
 
     private static OnlineShopSettingsPanel loaded(OnlineShopSettingsDTO settings) throws Exception {

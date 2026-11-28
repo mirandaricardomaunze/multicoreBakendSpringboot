@@ -96,12 +96,14 @@ caixa mudou, o desktop chama `PUT /api/online-shop/products/{id}/published` (aud
 editar o artigo pode publicá-lo; a recusa do backend (ex.: Adiantamento) aparece sem alteração.
 
 **Encomendas online (LO-UI-03).** Na lista de encomendas, a encomenda `LOJA_ONLINE` aparece com a marca
-**"Loja online"** (coluna "Origem", vazia nas do desktop); o detalhe mostra "Contacto: {telemóvel}",
+**"Loja online"** (coluna "Origem"; as do desktop não têm a marca e mantêm "Directa"/"Cotação {número}",
+que a coluna já mostrava); o detalhe mostra "Contacto: {telemóvel}",
 "Entrega: {fulfilmentLabel}" e, na entrega, "Morada: {deliveryAddress}". O sino dos perfis de vendas
 (`SignedInUser.isSellerOrAbove()`) mostra uma linha por encomenda `LOJA_ONLINE` ainda por facturar e não
 cancelada: tipo "Loja online", título "Encomenda da loja online por facturar", detalhe
-"{número} — {cliente} · {fulfilmentLabel}", prioridade 2, abre o card das encomendas. Os outros perfis
-não pedem a lista.
+"{número} — {cliente} · {fulfilmentLabel}", prioridade 2, abre o card das encomendas (`comercial`). Os outros
+perfis não pedem a lista. A lista vem de `GET /api/online-shop/orders/unbilled` (empresa activa, da mais recente;
+só leitura, SELLER e acima no `ApiRolePolicy`).
 
 ## 4. Fora de âmbito
 

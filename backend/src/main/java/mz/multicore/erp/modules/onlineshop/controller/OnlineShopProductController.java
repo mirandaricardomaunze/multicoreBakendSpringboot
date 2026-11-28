@@ -6,6 +6,7 @@ import mz.multicore.erp.modules.onlineshop.service.OnlineShopCatalogService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,7 +33,7 @@ public class OnlineShopProductController {
 
     @PutMapping
     public OnlineShopPublicationDTO set(@PathVariable Long productId,
-                                        @RequestBody SetOnlineShopPublicationRequest request) {
+                                        @Valid @RequestBody SetOnlineShopPublicationRequest request) {
         return catalogService.setPublished(productId, request);
     }
 }

@@ -1,7 +1,7 @@
 ---
 id: GOAL-016
 title: "Clientes encomendam pela loja online e levantam ou recebem em casa"
-status: IN_PROGRESS
+status: DONE
 priority: LOW
 spec: docs/LOJA_ONLINE_SPEC.md
 harness: docs/LOJA_ONLINE_HARNESS.md
@@ -34,7 +34,7 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - [x] LO-12 — modo, zona/loja e morada guardados na encomenda e no `OrderDTO` — `OnlineShopOrderTest`
 - [x] LO-UI-01 — definições da loja em Configurações › Integrações — `OnlineShopUiHarnessTest`
 - [x] LO-UI-02 — publicar artigo na ficha do artigo — `OnlineShopUiHarnessTest`
-- [ ] LO-UI-03 — encomendas marcadas "Loja online" e alerta no sino — `OnlineShopUiHarnessTest`
+- [x] LO-UI-03 — encomendas marcadas "Loja online" e alerta no sino — `OnlineShopUiHarnessTest`
 
 ## Fora de âmbito
 
@@ -75,3 +75,4 @@ em LO-01 quando o GOAL-013 estiver `DONE`.
 - 2026-11-28 · LO-12 · concluído: a encomenda `LOJA_ONLINE` guarda `fulfilmentLabel` ("Levantamento — {loja}" pelo WarehouseLookup ou "Entrega — {zona}", ≤120) e `deliveryAddress` (só na entrega) através do ExternalOrderSource do serviço da API pública (migração V164, colunas em customer_orders); o `OrderDTO` passa a trazer `origin`, `originLabel` (Desktop / API · {chave} / Loja online, OrderOrigin.label), `contactPhone`, `fulfilmentLabel` e `deliveryAddress`, com o construtor antigo a valer como desktop; desktop e API ficam nulos; OnlineShopOrderTest 35/35 verde.
 - 2026-11-28 · LO-UI-01 · concluído: Configurações › Integrações ganha, depois de "Webhooks", a secção "Loja online" (OnlineShopSettingsPanel em card ModernPanel, ícones pelo UIHelper.icon) com "Loja activa", "Código público" e a pré-visualização `/loja/{código}`, uma caixa por armazém de venda, tabela "Zonas de entrega" (Nome, Taxa (MT)) com "Adicionar zona"/"Remover zona", telefone e prazo (7 por omissão); lê e grava por `GET`/`PUT /api/online-shop/settings` (OnlineShopSettingsController, só ADMIN no ApiRolePolicy, 403 aos outros) pelo OnlineShopApiClient, com as mensagens do backend sem alteração; outro perfil não pede nada e vê "Só o administrador gere a loja online."; OnlineShopUiHarnessTest 7/7 e OnlineShopHttpIntegrationTest 11/11 verdes.
 - 2026-11-28 · LO-UI-02 · concluído: a ficha do artigo (Stock › Registar/Editar) ganha a caixa "Publicar na loja online" (OnlineShopPublishBox): desligada e bloqueada no artigo novo até ser gravado, na edição lida do servidor por `GET /api/online-shop/products/{id}/published` e gravada por `PUT` só quando muda, depois de gravar o artigo, com a recusa do backend sem alteração; OnlineShopProductController sobre OnlineShopCatalogService (mesma regra e auditoria ONLINE_SHOP_PUBLISH do LO-02), no ApiRolePolicy como os artigos (ler vendedor, alterar gestor/ADMIN, 403 aos outros); StockPanel recebe o OnlineShopApiClient pelo MainFrame; OnlineShopUiHarnessTest 10/10 e OnlineShopHttpIntegrationTest 12/12 verdes.
+- 2026-11-28 · LO-UI-03 · concluído: a coluna "Origem" da lista de encomendas mostra "Loja online" nas encomendas `LOJA_ONLINE` (as do desktop mantêm "Directa"/"Cotação …") e o detalhe junta "Contacto", "Entrega" e, na entrega, "Morada" (OnlineShopOrderInfo); o sino dos perfis de vendas (NotificationOnlineShopAlertProvider, isSellerOrAbove) tem uma linha "Loja online" · "Encomenda da loja online por facturar" · "{número} — {cliente} · {entrega}", prioridade 2, que abre o card comercial, lida de `GET /api/online-shop/orders/unbilled` (OnlineShopOrdersController → OnlineShopUnbilledOrdersService → OrderLookup.listUnbilledByOrigin; SELLER e acima, só leitura); outros perfis não pedem; SPEC §3.5 clarificada; OnlineShopUiHarnessTest 13/13 e OnlineShopHttpIntegrationTest 13/13 verdes. Goal DONE.

@@ -5,6 +5,7 @@ import mz.multicore.erp.modules.onlineshop.dto.SaveOnlineShopSettingsRequest;
 import mz.multicore.erp.modules.onlineshop.service.OnlineShopSettingsService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,7 +31,7 @@ public class OnlineShopSettingsController {
     }
 
     @PutMapping
-    public OnlineShopSettingsDTO save(@RequestBody SaveOnlineShopSettingsRequest request) {
+    public OnlineShopSettingsDTO save(@Valid @RequestBody SaveOnlineShopSettingsRequest request) {
         return settingsService.save(request);
     }
 }

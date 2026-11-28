@@ -79,6 +79,19 @@ public class OrderLookup {
                 createdBefore);
     }
 
+    /**
+     * Encomendas da empresa com a origem indicada ainda por facturar e não canceladas, da mais recente para a mais
+     * antiga — base do alerta das encomendas da loja online no sino (LOJA_ONLINE_SPEC §3.5).
+     */
+    public List<Order> listUnbilledByOrigin(Long companyId, OrderOrigin origin) {
+        List<String> done = Arrays.stream(OrderStatus.values())
+                .filter(status -> OrderStatus.isBilled(status.name()) || status == OrderStatus.CANCELLED)
+                .map(Enum::name)
+                .toList();
+        return orderRepository.findByCompanyIdAndOriginAndStatusNotInAndInvoiceIdIsNullOrderByCreatedAtDesc(companyId,
+                origin, done);
+    }
+
     // ---- Cotações ----
 
     /** Cotações da empresa, da mais recente para a mais antiga. */

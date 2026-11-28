@@ -183,7 +183,7 @@ final class CommercialOrderOperations {
                     order.totalAmount(),
                     impressoes,
                     order.kind(),
-                    order.quotationNumber() == null ? "Directa" : "Cotação " + order.quotationNumber(),
+                    mz.multicore.erp.gui.commercial.OnlineShopOrderInfo.originColumn(order),
                     formatExpectedDelivery(order),
                     order.businessUnitName() != null && !order.businessUnitName().isBlank()
                             ? order.businessUnitName() : "—"
