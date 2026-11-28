@@ -65,6 +65,44 @@ Hoje não há montra pública: só o desktop dentro da loja.
 - Encomenda online não facturada ao fim do prazo de cancelamento é **cancelada automaticamente**,
   libertando a reserva, com auditoria.
 
+### 3.5 No desktop (detalhe de §3.1 e §3.4; escrito na iteração 44, 2026-11-28)
+
+**Entrega guardada na encomenda (LO-12).** Hoje a morada é validada no checkout mas não fica em lado
+nenhum; o modo e a zona só se adivinham pela linha da taxa. A encomenda `LOJA_ONLINE` passa a guardar:
+
+- `fulfilmentLabel` (≤ 120): `Levantamento — {nome da loja}` ou `Entrega — {nome da zona}`;
+- `deliveryAddress` (≤ 255): a morada do checkout, só na entrega (nulo no levantamento).
+
+Ficam na própria encomenda (como já ficam `origin`, `originName` e `contactPhone`), gravados pelo
+serviço da API pública através de `ExternalOrderSource`; as encomendas do desktop e da API ficam nulas.
+O `OrderDTO` passa a trazer `origin`, `originLabel` (`Desktop`, `API · {chave}`, `Loja online`),
+`contactPhone`, `fulfilmentLabel` e `deliveryAddress`. Migração Flyway com o próximo número livre.
+
+**Definições (LO-UI-01).** Configurações › Integrações ganha, depois de "Webhooks", a secção
+**"Loja online"** (card `ModernPanel`, ícone pelo `UIHelper.icon`):
+
+- campos: "Loja activa" (caixa), "Código público" com a pré-visualização do endereço `/loja/{código}`,
+  "Lojas de levantamento" (uma caixa por armazém de venda da empresa), tabela "Zonas de entrega"
+  (Nome, Taxa em MT) com "Adicionar zona" e "Remover zona", "Telefone de contacto" e
+  "Prazo de cancelamento (dias)" com 7 por omissão; botão "Guardar";
+- lê e grava por endpoints internos `GET`/`PUT /api/online-shop/settings` (só ADMIN, área classificada
+  no `ApiRolePolicy`); as mensagens de erro são as do backend (LO-01), mostradas sem alteração;
+- outro perfil não pede as definições e vê "Só o administrador gere a loja online.".
+
+**Publicar artigo (LO-UI-02).** A ficha do artigo (Stock › artigo) ganha a caixa
+**"Publicar na loja online"**, desligada por omissão e sempre desligada no artigo novo até ser gravado.
+O estado actual vem do servidor (`GET /api/online-shop/products/{id}/published`); ao gravar, só quando a
+caixa mudou, o desktop chama `PUT /api/online-shop/products/{id}/published` (auditado, LO-02). Quem pode
+editar o artigo pode publicá-lo; a recusa do backend (ex.: Adiantamento) aparece sem alteração.
+
+**Encomendas online (LO-UI-03).** Na lista de encomendas, a encomenda `LOJA_ONLINE` aparece com a marca
+**"Loja online"** (coluna "Origem", vazia nas do desktop); o detalhe mostra "Contacto: {telemóvel}",
+"Entrega: {fulfilmentLabel}" e, na entrega, "Morada: {deliveryAddress}". O sino dos perfis de vendas
+(`SignedInUser.isSellerOrAbove()`) mostra uma linha por encomenda `LOJA_ONLINE` ainda por facturar e não
+cancelada: tipo "Loja online", título "Encomenda da loja online por facturar", detalhe
+"{número} — {cliente} · {fulfilmentLabel}", prioridade 2, abre o card das encomendas. Os outros perfis
+não pedem a lista.
+
 ## 4. Fora de âmbito
 
 - Pagamento online (M-Pesa, cartão), contas de cliente, cupões e promoções na loja online.

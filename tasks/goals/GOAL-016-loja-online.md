@@ -31,7 +31,10 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - [x] LO-04 — endpoints públicos, limites e honeypot — `OnlineShopHttpIntegrationTest`
 - [x] LO-09 — consulta por número + telemóvel — `OnlineShopHttpIntegrationTest`
 - [x] LO-11 — página pública segura e móvel — `OnlineShopStaticAssetsHarnessTest`
-- [ ] LO-UI-01 — definições, publicar artigo e encomendas online no desktop — `OnlineShopUiHarnessTest`
+- [ ] LO-12 — modo, zona/loja e morada guardados na encomenda e no `OrderDTO` — `OnlineShopOrderTest`
+- [ ] LO-UI-01 — definições da loja em Configurações › Integrações — `OnlineShopUiHarnessTest`
+- [ ] LO-UI-02 — publicar artigo na ficha do artigo — `OnlineShopUiHarnessTest`
+- [ ] LO-UI-03 — encomendas marcadas "Loja online" e alerta no sino — `OnlineShopUiHarnessTest`
 
 ## Fora de âmbito
 
@@ -68,3 +71,4 @@ em LO-01 quando o GOAL-013 estiver `DONE`.
 - 2026-11-28 · LO-04 · concluído: OnlineShopPublicController expõe `/api/shop/{código}/products` e `POST /api/shop/{código}/orders` sem login (permitAll, fora dos interceptores de empresa/versão, área `/api/shop` classificada no ApiRolePolicy); loja desactivada ou inexistente → "Loja indisponível."; OnlineShopRateLimitFilter limita por IP (ClientIpResolver) a 60 pedidos/min e 5 tentativas de encomenda/hora com 429 `RATE_LIMIT_EXCEEDED` e `Retry-After` (janela fixa partilhada com a API pública: FixedWindowRateLimiter); campo-armadilha `website` no checkout recusa com "Não foi possível registar a encomenda." antes de procurar a loja, sem criar nada; OnlineShopHttpIntegrationTest 6/6 verde.
 - 2026-11-28 · LO-09 · concluído: `POST /api/shop/{código}/orders/lookup` (número + telemóvel no corpo, fora dos logs e do limite horário de encomendas) devolve número, estado, linhas e total só das encomendas `LOJA_ONLINE` da empresa da loja com esse telemóvel (normalizado como no checkout); telemóvel errado ou inválido, número inexistente ou em falta respondem todos "Encomenda não encontrada." (OnlineShopOrderTrackingService sobre CustomerOrderTrackingService.findByNumberAndContactPhone); OnlineShopHttpIntegrationTest 9/9 verde.
 - 2026-11-28 · LO-11 · concluído: página pública `/loja/{código}` (forward para `static/loja/index.html`, código só minúsculas/números/hífen) com loja.css, loja.js e icon.svg próprios, sem CDN nem script/estilo/handlers inline, CSP só 'self' + DENY + no-referrer (PortalSecurityHeaders passa a cobrir `/loja`), texto da API só por `textContent`, layout a partir de 360 px, catálogo por categoria com pesquisa e Disponível/Esgotado (esgotado não se adiciona), carrinho no `localStorage` só com SKU + quantidade, checkout com campo-armadilha escondido e consulta por número + telemóvel, valores em 1.460,00 MT; novo `GET /api/shop/{código}` (OnlineShopStorefrontService) com nome, contacto, lojas de levantamento e zonas com taxa; OnlineShopStaticAssetsHarnessTest 11/11 verde.
+- 2026-11-28 · LO-UI-01 · spec: critério demasiado grande e sem regra para guardar a entrega (a morada do checkout perdia-se); SPEC §3.5 escrita (fulfilmentLabel e deliveryAddress na encomenda, secção "Loja online" em Integrações, caixa "Publicar na loja online" na ficha do artigo, marca "Loja online" e alerta no sino) e critério dividido em LO-12, LO-UI-01, LO-UI-02 e LO-UI-03 no HARNESS e no goal; sem código.
