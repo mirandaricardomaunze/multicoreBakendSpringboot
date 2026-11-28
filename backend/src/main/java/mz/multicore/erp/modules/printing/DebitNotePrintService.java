@@ -29,7 +29,7 @@ public class DebitNotePrintService {
     }
 
     public DebitNotePrintService(DebitNoteService service) {
-        this(service, new DebitNoteDocumentRenderer());
+        this(service, new DebitNoteDocumentRenderer(null));
     }
 
     @Transactional(readOnly = true)

@@ -113,12 +113,15 @@ public final class AccountingJournalTab extends JPanel {
         UIHelper.styleTextField(debitAccount);
         UIHelper.styleTextField(creditAccount);
         MoneyField amount = new MoneyField();
+        CostCenterCombo costCenter = new CostCenterCombo().load(accountingApiClient);
+        FormField costCenterForm = new FormField("Centro de custo", costCenter, false,
+                "Só segue nas contas das classes 6 e 7");
 
         FormField descForm = new FormField("Descrição", description, true, null);
         FormField debitForm = new FormField("Conta a debitar", debitAccount, true, "Código da conta (ex.: 1101)");
         FormField creditForm = new FormField("Conta a creditar", creditAccount, true, "Código da conta (ex.: 7101)");
         JPanel form = UIHelper.createDialogForm(
-                "Data:", date, "", descForm, "", debitForm, "", creditForm, "Valor (MT):", amount);
+                "Data:", date, "", descForm, "", debitForm, "", creditForm, "Valor (MT):", amount, "", costCenterForm);
 
         ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Novo Lançamento",
                 "fas-book", "Lançamento manual — débito e crédito pelo mesmo valor", form);
@@ -128,11 +131,16 @@ public final class AccountingJournalTab extends JPanel {
             }
             BigDecimal value = amount.value();
             if (value.signum() <= 0) throw FieldValidationException.of(amount, "O valor deve ser maior que zero.");
+            Long centerId = costCenter.selectedCostCenterId();
+            String debitCode = debitAccount.getText().trim();
+            String creditCode = creditAccount.getText().trim();
             CreateJournalEntryRequest request = new CreateJournalEntryRequest(
                     AccountingUiHelper.parseDate(date.getText()),
                     description.getText().trim(),
-                    List.of(new CreateJournalEntryRequest.Line(debitAccount.getText().trim(), value, null, null),
-                            new CreateJournalEntryRequest.Line(creditAccount.getText().trim(), null, value, null)));
+                    List.of(new CreateJournalEntryRequest.Line(debitCode, value, null, null,
+                                    CostCenterCombo.centerForAccount(debitCode, centerId)),
+                            new CreateJournalEntryRequest.Line(creditCode, null, value, null,
+                                    CostCenterCombo.centerForAccount(creditCode, centerId))));
             return () -> accountingApiClient.createEntry(request);
         });
         if (dialog.showDialog()) journalPager.reload();

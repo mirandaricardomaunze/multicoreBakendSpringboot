@@ -225,7 +225,8 @@ public class PosCheckoutAndPaymentService {
         eventPublisher.publishEvent(new SaleRegisteredEvent(
                 savedInvoice.getCompany().getId(), savedInvoice.getId(), savedInvoice.getInvoiceNumber(),
                 LocalDate.now(), savedInvoice.getTotalBeforeTax(), savedInvoice.getTaxAmount(),
-                savedInvoice.getTotalAmount(), costOfGoods, moneyNow, cashNow.signum() > 0, cashNow));
+                savedInvoice.getTotalAmount(), costOfGoods, moneyNow, cashNow.signum() > 0, cashNow,
+                warehouse == null ? null : warehouse.getId()));
         return savedInvoice;
     }
 

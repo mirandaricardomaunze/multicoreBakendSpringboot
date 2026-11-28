@@ -3,11 +3,13 @@ package mz.multicore.erp.modules.comercial.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import mz.multicore.erp.modules.comercial.service.OrderReservationWatcher;
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "customer_order_lines")
+@EntityListeners(OrderReservationWatcher.class)
 @Getter
 @Setter
 public class OrderLine {

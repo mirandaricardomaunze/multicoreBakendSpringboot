@@ -76,6 +76,22 @@ public class JournalEntry extends BaseEntity {
         return totalDebit().compareTo(totalCredit()) == 0;
     }
 
+    /** Há partidas das classes 6/7 ainda sem centro de custo (a porta de gravação completa-as com o por omissão). */
+    public boolean hasLinesMissingCostCenter() {
+        return lines.stream().anyMatch(line -> line.requiresCostCenter() && line.getCostCenter() == null);
+    }
+
+    /**
+     * Centros de custo das partidas (docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §3.2, CC-04): obrigatório nas classes 6 e 7,
+     * proibido nas classes 1–5, activo e da empresa do lançamento.
+     */
+    public void validateCostCenters() {
+        Long companyId = company == null ? null : company.getId();
+        for (JournalLine line : lines) {
+            line.validateCostCenter(companyId);
+        }
+    }
+
     /**
      * <b>Fonte única</b> da validação de um lançamento. Chamada antes de gravar, venha o
      * lançamento de onde vier (manual ou automático) — um lançamento desequilibrado gravado é

@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.accounting.service;
 
+import mz.multicore.erp.architecture.events.JournalEntryPostedEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.paging.PageQuery;
 import mz.multicore.erp.architecture.paging.PageResponse;
@@ -9,6 +10,8 @@ import mz.multicore.erp.modules.accounting.dto.CreateJournalEntryRequest;
 import mz.multicore.erp.modules.accounting.dto.JournalEntryDTO;
 import mz.multicore.erp.modules.accounting.dto.JournalLineDTO;
 import mz.multicore.erp.modules.accounting.model.Account;
+import mz.multicore.erp.modules.accounting.model.AccountClass;
+import mz.multicore.erp.modules.accounting.model.CostCenter;
 import mz.multicore.erp.modules.accounting.model.JournalEntry;
 import mz.multicore.erp.modules.accounting.model.JournalLine;
 import mz.multicore.erp.modules.accounting.model.JournalSource;
@@ -18,6 +21,7 @@ import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +29,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Diário — onde os lançamentos nascem, manuais ou automáticos.
@@ -41,17 +48,23 @@ public class JournalService {
     private final DocumentNumberService documentNumberService;
     private final CompanyService companyService;
     private final AuditLogService auditLogService;
+    private final CostCenterService costCenterService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public JournalService(JournalEntryRepository journalEntryRepository,
                           ChartOfAccountsService chartOfAccountsService,
                           DocumentNumberService documentNumberService,
                           CompanyService companyService,
-                          AuditLogService auditLogService) {
+                          AuditLogService auditLogService,
+                          CostCenterService costCenterService,
+                          ApplicationEventPublisher eventPublisher) {
         this.journalEntryRepository = journalEntryRepository;
         this.chartOfAccountsService = chartOfAccountsService;
         this.documentNumberService = documentNumberService;
         this.companyService = companyService;
         this.auditLogService = auditLogService;
+        this.costCenterService = costCenterService;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Lançamento manual do contabilista. */
@@ -72,6 +85,7 @@ public class JournalService {
             journalLine.setDebit(line.debit());
             journalLine.setCredit(line.credit());
             journalLine.setDescription(line.description());
+            journalLine.setCostCenter(costCenterOrNull(companyId, line.costCenterId()));
             entry.addLine(journalLine);
         }
 
@@ -91,14 +105,66 @@ public class JournalService {
     @Transactional
     public JournalEntry save(JournalEntry entry, Long companyId) {
         entry.setCompany(companyService.getCurrentCompanyReference(companyId));
+        fillMissingCostCenters(entry, () -> costCenterService.requireDefault(companyId));
         entry.validateForPosting();
+        entry.validateCostCenters();
         if (entry.getEntryNumber() == null) {
             entry.setEntryNumber(documentNumberService.next(DocumentSeries.JOURNAL_ENTRY));
         }
         if (entry.getCreatedBy() == null) {
             entry.setCreatedBy(CurrentUserContext.getUsername());
         }
-        return journalEntryRepository.save(entry);
+        JournalEntry saved = journalEntryRepository.save(entry);
+        publishCostCenters(entry, companyId);
+        return saved;
+    }
+
+    /** Avisa os alertas de orçamento (§4.3) dos centros com custos (classe 6) neste lançamento. */
+    private void publishCostCenters(JournalEntry entry, Long companyId) {
+        Set<Long> costCenterIds = entry.getLines().stream()
+                .filter(line -> line.getCostCenter() != null)
+                .filter(line -> line.getAccount().getAccountClass() == AccountClass.CUSTOS_E_PERDAS)
+                .map(line -> line.getCostCenter().getId())
+                .collect(Collectors.toSet());
+        if (!costCenterIds.isEmpty()) {
+            eventPublisher.publishEvent(new JournalEntryPostedEvent(companyId, entry.getEntryDate(), costCenterIds));
+        }
+    }
+
+    /**
+     * Centro pedido explicitamente para uma partida (lançamento manual, despesa — §3.2): tem de existir, ser da
+     * empresa e estar activo. {@code null} deixa a partida sem centro; se for de classe 6/7, {@link #save} completa-a
+     * com o centro por omissão.
+     */
+    @Transactional(readOnly = true)
+    public CostCenter costCenterOrNull(Long companyId, Long costCenterId) {
+        return costCenterId == null ? null : costCenterService.requirePostable(companyId, costCenterId);
+    }
+
+    /**
+     * Lançamento automático de um documento com armazém (CC-05, §3.2), antes de {@link #save}: as partidas 6/7 sem
+     * centro ficam no centro do armazém de origem; sem armazém (ou sem centro activo do armazém), no centro por omissão.
+     */
+    @Transactional
+    public void assignWarehouseCostCenter(JournalEntry entry, Long companyId, Long warehouseId) {
+        fillMissingCostCenters(entry, () -> costCenterService.postingCenterOf(companyId, warehouseId));
+    }
+
+    /** Centro de uma partida automática que é de um armazém concreto (ex.: parte vendida dos custos de importação). */
+    @Transactional
+    public CostCenter costCenterOfWarehouse(Long companyId, Long warehouseId) {
+        return costCenterService.postingCenterOf(companyId, warehouseId);
+    }
+
+    /** Partidas das classes 6/7 sem centro recebem o centro dado (só é procurado se houver alguma). */
+    private static void fillMissingCostCenters(JournalEntry entry, Supplier<CostCenter> center) {
+        if (!entry.hasLinesMissingCostCenter()) {
+            return;
+        }
+        CostCenter resolved = center.get();
+        entry.getLines().stream()
+                .filter(line -> line.requiresCostCenter() && line.getCostCenter() == null)
+                .forEach(line -> line.setCostCenter(resolved));
     }
 
     /**

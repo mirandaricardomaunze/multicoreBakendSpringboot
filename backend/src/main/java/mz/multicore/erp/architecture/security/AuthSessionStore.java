@@ -7,13 +7,17 @@ import java.util.Optional;
 /** Where {@link AuthSessionService} keeps sessions. Sessions are addressed by the hash of their token, never the token. */
 public interface AuthSessionStore {
 
-    record StoredSession(String tokenHash, String username, Instant issuedAt, Instant expiresAt, boolean restricted) {}
+    record StoredSession(String tokenHash, String username, Instant issuedAt, Instant expiresAt, boolean restricted,
+                         boolean portal) {}
 
     void save(StoredSession session);
 
     Optional<StoredSession> find(String tokenHash);
 
     void delete(String tokenHash);
+
+    /** Moves the expiry of one session (portal sessions slide while in use). */
+    void updateExpiresAt(String tokenHash, Instant expiresAt);
 
     void deleteUser(String username);
 

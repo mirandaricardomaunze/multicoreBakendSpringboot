@@ -116,7 +116,7 @@ public class SupplierPaymentService {
         eventPublisher.publishEvent(new SupplierPaymentRegisteredEvent(
                 purchase.getCompany().getId(), transaction.id(), purchase.getPurchaseNumber(),
                 transaction.transactionDate().toLocalDate(), treasuryAmount,
-                financeService.accountType(financeAccountId) == TreasuryAccountType.CASH, supplierAmount));
+                financeService.accountType(financeAccountId) == TreasuryAccountType.CASH, supplierAmount, purchase.warehouseId()));
         auditLogService.logCurrent("SUPPLIER_PAYMENT",
                 "Compra " + purchase.getPurchaseNumber() + " pagamento " + amount.toPlainString()
                         + " " + unit + " (saldo " + purchase.getOutstanding().toPlainString() + " " + unit + ")");

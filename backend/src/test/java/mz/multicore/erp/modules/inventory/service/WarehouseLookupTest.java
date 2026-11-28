@@ -100,7 +100,7 @@ class WarehouseLookupTest {
     void escritaAlheia_passaPeloComandoDoInventario() {
         Warehouse w = warehouse(10L, 1L);
         when(warehouses.save(w)).thenReturn(w);
-        WarehouseCommandService commands = new WarehouseCommandService(warehouses);
+        WarehouseCommandService commands = new WarehouseCommandService(warehouses, event -> { });
 
         assertThat(commands.saveWarehouse(w)).isSameAs(w);
         verify(warehouses).save(w);

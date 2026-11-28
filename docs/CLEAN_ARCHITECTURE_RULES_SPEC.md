@@ -38,6 +38,9 @@ contracts/backend/desktop), `EnterpriseModulesArchitectureHarnessTest` (DTO reco
 `EnterpriseModulesUiUniformityHarnessTest`, `IconSystemHarnessTest`, `KpiCardUniformityHarnessTest`,
 `ButtonIconContrastHarnessTest` e `DesktopThinContextTest`.
 
+Texto e identidade (desde 2026-11-21, depois de o PR #12 só falhar na CI): `PrintableTextHarnessTest`
+(só caracteres que o PDF desenha) e `ProductIdentityHarnessTest` (sem nomes de produtos externos).
+
 ## 4. Diff-guard — linhas novas
 
 | ID | Proibido em linhas novas | Alternativa |

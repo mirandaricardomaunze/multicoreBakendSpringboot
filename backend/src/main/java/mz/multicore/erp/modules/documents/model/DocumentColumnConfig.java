@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Configuração (por empresa) de que colunas aparecem na tabela de linhas dos documentos comerciais
  * (fatura, encomenda, nota de crédito, guia — que partilham o {@code LineItemsTableRenderer}).
@@ -69,4 +72,28 @@ public class DocumentColumnConfig extends BaseEntity {
     /** Comentário/rodapé personalizado (aplica-se ao recibo POS). Vazio = texto padrão. */
     @Column(name = "footer_comment", length = 255)
     private String footerComment;
+
+    /** Cor de destaque {@code #RRGGBB} do modelo (DT-01). Nula = cor do {@code PdfTheme}. */
+    @Column(name = "accent_color", length = 7)
+    private String accentColor;
+
+    /** Posição do logótipo no cabeçalho; sem logótipo da empresa, nada aparece. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "logo_position", nullable = false, length = 10)
+    private DocumentLogoPosition logoPosition = DocumentLogoPosition.LEFT;
+
+    /** Notas livres impressas antes do rodapé (até 500 caracteres). */
+    @Column(name = "template_notes", length = 500)
+    private String templateNotes;
+
+    /** Imprime o QR code de consulta quando o documento o tiver. */
+    @Column(name = "show_qr_code", nullable = false)
+    private boolean showQrCode = true;
+
+    /** Contas bancárias impressas no bloco de dados bancários (até 3, pela ordem escolhida). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "document_template_bank_accounts",
+            joinColumns = @JoinColumn(name = "config_id"))
+    @OrderColumn(name = "sort_order")
+    private List<DocumentBankAccount> bankAccounts = new ArrayList<>();
 }

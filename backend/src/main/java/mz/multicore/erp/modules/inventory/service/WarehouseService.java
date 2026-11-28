@@ -39,7 +39,8 @@ public class WarehouseService {
         WarehouseQueryService query = new WarehouseQueryService(warehouseRepository, companyLookup);
         this.queryService = query;
         this.lifecycleService = new WarehouseLifecycleService(
-                warehouseRepository, companyLookup, companyService, auditLogService, query);
+                new WarehouseCommandService(warehouseRepository, event -> { }),
+                companyLookup, companyService, auditLogService, query);
     }
 
     @Transactional(readOnly = true)

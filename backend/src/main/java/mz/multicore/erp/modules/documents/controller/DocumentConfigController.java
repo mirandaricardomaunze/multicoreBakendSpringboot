@@ -3,6 +3,7 @@ package mz.multicore.erp.modules.documents.controller;
 import jakarta.validation.Valid;
 
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
 import mz.multicore.erp.modules.documents.model.DocumentType;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.http.ResponseEntity;
@@ -36,5 +37,21 @@ public class DocumentConfigController {
             @RequestParam(defaultValue = "COMMERCIAL") DocumentType documentType,
             @RequestBody @Valid DocumentColumnsDTO dto) {
         return ResponseEntity.ok(service.save(companyId, documentType, dto));
+    }
+
+    @GetMapping("/template")
+    public ResponseEntity<DocumentTemplateDTO> getTemplate(
+            @RequestParam Long companyId,
+            @RequestParam(defaultValue = "COMMERCIAL") DocumentType documentType) {
+        return ResponseEntity.ok(service.getTemplate(companyId, documentType));
+    }
+
+    /** Só ADMIN; auditado como {@code DOCUMENT_TEMPLATE_CHANGE} (MODELOS_DOCUMENTO_SPEC §3.3). */
+    @PutMapping("/template")
+    public ResponseEntity<DocumentTemplateDTO> saveTemplate(
+            @RequestParam Long companyId,
+            @RequestParam(defaultValue = "COMMERCIAL") DocumentType documentType,
+            @RequestBody @Valid DocumentTemplateDTO dto) {
+        return ResponseEntity.ok(service.saveTemplate(companyId, documentType, dto));
     }
 }

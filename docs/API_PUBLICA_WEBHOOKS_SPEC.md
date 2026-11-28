@@ -25,19 +25,61 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - Chave por empresa, criada pelo **ADMIN** com nome (ex.: "Loja online") e permissões:
   `CATALOG_READ`, `ORDERS_READ`, `ORDERS_WRITE`.
 - A chave completa (`mk_live_` + 32 bytes aleatórios em base62) é mostrada **uma única vez**; o
-  servidor guarda só o **hash SHA-256** e os primeiros 8 caracteres para identificação.
+  servidor guarda só o **hash SHA-256** e os primeiros 8 caracteres para identificação (os 8 que vêm
+  depois de `mk_live_`, porque o prefixo é igual em todas as chaves; mostrados como `mk_live_XXXXXXXX...`).
 - Revogar é imediato. Cada chave regista a data do último uso.
 - Criar e revogar geram auditoria `API_KEY_CREATE` / `API_KEY_REVOKE`.
+
+#### 3.1.1 Gestão das chaves (API-02)
+
+- Rotas **internas** (login de utilizador + `X-Company-Id`, nunca `X-Api-Key`), sempre na empresa activa:
+  `GET /api/integrations/api-keys` (lista sem segredo nem hash), `POST /api/integrations/api-keys`
+  (`{name, permissions}` → `201` com a chave e o segredo completo, a única vez que sai) e
+  `POST /api/integrations/api-keys/{id}/revoke` (→ `200` com a chave revogada).
+- Só o **ADMIN** lista, cria e revoga: qualquer outro perfil → `403` (política HTTP e guarda do Service).
+- Chave de outra empresa ou já revogada, nome vazio ou sem permissões → `400` com mensagem PT-MZ.
+- A auditoria regista o utilizador, o nome e a identificação `mk_live_XXXXXXXX...` da chave, **nunca** o segredo.
 
 ### 3.2 Pedidos
 
 - Prefixo versionado **`/api/public/v1/**`**, autenticação por cabeçalho `X-Api-Key`. Os tokens de
   utilizador **não** servem aqui e as chaves de API **não** servem em `/api/**` interno.
 - A empresa é a da chave; não há `X-Company-Id`.
-- Limite: **60 pedidos por minuto por chave** → `429` com `Retry-After`.
+- Limite: **60 pedidos por minuto por chave** → `429` com `Retry-After`. Janela fixa de 1 minuto que abre no
+  primeiro pedido da chave; os pedidos recusados não contam; `Retry-After` em segundos (≥ 1) até a janela
+  fechar; corpo com `code` `RATE_LIMIT_EXCEEDED`. O limite é por chave: uma chave esgotada não trava outra.
 - Erros em JSON com `code` estável em inglês e `message` em PT-MZ; nunca stack traces.
 - Paginação `page`/`size` (máx. 100), datas ISO 8601, valores com ponto decimal (é API, não ecrã).
 - Documentação OpenAPI (springdoc) só do grupo público, em `/api/public/v1/docs`.
+
+#### 3.2.1 Erros e paginação (API-06)
+
+- **Todo** o erro em `/api/public/**` sai em JSON (`application/json`) com só dois campos: `code` e `message`
+  (PT-MZ). Nunca stack trace, nome de classe Java, SQL ou outro detalhe interno; esse detalhe fica no log.
+- Códigos comuns a todas as rotas (além dos próprios de cada recurso, §3.2–§3.4.3):
+  - `400 VALIDATION_ERROR` — corpo que não é JSON, campo inválido, parâmetro em falta ou com tipo errado
+    (ex.: `page=abc`), data de `updatedSince` que não é ISO 8601; a `message` diz o que está mal.
+  - `404 NOT_FOUND` — rota que não existe na API pública (com chave válida; sem chave é o `401` da §3.2).
+  - `405 METHOD_NOT_ALLOWED` — método que a rota não aceita, com o cabeçalho `Allow`.
+  - `409 CONFLICT` — o pedido colidiu com outro gravado em simultâneo (ex.: dois `POST /orders` iguais ao
+    mesmo tempo); nada fica duplicado e o cliente pode repetir.
+  - `500 INTERNAL_ERROR` — avaria inesperada, com mensagem genérica.
+- Paginação: `page` começa em 0 (negativa conta como 0); `size` por omissão 50, no máximo 100 (acima usa-se
+  100; menor que 1 usa-se o por omissão). A resposta diz sempre o `page` e o `size` efectivos.
+
+#### 3.2.2 Documentação OpenAPI (API-11)
+
+- `GET /api/public/v1/docs` devolve o documento **OpenAPI 3** em JSON (`application/json`) do grupo público.
+- Só descreve rotas de `/api/public/v1/**` (produtos, stock, encomendas). Nenhuma rota interna (`/api/**` do
+  desktop, `/api/integrations/**`, autenticação, relatórios) nem o próprio `/docs` aparece.
+- Declara o esquema de segurança `ApiKeyAuth` (`apiKey`, cabeçalho `X-Api-Key`) aplicado a todas as rotas, e o
+  corpo de erro `PublicApiError` (`code`, `message`).
+- Como o resto de `/api/public/**` (§3.2), exige uma chave **válida e não revogada**, de qualquer permissão;
+  sem chave → `401 API_KEY_REQUIRED`, chave inválida/revogada → `401 API_KEY_INVALID`; conta para o limite
+  de 60/min.
+- Existe também em produção, independentemente de `springdoc.api-docs.enabled`/`springdoc.swagger-ui.enabled`,
+  que continuam a controlar só a documentação **interna** (`/v3/api-docs`, desligada em prod).
+- Sem Swagger UI para o grupo público nesta versão (o cliente importa o JSON na sua ferramenta).
 
 ### 3.3 Recursos
 
@@ -50,18 +92,89 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 | `POST /orders` | `ORDERS_WRITE` | cria encomenda de cliente |
 
 - Só artigos activos da empresa. Custos, margens e fornecedores **nunca** saem pela API.
+- A permissão é verificada por rota (método + caminho) antes do recurso: chave válida sem a permissão
+  da rota → `403` com `code` `API_PERMISSION_DENIED` e `message` PT-MZ que nomeia a permissão em falta.
+  Ter `ORDERS_WRITE` não dá `ORDERS_READ` (cada permissão vale só pela sua rota).
+
+#### 3.3.1 Catálogo e stock (API-07)
+
+- **Artigo activo** = associado à empresa da chave (o cadastro não tem outro estado). O artigo de sistema
+  *Adiantamento* nunca aparece (só se vende pelo módulo Adiantamentos).
+- Campos de `GET /products` e `/products/{sku}`: `sku`, `name`, `category` (nome ou `null`), `barcode`,
+  `unit` (unidade base), `vatRatePercent` (ex.: `16.00`), `priceWithVat` (preço de retalho + IVA, 2 casas,
+  o mesmo cálculo dos documentos de venda) e `updatedAt` (ISO 8601 com fuso). Nada de preço de custo, preço de
+  grosso, margens, fornecedores ou unidade de negócio.
+- `updatedSince` (ISO 8601: data, data-hora ou data-hora com fuso): só artigos criados ou alterados a partir
+  desse instante. Valor inválido → recusado.
+- `/products/{sku}` de um SKU inexistente na empresa → `404` `PRODUCT_NOT_FOUND`.
+- `GET /stock`: uma linha por artigo com controlo de stock × armazém de venda da empresa (activo, permite
+  vendas, não é de trânsito), com `sku`, `warehouseCode` (número do armazém ou `null`), `warehouseName` e
+  `available` = quantidade − reservas activas de encomendas nesse armazém, nunca negativa.
+- `warehouse` filtra por número ou nome do armazém (sem distinguir maiúsculas); armazém de venda inexistente
+  → `404` `WAREHOUSE_NOT_FOUND`.
+- Listas paginadas: `page` começa em 0, `size` por omissão 50 e no máximo 100 (acima disso usa-se 100);
+  resposta `{items, page, size, totalItems, totalPages}`, ordenada por SKU (e armazém no stock).
 
 ### 3.4 Criar encomenda
 
 - Corpo: `externalReference` (obrigatório, único por chave), cliente por `nuit` (existente ou criado
   com as regras do registo manual) ou, sem NUIT, **Consumidor Final** com `contactName` e
-  `contactPhone` guardados na encomenda; `warehouse`; linhas `sku` + `quantity`; `notes`.
+  `contactPhone` guardados na encomenda; `customerName`; `warehouse`; linhas `sku` + `quantity`; `notes`.
+- **Cliente novo por NUIT (decisão do responsável, 2026-11-27):** `customerName` é opcional, mas
+  obrigatório quando o NUIT ainda não existe na empresa; sem ele → `400 CUSTOMER_NAME_REQUIRED`
+  com mensagem PT-MZ. O `contactName` nunca é usado como nome do cliente.
 - Preço e IVA vêm **sempre do sistema** (o pedido não envia preços).
-- Mesmas regras das encomendas do desktop: stock disponível, reserva, limite de crédito, fluxo de
-  aprovação. Estado inicial o mesmo que uma encomenda nova do desktop.
+- **Via da encomenda (decisão do responsável, 2026-11-27):** a encomenda nasce como `FORMAL_ORDER`
+  (Encomenda A4) em `PENDING_APPROVAL` e passa pelo motor de aprovações como no desktop, **mais**
+  verificação de stock disponível e reserva activa logo na criação (respeitando as reservas de outros
+  pedidos). Sem stock disponível → recusada com mensagem PT-MZ. A reserva liberta-se ao facturar ou
+  cancelar, como hoje; o limite de crédito verifica-se na facturação, como no desktop. Esta combinação
+  só é usada pela API pública e pela loja online.
 - **Idempotente**: repetir o mesmo `externalReference` com a mesma chave devolve a encomenda já
   criada (200), sem duplicar; com conteúdo diferente → `409`.
 - A encomenda guarda a origem (`API` + nome da chave) e aparece no desktop como qualquer outra.
+
+#### 3.4.1 Detalhe de `POST /orders` (API-08)
+
+- Campos: `externalReference` (obrigatório, até 80 caracteres), `warehouse` (obrigatório: número ou nome de um
+  armazém de venda, como no `GET /stock`), `lines` (pelo menos uma; `sku` e `quantity` > 0), `nuit`,
+  `customerName`, `contactName`, `contactPhone`, `notes` (até 1000).
+- Sem `nuit`: `contactName` e `contactPhone` são obrigatórios (Consumidor Final precisa de contacto) →
+  `400 CONTACT_REQUIRED`. Com `nuit` válido (9 dígitos): cliente da empresa com esse NUIT; se não existir,
+  é registado com `customerName` pelas regras do registo manual (NUIT inválido → `400`).
+- A encomenda é criada em nome da chave (utilizador `API · <nome da chave>`, perfil de vendedor) e na empresa
+  dela; o motor de aprovações trata-a como uma encomenda de vendedor.
+- Respostas: `201` com a encomenda (`number`, `externalReference`, `status`, linhas com preço do sistema e
+  totais); SKU inexistente → `404 PRODUCT_NOT_FOUND`; armazém → `404 WAREHOUSE_NOT_FOUND`; stock disponível
+  insuficiente → `422 INSUFFICIENT_STOCK`; outra regra de negócio → `422 BUSINESS_RULE_VIOLATION`; corpo
+  inválido → `400 VALIDATION_ERROR`. Mensagens em PT-MZ.
+- Uma encomenda com reserva activa rejeitada no motor de aprovações fica cancelada e **liberta a reserva**.
+
+#### 3.4.2 Idempotência de `POST /orders` (API-09)
+
+- A unicidade é por **chave + `externalReference`** (sem espaços nas pontas): duas chaves da mesma empresa
+  podem usar a mesma referência sem colidir.
+- O "conteúdo" é a impressão digital SHA-256 do corpo normalizado: todos os campos do corpo, sem espaços nas
+  pontas (vazio = ausente), quantidades sem zeros à direita (`3` = `3.000`), linhas pela ordem enviada. É
+  guardada na encomenda (`request_fingerprint`).
+- Repetição com o mesmo conteúdo → `200` com a encomenda já criada **no estado actual**, sem nova encomenda,
+  sem nova reserva e sem registar cliente.
+- Mesma referência com conteúdo diferente → `409 EXTERNAL_REFERENCE_CONFLICT` com mensagem PT-MZ que indica a
+  referência e o número da encomenda existente; nada é gravado.
+- A verificação acontece antes de qualquer outra regra do pedido (artigos, armazém, cliente, stock).
+
+#### 3.4.3 Consulta de `GET /orders/{number}` (API-10)
+
+- Mostra qualquer **encomenda de cliente** da empresa da chave (Encomenda A4 ou Pedido de separação), venha ela
+  da API ou do desktop: a permissão `ORDERS_READ` existe para chaves que só lêem. As reposições internas não são
+  encomendas de cliente e não aparecem.
+- Procura pelo número exacto da encomenda (sem espaços nas pontas), que vai tal e qual no caminho, com a barra
+  (ex.: `GET /api/public/v1/orders/ENC-2026/00001`). Número inexistente, de outra empresa ou de
+  uma reposição interna → `404 ORDER_NOT_FOUND` com mensagem PT-MZ (não se revela se existe noutra empresa).
+- Corpo: o mesmo de `POST /orders` (`number`, `externalReference` — `null` nas do desktop —, `status`,
+  `statusLabel`, cliente, armazém, linhas com preço do sistema e IVA em %, totais, `createdAt`) **mais**
+  `invoiceNumber`: o número da factura associada, ou `null` enquanto não estiver facturada. O estado é o actual.
+- Nada de ids internos, custos, margens ou reservas.
 
 ## 4. Webhooks (GOAL-014)
 
@@ -71,6 +184,33 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - URL tem de ser **HTTPS** em produção; endereços privados/locais (`localhost`, `10.*`, `192.168.*`,
   `172.16–31.*`, `127.*`, `169.254.*`) são recusados.
 - Cada subscrição tem um **segredo** gerado pelo sistema, mostrado uma vez.
+
+#### 4.1.1 Regras da subscrição (WH-01)
+
+- **Quem**: só o **ADMIN** cria, lista, activa e desactiva subscrições, sempre na **empresa activa**; qualquer
+  outro perfil → `BusinessRuleException` "Só o administrador gere os webhooks." (a política HTTP `403` é do WH-08).
+- **Campos ao criar**: `url` (obrigatória, ≤ 500 caracteres) e `events` (pelo menos um dos quatro de §4.2,
+  sem repetidos). Nasce **activa**. A URL e os eventos não se editam: para mudar, cria-se outra e desactiva-se
+  a antiga. Activar/desactivar é a única alteração.
+- **URL válida**: absoluta, com host, sem utilizador/senha (`https://u:p@...` recusada). Esquema **`https`**
+  obrigatório com o perfil `prod`; fora de `prod` aceita também `http` (desenvolvimento). Outro esquema → recusa.
+- **Endereços privados/locais recusados** (anti-SSRF): `localhost` e `*.localhost`; IPv4 `0.*`, `10.*`, `127.*`,
+  `169.254.*`, `172.16–31.*`, `192.168.*`; IPv6 `::`, `::1`, `fc00::/7`, `fe80::/10` (e IPv4 mapeado nestes
+  intervalos). Um nome de host é resolvido (DNS) e **todos** os endereços devolvidos são verificados; nome que
+  não resolve → recusa. A resolução passa por uma porta injectável (testes sem rede). A mesma verificação
+  repete-se antes de cada entrega (WH-04/05), para um DNS que mude depois não abrir a rede interna.
+- **Segredo**: `whsec_` + 32 bytes aleatórios em base62 (mesmo gerador das chaves de API, §3.1). Sai **só** na
+  resposta da criação; listas e detalhes nunca o devolvem. Como a assinatura HMAC (§4.3) precisa dele em claro,
+  fica guardado **cifrado em repouso** com a cifra AES-256-GCM existente (`AttachmentCrypto`, prefixo `MCE1`;
+  sem chave configurada fora de prod fica em claro, como os anexos).
+- **Auditoria**: `WEBHOOK_CREATE`, `WEBHOOK_ACTIVATE`, `WEBHOOK_DEACTIVATE` com o utilizador e a URL, **nunca**
+  o segredo. Subscrição de outra empresa → "Subscrição não encontrada."
+- **Mensagens PT-MZ** (o backend devolve-as em `400`):
+  - "Indique o URL do webhook." · "O URL do webhook é inválido." · "O URL do webhook tem de usar https://."
+  - "Não são permitidos endereços privados ou locais no webhook." · "Não foi possível resolver o endereço do webhook."
+  - "Escolha pelo menos um evento." · "Evento de webhook desconhecido: X."
+- **Persistência**: tabela `webhook_subscriptions` (empresa, URL, eventos, segredo cifrado, activa, criada em/por,
+  contador de falhas seguidas para o WH-07), migração Flyway com o próximo número livre, sintaxe PostgreSQL.
 
 ### 4.2 Eventos
 
@@ -86,6 +226,69 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - O envio acontece **depois do commit** da transacção que originou o evento; um erro no webhook
   nunca anula a operação.
 
+#### 4.2.1 Corpo dos eventos (WH-02)
+
+- **Origem**: os webhooks escutam os eventos de domínio que já existem (nunca o Repository de outro módulo):
+  `invoice.issued` ← `SaleRegisteredEvent` (factura, factura-recibo e venda POS, já publicados por
+  `ComercialInvoiceLifecycleService` e `PosCheckoutAndPaymentService`); `credit_note.issued` ←
+  `CreditNoteApprovedEvent` (nota de crédito "emitida" = aprovada); `order.status_changed` e
+  `stock.availability_changed` ← eventos novos `OrderStatusChangedEvent` e `StockAvailabilityChangedEvent`
+  (pacote `architecture.events`, só números/textos, nunca entidades). O resumo que falta no evento de domínio
+  (cliente, NUIT, SKU) é lido pelo Service público do módulo dono.
+- **Quem recebe**: só subscrições **activas** da **mesma empresa** do evento que escolheram aquele tipo. Sem
+  subscrição interessada não se constrói corpo nenhum. Um evento gera **um** corpo (mesmo `id`) por subscrição.
+- **Envelope** (JSON, chaves em camelCase, datas ISO 8601 com fuso, valores monetários com 2 casas em número):
+  `{"id": "evt_<32 base62>", "type": "<código §4.2>", "occurredAt": "...", "companyId": 1, "data": {...}}`.
+  `id` único por ocorrência (gerador `SecretTokens`); `occurredAt` = instante do facto.
+- **`data` por evento**:
+  - `invoice.issued`: `invoiceNumber`, `documentDate` (data), `channel` (`MANUAL` | `POS`), `customer`,
+    `totalBeforeTax`, `taxAmount`, `totalAmount`, `amountPaid` (o que entrou no acto).
+  - `credit_note.issued`: `creditNoteNumber`, `invoiceNumber` (factura de origem ou `null`), `customer`,
+    `totalBeforeTax`, `taxAmount`, `totalAmount`.
+  - `order.status_changed`: `orderNumber`, `previousStatus`, `status` (nomes de `OrderStatus`, ex. `BILLED`),
+    `customer`, `totalAmount`, `invoiceNumber` (quando já facturada, senão `null`). Só se publica quando o estado
+    **muda** de facto (mesmo estado → nada); a criação da encomenda não é mudança de estado.
+  - `stock.availability_changed`: `sku`, `productName`, `warehouseCode`, `warehouseName`, `available`
+    (o mesmo cálculo do `GET /stock`, §3.3.1) e `status` (`OUT_OF_STOCK` quando `available` passa de > 0 a 0;
+    `BACK_IN_STOCK` quando passa de 0 a > 0). Só armazéns de venda (§3.3.1) e artigos com controlo de stock;
+    variações que não cruzam o zero não geram evento; várias variações do mesmo artigo × armazém na mesma
+    transacção comparam só o primeiro antes com o último depois.
+  - `customer` = `{"name": ..., "nuit": ...}` (NUIT `null` quando não há; Consumidor Final com o nome guardado
+    no documento). Nenhum outro dado pessoal (telefone, email, morada) nem custos ou margens.
+- **Contrato**: o corpo é construído por `WebhookEventFactory` (módulo webhooks) a partir de um record de
+  domínio, testável sem HTTP; WH-02 cobre a construção e a escolha das subscrições, o envio é do WH-03/04.
+
+#### 4.2.2 Envio depois do commit (WH-03)
+
+- **Quando**: os webhooks escutam os quatro eventos de domínio com `@TransactionalEventListener(phase =
+  AFTER_COMMIT)`. Transacção que faz **rollback** → nenhuma entrega registada nem enviada. Evento publicado fora
+  de transacção (`fallbackExecution = true`) conta como já confirmado.
+- **Registo primeiro, envio depois**: depois do commit, numa transacção **nova** (`REQUIRES_NEW`, porque a
+  original já fechou), `WebhookEventService.prepare(...)` escolhe as subscrições (§4.2.1) e grava **uma entrega
+  por subscrição** em `webhook_deliveries` com estado `PENDING`, `attempts = 0`, `next_attempt_at = agora` e o
+  corpo JSON já serializado (o corpo não volta a ser construído: reenvios e tentativas mandam exactamente o mesmo
+  texto, mesmo `id` de evento). Sem subscrição interessada → nenhuma linha.
+- **Envio fora da thread do negócio**: gravadas as entregas, cada uma é entregue a uma porta
+  `WebhookDispatcher` que corre num executor próprio (assíncrono). A operação do utilizador (factura, POS,
+  aprovação, guia) nunca espera pelo HTTP. O POST, a assinatura e os cabeçalhos são do WH-04; as tentativas e o
+  `FAILED` do WH-05. Até lá a entrega fica `PENDING`.
+- **Um erro no webhook nunca anula a operação**: qualquer excepção no caminho do webhook (leitura do resumo,
+  serialização, gravação da entrega, despacho) é apanhada no listener e registada em log `WARN` com o tipo do
+  evento e a empresa (nunca o segredo nem o corpo); a operação de negócio já está confirmada e não é afectada, e
+  os outros eventos/subscrições seguem. Uma subscrição que falha a gravação não impede as outras.
+- **Janela aceite**: se o processo morrer entre o commit e a gravação da entrega, esse evento perde-se (não há
+  outbox na transacção de negócio, para um erro do webhook nunca a poder anular). Fica documentado; não se
+  reconstrói depois.
+- **Persistência**: tabela `webhook_deliveries` (empresa, subscrição, `event_id`, `event_type`, corpo,
+  estado `PENDING` | `DELIVERED` | `FAILED`, tentativas, próxima tentativa, último código HTTP, última duração
+  em ms, último erro curto, criada em, entregue em), índices por (estado, próxima tentativa) e por (subscrição,
+  criada em); migração Flyway com o próximo número livre, sintaxe PostgreSQL. A limpeza aos 30 dias é do WH-06.
+- **Contrato de teste** (`WebhookAfterCommitJpaTest`, com Hibernate e commits reais; `WebhookEventTest` continua a
+  provar os corpos): commit com subscrição interessada → uma entrega `PENDING` por
+  subscrição com o mesmo `event_id` e despacho chamado depois do commit; rollback → zero entregas e nenhum
+  despacho; falha forçada no caminho do webhook → a operação fica confirmada e não sai excepção para quem
+  chamou; sem interessados → zero entregas.
+
 ### 4.3 Entrega
 
 - `POST` com cabeçalhos `X-Multicore-Event`, `X-Multicore-Delivery` (id) e
@@ -96,10 +299,233 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
 - Reenviar manualmente uma entrega `FAILED`.
 - **20 falhas seguidas** desactivam a subscrição e avisam o ADMIN no sino.
 
+#### 4.3.1 Envio, assinatura e cabeçalhos (WH-04)
+
+- **Quem envia**: o `AsyncWebhookDispatcher` (executor próprio, §4.2.2) chama `WebhookSender.send(deliveryId)`, que
+  lê a entrega e a subscrição em transacção própria, faz **uma** tentativa e grava o resultado. O HTTP passa por uma
+  porta injectável `WebhookHttpClient` (testes sem rede; a implementação real usa `java.net.http.HttpClient`).
+- **Pedido**: `POST` para o URL da subscrição com o corpo **exactamente** como está em `webhook_deliveries.body`
+  (bytes UTF-8, nunca reconstruído nem reformatado). Cabeçalhos:
+  - `Content-Type: application/json; charset=utf-8`
+  - `User-Agent: Multicore-Webhooks/1`
+  - `X-Multicore-Event`: o código do evento (`invoice.issued`, ...), igual ao `type` do corpo.
+  - `X-Multicore-Delivery`: o `id` da entrega (`webhook_deliveries.id`, em texto); o mesmo em todas as tentativas e
+    reenvios da mesma entrega, para o receptor deduplicar (o `id` do evento no corpo também não muda).
+  - `X-Multicore-Signature: sha256=<hex>` — HMAC-SHA256 dos bytes do corpo com a chave = o segredo completo da
+    subscrição (`whsec_...`, decifrado com `AttachmentCrypto`, em bytes UTF-8); `<hex>` em minúsculas, 64 caracteres.
+    O segredo em claro só existe em memória durante o cálculo; nunca vai para log, `last_error` nem cabeçalho.
+- **Rede**: timeout total de **10 s** (ligação + resposta); redirecções **não** são seguidas (3xx = falha). Antes de
+  ligar, o URL volta a passar pelo `WebhookUrlValidator` (§4.1.1, DNS outra vez): endereço privado/local ou nome que
+  não resolve → falha sem abrir ligação. O corpo da resposta é ignorado (não se guarda).
+- **Resultado gravado** (uma tentativa):
+  - **2xx** → `DELIVERED`, `delivered_at = agora`, `attempts + 1`, `last_http_status`, `last_duration_ms`,
+    `last_error = null`, `next_attempt_at = null`.
+  - **Falha** (não-2xx, timeout, erro de rede, endereço recusado) → `attempts + 1`, `last_http_status` (ou `null` sem
+    resposta), `last_duration_ms`, `last_error` curto em PT-MZ (≤ 500: "Resposta HTTP 500.", "Tempo de resposta
+    excedido (10 s).", "Erro de rede: <classe>.", "Endereço do webhook recusado."); a entrega **continua `PENDING`**.
+    O agendamento das próximas tentativas e o `FAILED` são do WH-05; o contador de falhas seguidas, do WH-07.
+- **Não envia**: entrega que já não está `PENDING` (ex. `DELIVERED`) ou subscrição **inactiva** → nenhum pedido HTTP e
+  nada muda na entrega. Um erro no envio nunca sai do executor (apanhado e registado em `WARN`, sem segredo nem corpo).
+- **Contrato de teste** (`WebhookDeliveryTest`, cliente HTTP falso): corpo enviado = corpo gravado; cabeçalhos com o
+  tipo, o id da entrega e a assinatura igual ao HMAC-SHA256 calculado à parte (vector conhecido); 2xx → `DELIVERED`
+  com código e duração; 500/timeout/erro de rede → `PENDING` com `attempts = 1` e `last_error`; URL que passou a
+  resolver para endereço privado → nenhum pedido e falha registada; subscrição inactiva ou entrega já entregue →
+  nenhum pedido.
+
+#### 4.3.2 Tentativas e `FAILED` (WH-05)
+
+- **Calendário**: a primeira tentativa é a do despacho logo a seguir ao commit (§4.2.2). Cada falha (§4.3.1) agenda a
+  seguinte a contar do **fim da tentativa que falhou**: depois da 1.ª falha +**1 min**, da 2.ª +**5 min**, da 3.ª
+  +**30 min**, da 4.ª +**2 h**, da 5.ª +**12 h**. A **6.ª falha** (a inicial + 5 novas tentativas) passa a entrega a
+  `FAILED` com `next_attempt_at = null`; o `last_error`, o código e a duração da última tentativa ficam. O calendário
+  vive num só sítio (`WebhookRetryPolicy`, constante, sem configuração) e usa um `java.time.Clock` injectável.
+- **Quem repete**: `WebhookRetryScheduler` (`@Scheduled(fixedDelay)`, intervalo `webhooks.retry.poll-ms`, por omissão
+  30 000; desligável com `webhooks.retry.enabled=false`) procura entregas `PENDING` com `next_attempt_at <= agora` de
+  subscrições **activas**, por `next_attempt_at` crescente, no máximo **50** por volta, e entrega cada id ao
+  `WebhookDispatcher` (o mesmo envio do WH-04). Também apanha entregas que ficaram `PENDING` depois de um reinício (o
+  despacho assíncrono perdeu-se): a primeira tentativa não se perde, só se atrasa.
+- **Sem envios em duplicado**: antes de ligar, a tentativa é **reclamada** numa actualização condicional
+  (`PENDING` e `next_attempt_at <= agora` → `next_attempt_at = agora + 2 min`, um prazo maior que o timeout de 10 s);
+  se outra thread/instância já a reclamou, não há pedido. O resultado da tentativa substitui esse prazo (`DELIVERED` →
+  `null`; falha → próximo do calendário ou `FAILED`). Se o processo morrer a meio, o prazo expira e a tentativa repete
+  (o receptor deduplica por `X-Multicore-Delivery`).
+- **Subscrição inactiva**: as entregas `PENDING` dela não são enviadas nem contadas como falha; ficam à espera e seguem
+  pelo calendário quando a subscrição volta a ficar activa. Desactivar não as passa a `FAILED`.
+- **Timeout** continua o do §4.3.1 (10 s por tentativa); timeout conta como falha igual às outras.
+- `FAILED` é final para o agendador; só o reenvio manual (WH-06) a volta a pôr `PENDING`. O contador de falhas
+  seguidas da subscrição é do WH-07.
+- **Contrato de teste** (`WebhookDeliveryTest`, relógio fixo e cliente HTTP falso): falhas seguidas agendam
+  `next_attempt_at` a +1 min, +5 min, +30 min, +2 h e +12 h do fim de cada tentativa; a 6.ª falha → `FAILED`,
+  `attempts = 6`, `next_attempt_at = null`; sucesso numa repetição → `DELIVERED` sem mais tentativas; o agendador só
+  despacha `PENDING` vencidas de subscrições activas (não as futuras, `DELIVERED`, `FAILED` nem de inactivas) e no
+  máximo 50; uma tentativa já reclamada não volta a ser enviada dentro do prazo e volta a sê-lo depois de ele expirar.
+
+#### 4.3.3 Registo de entregas, reenvio e limpeza (WH-06)
+
+- **Quem**: só o **ADMIN**, na **empresa activa** (mesma regra e mensagem do §4.1.1); subscrição ou entrega de outra
+  empresa → "Subscrição não encontrada." / "Entrega não encontrada." (a política HTTP `403`/`404` é do WH-08).
+- **Registo por subscrição**: `WebhookDeliveryService.listDeliveries(subscriptionId, status, page, size)` devolve
+  `WebhookDeliveryDTO` (record na fronteira, nunca a entidade): `id`, `eventId`, `eventType` (código §4.2),
+  `status`, `attempts`, `lastHttpStatus`, `lastDurationMs`, `lastError`, `nextAttemptAt`, `createdAt`,
+  `deliveredAt`. **Nunca** o corpo nem o segredo (o corpo tem nome/NUIT do cliente e não sai do servidor por esta
+  via). Ordem: mais recentes primeiro (`createdAt` decrescente, depois `id` decrescente). `status` opcional
+  (`PENDING` | `DELIVERED` | `FAILED`; desconhecido → "Estado de entrega desconhecido: X."). Paginação: `page` ≥ 0,
+  `size` por omissão 50, máximo 100 (fora disso → "Tamanho de página inválido (1 a 100)."). Uma linha por entrega
+  com os dados da **última** tentativa (não há tabela de tentativas; `attempts` diz quantas houve).
+- **Reenvio manual**: `WebhookDeliveryService.resend(deliveryId)` só para entregas **`FAILED`**; outro estado →
+  "Só se reenviam entregas falhadas." Subscrição **inactiva** → "Active a subscrição antes de reenviar." O reenvio
+  **reutiliza a mesma entrega** (mesmo `id`, logo o mesmo `X-Multicore-Delivery`, mesmo corpo e `event_id`): passa a
+  `PENDING`, `attempts = 0`, `next_attempt_at = agora` (calendário do §4.3.2 recomeça do zero), mantém o
+  `last_error`/código/duração anteriores até à nova tentativa, e é entregue logo ao `WebhookDispatcher` **depois do
+  commit** (assíncrono; se o despacho se perder, o agendador do WH-05 apanha-a). Auditoria `WEBHOOK_RESEND` com o
+  utilizador, a URL e o id da entrega/evento, nunca o corpo nem o segredo. Devolve o `WebhookDeliveryDTO` já `PENDING`.
+  O efeito do reenvio no contador de falhas seguidas é do WH-07.
+- **Guardado 30 dias**: `WebhookDeliveryCleanupJob` (`@Scheduled(cron)`, `webhooks.retention.cron`, por omissão
+  `0 30 3 * * *`; desligável com `webhooks.retention.enabled=false`; `Clock` injectável) apaga as entregas com
+  `created_at` anterior a **agora − 30 dias**, de qualquer estado e de qualquer empresa (inclui `PENDING` à espera de
+  subscrição inactiva: um evento com mais de 30 dias já não se envia). Apaga em lotes (≤ 500 por instrução) para não
+  prender a tabela; regista em `INFO` só o número apagado. As subscrições nunca são apagadas por este job.
+- **Contrato de teste** (`WebhookDeliveryTest`, relógio fixo e cliente HTTP falso): lista só as entregas da
+  subscrição e da empresa activa, mais recentes primeiro, filtro por estado, sem corpo; não-ADMIN recusado; reenviar
+  `FAILED` → `PENDING` com `attempts = 0`, mesmo id e corpo, despacho chamado e auditoria; reenviar `DELIVERED`/
+  `PENDING` ou com subscrição inactiva → recusa e nada muda; limpeza apaga as de 31 dias e mantém as de 29 dias.
+
+#### 4.3.4 Desactivação após 20 falhas seguidas e aviso (WH-07)
+
+- **O que conta como falha**: uma **entrega** que passa a `FAILED` (esgotou as 6 tentativas do §4.3.2), não cada
+  tentativa falhada. Assim um receptor parado alguns minutos com muitos eventos não desliga a subscrição: só desliga
+  depois de 20 eventos seguidos sem nenhum chegar (cada um já tentado ~15 h). É a interpretação do
+  `consecutive_failures` da V159 ("failed deliveries in a row").
+- **Contador** (`webhook_subscriptions.consecutive_failures`): `+1` quando uma entrega da subscrição passa a
+  `FAILED`; volta a **0** quando qualquer entrega da subscrição fica `DELIVERED` (inclui uma repetição ou um reenvio
+  que acerta). O incremento é uma actualização atómica na base de dados (`consecutive_failures = consecutive_failures
+  + 1`), na mesma transacção que grava o `FAILED`, para envios em paralelo não perderem contagens. O reenvio manual
+  (WH-06) **não** mexe no contador: conta outra vez só se voltar a `FAILED` (+1) ou se for entregue (0).
+- **Desactivação**: quando o contador chega a **20** (≥ 20) e a subscrição está activa, passa a **inactiva**
+  automaticamente com `auto_disabled_at = agora` (coluna nova, `null` enquanto não houver desactivação automática),
+  por actualização condicional (`active = true` e `consecutive_failures >= 20`) para que só uma thread a desactive e
+  avise uma vez. Depois disso vale o §4.3.2: as `PENDING` dela ficam à espera, sem contar falha.
+- **Auditoria**: `WEBHOOK_AUTO_DEACTIVATE` com utilizador `sistema`, a URL e o número de falhas seguidas; nunca o
+  segredo nem corpos.
+- **Aviso ao ADMIN (sino)**: `WebhookSubscriptionService.autoDisabledAlerts()` — só ADMIN, empresa activa (mesma regra
+  do §4.1.1) — devolve `WebhookAlertDTO(subscriptionId, url, consecutiveFailures, disabledAt, message)` das
+  subscrições da empresa com `auto_disabled_at` preenchido e ainda inactivas, mais recentes primeiro, com a mensagem
+  PT-MZ "O webhook <url> foi desactivado após 20 entregas falhadas seguidas. Corrija o receptor e active-o de novo."
+  O endpoint é do WH-08 e a entrada no sino do desktop (que o lê para o ADMIN e leva a Configurações › Integrações) é
+  do WH-UI-01. O `WebhookSubscriptionDTO` passa a trazer também `autoDisabledAt`.
+- **Reactivar** (`activate`, §4.1.1): põe `consecutive_failures = 0` e `auto_disabled_at = null`; o aviso desaparece.
+  Desactivar à mão nunca preenche `auto_disabled_at` (não gera aviso).
+- **Persistência**: migração Flyway com o próximo número livre (`auto_disabled_at TIMESTAMP NULL` em
+  `webhook_subscriptions`), sintaxe PostgreSQL.
+- **Contrato de teste** (`WebhookDeliveryTest`, relógio fixo e cliente HTTP falso): 19 entregas `FAILED` seguidas →
+  activa com contador 19; a 20.ª → inactiva, `auto_disabled_at` preenchido, auditoria e um aviso na lista; uma
+  entrega `DELIVERED` pelo meio repõe o contador a 0; tentativas falhadas que ainda ficam `PENDING` não contam;
+  reactivar limpa contador e aviso; desactivação manual não gera aviso; não-ADMIN recusado ao pedir os avisos;
+  avisos só da empresa activa.
+
+#### 4.3.5 Endpoints internos dos webhooks (WH-08)
+
+- Rotas **internas** (login de utilizador + `X-Company-Id`, nunca `X-Api-Key`), sempre na **empresa activa**, num
+  único `WebhookController` (só HTTP, delega nos Services do §4.1.1/§4.3.3/§4.3.4; DTO record na fronteira, nunca a
+  entidade), sob o mesmo prefixo das chaves de API (§3.1.1):
+
+  | Método e rota | Service | Resposta |
+  |---|---|---|
+  | `GET /api/integrations/webhooks` | `WebhookSubscriptionService.list()` | `200` lista de `WebhookSubscriptionDTO` (sem segredo) |
+  | `POST /api/integrations/webhooks` (`{url, events}`) | `create(...)` | `201` `CreatedWebhookSubscriptionDTO` — a única vez que o segredo sai |
+  | `POST /api/integrations/webhooks/{id}/activate` | `activate(id)` | `200` `WebhookSubscriptionDTO` |
+  | `POST /api/integrations/webhooks/{id}/deactivate` | `deactivate(id)` | `200` `WebhookSubscriptionDTO` |
+  | `GET /api/integrations/webhooks/alerts` | `autoDisabledAlerts()` | `200` lista de `WebhookAlertDTO` (sino do WH-UI-01) |
+  | `GET /api/integrations/webhooks/{id}/deliveries?status=&page=0&size=50` | `WebhookDeliveryService.listDeliveries(...)` | `200` lista de `WebhookDeliveryDTO` (sem corpo nem segredo) |
+  | `POST /api/integrations/webhooks/deliveries/{deliveryId}/resend` | `resend(deliveryId)` | `200` `WebhookDeliveryDTO` já `PENDING` |
+
+- **Só o ADMIN**: qualquer outro perfil → **`403`** pela política HTTP (`ApiRolePolicy`, prefixo
+  `/api/integrations` já ADMIN) **antes** de chegar ao Service; a guarda do Service (§4.1.1) mantém-se como segunda
+  linha. Sem login → `401`. Toda a rota nova fica classificada (RPC-01, `ApiRolePolicyEndpointCoverageHarnessTest`).
+  Uma `X-Api-Key` nestas rotas é recusada como qualquer `/api/**` (API-03).
+- **Erros de regra → `400`** com a mensagem PT-MZ do Service (`BusinessRuleException`, `GlobalExceptionHandler`),
+  incluindo subscrição/entrega **de outra empresa ou inexistente** ("Subscrição não encontrada." /
+  "Entrega não encontrada."): o mesmo tratamento das chaves de API (§3.1.1), para não revelar se o id existe noutra
+  empresa e manter um só contrato na API interna. Corpo inválido ou ausente → `400`; `status`/`size` fora do
+  permitido → `400` com as mensagens do §4.3.3. Nunca há stack trace nem segredo nas respostas de erro.
+- **Empresa activa**: tudo o que o `X-Company-Id` não for a empresa da subscrição/entrega comporta-se como
+  "não encontrada"; a lista e os avisos só trazem dados da empresa activa.
+- **Segredo**: só no corpo do `201` do `POST`; `GET`, activar, desactivar, entregas e avisos nunca o devolvem
+  (nem `secret` nem o valor cifrado).
+- **Contrato de teste** (`WebhookHttpIntegrationTest`, `@SpringBootTest` + MockMvc, perfil `test`, resolução DNS por
+  porta falsa e dispatcher/cliente HTTP falsos — sem rede): ADMIN cria (`201` com `whsec_`), lista sem segredo,
+  desactiva e activa; MANAGER e EMPLOYEE recebem `403` em todas as rotas; URL privada ou sem eventos → `400` com a
+  mensagem; subscrição de outra empresa → `400` "Subscrição não encontrada."; registo de entregas com filtro e `size`
+  101 → `400`; reenvio de `FAILED` → `200` `PENDING` e de `DELIVERED` → `400`; avisos devolvem a subscrição
+  desactivada automaticamente; nenhuma resposta contém o segredo fora do `201`. `ApiRolePolicyEndpointCoverageHarnessTest`
+  verde com as rotas novas.
+
 ### 4.4 Desktop
 
 - Configurações › Integrações: chaves de API (criar com permissões, mostrar uma vez, revogar, último
   uso) e webhooks (URL, eventos, segredo mostrado uma vez, registo de entregas, reenviar).
+
+#### 4.4.1 Ecrã de chaves de API (API-UI-01)
+
+- Configurações › separador **"Integrações"** (último, ícone `fas-plug`), com a secção "Chaves de API"; os
+  webhooks (WH-UI-01, GOAL-014) entram depois no mesmo separador. Tudo pela API interna de §3.1.1
+  (`/api/integrations/api-keys`), sempre na empresa activa; o desktop nunca gera nem guarda segredos.
+- Tabela: nome, identificação `mk_live_XXXXXXXX...`, permissões (rótulos PT-MZ: "Ler catálogo",
+  "Ler encomendas", "Criar encomendas"), criada em / por, último uso ("Nunca usada" quando vazio) e estado
+  ("Activa" ou "Revogada em dd/MM/yyyy HH:mm por X"). Datas em `dd/MM/yyyy HH:mm`. Chaves revogadas continuam
+  visíveis (histórico). Botão "Actualizar" relê a lista.
+- **"Nova chave"**: diálogo com nome (obrigatório) e uma caixa por permissão (pelo menos uma); validação
+  local com as mesmas mensagens do backend, mas o backend decide (`400` mostrado tal como vem).
+- **Mostrar uma vez**: depois do `201`, diálogo modal com o segredo completo num campo só de leitura,
+  botão "Copiar" (área de transferência) e o aviso "Esta chave não volta a ser mostrada. Guarde-a agora.";
+  ao fechar, o segredo é descartado da memória do ecrã e a tabela recarrega sem ele.
+- **"Revogar"**: só com uma chave **activa** seleccionada; pede confirmação ("A chave X deixa de funcionar
+  imediatamente. Revogar?") e recarrega a tabela.
+- Só o **ADMIN** gere chaves: para outro perfil, "Nova chave" e "Revogar" ficam desactivados e a lista não é
+  pedida (mostra "Só o administrador gere as chaves de API."); o backend continua a ser quem decide (`403`).
+- UI uniforme: tokens do tema e `UIHelper` (ícones `UIHelper.icon`, nunca emojis), como os outros
+  separadores de Configurações.
+
+#### 4.4.2 Ecrã de webhooks (WH-UI-01)
+
+- **Onde**: no mesmo separador "Integrações" (§4.4.1), uma segunda secção **"Webhooks"** por baixo de "Chaves de API"
+  (`IntegrationsPanel` passa a ter as duas: `ApiKeysPanel` e `WebhooksPanel`; `refresh()` relê as duas). Tudo pela
+  API interna do §4.3.5 (`/api/integrations/webhooks`) por um cliente próprio `WebhookApiClient` (desktop), sempre na
+  empresa activa; o desktop nunca gera, guarda nem regista segredos; usa só os DTO de `contracts`.
+- **Tabela de subscrições**: URL, eventos (rótulos PT-MZ separados por vírgula: `invoice.issued` → "Factura emitida",
+  `credit_note.issued` → "Nota de crédito emitida", `order.status_changed` → "Estado da encomenda",
+  `stock.availability_changed` → "Disponibilidade de stock"), falhas seguidas, criada em / por e estado:
+  "Activa", "Inactiva" ou "Desactivada automaticamente em dd/MM/yyyy HH:mm" (quando `autoDisabledAt` vem preenchido).
+  Datas em `dd/MM/yyyy HH:mm`. Botão "Actualizar" relê a lista.
+- **"Novo webhook"**: diálogo com URL (obrigatória) e uma caixa por evento, com os rótulos acima (pelo menos uma);
+  validação local com as mensagens do backend ("Indique o URL do webhook." / "Escolha pelo menos um evento."), mas
+  quem decide é o backend (`400` — URL privada, http em prod, … — mostrado tal como vem). Envia os códigos de evento.
+- **Mostrar uma vez**: depois do `201`, diálogo modal com o segredo `whsec_` num campo só de leitura, botão "Copiar" e
+  o aviso "Este segredo não volta a ser mostrado. Guarde-o agora para validar a assinatura X-Multicore-Signature.";
+  ao fechar, o segredo é descartado e a tabela recarrega sem ele (mesmo padrão do `ApiKeySecretDialog`, reutilizado
+  ou generalizado — nunca duplicado).
+- **"Activar" / "Desactivar"**: um botão que muda de rótulo pela subscrição seleccionada (activa → "Desactivar", com
+  confirmação "O webhook X deixa de receber avisos. Desactivar?"; inactiva → "Activar", sem confirmação). Sem
+  selecção, desactivado. Recarrega a tabela depois.
+- **Registo de entregas**: com uma subscrição seleccionada, uma segunda tabela (abaixo) mostra as entregas dela
+  (`/{id}/deliveries`, 50 mais recentes): evento (rótulo PT-MZ), estado PT-MZ ("Pendente" / "Entregue" / "Falhada"),
+  tentativas, último código HTTP ("—" quando não há), duração em ms, último erro, próxima tentativa, criada em e
+  entregue em. Um filtro de estado ("Todos", "Pendente", "Entregue", "Falhada") relê a lista com `status`.
+- **"Reenviar"**: só com uma entrega **`FAILED`** seleccionada (para as outras fica desactivado); pede confirmação
+  ("A entrega X volta a ser enviada. Reenviar?"), chama `/deliveries/{deliveryId}/resend` e relê o registo.
+- **Sino**: o ADMIN vê no sino uma notificação por cada aviso de `/alerts` (tipo "Webhook", texto PT-MZ do backend,
+  quando = `disabledAt`, prioridade alta) que abre Configurações (`config`) — novo fornecedor do `NotificationFeed`
+  como os outros (`NotificationWebhookAlertProvider`); um erro do pedido nunca parte o sino; outro perfil → sem pedido.
+- **Só o ADMIN**: para outro perfil, "Novo webhook", "Activar/Desactivar" e "Reenviar" ficam desactivados, a lista
+  não é pedida e mostra "Só o administrador gere os webhooks."; o backend continua a decidir (`403`).
+- UI uniforme como §4.4.1: tokens do tema, `UIHelper` (ícones `fas-satellite-dish` na secção, `fas-plus`,
+  `fas-sync-alt`, `fas-power-off`, `fas-redo`, `fas-copy`; nunca emojis), diálogos com o mesmo estilo dos das chaves.
+- **Contrato de teste** (`IntegrationsUiHarnessTest`, métodos `whUi01_*`, sem rede — cliente falso): o separador
+  Integrações tem a secção Webhooks; a tabela mostra os rótulos PT-MZ e o estado de desactivação automática;
+  validação local do "Novo webhook"; segredo mostrado uma vez e descartado; Activar/Desactivar muda pela selecção;
+  "Reenviar" só para `FAILED`; o filtro passa o `status`; não-ADMIN não pede a lista e tem os botões desactivados;
+  o sino traz o aviso só para o ADMIN e leva a `config`; ícones por `UIHelper.icon` sem emojis.
+  `DesktopThinContextTest` verde.
 
 ## 5. Fora de âmbito
 

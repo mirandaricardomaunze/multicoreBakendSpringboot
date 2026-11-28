@@ -3,9 +3,12 @@ package mz.multicore.erp.modules.comercial.model;
 import mz.multicore.erp.architecture.BaseEntity;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
+import mz.multicore.erp.modules.comercial.service.OrderReservationWatcher;
+import mz.multicore.erp.modules.comercial.service.OrderStatusChangePublisher;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 
@@ -14,10 +17,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Entity
 @Table(name = "customer_orders", uniqueConstraints = @UniqueConstraint(
         name = "uk_customer_orders_company_number", columnNames = {"company_id", "order_number"}))
+@EntityListeners({OrderStatusChangePublisher.class, OrderReservationWatcher.class})
 @Getter
 @Setter
 public class Order extends BaseEntity {
@@ -62,6 +67,15 @@ public class Order extends BaseEntity {
     @Column(name = "status", nullable = false)
     /** Nome de um {@link OrderStatus}; texto na base, comparado sempre através do enum. */
     private String status = OrderStatus.PENDING.name();
+
+    /**
+     * Estado tal como está gravado na base (lido ou acabado de gravar) — serve só para saber, no fim do flush, se o
+     * estado mudou de facto e avisar com {@code OrderStatusChangedEvent} (WH-02). Não é coluna.
+     */
+    @Transient
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private String persistedStatus;
 
     /**
      * Via da encomenda — decide aprovação, formato do documento e se entra na separação.
@@ -147,8 +161,48 @@ public class Order extends BaseEntity {
     @Column(name = "reservation_active", nullable = false)
     private boolean reservationActive;
 
+    // ─── Origem externa (docs/API_PUBLICA_WEBHOOKS_SPEC.md §3.4) ──────────────
+    /** Por onde entrou a encomenda; as do desktop ficam {@link OrderOrigin#DESKTOP}. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origin", nullable = false, length = 20,
+            columnDefinition = "varchar(20) default 'DESKTOP' not null")
+    private OrderOrigin origin = OrderOrigin.DESKTOP;
+
+    /** Nome da chave de API que a criou (ex.: "Loja online"); nulo nas do desktop. */
+    @Column(name = "origin_name", length = 120)
+    private String originName;
+
+    /** Referência do sistema externo (número da encomenda na loja online); nulo nas do desktop. */
+    @Column(name = "external_reference", length = 80)
+    private String externalReference;
+
+    /** Telefone de contacto do Consumidor Final que encomendou por um sistema externo. */
+    @Column(name = "contact_phone", length = 40)
+    private String contactPhone;
+
+    /** Loja online (docs/LOJA_ONLINE_SPEC.md §3.5): "Levantamento — {loja}" ou "Entrega — {zona}"; nulo nas outras. */
+    @Column(name = "fulfilment_label", length = 120)
+    private String fulfilmentLabel;
+
+    /** Morada do checkout da loja online, só na entrega ao domicílio. */
+    @Column(name = "delivery_address", length = 255)
+    private String deliveryAddress;
+
+    /** SHA-256 do corpo que criou a encomenda pela API (§3.4.2): repetição igual → 200, diferente → 409. */
+    @Column(name = "request_fingerprint", length = 64)
+    private String requestFingerprint;
+
     @Version
     private long version;
+
+    /** Liberta o stock que a encomenda tinha prometido; nada muda se não houver reserva activa. */
+    public void releaseReservation() {
+        if (!reservationActive) {
+            return;
+        }
+        reservationActive = false;
+        lines.forEach(line -> line.setReservedQuantity(BigDecimal.ZERO));
+    }
 
     public void addLine(OrderLine line) {
         lines.add(line);
@@ -186,5 +240,23 @@ public class Order extends BaseEntity {
             return false;
         }
         return !OrderStatus.isClosed(status);
+    }
+
+    /**
+     * Estado anterior quando o estado gravado mudou desde a última leitura/gravação, e passa a lembrar o actual;
+     * vazio quando não mudou ou quando a encomenda acabou de ser criada (criar não é mudar de estado).
+     */
+    public Optional<String> takePersistedStatusChange() {
+        String previous = persistedStatus;
+        persistedStatus = status;
+        if (previous == null || previous.equals(status)) {
+            return Optional.empty();
+        }
+        return Optional.of(previous);
+    }
+
+    /** Lembra o estado tal como ficou gravado (depois de ler ou de criar a encomenda). */
+    public void rememberPersistedStatus() {
+        persistedStatus = status;
     }
 }

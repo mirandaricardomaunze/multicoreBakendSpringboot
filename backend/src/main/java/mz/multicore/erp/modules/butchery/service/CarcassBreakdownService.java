@@ -194,7 +194,7 @@ public class CarcassBreakdownService {
         // The carcass leaves stock at its book value and the cuts enter at the cost shared among them.
         eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.InventoryValueChangedEvent(warehouse.getCompany().getId(),
                 mz.multicore.erp.modules.accounting.model.JournalSource.CARCASS_BREAKDOWN, breakdown.getId(), breakdown.getNumber(),
-                java.time.LocalDate.now(), carcassBookValue, inputCost, null));
+                java.time.LocalDate.now(), carcassBookValue, inputCost, null, null, warehouse.getId()));
         CarcassBreakdownDTO dto = toDto(breakdown);
         auditLogService.logCurrent("CARCASS_BREAKDOWN_POST", "Desmancha " + breakdown.getNumber() + ": "
                 + DisplayNumbers.qty(request.inputKg()) + " kg de " + source.getName() + " deram "
@@ -226,7 +226,8 @@ public class CarcassBreakdownService {
         eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.InventoryValueChangedEvent(
                 breakdown.getCompany().getId(), mz.multicore.erp.modules.accounting.model.JournalSource.CARCASS_BREAKDOWN_CANCEL,
                 breakdown.getId(), breakdown.getNumber(), java.time.LocalDate.now(), breakdown.getInputCost(),
-                nz(breakdown.getSourceProduct().getPurchasePrice()).multiply(breakdown.getInputKg()).setScale(2, RoundingMode.HALF_UP), null));
+                nz(breakdown.getSourceProduct().getPurchasePrice()).multiply(breakdown.getInputKg()).setScale(2, RoundingMode.HALF_UP),
+                null, null, breakdown.getWarehouse().getId()));
         breakdown.setStatus(CarcassBreakdownStatus.CANCELLED);
         breakdown.setCancellationReason(request.reason().trim());
         breakdown.setCancelledAt(LocalDateTime.now());

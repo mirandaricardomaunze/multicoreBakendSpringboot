@@ -26,6 +26,7 @@ public class StockPanel extends JPanel {
     final ProductCategoryApiClient productCategoryApiClient;
     final StockWasteApiClient stockWasteApiClient;
     final InventoryPhysicalCountingApiClient physicalCountingApiClient;
+    final OnlineShopApiClient onlineShopApiClient; // "Publicar na loja online" na ficha do artigo (LO-UI-02)
     private final StockTransferActions transferActions;
     private final StockProductActions productActions;
     private final StockInventoryCountActions inventoryCountActions;
@@ -81,14 +82,15 @@ public class StockPanel extends JPanel {
                       ProductCategoryApiClient productCategoryApiClient, PrintApiClient printApiClient,
                       StockWasteApiClient stockWasteApiClient) {
         this(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient,
-                productCategoryApiClient, printApiClient, stockWasteApiClient, null);
+                productCategoryApiClient, printApiClient, stockWasteApiClient, null, null);
     }
 
     public StockPanel(InventoryApiClient inventoryApiClient, ComercialApiClient comercialApiClient,
                       StockTransferApiClient stockTransferApiClient, InventoryCountApiClient inventoryCountApiClient,
                       ProductCategoryApiClient productCategoryApiClient, PrintApiClient printApiClient,
-                      StockWasteApiClient stockWasteApiClient, InventoryPhysicalCountingApiClient physicalCountingApiClient) {
-        this.inventoryApiClient = inventoryApiClient; this.printApiClient = printApiClient;
+                      StockWasteApiClient stockWasteApiClient, InventoryPhysicalCountingApiClient physicalCountingApiClient,
+                      OnlineShopApiClient onlineShopApiClient) {
+        this.inventoryApiClient = inventoryApiClient; this.printApiClient = printApiClient; this.onlineShopApiClient = onlineShopApiClient;
         this.comercialApiClient = comercialApiClient; this.stockTransferApiClient = stockTransferApiClient;
         this.inventoryCountApiClient = inventoryCountApiClient; this.productCategoryApiClient = productCategoryApiClient;
         this.stockWasteApiClient = stockWasteApiClient; this.physicalCountingApiClient = physicalCountingApiClient;

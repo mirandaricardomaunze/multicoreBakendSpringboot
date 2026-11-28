@@ -139,6 +139,7 @@ public class OperationsPostingHandler {
         entry.addLine(JournalLine.credit(postingHelper.account(event.companyId(), PgcNirfChart.VARIACAO_PRODUCAO),
                 cip, "Apuramento da variação de produção"));
 
+        journalService.assignWarehouseCostCenter(entry, event.companyId(), event.warehouseId());
         journalService.save(entry, event.companyId());
     }
 

@@ -3,6 +3,8 @@ package mz.multicore.erp.modules.comercial.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuide;
 import mz.multicore.erp.modules.comercial.model.Order;
+import mz.multicore.erp.modules.comercial.model.OrderOrigin;
+import mz.multicore.erp.modules.comercial.model.OrderStatus;
 import mz.multicore.erp.modules.comercial.model.Quotation;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
@@ -10,6 +12,8 @@ import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,6 +63,33 @@ public class OrderLookup {
     /** Primeira encomenda da empresa ligada à factura indicada. */
     public Optional<Order> findOrderByInvoice(Long companyId, Long invoiceId) {
         return orderRepository.findFirstByCompanyIdAndInvoiceId(companyId, invoiceId);
+    }
+
+    /**
+     * Encomendas da empresa com a origem indicada, criadas antes de {@code createdBefore} e ainda canceláveis (antes
+     * de guia, transferência ou fatura) — base do cancelamento automático da loja online (LOJA_ONLINE_SPEC §3.4).
+     */
+    public List<Order> listCancellableByOriginCreatedBefore(Long companyId, OrderOrigin origin,
+                                                            LocalDateTime createdBefore) {
+        List<String> cancellable = Arrays.stream(OrderStatus.values())
+                .filter(status -> OrderStatus.isCancellable(status.name()))
+                .map(Enum::name)
+                .toList();
+        return orderRepository.findByCompanyIdAndOriginAndStatusInAndCreatedAtBefore(companyId, origin, cancellable,
+                createdBefore);
+    }
+
+    /**
+     * Encomendas da empresa com a origem indicada ainda por facturar e não canceladas, da mais recente para a mais
+     * antiga — base do alerta das encomendas da loja online no sino (LOJA_ONLINE_SPEC §3.5).
+     */
+    public List<Order> listUnbilledByOrigin(Long companyId, OrderOrigin origin) {
+        List<String> done = Arrays.stream(OrderStatus.values())
+                .filter(status -> OrderStatus.isBilled(status.name()) || status == OrderStatus.CANCELLED)
+                .map(Enum::name)
+                .toList();
+        return orderRepository.findByCompanyIdAndOriginAndStatusNotInAndInvoiceIdIsNullOrderByCreatedAtDesc(companyId,
+                origin, done);
     }
 
     // ---- Cotações ----

@@ -65,6 +65,19 @@ public final class ThermalReceiptRenderer {
         doc.add(paragraph);
     }
 
+    /**
+     * Rodapé personalizado do modelo, linha a linha; sem rodapé próprio usa {@code fallback}
+     * (nada quando também é {@code null}).
+     */
+    public static void footer(Document doc, String footer, String fallback) {
+        String message = notBlank(footer) ? footer : fallback;
+        if (!notBlank(message)) return;
+        doc.add(PdfDocumentBuilder.spacer(6f));
+        for (String line : message.split("\\r?\\n")) {
+            centered(doc, line, PdfTheme.smallFont());
+        }
+    }
+
     public static void centered(Document doc, String text, Font font) {
         aligned(doc, text, font, Element.ALIGN_CENTER);
     }

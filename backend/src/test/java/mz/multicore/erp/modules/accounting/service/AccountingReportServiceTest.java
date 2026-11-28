@@ -184,7 +184,7 @@ class AccountingReportServiceTest {
                 venda(marco, "LC-2026/2", "232.00", "200.00", "32.00")));
 
         LedgerDTO ledger = service.getLedger(PgcNirfChart.CLIENTES,
-                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), null);
 
         assertEquals(new BigDecimal("500.00"), ledger.openingBalance(),
                 "o extracto de Março tem de começar com o que o cliente já devia");
@@ -199,7 +199,7 @@ class AccountingReportServiceTest {
                 venda(dia, "LC-2026/1", "232.00", "200.00", "32.00"),
                 recebimento(dia, "LC-2026/2", "100.00")));
 
-        LedgerDTO ledger = service.getLedger(PgcNirfChart.CLIENTES, dia, dia);
+        LedgerDTO ledger = service.getLedger(PgcNirfChart.CLIENTES, dia, dia, null);
 
         assertEquals(2, ledger.movements().size());
         assertEquals(new BigDecimal("232.00"), ledger.movements().get(0).runningBalance());
@@ -214,7 +214,7 @@ class AccountingReportServiceTest {
         LocalDate dia = LocalDate.of(2026, 8, 10);
         stubEntries(dia, dia, List.of(venda(dia, "LC-2026/1", "232.00", "200.00", "32.00")));
 
-        LedgerDTO ledger = service.getLedger(PgcNirfChart.VENDAS, dia, dia);
+        LedgerDTO ledger = service.getLedger(PgcNirfChart.VENDAS, dia, dia, null);
 
         assertEquals(1, ledger.movements().size());
         assertEquals(new BigDecimal("200.00"), ledger.movements().get(0).credit());

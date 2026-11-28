@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.comercial.service;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
@@ -54,12 +53,23 @@ final class OrderStockAvailability {
             BigDecimal reserved = zeroIfNull(orderLineRepository.sumActiveReservations(productId, warehouse.getId()));
             BigDecimal available = physical.subtract(reserved).add(ownReservation.getOrDefault(productId, BigDecimal.ZERO));
             if (available.compareTo(entry.getValue()) < 0) {
-                throw new BusinessRuleException("Stock disponível insuficiente para " + products.get(productId).getName()
+                throw new InsufficientStockException("Stock disponível insuficiente para " + products.get(productId).getName()
                         + " no armazém " + warehouse.getName() + ": precisa de " + DisplayNumbers.qty(entry.getValue())
                         + ", livre " + DisplayNumbers.qty(available.max(BigDecimal.ZERO))
                         + ". O restante está reservado para pedidos de separação.");
             }
         }
+    }
+
+    /**
+     * Confirma o stock livre de todas as linhas no armazém da encomenda (somado por artigo) e reserva-o:
+     * cada linha fica com a sua quantidade reservada e a reserva activa. Pedidos de separação e encomendas da API.
+     */
+    static void requireAndReserve(Order order, InventoryService inventoryService, OrderLineRepository orderLineRepository) {
+        require(order, order.getWarehouse(), order.getLines().stream()
+                .map(l -> new Outgoing(l.getProduct(), l.getQuantity())).toList(), inventoryService, orderLineRepository);
+        order.getLines().forEach(line -> line.setReservedQuantity(line.getQuantity()));
+        order.setReservationActive(true);
     }
 
     private static BigDecimal zeroIfNull(BigDecimal value) {

@@ -91,7 +91,8 @@ public class DebitNoteLifecycleService {
         eventPublisher.publishEvent(new DebitNoteApprovedEvent(
                 saved.getCompany().getId(), saved.getId(), saved.getNoteNumber(),
                 saved.getIssueDate().toLocalDate(), saved.getTotalBeforeTax(),
-                saved.getTaxAmount(), saved.getTotalAmount()));
+                saved.getTaxAmount(), saved.getTotalAmount(),
+                CommercialNoteRules.warehouseIdOf(null, saved.getInvoice())));
         auditLogService.logCurrent("DEBIT_NOTE_APPROVE",
                 "Nota de débito " + saved.getNoteNumber() + " aprovada.");
         return queryService.toDTO(saved);

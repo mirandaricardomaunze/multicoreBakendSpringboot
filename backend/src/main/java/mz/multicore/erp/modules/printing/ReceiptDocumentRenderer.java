@@ -12,6 +12,9 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.SalesChannel;
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
+import mz.multicore.erp.modules.documents.model.DocumentType;
+import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import mz.multicore.erp.modules.pos.model.PaymentEntry;
 import mz.multicore.erp.modules.pos.model.PaymentMethod;
 import org.springframework.stereotype.Component;
@@ -27,14 +30,29 @@ public class ReceiptDocumentRenderer {
     static final float[] LINE_COLUMNS = {55f, 45f};
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private final DocumentConfigService documentConfigService;
 
+    /** {@code documentConfigService} nulo (testes sem Spring) imprime com o modelo por omissão. */
+    public ReceiptDocumentRenderer(DocumentConfigService documentConfigService) {
+        this.documentConfigService = documentConfigService;
+    }
+
+    /** Usa o modelo POS actual da empresa (logótipo, notas e rodapé). */
     public byte[] renderDocument(Invoice invoice, DocumentColumnsDTO cols, List<PaymentEntry> entries) {
+        return renderDocument(invoice, cols, entries, documentConfigService == null ? null
+                : documentConfigService.getTemplate(invoice.getCompany().getId(), DocumentType.POS_RECEIPT));
+    }
+
+    /** Talão POS com logótipo, notas e rodapé do modelo; sem cor nem dados bancários (SPEC §3.3). */
+    public byte[] renderDocument(Invoice invoice, DocumentColumnsDTO cols, List<PaymentEntry> entries,
+                                 DocumentTemplateDTO template) {
         return PdfDocumentBuilder.buildReceipt(doc -> {
             renderHeader(doc, invoice);
             renderLines(doc, invoice, cols);
             renderTotals(doc, invoice);
             renderPayments(doc, entries);
-            renderFooter(doc, cols);
+            DocumentTemplateBlocks.thermalNotes(doc, template);
+            ThermalReceiptRenderer.footer(doc, cols.footer(), "Obrigado pela sua preferência!");
         });
     }
 
@@ -44,7 +62,8 @@ public class ReceiptDocumentRenderer {
         addCentered(doc, "1.ª VIA — ORIGINAL (CLIENTE)", PdfTheme.smallFont());
         addCentered(doc, invoice.getInvoiceNumber(), PdfTheme.bodyFont());
         addCentered(doc, invoice.getCreatedAt() != null ? invoice.getCreatedAt().format(DATE_FMT) : "", PdfTheme.smallFont());
-        addCentered(doc, "Cliente: " + buyerName(invoice), PdfTheme.smallFont());
+        addCentered(doc, "Cliente: " + FiscalElements.buyerName(invoice.getCustomerName(), invoice.getClient()), PdfTheme.smallFont());
+        addCentered(doc, "NUIT Cliente: " + FiscalElements.buyerTaxId(invoice.getClient()), PdfTheme.smallFont());
         addCentered(doc, "Operador: " + (invoice.getCreatedBy() != null ? invoice.getCreatedBy() : "—"), PdfTheme.smallFont());
         doc.add(PdfDocumentBuilder.spacer(4f));
     }
@@ -93,6 +112,7 @@ public class ReceiptDocumentRenderer {
     private void renderTotals(Document doc, Invoice invoice) {
         addDottedLine(doc);
         addRight(doc, "Subtotal: " + MoneyFormat.format(invoice.getTotalBeforeTax()), PdfTheme.bodyFont());
+        FiscalElements.thermalVatByRate(doc, FiscalElements.invoiceBreakdowns(invoice.getLines()));
         addRight(doc, "IVA:      " + MoneyFormat.format(invoice.getTaxAmount()), PdfTheme.bodyFont());
         addRight(doc, "TOTAL:    " + MoneyFormat.format(invoice.getTotalAmount()), PdfTheme.boldFont());
     }
@@ -130,11 +150,6 @@ public class ReceiptDocumentRenderer {
         }
     }
 
-    private String buyerName(Invoice invoice) {
-        if (invoice.getCustomerName() != null && !invoice.getCustomerName().isBlank()) return invoice.getCustomerName();
-        return invoice.getClient() != null ? invoice.getClient().getName() : "—";
-    }
-
     private String methodLabel(PaymentMethod method) {
         if (method == null) return "Pago";
         return switch (method) {
@@ -146,14 +161,6 @@ public class ReceiptDocumentRenderer {
             case CREDIT -> "Fiado";
             case STORE_CREDIT -> "Vale de Compras";
         };
-    }
-
-    private void renderFooter(Document doc, DocumentColumnsDTO cols) {
-        doc.add(PdfDocumentBuilder.spacer(6f));
-        String message = (cols.footer() != null && !cols.footer().isBlank()) ? cols.footer() : "Obrigado pela sua preferência!";
-        for (String line : message.split("\\r?\\n")) {
-            addCentered(doc, line, PdfTheme.smallFont());
-        }
     }
 
     private void addCentered(Document doc, String text, Font font) {

@@ -41,7 +41,7 @@ public class LandedCostPostingService {
         entry.setSourceDocumentId(event.documentId());
         entry.setSourceDocumentNumber(event.documentNumber());
         debit(entry, companyId, PgcNirfChart.MERCADORIAS, event.stockAmount(), "Custos de importação no stock");
-        debit(entry, companyId, PgcNirfChart.CMVMC, event.soldAmount(), "Custos de importação da parte já vendida");
+        addSoldCost(entry, event);
         debit(entry, companyId, PgcNirfChart.IVA_DEDUTIVEL, event.vatAmount(), "IVA dedutível da importação");
         for (LandedCostConfirmedEvent.Payable payable : event.payables()) {
             BigDecimal amount = safe(payable.amount());
@@ -53,9 +53,30 @@ public class LandedCostPostingService {
         journalService.save(entry, companyId);
     }
 
-    private void debit(JournalEntry entry, Long companyId, String accountCode, BigDecimal amount, String description) {
-        if (safe(amount).signum() > 0) {
-            entry.addLine(JournalLine.debit(postingHelper.account(companyId, accountCode), amount, description));
+    /**
+     * Parte já vendida a débito de 6101 (CC-05): uma partida por armazém das compras, no centro desse armazém; sem
+     * repartição, uma só partida que a gravação põe no centro por omissão.
+     */
+    private void addSoldCost(JournalEntry entry, LandedCostConfirmedEvent event) {
+        String description = "Custos de importação da parte já vendida";
+        if (event.soldByWarehouse().isEmpty()) {
+            debit(entry, event.companyId(), PgcNirfChart.CMVMC, event.soldAmount(), description);
+            return;
         }
+        for (LandedCostConfirmedEvent.WarehouseShare share : event.soldByWarehouse()) {
+            JournalLine line = debit(entry, event.companyId(), PgcNirfChart.CMVMC, share.amount(), description);
+            if (line != null) {
+                line.setCostCenter(journalService.costCenterOfWarehouse(event.companyId(), share.warehouseId()));
+            }
+        }
+    }
+
+    private JournalLine debit(JournalEntry entry, Long companyId, String accountCode, BigDecimal amount, String description) {
+        if (safe(amount).signum() <= 0) {
+            return null;
+        }
+        JournalLine line = JournalLine.debit(postingHelper.account(companyId, accountCode), amount, description);
+        entry.addLine(line);
+        return line;
     }
 }

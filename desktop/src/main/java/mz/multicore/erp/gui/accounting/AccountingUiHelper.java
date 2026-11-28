@@ -29,7 +29,7 @@ public final class AccountingUiHelper {
         };
     }
 
-    public static JTable styledTable(DefaultTableModel model, boolean disablePagination) {
+    public static JTable styledTable(javax.swing.table.TableModel model, boolean disablePagination) {
         JTable table = new JTable(model);
         if (disablePagination) {
             table.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);

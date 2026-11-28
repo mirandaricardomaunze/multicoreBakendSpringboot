@@ -168,7 +168,7 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.BulkStockApiClient bulkStockApiClient,
             mz.multicore.erp.desktop.client.ProjectsApiClient projectsApiClient,
             mz.multicore.erp.desktop.client.SectorApiClients sectorApiClients,
-            mz.multicore.erp.desktop.client.DataImportApiClient dataImportApiClient, mz.multicore.erp.desktop.client.ExchangeRateApiClient exchangeRateApiClient) {
+            mz.multicore.erp.desktop.client.DataImportApiClient dataImportApiClient, mz.multicore.erp.desktop.client.ExchangeRateApiClient exchangeRateApiClient, mz.multicore.erp.desktop.client.ApiKeyApiClient apiKeyApiClient, mz.multicore.erp.desktop.client.WebhookApiClient webhookApiClient, mz.multicore.erp.desktop.client.OnlineShopApiClient onlineShopApiClient) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
         this.mySubscriptionApiClient = mySubscriptionApiClient;
@@ -204,7 +204,7 @@ public class MainFrame extends JFrame {
             sellerDashboardPanel = sellerSession
                     ? new SellerDashboardPanel(comercialApiClient, posApiClient, this::handleSellerDashboardAction)
                     : null;
-            stockPanel = sellerSession ? null : new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient, printApiClient, stockWasteApiClient, inventoryPhysicalCountingApiClient);
+            stockPanel = sellerSession ? null : new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient, printApiClient, stockWasteApiClient, inventoryPhysicalCountingApiClient, onlineShopApiClient);
             comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient, printApiClient,
                     productionApiClient, fleetApiClient,
                     () -> {
@@ -214,11 +214,11 @@ public class MainFrame extends JFrame {
                         if (stockPanel != null) stockPanel.showWarehouseTransfers();
                     });
             financeiroPanel = sellerSession ? null : new FinanceiroPanel(financeApiClient, comercialApiClient, bankReconciliationApiClient, cashFlowForecastApiClient);
-            hrPanel         = sellerSession ? null : new HRPanel(hrApiClient, printApiClient);
+            hrPanel         = sellerSession ? null : new HRPanel(hrApiClient, printApiClient, accountingApiClient);
             crmPanel        = new CRMPanel(crmApiClient, comercialApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient, printApiClient, creditRiskApiClient, accountStatementApiClient);
             fiscalPanel     = sellerSession ? null : new FiscalPanel(fiscalApiClient);
-            accountingPanel = sellerSession ? null : new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient);
+            accountingPanel = sellerSession ? null : new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient, printApiClient);
             assetsPanel     = sellerSession ? null : new AssetsPanel(assetApiClient, printApiClient);
             manufacturingPanel = sellerSession ? null : new ManufacturingPanel(productionApiClient, comercialApiClient, inventoryApiClient);
             fleetPanel      = sellerSession ? null : new FleetPanel(fleetApiClient);
@@ -229,12 +229,12 @@ public class MainFrame extends JFrame {
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient,
                     promotionApiClient, scaleBarcodeParser, printApiClient);
             comprasPanel    = sellerSession ? null : new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient, exchangeRateApiClient);
-            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient, activityApiClient, dataImportApiClient, exchangeRateApiClient);
+            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient, activityApiClient, dataImportApiClient, exchangeRateApiClient, accountingApiClient, apiKeyApiClient, webhookApiClient, onlineShopApiClient);
             performancePanel = sellerSession ? null : new PerformancePanel(performanceApiClient, desktopSessionStore);
             forensicAuditPanel = sellerSession ? null : new ForensicAuditPanel(forensicAuditApiClient);
             aiAssistantPanel = sellerSession ? null : new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);
             notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient,
-                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient, stockTransferApiClient, qualityApiClient);
+                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient, stockTransferApiClient, qualityApiClient).withBudgetAlerts(accountingApiClient).withWebhookAlerts(webhookApiClient).withOnlineShopOrders(onlineShopApiClient);
             notificationReadStore = new NotificationReadStore();
             notificationsPanel = new NotificationsPanel(notificationFeed, notificationReadStore,
                     this::navigateFromNotification, this::updateNotificationBadge);

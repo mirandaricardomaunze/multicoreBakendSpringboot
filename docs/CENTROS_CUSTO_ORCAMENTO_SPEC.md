@@ -29,33 +29,78 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
   armazém ligado (só `WAREHOUSE`), `active`.
 - Criar um armazém cria o seu centro (`code` = código do armazém); armazéns existentes recebem centro
   pela migração. Centro de armazém não se edita à mão: acompanha o nome e o estado do armazém.
+  Se o número do armazém falta ou já está ocupado na empresa, o código é `ARM-<id do armazém>`; o código
+  não muda depois (só nome e estado acompanham). Desactivar o armazém cujo centro era o centro por
+  omissão devolve o "por omissão" ao `ADM`.
 - Cada empresa recebe um centro manual **`ADM` — Administração**, que é o **centro por omissão**
-  (alterável nas Configurações para outro centro activo).
+  (alterável nas Configurações para outro centro activo). Há sempre um e só um por empresa: o centro
+  por omissão não se desactiva nem se apaga sem antes escolher outro; empresa nova recebe o `ADM` ao
+  primeiro uso, empresas existentes pela migração.
 - Centros manuais: criar, renomear, desactivar. Não se apaga um centro com lançamentos.
 - Centro inactivo não aceita lançamentos novos.
 - Gerir centros: **ADMIN** e **MANAGER**. Consultar: quem vê a contabilidade.
+  Concretização (CC-09): `/api/accounting/cost-centers` — `GET` lista, `POST` cria, `PUT /{id}` altera,
+  `PUT /{id}/default` torna-o o centro por omissão, `DELETE /{id}` apaga; relatório em
+  `GET /api/accounting/cost-center-result?from&to`. Área da contabilidade, logo só ADMIN/MANAGER; tudo na empresa
+  activa (centro de outra empresa responde "não encontrado nesta empresa"). Listar é "primeiro uso": a lista
+  traz sempre o centro por omissão (cria o `ADM` se a empresa ainda não tiver nenhum).
 
 ### 3.2 Marcação nos lançamentos
 
 - `JournalLine.costCenter`: **obrigatório** nas linhas de contas das classes **6** e **7**, e
-  **proibido** nas classes 1–5 (`BusinessRuleException` no domínio do lançamento).
+  **proibido** nas classes 1–5 (`BusinessRuleException` no domínio do lançamento). A regra aplica-se na
+  porta única de gravação (`JournalService.save`), que antes de validar completa com o centro por omissão
+  as partidas 6/7 que chegam sem centro; um centro numa partida das classes 1–5 é recusado, nunca
+  descartado em silêncio.
 - Centro de outra empresa ou inactivo é recusado.
 - Lançamentos automáticos: centro = centro do **armazém do documento de origem** (vendas, POS,
   compras, quebras, ajustes de stock, custos de importação). Evento sem armazém (salários,
   amortizações, combustível da frota, despesas de tesouraria sem centro) usa o **centro por omissão**.
+  Concretização (CC-05): o evento leva o `warehouseId` e as partidas 6/7 sem centro ficam no centro activo desse
+  armazém (`CostCenterService.postingCenterOf`); armazém sem centro activo da empresa cai no centro por omissão, para
+  nunca bloquear a operação. Armazém de cada origem: venda/POS e nota de débito — o da fatura; nota de crédito — o da
+  nota, senão o da fatura; quebra, ajuste, desmancha e lote de produção — o do movimento; ordem de produção — o
+  consumo no armazém de origem e a variação de produção no de destino; diferença de câmbio do pagamento a fornecedor
+  — o da compra; custos de importação — a parte já vendida (6101) repartida pelo armazém da compra de cada linha.
+  A perda em trânsito (entre armazéns) usa o centro por omissão. A anulação de venda ou de recebimento estorna cada
+  partida no centro da original (centro entretanto inactivo cede ao por omissão).
 - Lançamento manual e despesa de tesouraria: o pedido aceita `costCenterId` nas linhas/na despesa;
   vazio numa linha de classe 6/7 usa o **centro por omissão**. O desktop pede o centro com o centro por
   omissão pré-seleccionado.
-- Linhas das classes 6/7 já existentes recebem o centro por omissão pela migração.
+  A "despesa de tesouraria" é a **despesa do colaborador** (`CreateExpenseClaimRequest.costCenterId`), paga pela
+  tesouraria ao aprovar e lançada a débito de 6201: o centro fica guardado na despesa e segue no
+  `TreasuryPayoutEvent` para a partida de custo. O módulo de RH guarda só o id; quem valida o centro (existe, é da
+  empresa, está activo) é a contabilidade ao lançar o reembolso — um centro que entretanto ficou inactivo faz
+  falhar a aprovação com a mensagem do centro, sem pagamento nem lançamento.
+- Linhas das classes 6/7 já existentes recebem o centro por omissão pela migração (V151).
 
 ### 3.3 Resultado por centro
 
 - Relatório "Resultados por centro de custo" para um período: por centro, proveitos (classe 7,
   crédito − débito), custos (classe 6, débito − crédito) e resultado; mais a coluna "Total".
 - O total do relatório é **igual** ao resultado da demonstração de resultados do mesmo período.
+  Concretização (CC-07): `AccountingReportService.getCostCenterResult` lê as mesmas partidas que a demonstração e
+  dá a cada valor o sinal da natureza da conta, como ela (no plano, classe 6 devedora e 7 credora — as fórmulas
+  acima); uma linha por centro com movimentos nas classes 6/7, ordenada pelo código; partidas 6/7 sem centro
+  (anteriores aos centros) aparecem numa linha "Sem centro", para o total bater sempre.
 - Razão e balancete aceitam filtro opcional por centro.
+  Concretização (CC-08): `costCenterId` opcional (`getLedger`/`getTrialBalance`, parâmetro `costCenterId` nos
+  endpoints); vazio dá o razão/balancete completos, como antes. Com centro, só contam as partidas desse centro —
+  também no saldo inicial do razão —, pelo que o balancete filtrado só tem contas das classes 6/7 e normalmente
+  não fica equilibrado (os totais e o indicador "equilibrado" reflectem só as partidas filtradas). As
+  partidas são sempre da empresa activa, logo um centro de outra empresa não mostra nada; um centro inactivo
+  continua consultável (histórico).
 - Desktop: ecrã em Contabilidade com o relatório (período, tabela por centro) e exportação pelos
   meios normais de tabela (PDF/Excel/CSV); gestão de centros em Configurações.
+  Concretização (CC-UI-01): Configurações › "Centros de Custo" (último separador) lista código, nome, tipo
+  (Manual/Armazém), estado e qual é o por omissão, e mostra o centro por omissão por cima da tabela. "Novo centro"
+  e "Editar" (código, nome, estado) só para centros manuais; "Apagar" só manual e nunca o por omissão (com
+  confirmação; o backend recusa se tiver lançamentos); "Tornar por omissão" só para centro activo que ainda não o
+  é. Sem ADMIN/MANAGER os botões ficam desactivados; o backend é quem decide.
+  Concretização (CC-UI-03): Contabilidade › "Resultados por centro" (última aba): período De/A (por omissão o mês
+  corrente) e "Calcular"; tabela com código, centro, proveitos, custos e resultado, a linha "Sem centro" quando
+  existir e, no fim, a linha "Total" (igual à demonstração de resultados), sem ordenação nem paginação para o Total
+  ficar no fim; exportação PDF com os dados da empresa, Excel e CSV (menu de contexto da tabela).
 
 ## 4. Orçamento (GOAL-011)
 
@@ -63,34 +108,94 @@ Baixa da renda do armazém do Porto, nem orçamento contra o qual medir.
 
 - Um orçamento por empresa e ano, com linhas: conta **movimentável das classes 6 ou 7**, centro de
   custo activo, mês (1–12) e valor ≥ 0. Uma linha por conta × centro × mês.
+  Concretização (OR-01): `BudgetService.save` recebe o ano inteiro (`SaveBudgetRequest`, linhas com código da conta,
+  centro, mês e valor); células enviadas são criadas ou actualizadas e as omitidas saem. Valor zero é uma célula
+  preenchida (conta para "só células vazias" no OR-02). Ano sem orçamento devolve grelha vazia.
 - Editável a qualquer momento; cada gravação gera auditoria `BUDGET_CHANGE` com ano e totais.
 - **Copiar do ano anterior**: preenche cada conta × centro × mês com o **real** do mesmo mês do ano
   anterior, com percentagem opcional de ajuste (ex.: +10%), arredondado a 2 casas. Só preenche células
   vazias, nunca sobrescreve.
+  Concretização (OR-02): `BudgetService.copyFromPreviousYear` (`CopyBudgetRequest`: ano destino e ajuste % opcional,
+  vazio = 0, nunca abaixo de −100%) lê o real do ano anterior por conta × centro × mês (sinal do §4.2, só partidas com
+  centro), arredonda `real × (1 + ajuste/100)` a 2 casas (meio para cima) e **grava** as células em falta no orçamento
+  do ano destino (criando-o se não existir). Ficam de fora: células já preenchidas (mesmo a zero), real ≤ 0 e centros
+  hoje inactivos. Devolve o orçamento resultante.
 - Gerir orçamento: **ADMIN** e **MANAGER**.
+  Concretização (OR-07): em `/api/accounting/budgets`, sempre na empresa activa e só ADMIN/MANAGER (na política HTTP
+  e no Service, também para consultar): `GET ?year=` devolve o orçamento do ano (grelha vazia sem orçamento),
+  `PUT` grava o ano inteiro (`SaveBudgetRequest`), `POST /copy-previous-year` copia do ano anterior
+  (`CopyBudgetRequest`), `GET /variance?year=&month=&cumulative=&costCenterId=` dá o real vs orçado (§4.2) e
+  `GET /alerts?year=` os alertas do sino (§4.3). Regras violadas respondem 400 com a mensagem PT-MZ. Gravar e copiar
+  registam auditoria `BUDGET_CHANGE` com o ano, o total de custos, o total de proveitos e o número de células.
 
 ### 4.2 Real vs orçado
 
 - Real = soma das linhas de lançamento da conta e centro no mês (classe 6: débito − crédito;
   classe 7: crédito − débito).
+  Concretização (OR-03): `BudgetVarianceService.report` (ano, mês 1–12, acumulado sim/não, centro opcional; ADMIN e
+  MANAGER) devolve uma linha por conta × centro com o **orçado** e o **real** do período — só o mês, ou de janeiro até
+  ao mês quando acumulado — da empresa activa. Entram as contas × centros com orçamento **ou** com real no período
+  (falta de um lado vale zero); partidas sem centro ficam de fora (não comparam com o orçamento); centros hoje
+  inactivos continuam a aparecer com o seu histórico. Ordem: código da conta, depois código do centro.
 - Relatório por centro e conta, para um mês e acumulado do ano: orçado, real, desvio (real − orçado)
   e desvio %. Desvio **desfavorável**: custo acima do orçado ou proveito abaixo; favorável no inverso.
   Orçado zero mostra desvio % vazio, não infinito.
+  Concretização (OR-04): cada linha do relatório traz `variance` = real − orçado, `variancePercent` = desvio ÷ orçado
+  × 100 arredondado a 2 casas (meio para cima; `null` quando o orçado é zero) e `direction`: `UNFAVORABLE` quando o
+  custo (classe 6) fica acima do orçado ou o proveito (classe 7) abaixo, `FAVORABLE` no inverso e `ON_BUDGET` quando o
+  desvio é zero. O desvio % mantém o sinal do desvio (real abaixo do orçado dá % negativa).
 
 ### 4.3 Alertas
 
 - Por centro e mês: quando o **real dos custos (classe 6)** atinge **90%** e **100%** do **orçado dos
   custos** desse centro nesse mês, gera-se **um** alerta por limiar, centro e mês (não repete).
+  Concretização (OR-05): cada lançamento gravado pela porta única do diário (`JournalService.save`) com partidas de
+  classe 6 publica `JournalEntryPostedEvent` (empresa, data, centros dessas partidas); o `BudgetAlertService` avalia, na
+  mesma transacção, cada centro no mês do lançamento: orçado = soma das células de classe 6 do centro e mês, real = soma
+  das partidas de classe 6 do centro e mês (débito − crédito). Orçado zero ou sem orçamento não gera alerta. O limiar é
+  atingido com real ≥ limiar% × orçado; um real que salte directamente para 100% gera os dois alertas. O alerta fica
+  gravado (`budget_alerts`, V153, único por empresa × centro × ano × mês × limiar) com o orçado e o real do momento e
+  nunca se repete, mesmo que o real desça e volte a subir ou o orçamento mude. Alterar o orçamento não reavalia.
 - O alerta aparece no sino dos perfis ADMIN e MANAGER.
+  Concretização (OR-05): `BudgetAlertService.listAlerts(ano)` devolve os alertas da empresa activa nesse ano (mês mais
+  recente e limiar mais alto primeiro), com texto PT-MZ pronto para o sino; só ADMIN e MANAGER.
 - Ao gravar uma compra ou despesa de tesouraria que faz o centro passar um limiar, a resposta traz um
   **aviso** que o desktop mostra como toast. **Nada é bloqueado**.
+  Concretização (OR-06): cada alerta **novo** gerado pelo `BudgetAlertService` durante o lançamento de uma operação
+  (compra, custos de importação, pagamento a fornecedor com diferença de câmbio, aprovação da despesa do colaborador
+  ou qualquer outra gravação que lance custos pelo diário) vira um aviso da operação (`OperationWarnings`, com o
+  mesmo texto PT-MZ do sino). O aviso só conta **depois do commit** — uma operação revertida não avisa — e volta na
+  resposta HTTP de sucesso num cabeçalho `X-Operation-Warning` por aviso (UTF-8 codificado em URL), sem mudar o
+  corpo; respostas com erro descartam-no. A operação grava sempre; limiar já alertado não volta a avisar. O toast no
+  desktop fica com o OR-UI-02.
 
 ### 4.4 Desktop
 
 - Contabilidade › Orçamento: escolher ano, grelha conta × centro com os 12 meses, copiar do ano
   anterior, gravar.
+  Concretização (OR-UI-01): Contabilidade › "Orçamento", aba logo a seguir a "Razão" (as abas "Demonstrações" e
+  "Resultados por centro" continuam as últimas). Ano (por omissão o corrente) e "Carregar"; grelha com uma linha por
+  conta × centro e as colunas Conta, Centro, Jan…Dez e Total (soma da linha, só leitura). Só as células dos meses se
+  editam: vazia = sem orçamento (não segue no pedido), `0` é célula preenchida; valor negativo ou não numérico fica
+  recusado na célula com mensagem PT-MZ. "Adicionar linha" pede a conta (movimentável e activa das classes 6/7, do
+  plano de contas) e o centro (activos); conta × centro repetida é recusada. "Remover linha" tira a linha
+  seleccionada (sai do orçamento ao gravar). "Copiar do ano anterior" pede o ajuste % (≥ −100; 0 copia o real tal
+  como está), confirma que alterações por gravar se perdem, chama o backend (que já grava, §4.1) e mostra o orçamento
+  devolvido. "Gravar" envia o ano inteiro (`PUT`). Por baixo, os totais de custos e proveitos gravados (do backend).
+  Sem ADMIN/MANAGER os botões de alterar ficam desactivados; o backend é quem decide. Erros no painel de feedback.
 - Contabilidade › Real vs Orçado: mês ou acumulado, filtro por centro, desvios coloridos pelo
   vocabulário de estados do projecto (`StatusTone`).
+  Concretização (OR-UI-02): Contabilidade › "Real vs Orçado", aba logo a seguir a "Orçamento" (as abas "Demonstrações"
+  e "Resultados por centro" continuam as últimas). Filtros ano, mês, período ("Só o mês" / "Acumulado (Jan até ao
+  mês)") e centro ("Todos os centros" ou qualquer centro, inactivos incluídos por terem histórico); "Calcular" chama
+  `GET /variance`. Colunas Conta, Centro, Orçado, Real, Desvio, Desvio % (vazio com orçado zero) e Situação
+  ("Favorável" verde, "Desfavorável" vermelho, "No orçamento" informativo, pelo `StatusTone`); desvio e desvio % ficam
+  na cor da situação da linha. Por baixo, o período e quantas linhas são desfavoráveis. Sem ADMIN/MANAGER não há
+  pedido e "Calcular" fica desactivado. Sino: os alertas do ano corrente (`GET /alerts`) entram no sino só de ADMIN e
+  MANAGER, tipo "Orçamento", com o texto do backend, prioridade mais alta no limiar 100%, e abrem a Contabilidade; uma
+  falha a obter os alertas não esconde as restantes notificações. Toast: cada cabeçalho `X-Operation-Warning` de uma
+  resposta de sucesso, descodificado, aparece como toast de aviso (sem bloquear) e o contador do sino é actualizado;
+  respostas com erro não avisam.
 
 ## 5. Fora de âmbito
 

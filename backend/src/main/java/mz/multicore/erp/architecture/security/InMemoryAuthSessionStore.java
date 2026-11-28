@@ -28,6 +28,12 @@ class InMemoryAuthSessionStore implements AuthSessionStore {
     }
 
     @Override
+    public void updateExpiresAt(String tokenHash, Instant expiresAt) {
+        sessions.computeIfPresent(tokenHash, (hash, s) -> new StoredSession(s.tokenHash(), s.username(),
+                s.issuedAt(), expiresAt, s.restricted(), s.portal()));
+    }
+
+    @Override
     public void deleteUser(String username) {
         sessions.values().removeIf(session -> session.username().equals(username));
     }

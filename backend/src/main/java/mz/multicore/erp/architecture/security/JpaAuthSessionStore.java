@@ -26,6 +26,7 @@ public class JpaAuthSessionStore implements AuthSessionStore {
         row.setIssuedAt(session.issuedAt());
         row.setExpiresAt(session.expiresAt());
         row.setRestricted(session.restricted());
+        row.setPortal(session.portal());
         row.setCreatedBy(session.username());
         repository.save(row);
     }
@@ -34,13 +35,19 @@ public class JpaAuthSessionStore implements AuthSessionStore {
     @Transactional(readOnly = true)
     public Optional<StoredSession> find(String tokenHash) {
         return repository.findById(tokenHash).map(row -> new StoredSession(row.getTokenHash(), row.getUsername(),
-                row.getIssuedAt(), row.getExpiresAt(), row.isRestricted()));
+                row.getIssuedAt(), row.getExpiresAt(), row.isRestricted(), row.isPortal()));
     }
 
     @Override
     @Transactional
     public void delete(String tokenHash) {
         repository.deleteById(tokenHash);
+    }
+
+    @Override
+    @Transactional
+    public void updateExpiresAt(String tokenHash, Instant expiresAt) {
+        repository.updateExpiresAt(tokenHash, expiresAt);
     }
 
     @Override

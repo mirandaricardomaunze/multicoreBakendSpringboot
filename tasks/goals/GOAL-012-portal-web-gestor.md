@@ -1,11 +1,11 @@
 ---
 id: GOAL-012
 title: "Gestor vê o negócio e aprova pedidos no telemóvel pelo portal web"
-status: TODO
+status: DONE
 priority: MEDIUM
 spec: docs/PORTAL_GESTOR_SPEC.md
 harness: docs/PORTAL_GESTOR_HARNESS.md
-verify: ["PortalLoginTest", "PortalSessionTest", "PortalTokenScopeTest", "PortalHttpIntegrationTest", "PortalSecurityHeadersTest", "PortalStaticAssetsHarnessTest", "ApiRolePolicyEndpointCoverageHarnessTest"]
+verify: ["PortalLoginTest", "PortalSessionTest", "PortalTokenScopeTest", "PortalHttpIntegrationTest", "PortalSummaryServiceTest", "PortalSecurityHeadersTest", "PortalStaticAssetsHarnessTest", "ApiRolePolicyEndpointCoverageHarnessTest"]
 blockedBy: []
 ---
 
@@ -17,18 +17,18 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 
 ## Critérios de aceitação
 
-- [ ] PG-01 — login PORTAL só ADMIN/MANAGER — `PortalLoginTest`
-- [ ] PG-02 — 2FA obrigatório no portal — `PortalLoginTest`
-- [ ] PG-04 — limitador de tentativas partilhado — `PortalLoginTest`
-- [ ] PG-03 — expiração 12 h / 30 min e logout — `PortalSessionTest`
-- [ ] PG-05 — token de portal limitado às rotas do portal — `PortalTokenScopeTest`
-- [ ] PG-06 — isolamento de empresa — `PortalHttpIntegrationTest`
-- [ ] PG-07 — resumo do painel — `PortalHttpIntegrationTest`
-- [ ] PG-08 — aprovar/rejeitar com as regras do módulo — `PortalHttpIntegrationTest`
-- [ ] PG-09 — cabeçalhos de segurança — `PortalSecurityHeadersTest`
-- [ ] PG-10 — só HTTPS em produção — `PortalSecurityHeadersTest`
-- [ ] PG-11 — página sem CDN/inline, sessionStorage, textContent, PWA — `PortalStaticAssetsHarnessTest`
-- [ ] PG-12 — layout móvel, actualização e formatos — `PortalStaticAssetsHarnessTest`
+- [x] PG-01 — login PORTAL só ADMIN/MANAGER — `PortalLoginTest`
+- [x] PG-02 — 2FA obrigatório no portal — `PortalLoginTest`
+- [x] PG-04 — limitador de tentativas partilhado — `PortalLoginTest`
+- [x] PG-03 — expiração 12 h / 30 min e logout — `PortalSessionTest`
+- [x] PG-05 — token de portal limitado às rotas do portal — `PortalTokenScopeTest`
+- [x] PG-06 — isolamento de empresa — `PortalHttpIntegrationTest`
+- [x] PG-07 — resumo do painel — `PortalHttpIntegrationTest`
+- [x] PG-08 — aprovar/rejeitar com as regras do módulo — `PortalHttpIntegrationTest`
+- [x] PG-09 — cabeçalhos de segurança — `PortalSecurityHeadersTest`
+- [x] PG-10 — só HTTPS em produção — `PortalSecurityHeadersTest`
+- [x] PG-11 — página sem CDN/inline, sessionStorage, textContent, PWA — `PortalStaticAssetsHarnessTest`
+- [x] PG-12 — layout móvel, actualização e formatos — `PortalStaticAssetsHarnessTest`
 
 ## Fora de âmbito
 
@@ -41,3 +41,15 @@ Regras em `docs/PORTAL_GESTOR_SPEC.md`.
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-25 · PG-01 · Login com `channel: PORTAL` só entra para quem é ADMIN/MANAGER numa empresa (PortalLoginPolicy); EMPLOYEE recusado sem token com mensagem PT-MZ, sessão de portal só lista essas empresas, login desktop inalterado; PortalLoginTest verde 5/5.
+- 2026-11-25 · PG-02 · Portal recusa ADMIN/MANAGER sem verificação em dois passos activa (mensagem PT-MZ da SPEC, sem token) e pede o código como no desktop antes de dar token; código errado recusado; login desktop inalterado; PortalLoginTest verde 9/9.
+- 2026-11-25 · PG-04 · Tentativas falhadas do portal (senha errada e código 2FA errado) contam no mesmo `LoginRateLimiter` do desktop: 5 falhas bloqueiam portal e desktop na mesma origem, e falhas no desktop bloqueiam o portal; o AuthController já partilhava o limitador, os testes fixam a garantia; PortalLoginTest verde 12/12.
+- 2026-11-25 · PG-03 · Sessão de portal marcada na base (migração V154, coluna `portal`): expira 30 min depois do último pedido, deslizando com o uso, e nunca passa das 12 h depois do login; logout invalida o token; sessões do desktop mantêm as 8 h sem limite de inactividade; relógio injectável no `AuthSessionService`; PortalSessionTest verde 6/6, PortalLoginTest 12/12.
+- 2026-11-25 · PG-05 · Token de portal só abre `/api/auth/**`, `/api/reports/store-dashboard`, `/api/approvals/**` e `/api/portal/**` (PortalTokenScope, aplicado no TokenAuthenticationFilter); qualquer outra rota `/api/**` responde 403 com mensagem PT-MZ, incluindo plataforma e monitorização; tokens do desktop inalterados; PortalTokenScopeTest verde 5/5.
+- 2026-11-25 · PG-06 · Pedido com token de portal só entra em empresa onde o utilizador é ADMIN/MANAGER (PortalLoginPolicy.requireCompanyRole no SecurityInterceptor): empresa sem acesso, empresa onde é só EMPLOYEE/SELLER e `companyId` na URL diferente do `X-Company-Id` → 403 com mensagem PT-MZ; token do desktop mantém o acesso actual; PortalHttpIntegrationTest verde 6/6.
+- 2026-11-25 · PG-07 · Novo módulo `portal` com `GET /api/portal/summary` só de leitura (PortalSummaryService pelas portas Lookup): vendas realizadas de hoje e do mês por loja, caixas abertas (operador actual, desde quando), 20 artigos mais urgentes abaixo do mínimo, total vencido e top 10 clientes em atraso, aprovações pendentes; `/api/portal` só ADMIN/MANAGER no ApiRolePolicy; SPEC §3.3 detalha o contrato e anota a lacuna (a caixa ainda não guarda a loja); PortalSummaryServiceTest 5/5, PortalHttpIntegrationTest 9/9.
+- 2026-11-25 · PG-08 · Portal aprova e rejeita pelos endpoints existentes de `/api/approvals` com as regras do módulo (ApprovalLifecycleService, perfil da empresa do `X-Company-Id`): lista pendentes com tipo, pedido por, valor e data; gestor aprova pedido de gestor e fica no histórico; rejeitar sem motivo → 400 com mensagem PT-MZ e pedido continua pendente; motivo gravado; gestor não decide pedido que pede administrador nem pedido de outra empresa; sem código de produção novo, os testes fixam a garantia; PortalHttpIntegrationTest verde 15/15.
+- 2026-11-25 · PG-09 · Respostas de `/portal` e `/portal/**` levam `Content-Security-Policy` só com `'self'`/`'none'` (sem `unsafe-inline` nem origens externas, `frame-ancestors 'none'`), `X-Frame-Options: DENY` e `Referrer-Policy: no-referrer` (PortalSecurityHeaders ligado no SecurityConfig); o resto da aplicação mantém `SAMEORIGIN` para a consola H2; cálculo do caminho do pedido partilhado em `RequestPaths`; PortalSecurityHeadersTest verde 4/4, PortalTokenScopeTest 5/5.
+- 2026-11-25 · PG-10 · Em produção (perfil `prod`) o `PortalHttpsOnlyFilter`, ligado no SecurityConfig antes do filtro de token, recusa `/portal/**` e `/api/portal/**` sem HTTPS (ligação segura ou `X-Forwarded-Proto: https`) com 403 e mensagem PT-MZ; rotas partilhadas com o desktop e perfis não-prod inalterados; teste de segmento inteiro partilhado em `RequestPaths.isUnder`; SPEC §3.5 precisa o âmbito; PortalSecurityHeadersTest verde 8/8, PortalTokenScopeTest 5/5.
+- 2026-11-25 · PG-11 · Página do portal em `static/portal/` (index.html, portal.css, portal.js, manifest.webmanifest, icon.svg) sem CDN nem script/estilo/handlers inline: login com canal PORTAL e código 2FA, escolha de empresa, painel do `/api/portal/summary` e aprovar/rejeitar (motivo obrigatório); token só em `sessionStorage`, texto da API só por `textContent`; `/portal` e `/portal/` fazem forward para a página (WebConfig, sem redirect http atrás do proxy); PortalStaticAssetsHarnessTest verde 7/7, PortalSecurityHeadersTest 8/8.
+- 2026-11-25 · PG-12 · Página do portal fixada para o telemóvel: viewport `width=device-width, initial-scale=1` sem bloquear o zoom, nenhuma largura fixa acima de 360 px, linhas das listas quebram (`flex-wrap`) em vez de cortar, KPIs em 2 colunas; botão "Actualizar" e actualização sozinha a cada 5 minutos com o ecrã visível, e ao voltar ao ecrã com o painel há 5 minutos ou mais actualiza logo (`visibilitychange`); valores `1.460,00 MT`, quantidades até 3 casas e datas `dd/mm/aaaa` pelos formatadores próprios com os separadores do `DisplayNumbers`, sem formatos do browser; PortalStaticAssetsHarnessTest verde 11/11, PortalSecurityHeadersTest 8/8. Goal DONE.

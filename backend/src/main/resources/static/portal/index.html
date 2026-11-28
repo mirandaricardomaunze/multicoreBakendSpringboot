@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f3a5f">
+  <title>Portal do Gestor · Multicore</title>
+  <link rel="manifest" href="/portal/manifest.webmanifest">
+  <link rel="icon" href="/portal/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/portal/icon.svg">
+  <link rel="stylesheet" href="/portal/portal.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">Portal do Gestor</span>
+    <span class="who" id="who"></span>
+    <button type="button" class="link" id="logout" hidden>Sair</button>
+  </header>
+
+  <main>
+    <p class="alert" id="message" role="alert" hidden></p>
+
+    <section class="card" id="login-view">
+      <h1>Entrar</h1>
+      <form id="login-form" autocomplete="on">
+        <label>Utilizador
+          <input name="username" id="username" autocomplete="username" required>
+        </label>
+        <label>Senha
+          <input name="password" id="password" type="password" autocomplete="current-password" required>
+        </label>
+        <label id="code-field" hidden>Código de verificação (2 passos)
+          <input name="code" id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+        </label>
+        <button type="submit" id="login-submit">Entrar</button>
+      </form>
+    </section>
+
+    <section id="app-view" hidden>
+      <div class="toolbar">
+        <label class="company">Empresa
+          <select id="company"></select>
+        </label>
+        <button type="button" id="refresh">Actualizar</button>
+      </div>
+      <p class="muted" id="updated-at"></p>
+
+      <div class="kpis">
+        <div class="kpi"><span class="kpi-label">Vendas hoje</span><span class="kpi-value" id="sales-today">-</span></div>
+        <div class="kpi"><span class="kpi-label">Vendas do mês</span><span class="kpi-value" id="sales-month">-</span></div>
+        <div class="kpi"><span class="kpi-label">Vencido</span><span class="kpi-value" id="overdue-total">-</span></div>
+        <div class="kpi"><span class="kpi-label">Aprovações pendentes</span><span class="kpi-value" id="pending-count">-</span></div>
+      </div>
+
+      <section class="card">
+        <h2>Aprovações pendentes</h2>
+        <ul class="list" id="approvals"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Vendas por loja</h2>
+        <ul class="list" id="sales-by-store"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Caixas abertas</h2>
+        <ul class="list" id="open-tills"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Stock abaixo do mínimo</h2>
+        <ul class="list" id="low-stock"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Clientes com facturas vencidas</h2>
+        <ul class="list" id="overdue-clients"></ul>
+      </section>
+    </section>
+  </main>
+
+  <script src="/portal/portal.js" defer></script>
+</body>
+</html>

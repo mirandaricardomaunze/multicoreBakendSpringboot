@@ -18,13 +18,21 @@ import java.time.LocalDate;
  * @param sourceId      id of the document, unique per {@code source}, so a retry never posts twice
  * @param productId     product whose account (3201 or 3401) holds the movement: both sides of a waste or adjustment,
  *                      the entry side of a production batch; {@code null} keeps everything in 3201
+ * @param warehouseId   warehouse where the stock changed: its cost centre takes the class 6/7 lines (CC-05);
+ *                      {@code null} uses the default centre
  */
 public record InventoryValueChangedEvent(Long companyId, JournalSource source, Long sourceId, String reference,
                                          LocalDate date, BigDecimal valueOut, BigDecimal valueIn, String inCounterpart,
-                                         Long productId) {
+                                         Long productId, Long warehouseId) {
 
     public InventoryValueChangedEvent(Long companyId, JournalSource source, Long sourceId, String reference,
                                       LocalDate date, BigDecimal valueOut, BigDecimal valueIn, String inCounterpart) {
-        this(companyId, source, sourceId, reference, date, valueOut, valueIn, inCounterpart, null);
+        this(companyId, source, sourceId, reference, date, valueOut, valueIn, inCounterpart, null, null);
+    }
+
+    public InventoryValueChangedEvent(Long companyId, JournalSource source, Long sourceId, String reference,
+                                      LocalDate date, BigDecimal valueOut, BigDecimal valueIn, String inCounterpart,
+                                      Long productId) {
+        this(companyId, source, sourceId, reference, date, valueOut, valueIn, inCounterpart, productId, null);
     }
 }

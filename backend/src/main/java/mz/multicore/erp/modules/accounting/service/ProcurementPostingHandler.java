@@ -83,6 +83,7 @@ public class ProcurementPostingHandler {
         entry.addLine(JournalLine.credit(postingHelper.cashAccount(event.companyId(), event.cashPayment()),
                 amount, "Saída de tesouraria"));
         addExchangeDifference(entry, event.companyId(), amount.subtract(supplierAmount));
+        journalService.assignWarehouseCostCenter(entry, event.companyId(), event.warehouseId());
         journalService.save(entry, event.companyId());
     }
 

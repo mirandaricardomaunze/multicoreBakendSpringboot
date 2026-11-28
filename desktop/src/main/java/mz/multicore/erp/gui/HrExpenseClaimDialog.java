@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.accounting.CostCenterCombo;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
@@ -31,12 +32,14 @@ public final class HrExpenseClaimDialog {
         MoneyField amountField = new MoneyField();
         JTextField descField = new JTextField();
         UIHelper.styleTextField(descField);
+        CostCenterCombo costCenterCombo = new CostCenterCombo().load(owner.accountingApiClient);
 
         JPanel form = UIHelper.createDialogForm(
                 "Colaborador:", empCombo,
                 "Categoria:", categoryCombo,
                 "Valor (MT):", amountField,
-                "Descrição:", descField
+                "Descrição:", descField,
+                "Centro de custo:", costCenterCombo
         );
 
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Submeter Despesa", "fas-receipt",
@@ -54,7 +57,8 @@ public final class HrExpenseClaimDialog {
             }
             EmployeeDTO emp = owner.employeesList.get(empCombo.getSelectedIndex());
             String cat = categoryCombo.getSelectedItem().toString().split(" ")[0];
-            CreateExpenseClaimRequest request = new CreateExpenseClaimRequest(emp.id(), amount, cat, desc);
+            CreateExpenseClaimRequest request = new CreateExpenseClaimRequest(emp.id(), amount, cat, desc,
+                    costCenterCombo.selectedCostCenterId());
             UIHelper.runWithProgress(owner, "A submeter despesa…", () -> owner.hrApiClient.submitExpense(request), ignored -> {
                 owner.showSuccess("Despesa submetida.");
                 onSubmitted.run();

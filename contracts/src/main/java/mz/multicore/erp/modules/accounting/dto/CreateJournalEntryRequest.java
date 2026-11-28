@@ -24,12 +24,21 @@ public record CreateJournalEntryRequest(
         List<Line> lines
 ) {
 
-    /** One posting: an account and either a debit <b>or</b> credit amount. */
+    /**
+     * One posting: an account and either a debit <b>or</b> credit amount. {@code costCenterId} is optional: a line of
+     * class 6/7 without it goes to the company's default centre; a line of classes 1–5 must not carry one.
+     */
     public record Line(
             @NotBlank(message = "Indique a conta da partida.") @Size(max = 50)
             String accountCode,
             @PositiveOrZero BigDecimal debit,
             @PositiveOrZero BigDecimal credit,
-            @Size(max = 500) String description
-    ) {}
+            @Size(max = 500) String description,
+            Long costCenterId
+    ) {
+        /** Line without an explicit cost centre (class 6/7 falls back to the default centre). */
+        public Line(String accountCode, BigDecimal debit, BigDecimal credit, String description) {
+            this(accountCode, debit, credit, description, null);
+        }
+    }
 }

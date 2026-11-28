@@ -1,7 +1,7 @@
 ---
 id: GOAL-010
 title: "Resultado por loja, armazém e departamento com centros de custo"
-status: TODO
+status: DONE
 priority: MEDIUM
 spec: docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md
 harness: docs/CENTROS_CUSTO_ORCAMENTO_HARNESS.md
@@ -17,18 +17,18 @@ cada centro. Regras em `docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md` §2–§3.
 
 ## Critérios de aceitação
 
-- [ ] CC-01 — cadastro de centros, código único, inactivo e apagar com lançamentos — `CostCenterRulesTest`
-- [ ] CC-03 — centro `ADM` por omissão por empresa, alterável — `CostCenterRulesTest`
-- [ ] CC-02 — centro automático por armazém, existentes migrados, acompanha o armazém — `CostCenterWarehouseSyncTest`
-- [ ] CC-04 — obrigatório em 6/7, proibido em 1–5, mesma empresa — `JournalLineCostCenterTest`
-- [ ] CC-06 — manual e despesa com centro ou por omissão; linhas antigas migradas — `JournalLineCostCenterTest`
-- [ ] CC-05 — automáticos herdam do armazém ou usam o por omissão — `AutomaticPostingCostCenterTest`
-- [ ] CC-07 — resultados por centro iguais à demonstração de resultados — `CostCenterResultReportTest`
-- [ ] CC-08 — razão e balancete filtráveis por centro — `CostCenterResultReportTest`
-- [ ] CC-09 — endpoints, perfis e empresa activa — `CostCenterHttpIntegrationTest`
-- [ ] CC-UI-01 — gestão de centros e centro por omissão — `CostCenterUiHarnessTest`
-- [ ] CC-UI-02 — lançamento manual e despesa pedem o centro — `CostCenterUiHarnessTest`
-- [ ] CC-UI-03 — ecrã de resultados por centro — `CostCenterUiHarnessTest`
+- [x] CC-01 — cadastro de centros, código único, inactivo e apagar com lançamentos — `CostCenterRulesTest`
+- [x] CC-03 — centro `ADM` por omissão por empresa, alterável — `CostCenterRulesTest`
+- [x] CC-02 — centro automático por armazém, existentes migrados, acompanha o armazém — `CostCenterWarehouseSyncTest`
+- [x] CC-04 — obrigatório em 6/7, proibido em 1–5, mesma empresa — `JournalLineCostCenterTest`
+- [x] CC-06 — manual e despesa com centro ou por omissão; linhas antigas migradas — `JournalLineCostCenterTest`
+- [x] CC-05 — automáticos herdam do armazém ou usam o por omissão — `AutomaticPostingCostCenterTest`
+- [x] CC-07 — resultados por centro iguais à demonstração de resultados — `CostCenterResultReportTest`
+- [x] CC-08 — razão e balancete filtráveis por centro — `CostCenterResultReportTest`
+- [x] CC-09 — endpoints, perfis e empresa activa — `CostCenterHttpIntegrationTest`
+- [x] CC-UI-01 — gestão de centros e centro por omissão — `CostCenterUiHarnessTest`
+- [x] CC-UI-02 — lançamento manual e despesa pedem o centro — `CostCenterUiHarnessTest`
+- [x] CC-UI-03 — ecrã de resultados por centro — `CostCenterUiHarnessTest`
 
 ## Fora de âmbito
 
@@ -41,3 +41,15 @@ cada centro. Regras em `docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md` §2–§3.
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-22 · CC-01 · cadastro de centros de custo por empresa (código único, tipo WAREHOUSE/MANUAL, renomear/desactivar/apagar só manuais, não apaga com lançamentos, inactivo ou de outra empresa recusa lançamentos) em `CostCenterService`, migração V148 com `journal_lines.cost_center_id`; CostCenterRulesTest verde 14/14.
+- 2026-11-22 · CC-03 · centro por omissão por empresa (`cost_centers.default_center`, migração V149 cria `ADM — Administração` em cada empresa e marca-o); `CostCenterService.requireDefault` devolve-o ou cria/promove o `ADM`, `setDefault` muda para outro centro activo da empresa (ADMIN/MANAGER), o por omissão não se desactiva nem apaga; regra completada na SPEC §3.1; CostCenterRulesTest verde 23/23.
+- 2026-11-22 · CC-02 · centro automático por armazém: `WarehouseCommandService` (única escrita de armazéns) anuncia `WarehouseSavedEvent` e `CostCenterWarehouseSync` cria o centro WAREHOUSE (código = número do armazém, senão `ARM-<id>`) ou faz acompanhar nome e estado; arranque e migração V150 dão centro aos armazéns existentes; desactivar o armazém do centro por omissão devolve-o ao `ADM`; regra completada na SPEC §3.1; CostCenterWarehouseSyncTest verde 7/7.
+- 2026-11-22 · CC-04 · regra no domínio (`JournalLine.validateCostCenter`, `JournalEntry.validateCostCenters`): centro obrigatório nas classes 6/7, recusado nas classes 1–5, recusado se inactivo ou de outra empresa; `JournalService.save` (porta única) completa partidas 6/7 sem centro com o centro por omissão e aplica a regra, para os lançamentos automáticos não partirem (herança do armazém fica para CC-05, `costCenterId` no pedido e migração das linhas antigas para CC-06); SPEC §3.2 clarificada; JournalLineCostCenterTest verde 9/9, testes de lançamentos existentes verdes.
+- 2026-11-22 · CC-06 · `CreateJournalEntryRequest.Line.costCenterId` e `CreateExpenseClaimRequest.costCenterId` opcionais; `JournalService.costCenterOrNull` (único ponto que valida o centro pedido) serve o lançamento manual e o reembolso da despesa (`ExpenseClaim.costCenterId` → `FinanceService.registerAutoExpensePayout` → `TreasuryPayoutEvent.costCenterId` → partida 6201); vazio em 6/7 cai no por omissão, centro em 1–5 recusado; migração V151 (coluna `expense_claims.cost_center_id` e linhas 6/7 antigas no centro por omissão); SPEC §3.2 clarificada; JournalLineCostCenterTest verde 18/18, HRServiceTest e TreasuryPayoutPostingServiceTest verdes.
+- 2026-11-22 · CC-05 · eventos de venda/POS, notas de crédito/débito, valor de stock (quebra, ajuste, desmancha, produção), produção concluída e pagamento a fornecedor levam `warehouseId`; custos de importação levam a parte vendida por armazém (`soldByWarehouse`); `CostCenterService.postingCenterOf` dá o centro activo do armazém ou o por omissão e `JournalService.assignWarehouseCostCenter` aplica-o às partidas 6/7 antes do `save`; estorno de venda/recebimento mantém o centro da original; SPEC §3.2 concretizada; AutomaticPostingCostCenterTest verde 14/14, AutomaticPostingServiceTest, ExchangeDifferenceTest, LandedCost*Test e harnesses de decomposição verdes.
+- 2026-11-22 · CC-07 · `CostCenterResultBuilder` (via `AccountingReportService.getCostCenterResult`) agrega as partidas das classes 6/7 do período por centro (proveitos, custos, resultado, ordenado por código) com o sinal da natureza da conta, igual à demonstração de resultados, e põe partidas 6/7 sem centro numa linha "Sem centro"; DTOs `CostCenterResultDTO`/`CostCenterResultLineDTO` nos contracts; regra de período partilhada com a demonstração; SPEC §3.3 concretizada; CostCenterResultReportTest verde 7/7, AccountingReportServiceTest verde.
+- 2026-11-22 · CC-08 · razão e balancete aceitam `costCenterId` opcional (`AccountingReportService.getLedger/getTrialBalance`, parâmetro opcional nos endpoints `/ledger/{conta}` e `/trial-balance`): vazio dá o completo, com centro só contam as partidas desse centro, também no saldo inicial do razão (agora calculado por `totalsBetween`, sem ciclo duplicado); SPEC §3.3 concretizada; CostCenterResultReportTest verde 11/11, AccountingReportServiceTest e harness de decomposição verdes.
+- 2026-11-22 · CC-09 · `CostCenterController` (`/api/accounting/cost-centers`: listar, criar, alterar, `/{id}/default`, apagar) e `GET /api/accounting/cost-center-result` no `AccountingController`; área da contabilidade (só ADMIN/MANAGER, EMPLOYEE 403), sempre na empresa activa (centro de outra empresa dá 400); `CostCenterService.list` garante o centro por omissão (primeiro uso); SPEC §3.1 concretizada; CostCenterHttpIntegrationTest verde 3/3, ApiRolePolicyEndpointCoverageHarnessTest, CostCenterRulesTest e CostCenterWarehouseSyncTest verdes.
+- 2026-11-22 · CC-UI-01 · Configurações › "Centros de Custo" (último separador, `ConfigPanel` recebe o `AccountingApiClient`): `CostCentersPanel` lista código/nome/tipo/estado/por omissão num card e mostra o centro por omissão; `CostCenterFormDialog` (`ModernFormDialog`) cria/edita centros manuais; apagar (com `UIHelper.confirm`, nunca o por omissão) e "Tornar por omissão" (só activo); centros de armazém só de leitura; sem ADMIN/MANAGER botões desactivados; `AccountingApiClient` ganha os endpoints `/api/accounting/cost-centers`; SPEC §3.3 concretizada; CostCenterUiHarnessTest verde 5/5, DesktopThinContextTest e harnesses do ConfigPanel verdes.
+- 2026-11-24 · CC-UI-02 · `CostCenterCombo` (só centros activos, por omissão pré-seleccionado; sem lista fica "Centro por omissão da empresa" que não envia centro) no "Novo Lançamento" do diário (`CostCenterCombo.centerForAccount` envia o centro só nas partidas 6/7) e na "Submeter Despesa" do RH (`HRPanel` recebe o `AccountingApiClient`; `CreateExpenseClaimRequest.costCenterId`); CostCenterUiHarnessTest verde 8/8, DesktopThinContextTest e harnesses de UI verdes.
+- 2026-11-24 · CC-UI-03 · Contabilidade › "Resultados por centro" (última aba, `AccountingCostCenterResultTab`): período De/A e "Calcular" chamam `AccountingApiClient.getCostCenterResult` (`/api/accounting/cost-center-result`); tabela num card com código, centro, proveitos, custos e resultado por centro, "Sem centro" e a linha Total igual à demonstração (sem ordenação nem paginação, o Total fica no fim); exportação PDF (`TableExportAction`, `AccountingPanel` passa a receber o `PrintApiClient` do `MainFrame`, construtor de 1 argumento mantido), Excel (`UIHelper.createExportButton`) e CSV no menu de contexto; SPEC §3.3 concretizada; CostCenterUiHarnessTest verde 11/11, DesktopThinContextTest, AccountingPanelDecompositionHarnessTest e harnesses de UI/arquitectura verdes.

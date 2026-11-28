@@ -8,7 +8,6 @@ import mz.multicore.erp.modules.inventory.dto.CreateWarehouseRequest;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.model.WarehouseType;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -20,18 +19,18 @@ import java.math.BigDecimal;
 @Component
 public class WarehouseLifecycleService {
 
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseCommandService warehouseCommands;
     private final CompanyLookup companyLookup;
     private final CompanyService companyService;
     private final AuditLogService auditLogService;
     private final WarehouseQueryService queryService;
 
-    public WarehouseLifecycleService(WarehouseRepository warehouseRepository,
+    public WarehouseLifecycleService(WarehouseCommandService warehouseCommands,
                                      CompanyLookup companyLookup,
                                      CompanyService companyService,
                                      AuditLogService auditLogService,
                                      WarehouseQueryService queryService) {
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseCommands = warehouseCommands;
         this.companyLookup = companyLookup;
         this.companyService = companyService;
         this.auditLogService = auditLogService;
@@ -50,7 +49,7 @@ public class WarehouseLifecycleService {
         warehouse.setAllowsSales(allowsSales);
         warehouse.setManager(manager == null || manager.isBlank() ? null : manager.trim());
         warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
-        warehouse = warehouseRepository.save(warehouse);
+        warehouse = warehouseCommands.saveWarehouse(warehouse);
         auditLogService.logCurrent("WAREHOUSE_UPDATE", "Armazém " + warehouse.getName() + " actualizado.");
         return warehouse;
     }
@@ -58,7 +57,7 @@ public class WarehouseLifecycleService {
     public Warehouse setWarehouseActive(Long id, boolean active) {
         Warehouse warehouse = queryService.loadWarehouseForActiveCompany(id);
         warehouse.setActive(active);
-        warehouse = warehouseRepository.save(warehouse);
+        warehouse = warehouseCommands.saveWarehouse(warehouse);
         auditLogService.logCurrent("WAREHOUSE_STATUS",
                 "Armazém " + warehouse.getName() + (active ? " activado." : " desactivado."));
         return warehouse;
@@ -88,7 +87,7 @@ public class WarehouseLifecycleService {
         warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
         warehouse.setCompany(company);
         warehouse.setCreatedBy("SYSTEM");
-        return warehouseRepository.save(warehouse);
+        return warehouseCommands.saveWarehouse(warehouse);
     }
 
     public WarehouseDTO createWarehouse(CreateWarehouseRequest request) {

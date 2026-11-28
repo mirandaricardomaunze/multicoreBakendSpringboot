@@ -396,10 +396,7 @@ public class ComercialOrderLifecycleService {
         }
         approvalService.cancelPendingForDocument("ORDER", order.getId(), reason);
         order.setStatus(OrderStatus.CANCELLED.name());
-        if (order.isReservationActive()) {
-            order.setReservationActive(false);
-            order.getLines().forEach(line -> line.setReservedQuantity(BigDecimal.ZERO));
-        }
+        order.releaseReservation();
         orderRepository.save(order);
         auditLogService.logCurrent("ORDER_CANCEL", "Encomenda " + order.getOrderNumber() + " cancelada. Motivo: " + reason);
     }
@@ -561,7 +558,13 @@ public class ComercialOrderLifecycleService {
                 order.getStockTransferId(), order.getTransferNumber(), order.getVersion(),
                 order.getBusinessUnit() == null ? null : order.getBusinessUnit().getId(),
                 order.getBusinessUnit() == null ? null : order.getBusinessUnit().getName(),
-                order.getNotes());
+                order.getNotes(),
+                originOrDesktop(order).name(), OrderOrigin.label(order.getOrigin(), order.getOriginName()),
+                order.getContactPhone(), order.getFulfilmentLabel(), order.getDeliveryAddress());
+    }
+
+    private static OrderOrigin originOrDesktop(Order order) {
+        return order.getOrigin() == null ? OrderOrigin.DESKTOP : order.getOrigin();
     }
 
     public OrderDTO getOrderById(Long orderId) {

@@ -42,7 +42,7 @@ class TenantAccessServiceTest {
     void interceptorDerivesRoleFromDatabaseAndSelectsAuthorizedCompany() throws Exception {
         TenantAccessService access = mock(TenantAccessService.class);
         AuthSessionService sessions = mock(AuthSessionService.class);
-        SecurityInterceptor interceptor = new SecurityInterceptor(access, sessions);
+        SecurityInterceptor interceptor = new SecurityInterceptor(access, sessions, new PortalLoginPolicy());
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         AppUser user = user("ana", "ADMIN", 2L);
@@ -65,7 +65,7 @@ class TenantAccessServiceTest {
     @Test
     void interceptorRejectsRequestsWithoutIdentity() throws Exception {
         TenantAccessService access = mock(TenantAccessService.class);
-        SecurityInterceptor interceptor = new SecurityInterceptor(access, mock(AuthSessionService.class));
+        SecurityInterceptor interceptor = new SecurityInterceptor(access, mock(AuthSessionService.class), new PortalLoginPolicy());
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
 

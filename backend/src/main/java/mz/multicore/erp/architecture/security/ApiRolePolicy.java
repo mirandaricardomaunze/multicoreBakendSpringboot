@@ -18,7 +18,7 @@ public final class ApiRolePolicy {
             "/api/recurring/contracts", "/api/inventory/counts",
             "/api/inventory/physical-counting", "/api/inventory/waste",
             "/api/inventory/transfers", "/api/inventory/movements",
-            "/api/inventory/warehouses/all", "/api/intelligence", "/api/hr", "/api/quality");
+            "/api/inventory/warehouses/all", "/api/intelligence", "/api/hr", "/api/quality", "/api/portal");
 
     /** Raízes que têm uma decisão deliberada nesta política, mesmo quando a decisão fina é por método. */
     private static final Set<String> EXPLICIT_AREAS = Set.of(
@@ -35,7 +35,16 @@ public final class ApiRolePolicy {
             "/api/hr", "/api/quality", "/api/activity", "/api/units", "/api/pricing", "/api/pickups", "/api/bulk-stock", "/api/projects",
             "/api/advances", "/api/butchery", "/api/expiry", "/api/production-plans",
             "/api/custom-orders", "/api/consignments", "/api/exchange-rates",
-            "/api/returnables", "/api/variants", "/api/weighbridge", "/api/exceptions");
+            "/api/returnables", "/api/variants", "/api/weighbridge", "/api/exceptions", "/api/portal",
+            // Public API: no user role ever reaches it; each route demands its key permission (PublicApiPermissions).
+            "/api/public",
+            // Online shop: public without login, per-IP limits (LOJA_ONLINE_SPEC §3.2); no user role reaches it.
+            "/api/shop",
+            // Integrations (API keys, webhooks): ADMIN only (API_PUBLICA_WEBHOOKS_SPEC §3.1.1, §4.1).
+            "/api/integrations",
+            // Online shop back office: settings ADMIN only (LO-UI-01); product publication like products (LO-UI-02);
+            // unbilled online orders read by the sales roles (LO-UI-03).
+            "/api/online-shop");
 
     /** Business-sector areas (SA-C01..C03): every role may read, only management may change. */
     private static final Set<String> READ_SELLER_WRITE_MANAGER_AREAS = Set.of(
@@ -52,7 +61,9 @@ public final class ApiRolePolicy {
         if (uri == null || method == null) {
             return false;
         }
-        if (matches(uri, "/api/backup") || matches(uri, "/api/data-import") || (matches(uri, "/api/users")
+        if (matches(uri, "/api/backup") || matches(uri, "/api/data-import") || matches(uri, "/api/integrations")
+                || matches(uri, "/api/online-shop/settings")
+                || (matches(uri, "/api/users")
                 && !"/api/users/verify-pin".equals(uri))) {
             return false;
         }
@@ -61,6 +72,10 @@ public final class ApiRolePolicy {
             return !normalized.isBlank();
         }
         boolean manager = "MANAGER".equals(normalized);
+        if (matches(uri, "/api/documents/template")) {
+            // MODELOS_DOCUMENTO_SPEC §3.3: alterar e pré-visualizar o modelo só ADMIN; consultar a gestão.
+            return manager && "GET".equalsIgnoreCase(method);
+        }
         if (matches(uri, "/api/exchange-rates")) {
             // SPEC moeda estrangeira §3.2: criar/corrigir só ADMIN; consultar quem regista compras.
             return manager && "GET".equalsIgnoreCase(method);
@@ -146,8 +161,13 @@ public final class ApiRolePolicy {
         if (matches(uri, "/api/comercial/invoices")) {
             return "GET".equalsIgnoreCase(method) ? seller : manager;
         }
-        if (matches(uri, "/api/comercial/products") || matches(uri, "/api/product-categories")) {
+        if (matches(uri, "/api/comercial/products") || matches(uri, "/api/product-categories")
+                || matches(uri, "/api/online-shop/products")) {
             return "GET".equalsIgnoreCase(method) ? seller : manager;
+        }
+        if (matches(uri, "/api/online-shop/orders")) {
+            // LO-UI-03: the sales roles read the online orders still to be billed (bell); nothing to change here.
+            return seller && "GET".equalsIgnoreCase(method);
         }
         if (matches(uri, "/api/comercial/clients")) {
             return "DELETE".equalsIgnoreCase(method) ? manager : seller;

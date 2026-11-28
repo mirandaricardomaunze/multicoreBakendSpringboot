@@ -31,6 +31,17 @@ public final class PdfTheme {
 
     private PdfTheme() {}
 
+    /**
+     * Cor de destaque do modelo de documento da empresa ({@code #RRGGBB}, já validada pelo
+     * {@code DocumentAccentColorPolicy}); sem cor própria usa {@link #BRAND} (MODELOS_DOCUMENTO_SPEC §3.1).
+     */
+    public static Color accentOrDefault(String hex) {
+        if (hex == null || hex.isBlank()) {
+            return BRAND;
+        }
+        return Color.decode(hex.trim());
+    }
+
     public static Font titleFont() {
         return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, BRAND);
     }

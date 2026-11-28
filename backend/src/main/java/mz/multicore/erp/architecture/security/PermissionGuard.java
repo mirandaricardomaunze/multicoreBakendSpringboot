@@ -42,6 +42,10 @@ public final class PermissionGuard {
         requireAny(SELLER_ROLES, operation, "SELLER, MANAGER ou ADMIN");
     }
 
+    public static boolean isAdmin() {
+        return ADMIN_ROLES.contains(normalizedRole());
+    }
+
     public static boolean isManagerOrAdmin() {
         return MANAGER_ROLES.contains(normalizedRole());
     }

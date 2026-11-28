@@ -105,7 +105,8 @@ public final class OrderDetailsDialog {
         dialog.addKpi("Volume de Artigos", totalQty.toPlainString(), order.lines() != null ? order.lines().size() + " produtos distintos" : "—", UIHelper.ACCENT_BLUE, "fas-boxes");
         dialog.addKpi("Peso Bruto", totalWeight + " kg", "Massa total estimada", UIHelper.ACCENT_ORANGE, "fas-weight-hanging");
 
-        String originText = (order.quotationNumber() != null && !order.quotationNumber().isBlank())
+        String originText = OnlineShopOrderInfo.isOnlineShop(order) ? OnlineShopOrderInfo.originColumn(order)
+                : (order.quotationNumber() != null && !order.quotationNumber().isBlank())
                 ? "Cotação " + order.quotationNumber() : "Venda Directa";
         dialog.addKpi("Origem / Termos", originText, order.paymentTerms() != null ? order.paymentTerms() : "Pronto Pagamento", UIHelper.ACCENT_CYAN, "fas-file-contract");
 
@@ -174,14 +175,15 @@ public final class OrderDetailsDialog {
         String quotation = (order.quotationNumber() != null && !order.quotationNumber().isBlank())
                 ? order.quotationNumber() : "Venda Directa";
 
-        java.util.List<RecordDetailsDialog.PropertyItem> items = java.util.List.of(
+        java.util.List<RecordDetailsDialog.PropertyItem> items = new java.util.ArrayList<>(OnlineShopOrderInfo.details(order));
+        items.addAll(java.util.List.of(
                 new RecordDetailsDialog.PropertyItem("Termos de Pagamento", order.paymentTerms() != null ? order.paymentTerms() : "Pronto Pagamento"),
                 new RecordDetailsDialog.PropertyItem("Condições de Entrega Acordadas", order.deliveryTerms() != null ? order.deliveryTerms() : "Entrega standard"),
                 new RecordDetailsDialog.PropertyItem("Data de Entrega Prevista", deliveryDateText),
                 new RecordDetailsDialog.PropertyItem("Cliente Titular", order.clientName() != null ? order.clientName() : "—"),
                 new RecordDetailsDialog.PropertyItem("Destinatário / Comprador no Balcão", buyer),
                 new RecordDetailsDialog.PropertyItem("Cotação de Origem", quotation)
-        );
+        ));
 
         return RecordDetailsDialog.buildPropertySheet(items);
     }

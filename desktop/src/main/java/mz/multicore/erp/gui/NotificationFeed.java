@@ -33,6 +33,7 @@ public class NotificationFeed {
     private final SystemMonitoringApiClient monitoringApiClient;
     private final StockTransferApiClient stockTransferApiClient;
     private final QualityApiClient qualityApiClient;
+    private AccountingApiClient accountingApiClient; private WebhookApiClient webhookApiClient; private OnlineShopApiClient onlineShopApiClient;
 
     public NotificationFeed(ApprovalApiClient approvalApiClient, InventoryApiClient inventoryApiClient,
                             MySubscriptionApiClient subscriptionApiClient, HRApiClient hrApiClient) {
@@ -79,6 +80,15 @@ public class NotificationFeed {
         this.stockTransferApiClient = stockTransferApiClient; this.qualityApiClient = qualityApiClient;
     }
 
+    /** Junta ao sino os alertas 90%/100% do orçamento (docs/CENTROS_CUSTO_ORCAMENTO_SPEC.md §4.3). */
+    public NotificationFeed withBudgetAlerts(AccountingApiClient client) { this.accountingApiClient = client; return this; }
+
+    /** Junta ao sino os webhooks desactivados automaticamente (docs/API_PUBLICA_WEBHOOKS_SPEC.md §4.4.2). */
+    public NotificationFeed withWebhookAlerts(WebhookApiClient client) { this.webhookApiClient = client; return this; }
+
+    /** Junta ao sino as encomendas da loja online por facturar (docs/LOJA_ONLINE_SPEC.md §3.5, LO-UI-03). */
+    public NotificationFeed withOnlineShopOrders(OnlineShopApiClient client) { this.onlineShopApiClient = client; return this; }
+
     public List<NotificationItem> load(Long companyId) {
         List<NotificationItem> items = new ArrayList<>();
         addSystemAlerts(items);
@@ -95,6 +105,9 @@ public class NotificationFeed {
         NotificationHRAlertProvider.addQualityAlerts(items, companyId, qualityApiClient);
         addGoals(items, companyId);
         NotificationInventoryAlertProvider.addInTransitOverdue(items, companyId, stockTransferApiClient, IN_TRANSIT_OVERDUE_HOURS);
+        NotificationBudgetAlertProvider.addBudgetAlerts(items, accountingApiClient, LocalDate.now().getYear());
+        NotificationWebhookAlertProvider.addWebhookAlerts(items, webhookApiClient);
+        NotificationOnlineShopAlertProvider.addOnlineShopOrders(items, onlineShopApiClient);
         items.sort(Comparator.comparingInt(NotificationItem::priority).reversed()
                 .thenComparing(NotificationItem::type).thenComparing(NotificationItem::title));
         return List.copyOf(items);

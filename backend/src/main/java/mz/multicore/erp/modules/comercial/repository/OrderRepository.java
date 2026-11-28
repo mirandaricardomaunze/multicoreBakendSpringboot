@@ -29,7 +29,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                            @org.springframework.data.repository.query.Param("statuses") java.util.Collection<String> statuses,
                            @org.springframework.data.repository.query.Param("term") String term);
 
+    /** Encomendas da origem indicada, nos estados indicados, criadas antes do instante dado (cancelamento automático). */
+    List<Order> findByCompanyIdAndOriginAndStatusInAndCreatedAtBefore(Long companyId,
+            mz.multicore.erp.modules.comercial.model.OrderOrigin origin, java.util.Collection<String> statuses,
+            java.time.LocalDateTime createdBefore);
+
+    /** Encomendas da origem indicada fora dos estados indicados e sem fatura, da mais recente (alerta da loja online). */
+    List<Order> findByCompanyIdAndOriginAndStatusNotInAndInvoiceIdIsNullOrderByCreatedAtDesc(Long companyId,
+            mz.multicore.erp.modules.comercial.model.OrderOrigin origin, java.util.Collection<String> statuses);
+
     Optional<Order> findByCompanyIdAndIdempotencyKey(Long companyId, String idempotencyKey);
+    Optional<Order> findByCompanyIdAndOrderNumber(Long companyId, String orderNumber);
     Optional<Order> findFirstByCompanyIdAndInvoiceId(Long companyId, Long invoiceId);
     Optional<Order> findFirstByInvoiceId(Long invoiceId);
 

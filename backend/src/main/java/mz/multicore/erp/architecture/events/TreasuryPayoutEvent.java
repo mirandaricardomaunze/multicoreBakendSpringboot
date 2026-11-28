@@ -8,4 +8,11 @@ import java.time.LocalDate;
  * but not the books: posted debit by {@code purpose} / credit Caixa or Banco.
  */
 public record TreasuryPayoutEvent(Long companyId, Long transactionId, LocalDate date, BigDecimal amount,
-                                  PayoutPurpose purpose, boolean cash, String description) {}
+                                  PayoutPurpose purpose, boolean cash, String description, Long costCenterId) {
+
+    /** Payout without an explicit cost centre: the posting uses the company's default centre. */
+    public TreasuryPayoutEvent(Long companyId, Long transactionId, LocalDate date, BigDecimal amount,
+                               PayoutPurpose purpose, boolean cash, String description) {
+        this(companyId, transactionId, date, amount, purpose, cash, description, null);
+    }
+}

@@ -27,8 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 /**
@@ -137,7 +139,20 @@ public class LandedCostDocumentService {
         BigDecimal payableTotal = sum(payables.stream().map(LandedCostConfirmedEvent.Payable::amount));
         return new LandedCostConfirmedEvent(document.getCompany().getId(), document.getId(),
                 document.getDocumentNumber(), document.getDocumentDate(), stockAmount, soldAmount,
-                payableTotal.subtract(stockAmount).subtract(soldAmount), payables);
+                payableTotal.subtract(stockAmount).subtract(soldAmount), payables, soldByWarehouse(document));
+    }
+
+    /** Parte já vendida por armazém da compra de cada linha (CC-05): o custo vai ao centro de custo desse armazém. */
+    private static List<LandedCostConfirmedEvent.WarehouseShare> soldByWarehouse(LandedCostDocument document) {
+        Map<Long, BigDecimal> sold = new LinkedHashMap<>();
+        for (LandedCostAllocation allocation : document.getAllocations()) {
+            if (allocation.getSoldAmount() == null || allocation.getSoldAmount().signum() == 0) continue;
+            Purchase purchase = allocation.getPurchaseLine() == null ? null : allocation.getPurchaseLine().getPurchase();
+            sold.merge(purchase == null ? null : purchase.warehouseId(), allocation.getSoldAmount(), BigDecimal::add);
+        }
+        return sold.entrySet().stream()
+                .map(share -> new LandedCostConfirmedEvent.WarehouseShare(share.getKey(), share.getValue()))
+                .toList();
     }
 
     private static BigDecimal sum(Stream<BigDecimal> values) {

@@ -107,6 +107,10 @@ public class Product extends BaseEntity {
     @JoinColumn(name = "tax_rate_id")
     private TaxRate taxRate;
 
+    /** "Publicar na loja online" (docs/LOJA_ONLINE_SPEC.md §3.1): off by default. */
+    @Column(name = "published_online", nullable = false, columnDefinition = "boolean default false not null")
+    private boolean publishedOnline = false;
+
     @Column(name = "description", length = 500)
     private String description;
 

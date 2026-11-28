@@ -96,6 +96,11 @@ public class Purchase extends CurrencyDocument {
      * Pago em moeda base, ao câmbio do documento. Liquidada a dívida, é exactamente o total em moeda base menos o
      * devolvido, sem resíduos de cêntimos (SPEC §3.4).
      */
+    /** Id do armazém de entrada, ou {@code null} (Saldo Inicial): dá o centro de custo dos lançamentos (CC-05). */
+    public Long warehouseId() {
+        return warehouse == null ? null : warehouse.getId();
+    }
+
     @Transient
     public BigDecimal getBaseAmountPaid() {
         if (getOutstanding().signum() == 0) return baseTotal().subtract(toBaseAmount(orZero(returnedAmount)));

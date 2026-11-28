@@ -111,7 +111,8 @@ public class ComercialInvoiceLifecycleService {
                 invoice.getCompany().getId(), invoice.getId(), invoice.getInvoiceNumber(),
                 invoice.issueDate() == null ? LocalDate.now() : invoice.issueDate(),
                 invoice.getTotalBeforeTax(), invoice.getTaxAmount(), invoice.getTotalAmount(),
-                cost, amountPaidNow, cashPayment));
+                cost, amountPaidNow, cashPayment, cashPayment ? amountPaidNow : BigDecimal.ZERO,
+                invoice.getWarehouse() == null ? null : invoice.getWarehouse().getId()));
     }
 
     public InvoiceDTO createInvoice(CreateInvoiceRequest request) {

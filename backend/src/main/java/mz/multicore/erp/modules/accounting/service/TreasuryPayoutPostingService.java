@@ -12,7 +12,8 @@ import java.math.BigDecimal;
 
 /**
  * Automatic payouts that had no posting: bonuses and final settlements (6301), staff advances and loans (2602, cleared
- * by the payslip deductions), reimbursed expenses and outside services (6201); credit Caixa or Banco.
+ * by the payslip deductions), reimbursed expenses and outside services (6201); credit Caixa or Banco. The expense line
+ * carries the cost centre chosen on the expense, or none (the default centre on classes 6/7 — CC-06).
  */
 @Service
 public class TreasuryPayoutPostingService {
@@ -43,7 +44,9 @@ public class TreasuryPayoutPostingService {
         entry.setDescription(text.length() > 250 ? text.substring(0, 250) : text);
         entry.setSource(JournalSource.TREASURY_PAYOUT);
         entry.setSourceDocumentId(event.transactionId());
-        entry.addLine(JournalLine.debit(postingHelper.account(event.companyId(), debit), amount, "Pagamento"));
+        JournalLine expense = JournalLine.debit(postingHelper.account(event.companyId(), debit), amount, "Pagamento");
+        expense.setCostCenter(journalService.costCenterOrNull(event.companyId(), event.costCenterId()));
+        entry.addLine(expense);
         entry.addLine(JournalLine.credit(postingHelper.cashAccount(event.companyId(), event.cash()), amount, "Saída de tesouraria"));
         journalService.save(entry, event.companyId());
     }

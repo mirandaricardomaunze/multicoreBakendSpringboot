@@ -1,7 +1,9 @@
 package mz.multicore.erp.architecture.security;
 
+import mz.multicore.erp.modules.publicapi.service.ApiKeyAuthenticationService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -50,12 +52,21 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   TokenAuthenticationFilter tokenAuthenticationFilter) throws Exception {
+                                                   TokenAuthenticationFilter tokenAuthenticationFilter,
+                                                   ApiKeyAuthenticationService apiKeyAuthenticationService,
+                                                   PublicApiRateLimiter publicApiRateLimiter,
+                                                   OnlineShopRateLimiter onlineShopRateLimiter,
+                                                   ClientIpResolver clientIpResolver,
+                                                   Environment environment) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(h -> h.frameOptions(f -> f.sameOrigin())) // H2 console (dev)
+                // Portal web: CSP, DENY e no-referrer; resto: SAMEORIGIN para a consola H2 (dev). PG-09.
+                .headers(h -> {
+                    h.frameOptions(f -> f.disable());
+                    PortalSecurityHeaders.writers().forEach(h::addHeaderWriter);
+                })
                 // Defense-in-depth: o Spring Security recusa /api/** sem token válido (o filtro popula
                 // o SecurityContext). Login/logout e o health check ficam públicos. O SecurityInterceptor
                 // continua a resolver empresa/papel e a auditar por cima disto.
@@ -65,11 +76,21 @@ public class SecurityConfig {
                         // e um cliente bloqueado por ser antigo tem de a poder consultar.
                         .requestMatchers("/api/version").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // Loja online: montra e encomendas sem login; limites por IP no filtro abaixo. LO-04.
+                        .requestMatchers(OnlineShopRoutes.PATTERN).permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .exceptionHandling(e -> e.authenticationEntryPoint((request, response, ex) ->
                         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Autenticação necessária.")))
+                // Em prod, o portal só por HTTPS (directo ou X-Forwarded-Proto), antes de qualquer token. PG-10.
+                .addFilterBefore(PortalHttpsOnlyFilter.forEnvironment(environment), UsernamePasswordAuthenticationFilter.class)
+                // API pública: só X-Api-Key em /api/public/**; a chave nunca abre o /api/** interno; 60/min por chave. API-03/05.
+                .addFilterBefore(new ApiKeyAuthenticationFilter(apiKeyAuthenticationService, publicApiRateLimiter),
+                        UsernamePasswordAuthenticationFilter.class)
+                // Loja online: 60 pedidos/min e 5 encomendas/hora por IP. LO-04.
+                .addFilterBefore(new OnlineShopRateLimitFilter(onlineShopRateLimiter, clientIpResolver),
+                        UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable);

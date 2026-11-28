@@ -50,8 +50,37 @@ public record OrderDTO(
     long version,
     Long businessUnitId,
     String businessUnitName,
-    String notes
+    String notes,
+    /** Por onde entrou: {@code DESKTOP}, {@code API} ou {@code LOJA_ONLINE} (docs/LOJA_ONLINE_SPEC.md §3.5). */
+    String origin,
+    /** Rótulo PT-MZ da origem: "Desktop", "API · {chave}" ou "Loja online". */
+    String originLabel,
+    /** Telefone de contacto deixado por um sistema externo; nulo nas do desktop. */
+    String contactPhone,
+    /** Loja online: "Levantamento — {loja}" ou "Entrega — {zona}"; nulo nas outras. */
+    String fulfilmentLabel,
+    /** Loja online: morada de entrega, só na entrega ao domicílio. */
+    String deliveryAddress
 ) {
+    /** Construtor retrocompatível de 35 parâmetros, sem origem nem entrega (encomenda do desktop). */
+    public OrderDTO(Long id, String orderNumber, Long clientId, String clientName, String clientTaxId,
+                    String walkInName, BigDecimal totalBeforeTax, BigDecimal taxAmount, BigDecimal totalAmount,
+                    String status, Long invoiceId, List<OrderLineDTO> lines, LocalDateTime createdAt,
+                    LocalDateTime printedAt, int printCount, String lastPrintedBy,
+                    OrderKind kind, String kindLabel, String statusLabel,
+                    Long quotationId, String quotationNumber, String paymentTerms,
+                    String deliveryTerms, LocalDate expectedDeliveryDate, boolean deliveryOverdue,
+                    Long warehouseId, String warehouseName, Long destinationWarehouseId,
+                    String destinationWarehouseName, Long stockTransferId, String transferNumber,
+                    long version, Long businessUnitId, String businessUnitName, String notes) {
+        this(id, orderNumber, clientId, clientName, clientTaxId, walkInName, totalBeforeTax, taxAmount,
+                totalAmount, status, invoiceId, lines, createdAt, printedAt, printCount, lastPrintedBy,
+                kind, kindLabel, statusLabel, quotationId, quotationNumber, paymentTerms, deliveryTerms,
+                expectedDeliveryDate, deliveryOverdue, warehouseId, warehouseName, destinationWarehouseId,
+                destinationWarehouseName, stockTransferId, transferNumber, version, businessUnitId, businessUnitName,
+                notes, "DESKTOP", "Desktop", null, null, null);
+    }
+
     /** Construtor retrocompatível de 34 parâmetros sem notes. */
     public OrderDTO(Long id, String orderNumber, Long clientId, String clientName, String clientTaxId,
                     String walkInName, BigDecimal totalBeforeTax, BigDecimal taxAmount, BigDecimal totalAmount,

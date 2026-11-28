@@ -25,6 +25,9 @@ o que falta em stock e quem deve, e aprovar um desconto ou uma compra sem ir ao 
 
 - Mesmo endpoint de login (`/api/auth/login`) com o indicador de canal `PORTAL`.
 - Perfil que não seja ADMIN nem MANAGER → recusado com mensagem PT-MZ, sem token.
+  O perfil é o de cada empresa a que o utilizador tem acesso: entra quem for ADMIN ou MANAGER em pelo
+  menos uma, e a sessão de portal só lista essas empresas (onde é só EMPLOYEE/SELLER, não aparece).
+  Mensagem: "O portal é só para administradores e gestores. Use o programa da loja."
 - Conta sem 2FA activo → recusada: "Active a verificação em dois passos no programa da loja para
   usar o portal." O código 2FA é pedido como no desktop.
 - O token de portal expira **12 h** depois do login ou **30 min** depois do último pedido, o que vier
@@ -48,6 +51,18 @@ o que falta em stock e quem deve, e aprovar um desconto ou uma compra sem ir ao 
   - artigos com stock abaixo do mínimo (os 20 mais urgentes);
   - facturas vencidas: total e os 10 clientes com maior valor em atraso;
   - número de aprovações pendentes.
+- Contrato de `GET /api/portal/summary?companyId=` (só leitura, ADMIN/MANAGER, empresa do `X-Company-Id`):
+  - **Vendas**: só vendas realizadas (`Invoice.countsAsSale()`, como o `store-dashboard`), valor a pagar
+    líquido de notas; hoje = dia civil actual, mês = do dia 1 até agora; agrupadas pelo armazém da factura
+    (sem armazém → "Sem loja"), ordenadas pelo valor do mês, e com o total de hoje e do mês.
+  - **Caixas abertas**: sessões `OPEN`, operador actual (o da passagem de turno, senão o que abriu) e
+    abertura, as mais antigas primeiro. A sessão de caixa ainda não guarda a loja (`till_sessions` sem
+    armazém): o campo fica de fora até a caixa a registar — lacuna anotada, não se inventa a loja.
+  - **Stock baixo**: saldos abaixo do mínimo, os 20 mais urgentes = menor cobertura (quantidade ÷ mínimo)
+    primeiro; empate pela maior falta (mínimo − quantidade).
+  - **Vencidas**: facturas cobráveis com dias de atraso > 0 (`Invoice.daysOverdue`), total do valor em
+    dívida (`outstandingAmount`) e os 10 clientes com mais valor em atraso (nº de facturas e maior atraso).
+  - **Aprovações pendentes**: contagem dos pedidos `PENDING` da empresa.
 - Valores com `DisplayNumbers` (`1.460,00 MT`) e datas `dd/mm/aaaa`.
 - Botão "Actualizar"; actualiza sozinho a cada 5 minutos com o ecrã aberto.
 
@@ -68,6 +83,10 @@ o que falta em stock e quem deve, e aprovar um desconto ou uma compra sem ir ao 
   termina a sessão no browser.
 - Em produção (perfil `prod`), pedido ao portal sem HTTPS (directo ou `X-Forwarded-Proto: https`)
   é recusado.
+  "Portal" = páginas `/portal` e `/portal/**` e o endpoint próprio `/api/portal/**` (segmento inteiro);
+  recusa = **403** com "O portal só abre por ligação segura (https://).", antes de validar o token.
+  As rotas partilhadas com o desktop (`/api/auth/**`, `/api/approvals/**`) não mudam: a página só abre por
+  HTTPS e chama a API na mesma origem (`connect-src 'self'`). Fora de `prod` não há restrição.
 - Texto em PT-MZ; nenhum texto vindo da API é inserido como HTML (só `textContent`).
 
 ## 4. Fora de âmbito

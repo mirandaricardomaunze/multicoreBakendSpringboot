@@ -7,6 +7,7 @@ import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.modules.comercial.model.CreditNote;
 import mz.multicore.erp.modules.comercial.model.CreditNoteLine;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,40 +43,48 @@ public class CreditNotePrintService {
     @Transactional(readOnly = true)
     public byte[] render(Long noteId) {
         CreditNote note = service.loadForPrint(noteId);
+        DocumentTemplateDTO template = documentConfigService.getTemplate(note.getCompany().getId(),
+                mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL);
 
         return PdfDocumentBuilder.buildA4(doc -> {
             for (int i = 0; i < CREDIT_NOTE_COPIES.size(); i++) {
                 if (i > 0) {
                     doc.newPage();
                 }
-                renderCreditNoteCopy(doc, note, CREDIT_NOTE_COPIES.get(i));
+                renderCreditNoteCopy(doc, note, CREDIT_NOTE_COPIES.get(i), template);
             }
         });
     }
 
-    private void renderCreditNoteCopy(com.lowagie.text.Document doc, CreditNote note, String copyLabel) {
+    private void renderCreditNoteCopy(com.lowagie.text.Document doc, CreditNote note, String copyLabel,
+                                      DocumentTemplateDTO template) {
         doc.add(CompanyHeaderRenderer.build(
                 note.getCompany(),
                 "Nota de Crédito",
                 note.getNoteNumber(),
                 copyLabel,
-                null
+                null,
+                template
         ));
+        List<LineItemsTableRenderer.Row> rows = toRows(note.getLines());
         doc.add(buildContextBlock(note));
-        doc.add(buildLinesTable(note.getLines(), note.getCompany().getId()));
+        doc.add(LineItemsTableRenderer.buildCompact(rows, documentConfigService.getColumns(
+                note.getCompany().getId(), mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL)));
         doc.add(PdfDocumentBuilder.spacer(6f));
         doc.add(TotalsBlockRenderer.build(
                 note.getTotalBeforeTax(),
                 note.getTaxAmount(),
                 note.getTotalAmount(),
+                TotalsBlockRenderer.calculateBreakdowns(rows),
                 "TOTAL CREDITADO"
         ));
         if (note.getDescription() != null && !note.getDescription().isBlank()) {
             doc.add(PdfDocumentBuilder.spacer(10f));
             doc.add(new Paragraph("Observações: " + note.getDescription(), PdfTheme.bodyFont()));
         }
+        DocumentTemplateBlocks.addA4Closing(doc, template);
         doc.add(PdfDocumentBuilder.spacer(24f));
-        doc.add(buildSignatureBlock());
+        doc.add(SignatureBlockRenderer.build("Entidade Emitente", "Cliente"));
     }
 
     private PdfPTable buildContextBlock(CreditNote note) {
@@ -87,10 +96,8 @@ public class CreditNotePrintService {
         PdfPCell left = new PdfPCell();
         left.setBorder(PdfPCell.NO_BORDER);
         left.addElement(new Paragraph("Cliente", PdfTheme.subtitleFont()));
-        left.addElement(new Paragraph(note.getClient().getName(), PdfTheme.bodyFont()));
-        if (note.getClient().getTaxId() != null) {
-            left.addElement(new Paragraph("NUIT: " + note.getClient().getTaxId(), PdfTheme.bodyFont()));
-        }
+        left.addElement(new Paragraph(FiscalElements.buyerName(null, note.getClient()), PdfTheme.bodyFont()));
+        left.addElement(new Paragraph("NUIT: " + FiscalElements.buyerTaxId(note.getClient()), PdfTheme.bodyFont()));
         left.addElement(new Paragraph("Fatura: " + note.getInvoice().getInvoiceNumber(), PdfTheme.bodyFont()));
         if (note.getWarehouse() != null) {
             left.addElement(new Paragraph("Armazém devolução: " + note.getWarehouse().getName(), PdfTheme.smallFont()));
@@ -118,35 +125,16 @@ public class CreditNotePrintService {
         return table;
     }
 
-    private PdfPTable buildLinesTable(List<CreditNoteLine> lines, Long companyId) {
-        return LineItemsTableRenderer.buildCompact(lines.stream().map(l -> lineRowMapper.map(
+    private List<LineItemsTableRenderer.Row> toRows(List<CreditNoteLine> lines) {
+        return lines.stream().map(l -> lineRowMapper.map(
                 l.getProduct(),
                 l.getBatchNumber(),
                 l.getQuantity() == null ? BigDecimal.ZERO : l.getQuantity(),
                 l.getUnitPrice(),
                 l.getTaxRate(),
                 l.getDiscountPercentage(),
-                l.getLineTotal()
-        )).toList(), documentConfigService.getColumns(companyId, mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL));
-    }
-
-    private PdfPTable buildSignatureBlock() {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        try { table.setWidths(new float[]{50f, 50f}); } catch (Exception ignored) {}
-        table.addCell(signatureCell("Entidade Emitente"));
-        table.addCell(signatureCell("Cliente"));
-        return table;
-    }
-
-    private PdfPCell signatureCell(String label) {
-        PdfPCell cell = new PdfPCell();
-        cell.setBorder(PdfPCell.NO_BORDER);
-        cell.setPaddingTop(20f);
-        cell.setPaddingLeft(12f);
-        cell.setPaddingRight(12f);
-        cell.addElement(new Paragraph("____________________________", PdfTheme.bodyFont()));
-        cell.addElement(new Paragraph(label, PdfTheme.smallFont()));
-        return cell;
+                l.getLineTotal(),
+                l.getInvoiceLine() == null ? null : l.getInvoiceLine().effectiveExemptionReason()
+        )).toList();
     }
 }

@@ -77,4 +77,18 @@ final class StockProductFormBuilder {
         UIHelper.onTextChange(unitsPerPackageField, recalculate);
         recalculate.run();
     }
+
+    /** IVA combo for a new product: "IVA Padrão (16%)" first, then the rates, with the standard rate selected. */
+    static JComboBox<String> vatComboWithStandardSelected(java.util.List<mz.multicore.erp.modules.fiscal.dto.TaxRateDTO> vatRates) {
+        String[] labels = new String[vatRates.size() + 1];
+        labels[0] = "IVA Padrão (16%)";
+        int defaultTaxIdx = 0;
+        for (int i = 0; i < vatRates.size(); i++) {
+            labels[i + 1] = vatRates.get(i).name();
+            if ("IVA_STANDARD".equals(vatRates.get(i).type())) defaultTaxIdx = i + 1;
+        }
+        JComboBox<String> taxCombo = UIHelper.createComboBox(labels, label -> label);
+        taxCombo.setSelectedIndex(defaultTaxIdx);
+        return taxCombo;
+    }
 }

@@ -1,11 +1,11 @@
 ---
 id: GOAL-013
 title: "Sistemas externos lêem o catálogo e criam encomendas pela API pública"
-status: TODO
+status: DONE
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
-verify: ["ApiKeyRulesTest", "PublicApiAuthenticationTest", "PublicApiRateLimitTest", "PublicApiCatalogTest", "PublicApiOrderTest", "PublicApiHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "IntegrationsUiHarnessTest"]
+verify: ["ApiKeyRulesTest", "PublicApiAuthenticationTest", "PublicApiRateLimitTest", "PublicApiCatalogTest", "PublicApiCatalogHttpTest", "PublicApiOrderTest", "PublicApiHttpIntegrationTest", "ApiRolePolicyEndpointCoverageHarnessTest", "PostgresSchemaParityHarnessTest", "MigrationPostgresDialectHarnessTest", "IntegrationsUiHarnessTest", "GlobalExceptionHandlerTest", "DesktopThinContextTest"]
 blockedBy: []
 ---
 
@@ -17,18 +17,18 @@ Regras em `docs/API_PUBLICA_WEBHOOKS_SPEC.md` §2–§3 e §4.4.
 
 ## Critérios de aceitação
 
-- [ ] API-01 — chave gerada, mostrada uma vez, guardada em hash, revogável — `ApiKeyRulesTest`
-- [ ] API-03 — autenticação só por `X-Api-Key`, separada da API interna — `PublicApiAuthenticationTest`
-- [ ] API-04 — permissões por chave — `PublicApiAuthenticationTest`
-- [ ] API-05 — limite 60/min com 429 — `PublicApiRateLimitTest`
-- [ ] API-07 — catálogo e stock disponível sem dados internos — `PublicApiCatalogTest`
-- [ ] API-08 — criar encomenda com as regras do desktop — `PublicApiOrderTest`
-- [ ] API-09 — idempotência por `externalReference` — `PublicApiOrderTest`
-- [ ] API-10 — consultar encomenda — `PublicApiOrderTest`
-- [ ] API-02 — criar/revogar só ADMIN com auditoria — `PublicApiHttpIntegrationTest`
-- [ ] API-06 — erros e paginação — `PublicApiHttpIntegrationTest`
-- [ ] API-11 — OpenAPI do grupo público — `PublicApiHttpIntegrationTest`
-- [ ] API-UI-01 — ecrã de chaves de API — `IntegrationsUiHarnessTest`
+- [x] API-01 — chave gerada, mostrada uma vez, guardada em hash, revogável — `ApiKeyRulesTest`
+- [x] API-03 — autenticação só por `X-Api-Key`, separada da API interna — `PublicApiAuthenticationTest`
+- [x] API-04 — permissões por chave — `PublicApiAuthenticationTest`
+- [x] API-05 — limite 60/min com 429 — `PublicApiRateLimitTest`
+- [x] API-07 — catálogo e stock disponível sem dados internos — `PublicApiCatalogTest` · `PublicApiCatalogHttpTest`
+- [x] API-08 — criar encomenda com as regras do desktop — `PublicApiOrderTest`
+- [x] API-09 — idempotência por `externalReference` — `PublicApiOrderTest`
+- [x] API-10 — consultar encomenda — `PublicApiOrderTest`
+- [x] API-02 — criar/revogar só ADMIN com auditoria — `PublicApiHttpIntegrationTest`
+- [x] API-06 — erros e paginação — `PublicApiHttpIntegrationTest`
+- [x] API-11 — OpenAPI do grupo público — `PublicApiHttpIntegrationTest`
+- [x] API-UI-01 — ecrã de chaves de API — `IntegrationsUiHarnessTest`
 
 ## Fora de âmbito
 
@@ -36,8 +36,45 @@ Regras em `docs/API_PUBLICA_WEBHOOKS_SPEC.md` §2–§3 e §4.4.
 
 ## Perguntas em aberto
 
-(Vazio. A IA escreve aqui quando precisa de decisão humana e passa o goal a BLOCKED.)
+**P1 (API-08) — Por que via entra a encomenda criada pela API?** A SPEC §3.4 pede "stock disponível, reserva,
+limite de crédito, fluxo de aprovação" e "estado inicial o mesmo que uma encomenda nova do desktop", mas o
+desktop tem duas vias e nenhuma faz as quatro coisas:
+- `FORMAL_ORDER` (Encomenda A4, a via por omissão): nasce `PENDING_APPROVAL`, passa pelo motor de aprovações,
+  **não** verifica stock nem reserva na criação; o stock e o crédito só se verificam na facturação (ou na aprovação).
+- `PICKING_REQUEST` (Pedido de separação): verifica stock disponível e **reserva** logo, nasce
+  `AWAITING_SEPARATION`, **sem** aprovação; o crédito é verificado na facturação.
+
+Opções:
+- **A (recomendada)** — `FORMAL_ORDER` com aprovação e estado `PENDING_APPROVAL` como no desktop, **mais**
+  verificação de stock disponível e reserva activa na criação (a loja online não pode vender o que já está
+  prometido; a reserva liberta-se ao facturar/cancelar como hoje). É uma combinação nova, que só a API usa.
+- B — `PICKING_REQUEST` tal como o desktop (reserva, vai directo para separação no armazém, sem aprovação).
+- C — `FORMAL_ORDER` exactamente como no desktop (aprovação, sem reserva; stock só na facturação).
+
+**P2 (API-08) — Nome do cliente novo criado por NUIT.** O corpo da SPEC só tem `nuit`, `contactName` e
+`contactPhone`; o registo manual de cliente exige nome. Recomendação: campo opcional `customerName`, obrigatório
+só quando o NUIT ainda não existe na empresa (sem ele → 400 `CUSTOMER_NAME_REQUIRED`); alternativa: usar o
+`contactName` como nome do cliente.
+
+**Resposta do responsável (2026-11-27):** P1 → opção **A** (`FORMAL_ORDER` com aprovação e reserva activa na
+criação); P2 → `customerName` opcional, obrigatório quando o NUIT é novo (`400 CUSTOMER_NAME_REQUIRED`).
+Regras escritas na SPEC §3.4.
 
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-26 · API-01 · módulo `publicapi`: chave `mk_live_` + 32 bytes base62 mostrada só na criação, guardada em hash SHA-256 com os 8 caracteres de identificação, revogação imediata, último uso registado, auditoria `API_KEY_CREATE`/`API_KEY_REVOKE`, migração V155 `api_keys`; ApiKeyRulesTest verde 9/9.
+- 2026-11-26 · API-03 · `ApiKeyAuthenticationFilter` + `PublicApiRoutes`: `/api/public/**` só abre com `X-Api-Key` (empresa da chave, sem `X-Company-Id`), token de utilizador → 401 `USER_TOKEN_NOT_ACCEPTED`, chave em falta/revogada → 401 JSON `API_KEY_REQUIRED`/`API_KEY_INVALID`, chave recusada no `/api/**` interno; interceptores do desktop excluídos da rota pública; PublicApiAuthenticationTest verde 6/6.
+- 2026-11-26 · API-04 · `PublicApiPermissions` (rota+método → permissão, §3.3) verificado no `ApiKeyAuthenticationFilter` antes do recurso: chave sem a permissão → 403 JSON `API_PERMISSION_DENIED` com a permissão em falta, `ORDERS_WRITE` não dá `ORDERS_READ`; regra do 403 escrita na SPEC §3.3; PublicApiAuthenticationTest verde 9/9.
+- 2026-11-26 · API-05 · `PublicApiRateLimiter` (janela fixa de 1 min por chave, recusados não contam) aplicado no `ApiKeyAuthenticationFilter` depois da autenticação: o 61.º pedido → 429 JSON `RATE_LIMIT_EXCEEDED` com `Retry-After` em segundos (≥ 1); uma chave esgotada não trava outra; regra escrita na SPEC §3.2; PublicApiRateLimitTest verde 3/3.
+- 2026-11-26 · API-07 · `PublicCatalogController` + `PublicCatalogService`: `GET /products`, `/products/{sku}` e `/stock` da empresa da chave, só dados de venda (preço com IVA pelo `LineCalculator`, taxa em %, unidade base, `updatedAt` com fuso), sem custo/grosso/margens/fornecedores; `updatedSince` ISO 8601; stock disponível = quantidade − reservas activas (porta nova `OrderReservationLookup`) nos armazéns de venda, nunca negativo; 404 `PRODUCT_NOT_FOUND`/`WAREHOUSE_NOT_FOUND`; páginas a partir de 0, máx. 100; regra escrita na SPEC §3.3.1; PublicApiCatalogTest 7/7 e PublicApiCatalogHttpTest 2/2 verdes.
+- 2026-11-26 · API-08 · bloqueado: a via da encomenda (aprovação vs reserva) e o nome do cliente novo por NUIT não estão na SPEC §3.4; perguntas P1/P2 em `## Perguntas em aberto`.
+- 2026-11-27 · API-08 · `POST /api/public/v1/orders` (`PublicOrderController` + `PublicOrderService`): a chave actua como vendedor na sua empresa (`CurrentUserContext.runAs`), SKU/armazém de venda traduzidos, preço e IVA do sistema; nasce `FORMAL_ORDER` com o motor de aprovações e reserva o stock livre na criação (`ExternalOrderPlacementService`, `OrderStockAvailability.requireAndReserve`), sem stock → 422 `INSUFFICIENT_STOCK` sem gravar nada; cliente por NUIT (novo exige `customerName` → 400 `CUSTOMER_NAME_REQUIRED`) ou Consumidor Final com contacto (400 `CONTACT_REQUIRED`); origem `API` + nome da chave, referência externa e telefone gravados (V157); rejeição na aprovação liberta a reserva; detalhe na SPEC §3.4.1; PublicApiOrderTest 6/6 verde.
+- 2026-11-27 · API-09 · idempotência por chave + `externalReference`: impressão digital SHA-256 do corpo normalizado (`PublicOrderFingerprint`, espaços nas pontas e zeros à direita ignorados) guardada em `customer_orders.request_fingerprint` (V158); a verificação corre antes de qualquer outra regra (`ExternalOrderPlacementService.findPlaced`): mesmo conteúdo → 200 com a encomenda no estado actual, sem duplicar nem reservar de novo; conteúdo diferente → 409 `EXTERNAL_REFERENCE_CONFLICT` com a referência e o número existente; chaves diferentes não colidem; regra escrita na SPEC §3.4.2; PublicApiOrderTest 9/9 verde. Nota: dois pedidos iguais em simultâneo esbarram no índice único `uk_customer_orders_company_idempotency` (o segundo falha sem duplicar).
+- 2026-11-27 · API-10 · `GET /api/public/v1/orders/{número}` (`PublicOrderController` com `{*number}`, porque o número tem barra: `ENC-2026/00001`) com `ORDERS_READ`: `CustomerOrderTrackingService` (comercial) devolve qualquer Encomenda A4 ou Pedido de separação da empresa da chave, da API ou do desktop, no estado actual, com linhas, totais e `invoiceNumber` (`null` antes de facturar); outra empresa, número inexistente ou reposição interna → 404 `ORDER_NOT_FOUND`; a repetição idempotente do POST também mostra o estado actual com a factura; regra escrita na SPEC §3.4.3; PublicApiOrderTest 12/12 verde.
+- 2026-11-27 · API-02 · `ApiKeyController` interno em `/api/integrations/api-keys` (listar, criar → 201 com o segredo uma única vez, `POST /{id}/revoke`) sobre o `ApiKeyService`; `/api/integrations` classificada no `ApiRolePolicy` como só ADMIN (MANAGER/EMPLOYEE → 403, nada gravado); chave de outra empresa, já revogada, nome vazio ou sem permissões → 400 PT-MZ; auditoria `API_KEY_CREATE`/`API_KEY_REVOKE` com o utilizador e `mk_live_XXXXXXXX...`, nunca o segredo; `PublicApiExceptionHandler` restrito aos controllers públicos para não apanhar a gestão interna; regra escrita na SPEC §3.1.1; PublicApiHttpIntegrationTest 3/3 verde.
+- 2026-11-27 · API-06 · todo o erro em `/api/public/**` sai como `PublicApiError` `{code, message}` PT-MZ, sem stack trace nem SQL: `PublicApiExceptionHandler` passa a cobrir parâmetro com tipo errado/em falta e `updatedSince` inválido → `400 VALIDATION_ERROR`, gravação simultânea → `409 CONFLICT`, avaria → `500 INTERNAL_ERROR` genérico (detalhe só no log); rota inexistente → `404 NOT_FOUND` e método errado → `405 METHOD_NOT_ALLOWED` com `Allow` tratados no `GlobalExceptionHandler` só quando o pedido é da API pública (`PublicApiRoutes.isPublicApi(request)`), resto do servidor igual; paginação `page` ≥ 0, `size` 50 por omissão e máx. 100; regra escrita na SPEC §3.2.1; PublicApiHttpIntegrationTest 6/6 e GlobalExceptionHandlerTest 6/6 verdes.
+- 2026-11-27 · API-11 · spec primeiro: regra da documentação OpenAPI escrita na SPEC §3.2.2 (OpenAPI 3 JSON em `GET /api/public/v1/docs` só com as rotas `/api/public/v1/**`, esquema `ApiKeyAuth` no cabeçalho `X-Api-Key` e erro `PublicApiError`, exige chave válida de qualquer permissão e conta para o limite, existe em prod independentemente das flags springdoc da documentação interna, sem Swagger UI público); linha do HARNESS actualizada; implementação na próxima iteração.
+- 2026-11-27 · API-11 · `GET /api/public/v1/docs` (`PublicApiDocsController` + `PublicApiDocumentationService`): documento OpenAPI 3 JSON construído no módulo com os modelos do swagger-core (não depende do springdoc, por isso existe em prod com `springdoc.api-docs.enabled=false`), só com `/products`, `/products/{sku}`, `/stock`, `POST /orders` e `/orders/{number}`, esquema `ApiKeyAuth` (`X-Api-Key`) global, `PublicApiError` e esquemas gerados a partir dos DTO públicos; exige chave válida de qualquer permissão (401 `API_KEY_REQUIRED`/`API_KEY_INVALID`) e conta para o limite; o teste compara as rotas documentadas com as rotas que o servidor mapeia; PublicApiHttpIntegrationTest 8/8 verde.
+- 2026-11-27 · API-UI-01 · spec primeiro: ecrã de chaves escrito na SPEC §4.4.1 (Configurações › "Integrações" como último separador, tabela com identificação, permissões em PT-MZ, último uso e estado, "Nova chave" com nome e ≥1 permissão, segredo mostrado uma vez com "Copiar" e descartado ao fechar, "Revogar" só activa com confirmação, gestão só ADMIN, tudo pela API interna §3.1.1); linha do HARNESS actualizada; implementação na próxima iteração.
+- 2026-11-27 · API-UI-01 · Configurações › "Integrações" (último separador, `fas-plug`) com `IntegrationsPanel` › `ApiKeysPanel`: tabela nome, `mk_live_XXXXXXXX...`, permissões PT-MZ (`ApiKeyLabels`), criada em/por, último uso ("Nunca usada") e estado ("Activa"/"Revogada em … por …"), revogadas visíveis; "Nova chave" (`NewApiKeyDialog`, `ModernFormDialog` assíncrono) valida nome e ≥1 permissão com as mensagens do backend; segredo em `ApiKeySecretDialog` só de leitura com "Copiar" e o aviso, descartado ao fechar; "Revogar" só com chave activa e `UIHelper.confirm`; não-ADMIN não pede a lista e vê "Só o administrador gere as chaves de API."; cliente `ApiKeyApiClient` sobre `/api/integrations/api-keys`; `ApiKeyDTO`/`CreateApiKeyRequest`/`CreatedApiKeyDTO`/`ApiKeyPermission` movidos para `contracts` (mesmos pacotes) para o desktop os usar; IntegrationsUiHarnessTest 7/7 e DesktopThinContextTest 2/2 verdes. Goal concluído.

@@ -8,11 +8,11 @@ import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 /** Compõe exclusivamente a via térmica simplificada da factura. */
 @Component
@@ -20,6 +20,11 @@ public class InvoiceThermalRenderer {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     byte[] render(Invoice invoice) {
+        return render(invoice, null, null);
+    }
+
+    /** Talão com notas e rodapé do modelo da empresa; o logótipo sai sempre centrado no cabeçalho. */
+    byte[] render(Invoice invoice, DocumentTemplateDTO template, String footer) {
         return PdfDocumentBuilder.buildReceipt(doc -> {
             ThermalReceiptRenderer.companyHeader(doc, invoice.getCompany());
             ThermalReceiptRenderer.centered(doc, "FATURA SIMPLIFICADA", PdfTheme.boldFont());
@@ -28,10 +33,10 @@ public class InvoiceThermalRenderer {
             if (invoice.getCreatedAt() != null) {
                 ThermalReceiptRenderer.centered(doc, "Data: " + invoice.getCreatedAt().format(DATE_FMT), PdfTheme.smallFont());
             }
-            String buyer = invoice.getClient() != null ? invoice.getClient().getName() : invoice.getCustomerName();
-            if (buyer != null && !buyer.isBlank()) ThermalReceiptRenderer.centered(doc, "Cliente: " + buyer, PdfTheme.smallFont());
-            if (invoice.getClient() != null && invoice.getClient().getTaxId() != null) {
-                ThermalReceiptRenderer.centered(doc, "NUIT Cliente: " + invoice.getClient().getTaxId(), PdfTheme.smallFont());
+            ThermalReceiptRenderer.centered(doc, "Cliente: "
+                    + FiscalElements.buyerName(invoice.getCustomerName(), invoice.getClient()), PdfTheme.smallFont());
+            ThermalReceiptRenderer.centered(doc, "NUIT Cliente: " + FiscalElements.buyerTaxId(invoice.getClient()), PdfTheme.smallFont());
+            if (invoice.getClient() != null) {
                 String address = invoice.getClient().getAddress();
                 if (address != null && !address.isBlank() && !"-".equals(address.trim()) && !"—".equals(address.trim())) {
                     ThermalReceiptRenderer.centered(doc, "Morada: " + address.trim(), PdfTheme.smallFont());
@@ -41,16 +46,15 @@ public class InvoiceThermalRenderer {
             doc.add(lines(invoice));
             ThermalReceiptRenderer.dottedLine(doc);
             ThermalReceiptRenderer.right(doc, "Subtotal: " + MoneyFormat.format(invoice.getTotalBeforeTax()), PdfTheme.bodyFont());
-            for (TotalsBlockRenderer.TaxBreakdown b : TotalsBlockRenderer.calculateBreakdowns(taxRows(invoice))) {
-                ThermalReceiptRenderer.right(doc, b.taxRateLabel() + " s/ " + MoneyFormat.format(b.taxableAmount())
-                        + ": " + MoneyFormat.format(b.taxAmount()), PdfTheme.smallFont());
-            }
+            FiscalElements.thermalVatByRate(doc, FiscalElements.invoiceBreakdowns(invoice.getLines()));
             ThermalReceiptRenderer.right(doc, "IVA:      " + MoneyFormat.format(invoice.getTaxAmount()), PdfTheme.bodyFont());
             ThermalReceiptRenderer.right(doc, "TOTAL:    " + MoneyFormat.format(invoice.getTotalAmount()), PdfTheme.boldFont());
             ThermalReceiptRenderer.dottedLine(doc);
+            DocumentTemplateBlocks.thermalNotes(doc, template);
             ThermalReceiptRenderer.centered(doc, "Os bens/serviços foram postos à disposição", PdfTheme.smallFont());
             ThermalReceiptRenderer.centered(doc, "na data da emissão do documento.", PdfTheme.smallFont());
             ThermalReceiptRenderer.centered(doc, "Processado por Computador / Multicore ERP", PdfTheme.smallFont());
+            ThermalReceiptRenderer.footer(doc, footer, null);
         });
     }
 
@@ -78,13 +82,6 @@ public class InvoiceThermalRenderer {
             ThermalReceiptRenderer.cell(table, MoneyFormat.formatPlain(line.getLineTotal()), PdfTheme.boldFont(), Element.ALIGN_RIGHT, false);
         }
         return table;
-    }
-
-    /** Per-rate VAT summary with the legal reason of each VAT-free group (Código do IVA). */
-    private static List<LineItemsTableRenderer.Row> taxRows(Invoice invoice) {
-        return invoice.getLines().stream().map(line -> new LineItemsTableRenderer.Row(null, null, null, null,
-                line.getQuantity(), null, null, line.getUnitPrice(), line.getTaxRate(), line.getDiscountPercentage(),
-                line.getLineTotal(), line.effectiveExemptionReason())).toList();
     }
 
     private static String rateLabel(BigDecimal rate) {

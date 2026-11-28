@@ -2,12 +2,18 @@ package mz.multicore.erp.modules.printing;
 
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Element;
-import com.lowagie.text.Image;
+import com.lowagie.text.Font;
+import com.lowagie.text.FontFactory;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.documents.dto.DocumentTemplateDTO;
+import mz.multicore.erp.modules.documents.model.DocumentLogoPosition;
+import mz.multicore.erp.modules.printing.DocumentTemplateBlocks.LogoSize;
+
+import java.awt.Color;
 
 /**
  * Builds the document header block: company name, NUIT, contact, address.
@@ -33,25 +39,40 @@ public final class CompanyHeaderRenderer {
     public static PdfPTable build(Company company, String documentTitle, String documentNumber,
                                   String copyLabel, String statusLabel,
                                   float companyWidth, float documentWidth) {
+        return build(company, documentTitle, documentNumber, copyLabel, statusLabel,
+                new float[]{companyWidth, documentWidth}, DocumentTemplateDTO.defaults());
+    }
+
+    /** Cabeçalho com o modelo da empresa: posição do logótipo e cor de destaque nos títulos (DT-04). */
+    public static PdfPTable build(Company company, String documentTitle, String documentNumber,
+                                  String copyLabel, String statusLabel, DocumentTemplateDTO template) {
+        return build(company, documentTitle, documentNumber, copyLabel, statusLabel, new float[]{55f, 45f}, template);
+    }
+
+    private static PdfPTable build(Company company, String documentTitle, String documentNumber,
+                                   String copyLabel, String statusLabel,
+                                   float[] columnWidths, DocumentTemplateDTO template) {
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);
         try {
-            table.setWidths(new float[]{companyWidth, documentWidth});
+            table.setWidths(columnWidths);
         } catch (Exception ignored) {}
         table.setSpacingAfter(14f);
 
-        table.addCell(companyCell(company));
-        table.addCell(documentCell(documentTitle, documentNumber, copyLabel, statusLabel));
+        Color accent = DocumentTemplateBlocks.accent(template);
+        DocumentTemplateBlocks.addCenteredLogoRow(table, 2, company, template, LogoSize.HEADER);
+        table.addCell(companyCell(company, template, accent));
+        table.addCell(documentCell(company, template, accent, documentTitle, documentNumber, copyLabel, statusLabel));
         return table;
     }
 
-    private static PdfPCell companyCell(Company company) {
+    private static PdfPCell companyCell(Company company, DocumentTemplateDTO template, Color accent) {
         PdfPCell cell = new PdfPCell();
         cell.setBorder(PdfPCell.NO_BORDER);
 
-        addLogo(cell, company);
+        DocumentTemplateBlocks.addLogoIfAt(cell, DocumentLogoPosition.LEFT, company, template, LogoSize.HEADER);
 
-        Paragraph name = new Paragraph(CompanyIdentityText.displayName(company, "Empresa"), PdfTheme.titleFont());
+        Paragraph name = new Paragraph(CompanyIdentityText.displayName(company, "Empresa"), titleFont(accent));
         name.setSpacingAfter(2f);
         cell.addElement(name);
 
@@ -72,29 +93,23 @@ public final class CompanyHeaderRenderer {
         return cell;
     }
 
-    /** Logótipo (se existir), escalado a uma altura fixa. À prova de falha: bytes inválidos → sem imagem. */
-    private static void addLogo(PdfPCell cell, Company company) {
-        if (company == null || company.getLogo() == null || company.getLogo().length == 0) return;
-        try {
-            Image logo = Image.getInstance(company.getLogo());
-            logo.scaleToFit(150f, 50f);
-            logo.setSpacingAfter(4f);
-            cell.addElement(logo);
-        } catch (Exception ignored) {
-            // logótipo ilegível — o documento sai na mesma, sem imagem.
-        }
+    private static Font titleFont(Color accent) {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, accent);
     }
 
     private static void addLine(PdfPCell cell, String text, com.lowagie.text.Font font) {
         if (text != null && !text.isBlank()) cell.addElement(new Paragraph(text.trim(), font));
     }
 
-    private static PdfPCell documentCell(String title, String number, String copyLabel, String statusLabel) {
+    private static PdfPCell documentCell(Company company, DocumentTemplateDTO template, Color accent,
+                                         String title, String number, String copyLabel, String statusLabel) {
         PdfPCell cell = new PdfPCell();
         cell.setBorder(PdfPCell.NO_BORDER);
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 
-        Paragraph titleP = new Paragraph(title == null ? "" : title.toUpperCase(), PdfTheme.titleFont());
+        DocumentTemplateBlocks.addLogoIfAt(cell, DocumentLogoPosition.RIGHT, company, template, LogoSize.HEADER);
+
+        Paragraph titleP = new Paragraph(title == null ? "" : title.toUpperCase(), titleFont(accent));
         titleP.setAlignment(Element.ALIGN_RIGHT);
         titleP.setSpacingAfter(2f);
         cell.addElement(titleP);
@@ -119,7 +134,4 @@ public final class CompanyHeaderRenderer {
         return cell;
     }
 
-    private static String safe(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value;
-    }
 }

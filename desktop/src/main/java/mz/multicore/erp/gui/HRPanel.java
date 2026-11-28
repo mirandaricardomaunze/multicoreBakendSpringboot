@@ -20,6 +20,7 @@ import mz.multicore.erp.modules.hr.dto.ExpenseClaimDTO;
 import mz.multicore.erp.modules.hr.dto.PayslipDTO;
 import mz.multicore.erp.modules.hr.dto.VacationDTO;
 import mz.multicore.erp.modules.printing.dto.SensitiveDocumentType;
+import mz.multicore.erp.desktop.client.AccountingApiClient;
 import mz.multicore.erp.desktop.client.HRApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 
@@ -41,6 +42,8 @@ public class HRPanel extends JPanel {
     static final String[] ABSENCE_TYPES = {"JUSTIFIED", "UNJUSTIFIED", "SICK", "MATERNITY", "OTHER"};
 
     final HRApiClient hrApiClient;
+    /** Lists the cost centres for the expense-claim picker (CC-UI-02); may be null (backend default centre). */
+    final AccountingApiClient accountingApiClient;
     final PrintApiClient printApiClient;
     private final HROverviewTabPanel overviewTabPanel;
     private final HRExpensesPanel expensesPanel;
@@ -82,7 +85,13 @@ public class HRPanel extends JPanel {
     JTable expensesTable;
 
     public HRPanel(HRApiClient hrApiClient, PrintApiClient printApiClient) {
+        this(hrApiClient, printApiClient, null);
+    }
+
+    public HRPanel(HRApiClient hrApiClient, PrintApiClient printApiClient,
+                   AccountingApiClient accountingApiClient) {
         this.hrApiClient = hrApiClient;
+        this.accountingApiClient = accountingApiClient;
         this.printApiClient = printApiClient;
         this.overviewTabPanel = new HROverviewTabPanel(this);
         this.expensesPanel = new HRExpensesPanel(this);

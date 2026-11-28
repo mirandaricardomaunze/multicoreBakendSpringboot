@@ -26,11 +26,14 @@ public class AuthController {
     private final LoginRateLimiter loginRateLimiter;
     private final ClientIpResolver clientIpResolver;
     private final AccountSecurityService accountSecurityService;
+    private final PortalLoginPolicy portalLoginPolicy;
 
     public AuthController(AppUserService appUserService, AuthSessionService authSessionService,
                           SubscriptionService subscriptionService, LoginRateLimiter loginRateLimiter,
-                          ClientIpResolver clientIpResolver, AccountSecurityService accountSecurityService) {
+                          ClientIpResolver clientIpResolver, AccountSecurityService accountSecurityService,
+                          PortalLoginPolicy portalLoginPolicy) {
         this.accountSecurityService = accountSecurityService;
+        this.portalLoginPolicy = portalLoginPolicy;
         this.appUserService = appUserService;
         this.authSessionService = authSessionService;
         this.subscriptionService = subscriptionService;
@@ -49,6 +52,10 @@ public class AuthController {
             loginRateLimiter.recordFailure(request.username(), clientIp); // conta falhas (senha errada, inativo, inexistente)
             throw ex;
         }
+        boolean portal = portalLoginPolicy.isPortal(request.channel());
+        if (portal) {
+            portalLoginPolicy.requireAllowed(user); // PG-01/PG-02: recusado antes de qualquer token
+        }
         boolean twoFactor = accountSecurityService.mustUseTwoFactor(user);
         if (twoFactor && user.getTotpSecret() != null) {
             if (request.totpCode() == null || request.totpCode().isBlank()) {
@@ -63,13 +70,14 @@ public class AuthController {
         loginRateLimiter.recordSuccess(request.username(), clientIp);
         boolean setupRequired = twoFactor && user.getTotpSecret() == null;
         AuthSessionService.AuthSession session = authSessionService.create(
-                user, user.isPasswordChangeRequired() || setupRequired);
+                user, user.isPasswordChangeRequired() || setupRequired, portal); // PG-03: 12 h / 30 min sem uso
 
         // Só empresas acessíveis entram na sessão: activas (suspensão manual) e com assinatura que
         // permita login (não expirada/suspensa). Empresa sem assinatura continua acessível.
         List<CompanyAccess> companies = user.getCompanyAccesses().stream()
                 .filter(access -> access.getCompany().isActive())
                 .filter(access -> subscriptionService.allowsLogin(access.getCompany().getId()))
+                .filter(access -> !portal || portalLoginPolicy.allowsCompanyRole(access.getRole()))
                 .map(access -> new CompanyAccess(
                         access.getCompany().getId(), access.getCompany().getName(), access.getRole()))
                 .toList();
@@ -120,9 +128,14 @@ public class AuthController {
                 : null;
     }
 
-    public record LoginRequest(@NotBlank String username, @NotBlank String password, String totpCode) {
+    /** {@code channel}: vazio = desktop; {@code PORTAL} = portal web do gestor (PORTAL_GESTOR_SPEC §3.1). */
+    public record LoginRequest(@NotBlank String username, @NotBlank String password, String totpCode, String channel) {
         public LoginRequest(String username, String password) {
-            this(username, password, null);
+            this(username, password, null, null);
+        }
+
+        public LoginRequest(String username, String password, String totpCode) {
+            this(username, password, totpCode, null);
         }
     }
 

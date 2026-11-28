@@ -32,4 +32,8 @@ public class AuthSessionRecord extends BaseEntity {
 
     @Column(name = "restricted", nullable = false)
     private boolean restricted;
+
+    /** Sessão do portal web do gestor: expira também por falta de uso (PORTAL_GESTOR_SPEC §3.1). */
+    @Column(name = "portal", nullable = false)
+    private boolean portal;
 }

@@ -21,6 +21,8 @@ import java.time.LocalDate;
  * @param amountPaidNow quanto entrou em dinheiro no acto (0 = venda inteiramente a crédito)
  * @param cashPayment   o que foi pago entrou em numerário (caixa) e não por banco
  * @param cashPaidNow   parte de {@code amountPaidNow} em numerário; o resto entrou por banco (cartão, M-Pesa)
+ * @param warehouseId   armazém de onde a venda saiu — o seu centro de custo recebe o proveito e o custo (CC-05);
+ *                      {@code null} usa o centro por omissão
  */
 public record SaleRegisteredEvent(
         Long companyId,
@@ -33,13 +35,22 @@ public record SaleRegisteredEvent(
         BigDecimal costOfGoods,
         BigDecimal amountPaidNow,
         boolean cashPayment,
-        BigDecimal cashPaidNow
+        BigDecimal cashPaidNow,
+        Long warehouseId
 ) {
+    /** Venda sem armazém conhecido (centro por omissão). */
+    public SaleRegisteredEvent(Long companyId, Long invoiceId, String invoiceNumber, LocalDate date, BigDecimal netAmount,
+                               BigDecimal taxAmount, BigDecimal totalAmount, BigDecimal costOfGoods,
+                               BigDecimal amountPaidNow, boolean cashPayment, BigDecimal cashPaidNow) {
+        this(companyId, invoiceId, invoiceNumber, date, netAmount, taxAmount, totalAmount, costOfGoods, amountPaidNow,
+                cashPayment, cashPaidNow, null);
+    }
+
     /** Um único meio de pagamento: tudo em numerário ou tudo por banco. */
     public SaleRegisteredEvent(Long companyId, Long invoiceId, String invoiceNumber, LocalDate date, BigDecimal netAmount,
                                BigDecimal taxAmount, BigDecimal totalAmount, BigDecimal costOfGoods,
                                BigDecimal amountPaidNow, boolean cashPayment) {
         this(companyId, invoiceId, invoiceNumber, date, netAmount, taxAmount, totalAmount, costOfGoods, amountPaidNow,
-                cashPayment, cashPayment ? amountPaidNow : BigDecimal.ZERO);
+                cashPayment, cashPayment ? amountPaidNow : BigDecimal.ZERO, null);
     }
 }

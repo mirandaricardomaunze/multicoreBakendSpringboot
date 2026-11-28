@@ -14,15 +14,19 @@ import java.awt.*;
 
 /**
  * Gestão das colunas visíveis nos documentos oficiais (Fatura, Encomenda,
- * Guia de Remessa, etc.) e texto de rodapé de recibos POS.
+ * Guia de Remessa, etc.), texto de rodapé de recibos POS e o modelo do documento.
  */
 final class ConfigDocumentColumnsPanel {
 
     private final ConfigPanel owner;
     private JComboBox<String> docTypeCombo;
     private ColumnBoxGroup group;
+    private final ConfigDocumentTemplatePanel templatePanel;
 
-    ConfigDocumentColumnsPanel(ConfigPanel owner) { this.owner = owner; }
+    ConfigDocumentColumnsPanel(ConfigPanel owner) {
+        this.owner = owner;
+        this.templatePanel = new ConfigDocumentTemplatePanel(owner, this::selectedDocType);
+    }
 
     public JPanel buildPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 15));
@@ -87,7 +91,6 @@ final class ConfigDocumentColumnsPanel {
         footerRow.add(footerField, BorderLayout.CENTER);
         center.add(footerRow, BorderLayout.CENTER);
         card.add(center, BorderLayout.CENTER);
-
         group = new ColumnBoxGroup(bx[0], bx[1], bx[2], bx[3], bx[4], bx[5], bx[6], bx[7], bx[8], bx[9], bx[10], footerField);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -97,8 +100,7 @@ final class ConfigDocumentColumnsPanel {
         saveBtn.addActionListener(e -> ConfigDocumentColumnsOperations.saveColumns(owner, selectedDocType(), group));
         actions.add(saveBtn);
         card.add(actions, BorderLayout.SOUTH);
-
-        panel.add(card, BorderLayout.CENTER);
+        panel.add(templatePanel.stackBelow(card), BorderLayout.CENTER);
         return panel;
     }
 
@@ -118,5 +120,6 @@ final class ConfigDocumentColumnsPanel {
 
     void loadDocumentColumns() {
         ConfigDocumentColumnsOperations.loadColumns(owner, selectedDocType(), group);
+        templatePanel.refresh();
     }
 }
