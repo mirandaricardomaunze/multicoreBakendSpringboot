@@ -176,7 +176,8 @@ public class OnlineShopOrderService {
                         new SaveClientRequest(checkout.customerName(), checkout.nuit(), null, null)).id());
     }
 
-    private static OnlineShopOrderDTO toDTO(OrderDTO order) {
+    /** Customer view of an order: number, state, lines and total — no ids, costs, reservations or contact. */
+    static OnlineShopOrderDTO toDTO(OrderDTO order) {
         List<OnlineShopOrderLineDTO> lines = order.lines() == null ? List.of() : order.lines().stream()
                 .map(line -> new OnlineShopOrderLineDTO(line.sku(), line.productName(), line.quantity()))
                 .toList();

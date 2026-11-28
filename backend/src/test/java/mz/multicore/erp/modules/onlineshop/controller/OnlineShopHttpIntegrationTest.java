@@ -5,7 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.OnlineShopRateLimiter;
 import mz.multicore.erp.architecture.security.OnlineShopRoutes;
+import mz.multicore.erp.modules.comercial.model.Product;
+import mz.multicore.erp.modules.comercial.model.ProductSaleType;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseService;
+import mz.multicore.erp.modules.onlineshop.dto.LookupOnlineShopOrderRequest;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopFulfilment;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopOrderLineRequest;
 import mz.multicore.erp.modules.onlineshop.dto.PlaceOnlineShopOrderRequest;
@@ -35,6 +41,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * Harness LO-04 (docs/LOJA_ONLINE_SPEC.md §3.2): {@code /api/shop/{code}/**} answers without login; a disabled or
  * unknown shop is "Loja indisponível."; per client IP at most 60 requests a minute and 5 order attempts an hour
  * (429 {@code RATE_LIMIT_EXCEEDED} with {@code Retry-After}); a filled honeypot refuses the order and creates nothing.
+ *
+ * <p>Harness LO-09 (§3.3): the customer follows the order with its number and the checkout phone
+ * ({@code POST /api/shop/{code}/orders/lookup}); a wrong or malformed phone and an unknown number all answer the same
+ * "Encomenda não encontrada.", so the answer never reveals whether the order exists.
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:online-shop-http;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
@@ -42,7 +52,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 class OnlineShopHttpIntegrationTest {
 
     private static final String CODE = "lo04-montra";
+    private static final String SERVICE_SKU = "LO09-MONTAGEM";
+    private static final String NOT_FOUND = "Encomenda não encontrada.";
 
+    @Autowired private ProductLookup productLookup;
+    @Autowired private ProductCommandService productCommandService;
+    @Autowired private CompanyLookup companyLookup;
     @Autowired private MockMvc mockMvc;
     @Autowired private OnlineShopSettingsService settingsService;
     @Autowired private WarehouseService warehouseService;
@@ -138,14 +153,109 @@ class OnlineShopHttpIntegrationTest {
         assertThat(OnlineShopRoutes.isOrderPlacement("POST", "/api/shopx/a/orders")).isFalse();
     }
 
-    private void openShop(boolean enabled) {
-        long companyId = jdbc.queryForObject("select min(id) from companies", Long.class);
+    @Test
+    void lo09_consultaPorNumeroETelemovelDevolveOEstado() throws Exception {
+        Long pickup = openShop(true);
+        JsonNode placed = placeServiceOrder("10.9.0.1", pickup);
+        String number = placed.get("number").asText();
+
+        MockHttpServletResponse found = mockMvc.perform(from("10.9.0.1", lookup(CODE, number, "+258 84 123 4567")))
+                .andReturn().getResponse();
+
+        assertThat(found.getStatus()).isEqualTo(200);
+        JsonNode order = objectMapper.readTree(found.getContentAsString(StandardCharsets.UTF_8));
+        assertThat(order.get("number").asText()).isEqualTo(number);
+        assertThat(order.get("statusLabel").asText()).isNotBlank().isEqualTo(placed.get("statusLabel").asText());
+        assertThat(order.get("totalAmount").decimalValue())
+                .isEqualByComparingTo(placed.get("totalAmount").decimalValue());
+        assertThat(order.get("lines").get(0).get("sku").asText()).isEqualTo(SERVICE_SKU);
+        assertThat(order.has("id")).as("sem ids internos").isFalse();
+        assertThat(order.has("contactPhone")).as("não devolve o contacto").isFalse();
+    }
+
+    @Test
+    void lo09_telemovelErradoNaoRevelaAEncomenda() throws Exception {
+        Long pickup = openShop(true);
+        String number = placeServiceOrder("10.9.0.2", pickup).get("number").asText();
+
+        List<MockHttpServletRequestBuilder> misses = List.of(
+                lookup(CODE, number, "821234567"),
+                lookup(CODE, number, "12345"),
+                lookup(CODE, number, null),
+                lookup(CODE, "ENC-NAO-EXISTE", "841234567"),
+                lookup(CODE, null, "841234567"));
+        String firstBody = null;
+        for (MockHttpServletRequestBuilder miss : misses) {
+            MockHttpServletResponse response = mockMvc.perform(from("10.9.0.2", miss)).andReturn().getResponse();
+            assertThat(response.getStatus()).isEqualTo(400);
+            assertThat(message(response)).isEqualTo(NOT_FOUND);
+            JsonNode body = objectMapper.readTree(response.getContentAsString(StandardCharsets.UTF_8));
+            String comparable = body.get("code") + "|" + body.get("message");
+            if (firstBody == null) {
+                firstBody = comparable;
+            }
+            assertThat(comparable).as("mesma resposta quer a encomenda exista quer não").isEqualTo(firstBody);
+        }
+    }
+
+    @Test
+    void lo09_consultaNaoContaParaOLimiteDeEncomendas() {
+        assertThat(OnlineShopRoutes.isOrderPlacement("POST", "/api/shop/mercearia-baixa/orders/lookup")).isFalse();
+    }
+
+    private JsonNode placeServiceOrder(String ip, Long pickup) throws Exception {
+        publishServiceProduct();
+        PlaceOnlineShopOrderRequest request = new PlaceOnlineShopOrderRequest("Ana Machava", "841234567", null,
+                OnlineShopFulfilment.LEVANTAMENTO, pickup, null, null, null,
+                List.of(new OnlineShopOrderLineRequest(SERVICE_SKU, BigDecimal.ONE)));
+        MockHttpServletResponse response = mockMvc.perform(from(ip,
+                        post(OnlineShopRoutes.PREFIX + "/" + CODE + "/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))))
+                .andReturn().getResponse();
+        assertThat(response.getStatus()).as(response.getContentAsString(StandardCharsets.UTF_8)).isEqualTo(201);
+        return objectMapper.readTree(response.getContentAsString(StandardCharsets.UTF_8));
+    }
+
+    /** A published service product (no stock control), so the order needs no stock fixture. */
+    private void publishServiceProduct() {
+        long companyId = companyId();
+        if (productLookup.findBySkuForCompany(SERVICE_SKU, companyId).isPresent()) {
+            return;
+        }
+        Product product = new Product();
+        product.setSku(SERVICE_SKU);
+        product.setName("Montagem ao domicílio");
+        product.setUnitPrice(new BigDecimal("500.00"));
+        product.setPurchasePrice(BigDecimal.ZERO);
+        product.setMinStock(BigDecimal.ZERO);
+        product.setSaleType(ProductSaleType.SERVICE);
+        product.setStockTracked(false);
+        product.setPublishedOnline(true);
+        product.getCompanies().add(companyLookup.require(companyId));
+        productCommandService.saveProduct(product);
+    }
+
+    private MockHttpServletRequestBuilder lookup(String code, String number, String phone) throws Exception {
+        return post(OnlineShopRoutes.PREFIX + "/" + code + "/orders/lookup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LookupOnlineShopOrderRequest(number, phone)));
+    }
+
+    private long companyId() {
+        return jdbc.queryForObject("select min(id) from companies", Long.class);
+    }
+
+    /** @return the shop's pickup store */
+    private Long openShop(boolean enabled) {
+        long companyId = companyId();
         CurrentUserContext.setCurrentUser("admin", "ADMIN");
         CurrentUserContext.setCurrentCompanyId(companyId);
         try {
             Long pickup = warehouseService.getSalesWarehousesByCompany(companyId).get(0).getId();
             settingsService.save(new SaveOnlineShopSettingsRequest(enabled, CODE, List.of(pickup), List.of(),
                     null, null));
+            return pickup;
         } finally {
             CurrentUserContext.clear();
         }

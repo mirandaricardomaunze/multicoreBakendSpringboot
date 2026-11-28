@@ -11,6 +11,7 @@ import mz.multicore.erp.modules.onlineshop.model.OnlineShopSettings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -71,12 +72,17 @@ final class OnlineShopCheckoutRules {
         if (raw == null || raw.isBlank()) {
             throw new BusinessRuleException("O número de telemóvel é obrigatório.");
         }
-        String phone = ValidationPatterns.cleanPhoneMozambique(raw);
-        if (!MOBILE_MZ.matcher(phone).matches()) {
-            throw new BusinessRuleException(
-                    "Indique um telemóvel moçambicano com 9 dígitos, começado por 82 a 87 (ex.: 84 123 4567).");
+        return normalisedMobilePhone(raw).orElseThrow(() -> new BusinessRuleException(
+                "Indique um telemóvel moçambicano com 9 dígitos, começado por 82 a 87 (ex.: 84 123 4567)."));
+    }
+
+    /** The phone as the checkout stores it, or empty when it is not a Mozambican mobile number. */
+    static Optional<String> normalisedMobilePhone(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
         }
-        return phone;
+        String phone = ValidationPatterns.cleanPhoneMozambique(raw);
+        return MOBILE_MZ.matcher(phone).matches() ? Optional.of(phone) : Optional.empty();
     }
 
     private static String nuit(String raw) {
