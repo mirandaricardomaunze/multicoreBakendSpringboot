@@ -10,12 +10,14 @@ import mz.multicore.erp.modules.inventory.service.WarehouseService;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopDeliveryZoneDTO;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopSettingsDTO;
 import mz.multicore.erp.modules.onlineshop.dto.SaveOnlineShopSettingsRequest;
+import mz.multicore.erp.modules.onlineshop.model.OnlineShopDeliveryZone;
 import mz.multicore.erp.modules.onlineshop.model.OnlineShopSettings;
 import mz.multicore.erp.modules.onlineshop.repository.OnlineShopSettingsRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -32,6 +34,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -48,10 +51,11 @@ class OnlineShopSettingsTest {
     private final WarehouseService warehouseService = mock(WarehouseService.class);
     private final CompanyService companyService = mock(CompanyService.class);
     private final AuditLogService auditLogService = mock(AuditLogService.class);
+    private final DeliveryFeeProductProvisioner deliveryFeeProducts = mock(DeliveryFeeProductProvisioner.class);
     private final AtomicReference<OnlineShopSettings> stored = new AtomicReference<>();
 
-    private final OnlineShopSettingsService service =
-            new OnlineShopSettingsService(repository, warehouseService, companyService, auditLogService);
+    private final OnlineShopSettingsService service = new OnlineShopSettingsService(repository, warehouseService,
+            companyService, auditLogService, deliveryFeeProducts);
 
     @BeforeEach
     void setUp() {
@@ -181,6 +185,26 @@ class OnlineShopSettingsTest {
         assertMessage("Só o administrador gere a loja online.",
                 () -> service.save(request("loja-1", List.of(10L), List.of(), null)));
         verify(repository, never()).save(any());
+    }
+
+    // ─── LO-08: artigo da taxa de entrega criado na activação ─────────────────
+
+    @Test
+    void lo08_activarCriaOArtigoDaTaxaDeEntregaDeCadaZona() {
+        service.save(request("loja-1", List.of(10L), List.of(zone("Polana", "150"), zone("Matola", "0")), null));
+
+        ArgumentCaptor<OnlineShopDeliveryZone> zones = ArgumentCaptor.forClass(OnlineShopDeliveryZone.class);
+        verify(deliveryFeeProducts, times(2)).forZone(eq(stored.get().getCompany()), zones.capture());
+        assertEquals(List.of("Polana", "Matola"),
+                zones.getAllValues().stream().map(OnlineShopDeliveryZone::getName).toList());
+    }
+
+    @Test
+    void lo08_lojaDesactivadaNaoCriaArtigos() {
+        service.save(new SaveOnlineShopSettingsRequest(false, "loja-1", List.of(10L), List.of(zone("Polana", "10")),
+                null, null));
+
+        verify(deliveryFeeProducts, never()).forZone(any(), any());
     }
 
     private static SaveOnlineShopSettingsRequest request(String code, List<Long> pickups,

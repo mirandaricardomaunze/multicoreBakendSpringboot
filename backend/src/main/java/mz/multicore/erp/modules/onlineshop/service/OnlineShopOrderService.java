@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,9 @@ import java.util.Map;
  * <p>LO-07 (§3.3): the order's store is the chosen pickup store; for home delivery, the first pickup store (in the
  * shop's order) with free stock for the whole cart, otherwise "Não há stock suficiente para entrega". A pickup store
  * short of any product refuses the order with the list of those products. Nothing is created when refused.
+ *
+ * <p>LO-08 (§3.3): home delivery adds one service line "Taxa de entrega — {zona}" at the zone fee and the standard
+ * VAT ({@link DeliveryFeeProductProvisioner}); pickup is free.
  */
 @Service
 public class OnlineShopOrderService {
@@ -58,11 +62,13 @@ public class OnlineShopOrderService {
     private final ExternalOrderPlacementService placementService;
     private final StockLookup stockLookup;
     private final OrderReservationLookup reservationLookup;
+    private final DeliveryFeeProductProvisioner deliveryFeeProducts;
 
     public OnlineShopOrderService(OnlineShopSettingsRepository settingsRepository, ProductLookup productLookup,
                                   ClientLookup clientLookup, ComercialService comercialService,
                                   ExternalOrderPlacementService placementService, StockLookup stockLookup,
-                                  OrderReservationLookup reservationLookup) {
+                                  OrderReservationLookup reservationLookup,
+                                  DeliveryFeeProductProvisioner deliveryFeeProducts) {
         this.settingsRepository = settingsRepository;
         this.productLookup = productLookup;
         this.clientLookup = clientLookup;
@@ -70,6 +76,7 @@ public class OnlineShopOrderService {
         this.placementService = placementService;
         this.stockLookup = stockLookup;
         this.reservationLookup = reservationLookup;
+        this.deliveryFeeProducts = deliveryFeeProducts;
     }
 
     /** Places the order of the shop behind {@code /loja/{code}}; nothing is saved when a rule refuses it. */
@@ -92,10 +99,12 @@ public class OnlineShopOrderService {
                 .map(line -> new CartItem(requireOnSale(companyId, line.sku()), line.quantity()))
                 .toList();
         Long warehouseId = warehouseFor(companyId, shop, checkout, cart);
-        List<CreateInvoiceLineRequest> lines = cart.stream()
-                .map(item -> new CreateInvoiceLineRequest(item.product().getId(), item.quantity(),
-                        item.product().effectiveTaxRate(), BigDecimal.ZERO, null, null))
-                .toList();
+        List<CreateInvoiceLineRequest> lines = new ArrayList<>(cart.stream()
+                .map(item -> line(item.product(), item.quantity()))
+                .toList());
+        if (checkout.fulfilment() == OnlineShopFulfilment.ENTREGA) {
+            lines.add(line(deliveryFeeProducts.forZone(shop.getCompany(), checkout.deliveryZone()), BigDecimal.ONE));
+        }
         boolean walkIn = checkout.nuit() == null;
         Long clientId = walkIn ? null : customerFor(companyId, checkout);
         CreateOrderRequest order = new CreateOrderRequest(clientId, walkIn ? checkout.customerName() : null,
@@ -124,6 +133,12 @@ public class OnlineShopOrderService {
                 .filter(warehouseId -> shortOf(freeStock, warehouseId, cart).isEmpty())
                 .findFirst()
                 .orElseThrow(() -> new BusinessRuleException(NO_STOCK_FOR_DELIVERY));
+    }
+
+    /** Order line at the product's system price and VAT; the price never comes from the request. */
+    private static CreateInvoiceLineRequest line(Product product, BigDecimal quantity) {
+        return new CreateInvoiceLineRequest(product.getId(), quantity, product.effectiveTaxRate(), BigDecimal.ZERO,
+                null, null);
     }
 
     /** Names of the stock-tracked products whose free stock in the store does not cover the cart quantity. */

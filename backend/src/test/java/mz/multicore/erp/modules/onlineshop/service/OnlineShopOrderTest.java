@@ -8,7 +8,11 @@ import mz.multicore.erp.modules.onlineshop.model.OnlineShopDeliveryZone;
 import mz.multicore.erp.modules.onlineshop.model.OnlineShopSettings;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
+import mz.multicore.erp.architecture.pricing.TaxRates;
+import mz.multicore.erp.modules.comercial.dto.CreateInvoiceLineRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateOrderRequest;
+import mz.multicore.erp.modules.comercial.model.ProductSaleType;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 import mz.multicore.erp.modules.comercial.dto.OrderLineDTO;
 import mz.multicore.erp.modules.comercial.dto.SaveClientRequest;
@@ -42,6 +46,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,6 +63,8 @@ import static org.mockito.Mockito.when;
  * reserved stock, client by NUIT or Consumidor Final with the contact on the order, origin {@code LOJA_ONLINE}.
  * Harness LO-07 (§3.3): the order's store is the pickup store, or for delivery the first pickup store with free stock
  * for the whole cart; without stock the order is refused and nothing is created.
+ * Harness LO-08 (§3.3): home delivery adds the service line "Taxa de entrega — {zona}" at the zone fee and the
+ * standard VAT; pickup is free.
  */
 class OnlineShopOrderTest {
 
@@ -169,12 +176,19 @@ class OnlineShopOrderTest {
     private final OrderReservationLookup reservationLookup = mock(OrderReservationLookup.class);
     private final List<Stock> stockLines = new ArrayList<>();
     private final List<ReservedStock> reservations = new ArrayList<>();
+    private final ProductCommandService productCommandService = mock(ProductCommandService.class);
     private final OnlineShopOrderService orderService = new OnlineShopOrderService(settingsRepository, productLookup,
-            clientLookup, comercialService, placementService, stockLookup, reservationLookup);
+            clientLookup, comercialService, placementService, stockLookup, reservationLookup,
+            new DeliveryFeeProductProvisioner(productLookup, productCommandService));
 
     {
         when(stockLookup.listForCompany(COMPANY_ID)).thenReturn(stockLines);
         when(reservationLookup.activeReservationsForCompany(COMPANY_ID)).thenReturn(reservations);
+        when(productCommandService.saveProduct(any())).thenAnswer(invocation -> {
+            Product saved = invocation.getArgument(0);
+            if (saved.getId() == null) saved.setId(900L);
+            return saved;
+        });
     }
 
     @Test
@@ -400,6 +414,92 @@ class OnlineShopOrderTest {
                 List.of(new OnlineShopOrderLineRequest("MONTAGEM", BigDecimal.ONE))));
 
         assertEquals(PICKUP_A, placedOrder().warehouseId());
+    }
+
+    // ─── LO-08: taxa de entrega por zona ──────────────────────────────────────
+
+    @Test
+    void lo08_entregaAcrescentaALinhaDaTaxaDaZonaComOIvaNormal() {
+        openShopWithArroz();
+        stock(PICKUP_A, "10");
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", delivery(" matola ", "Rua X"));
+
+        List<CreateInvoiceLineRequest> lines = placedOrder().lines();
+        assertEquals(2, lines.size(), "artigo + taxa de entrega");
+        CreateInvoiceLineRequest fee = lines.get(1);
+        assertEquals(900L, fee.productId());
+        assertEquals(0, BigDecimal.ONE.compareTo(fee.quantity()));
+        assertEquals(TaxRates.STANDARD_VAT, fee.taxRate(), "IVA da taxa normal");
+        assertNull(fee.unitPrice(), "o preço é o do artigo da taxa, nunca do pedido");
+
+        ArgumentCaptor<Product> product = ArgumentCaptor.forClass(Product.class);
+        verify(productCommandService).saveProduct(product.capture());
+        Product feeProduct = product.getValue();
+        assertEquals("Taxa de entrega — Matola", feeProduct.getName());
+        assertEquals("LOJA-ENTREGA-1-MATOLA", feeProduct.getSku());
+        assertEquals(0, new BigDecimal("150.00").compareTo(feeProduct.getUnitPrice()), "a taxa da zona");
+        assertEquals(ProductSaleType.SERVICE, feeProduct.getSaleType());
+        assertFalse(feeProduct.isStockTracked(), "serviço sem stock");
+        assertFalse(feeProduct.isPublishedOnline(), "nunca aparece na montra");
+        assertNull(feeProduct.getTaxRate(), "sem taxa própria: IVA normal");
+    }
+
+    @Test
+    void lo08_artigoExistenteDaZonaEReutilizadoEAcompanhaATaxa() {
+        openShopWithArroz();
+        stock(PICKUP_A, "10");
+        Product existing = new Product();
+        existing.setId(321L);
+        existing.setSku("LOJA-ENTREGA-1-MATOLA");
+        existing.setName("Taxa de entrega — Matola");
+        existing.setUnitPrice(new BigDecimal("100.00"));
+        existing.setStockTracked(false);
+        when(productLookup.findBySkuForCompany("LOJA-ENTREGA-1-MATOLA", COMPANY_ID)).thenReturn(Optional.of(existing));
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", delivery("Matola", "Rua X"));
+
+        assertEquals(321L, placedOrder().lines().get(1).productId());
+        assertEquals(0, new BigDecimal("150.00").compareTo(existing.getUnitPrice()), "preço igual à taxa actual");
+        verify(productCommandService).saveProduct(existing);
+    }
+
+    @Test
+    void lo08_artigoJaAlinhadoNaoEGravadoDeNovo() {
+        Product existing = new Product();
+        existing.setId(321L);
+        existing.setName("Taxa de entrega — Matola");
+        existing.setUnitPrice(new BigDecimal("150.00"));
+        when(productLookup.findBySkuForCompany("LOJA-ENTREGA-1-MATOLA", COMPANY_ID)).thenReturn(Optional.of(existing));
+        OnlineShopSettings shop = shop();
+
+        Product result = new DeliveryFeeProductProvisioner(productLookup, productCommandService)
+                .forZone(shop.getCompany(), shop.getDeliveryZones().get(0));
+
+        assertEquals(existing, result);
+        verify(productCommandService, never()).saveProduct(any());
+    }
+
+    @Test
+    void lo08_levantamentoNaoTemTaxa() {
+        openShopWithArroz();
+        stock(PICKUP_A, "10");
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", pickup(PICKUP_A, CART));
+
+        assertEquals(1, placedOrder().lines().size());
+        verify(productCommandService, never()).saveProduct(any());
+    }
+
+    @Test
+    void lo08_skuDaZonaSemAcentosNemSimbolos() {
+        assertEquals("LOJA-ENTREGA-7-MAPUTO-BAIXA-ZONA-1",
+                DeliveryFeeProductProvisioner.sku(7L, " Maputo — Baixa, zona 1 "));
+        assertEquals("LOJA-ENTREGA-7-ZONA", DeliveryFeeProductProvisioner.sku(7L, "***"));
+        assertEquals("LOJA-ENTREGA-7-ZONA-ACUCAR", DeliveryFeeProductProvisioner.sku(7L, "Zona Açúcar"));
     }
 
     private void openShopWithArroz() {

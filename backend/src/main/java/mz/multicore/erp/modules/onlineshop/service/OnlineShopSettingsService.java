@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 /**
  * Online shop settings of the active company (docs/LOJA_ONLINE_SPEC.md §3.1, LO-01): only the ADMIN reads and saves
  * them; the public code is unique in the system; pickup stores are the company's sales warehouses. Every save is
- * audited.
+ * audited. Activating the shop provisions the delivery fee service product of each zone (LO-08).
  */
 @Service
 public class OnlineShopSettingsService {
@@ -31,13 +31,16 @@ public class OnlineShopSettingsService {
     private final WarehouseService warehouseService;
     private final CompanyService companyService;
     private final AuditLogService auditLogService;
+    private final DeliveryFeeProductProvisioner deliveryFeeProducts;
 
     public OnlineShopSettingsService(OnlineShopSettingsRepository repository, WarehouseService warehouseService,
-                                     CompanyService companyService, AuditLogService auditLogService) {
+                                     CompanyService companyService, AuditLogService auditLogService,
+                                     DeliveryFeeProductProvisioner deliveryFeeProducts) {
         this.repository = repository;
         this.warehouseService = warehouseService;
         this.companyService = companyService;
         this.auditLogService = auditLogService;
+        this.deliveryFeeProducts = deliveryFeeProducts;
     }
 
     @Transactional(readOnly = true)
@@ -79,6 +82,9 @@ public class OnlineShopSettingsService {
         settings.setAutoCancelDays(days);
         settings.setContactPhone(phone);
         OnlineShopSettings saved = repository.save(settings);
+        if (enabled) {
+            saved.getDeliveryZones().forEach(zone -> deliveryFeeProducts.forZone(saved.getCompany(), zone));
+        }
 
         auditLogService.logCurrent("ONLINE_SHOP_SETTINGS", describe(saved));
         return toDTO(saved);
