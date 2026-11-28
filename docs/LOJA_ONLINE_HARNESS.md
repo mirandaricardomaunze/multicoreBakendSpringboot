@@ -3,7 +3,7 @@
 > Cenários que provam [LOJA_ONLINE_SPEC.md](LOJA_ONLINE_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-28 (LO-01 verde: `OnlineShopSettingsTest`, migração V162; LO-02 verde: `OnlineShopCatalogTest`, migração V163)
+**Última actualização:** 2026-11-28 (LO-01 verde: `OnlineShopSettingsTest`, migração V162; LO-02 verde: `OnlineShopCatalogTest`, migração V163; LO-03 verde: `OnlineShopCatalogTest`)
 
 | ID | Garantia | Teste |
 |---|---|---|

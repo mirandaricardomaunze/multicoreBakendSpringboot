@@ -22,7 +22,7 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 
 - [x] LO-01 — activação e definições da loja — `OnlineShopSettingsTest`
 - [x] LO-02 — só artigos publicados — `OnlineShopCatalogTest`
-- [ ] LO-03 — Disponível/Esgotado sem dados internos — `OnlineShopCatalogTest`
+- [x] LO-03 — Disponível/Esgotado sem dados internos — `OnlineShopCatalogTest`
 - [ ] LO-05 — validação do checkout — `OnlineShopOrderTest`
 - [ ] LO-06 — encomenda pelo serviço da API pública — `OnlineShopOrderTest`
 - [ ] LO-07 — escolha do armazém e recusa sem stock — `OnlineShopOrderTest`
@@ -59,3 +59,4 @@ em LO-01 quando o GOAL-013 estiver `DONE`.
 - 2026-11-26 · pré-requisito · bloqueado: GOAL-013 está `BLOCKED` (API-08), não `DONE`; goal não iniciado, pergunta P1 em `## Perguntas em aberto`.
 - 2026-11-28 · LO-01 · concluído: OnlineShopSettingsService (só ADMIN) grava a loja da empresa com código público único (minúsculas, números, hífen), lojas de levantamento entre os armazéns de venda, zonas com taxa ≥ 0 e prazo (omissão 7), com auditoria ONLINE_SHOP_SETTINGS; migração V162; OnlineShopSettingsTest 9/9 verde.
 - 2026-11-28 · LO-02 · concluído: campo "Publicar na loja online" no artigo (desligado por omissão, migração V163); OnlineShopCatalogService lista só os artigos publicados da loja activa (nunca o Adiantamento), loja desactivada ou inexistente → "Loja indisponível.", publicar/retirar auditado (ONLINE_SHOP_PUBLISH); OnlineShopCatalogTest 6/6 verde.
+- 2026-11-28 · LO-03 · concluído: cada artigo da montra traz só Disponível/Esgotado (`available`), Disponível quando stock − reservas activas > 0 em pelo menos uma loja de levantamento (serviços sem controlo de stock sempre disponíveis; stock noutros armazéns não conta), lido pelo StockLookup e OrderReservationLookup; o DTO não tem quantidades, custos nem fornecedores; OnlineShopCatalogTest 11/11 verde.

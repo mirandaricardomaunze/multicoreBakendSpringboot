@@ -6,9 +6,14 @@ import mz.multicore.erp.modules.advances.AdvancePayments;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.ProductCategory;
+import mz.multicore.erp.modules.comercial.model.ReservedStock;
+import mz.multicore.erp.modules.comercial.service.OrderReservationLookup;
 import mz.multicore.erp.modules.comercial.service.ProductCommandService;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.inventory.model.Stock;
+import mz.multicore.erp.modules.inventory.model.Warehouse;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopProductDTO;
 import mz.multicore.erp.modules.onlineshop.model.OnlineShopSettings;
 import mz.multicore.erp.modules.onlineshop.repository.OnlineShopSettingsRepository;
@@ -17,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,18 +42,25 @@ import static org.mockito.Mockito.when;
  * Harness LO-02 (docs/LOJA_ONLINE_SPEC.md §3.1): the public shop lists only the company's active products with
  * "Publicar na loja online" switched on; the switch is off by default; name, category and VAT-inclusive price come
  * from the product.
+ * Harness LO-03 (§3.2): each product shows only Disponível/Esgotado — available when stock minus active reservations
+ * is positive in at least one pickup shop of the company — and the DTO never carries quantities, costs or suppliers.
  */
 class OnlineShopCatalogTest {
 
     private static final Long COMPANY_ID = 1L;
+    private static final Long PICKUP_A = 10L;
+    private static final Long PICKUP_B = 11L;
+    private static final Long CENTRAL_WAREHOUSE = 12L;
 
     private final OnlineShopSettingsRepository settingsRepository = mock(OnlineShopSettingsRepository.class);
     private final ProductLookup productLookup = mock(ProductLookup.class);
     private final ProductCommandService productCommandService = mock(ProductCommandService.class);
     private final AuditLogService auditLogService = mock(AuditLogService.class);
+    private final StockLookup stockLookup = mock(StockLookup.class);
+    private final OrderReservationLookup reservationLookup = mock(OrderReservationLookup.class);
 
     private final OnlineShopCatalogService service = new OnlineShopCatalogService(
-            settingsRepository, productLookup, productCommandService, auditLogService);
+            settingsRepository, productLookup, productCommandService, auditLogService, stockLookup, reservationLookup);
 
     @BeforeEach
     void setUp() {
@@ -73,11 +86,12 @@ class OnlineShopCatalogTest {
         Product oleo = product(2L, "OLEO-1L", "Óleo 1 L", "50.00", false);
         Product advance = product(3L, AdvancePayments.systemSku(COMPANY_ID), "Adiantamento", "0", true);
         when(productLookup.listForCompany(COMPANY_ID)).thenReturn(List.of(arroz, oleo, advance));
+        when(stockLookup.listForCompany(COMPANY_ID)).thenReturn(List.of(stock(arroz, PICKUP_A, "3")));
 
         List<OnlineShopProductDTO> catalog = service.listProducts("mercearia-baixa");
 
         assertEquals(List.of(new OnlineShopProductDTO("ARROZ-5KG", "Arroz 5 kg", "Mercearia",
-                new BigDecimal("116.00"))), catalog);
+                new BigDecimal("116.00"), true)), catalog);
     }
 
     @Test
@@ -123,6 +137,65 @@ class OnlineShopCatalogTest {
         verify(productCommandService, never()).saveProduct(any());
     }
 
+    @Test
+    void lo03_disponivelComStockLivreNumaLojaDeLevantamento() {
+        Product arroz = product(1L, "ARROZ-5KG", "Arroz 5 kg", "100.00", true);
+        when(productLookup.listForCompany(COMPANY_ID)).thenReturn(List.of(arroz));
+        when(stockLookup.listForCompany(COMPANY_ID))
+                .thenReturn(List.of(stock(arroz, PICKUP_A, "0"), stock(arroz, PICKUP_B, "2")));
+
+        assertTrue(service.listProducts("mercearia-baixa").get(0).available());
+    }
+
+    @Test
+    void lo03_esgotadoQuandoAsReservasConsomemOStock() {
+        Product arroz = product(1L, "ARROZ-5KG", "Arroz 5 kg", "100.00", true);
+        when(productLookup.listForCompany(COMPANY_ID)).thenReturn(List.of(arroz));
+        when(stockLookup.listForCompany(COMPANY_ID))
+                .thenReturn(List.of(stock(arroz, PICKUP_A, "4"), stock(arroz, PICKUP_B, "1")));
+        when(reservationLookup.activeReservationsForCompany(COMPANY_ID)).thenReturn(List.of(
+                new ReservedStock(1L, PICKUP_A, new BigDecimal("4")),
+                new ReservedStock(1L, PICKUP_B, new BigDecimal("1"))));
+
+        assertFalse(service.listProducts("mercearia-baixa").get(0).available());
+    }
+
+    @Test
+    void lo03_stockForaDasLojasDeLevantamentoNaoConta() {
+        Product arroz = product(1L, "ARROZ-5KG", "Arroz 5 kg", "100.00", true);
+        when(productLookup.listForCompany(COMPANY_ID)).thenReturn(List.of(arroz));
+        when(stockLookup.listForCompany(COMPANY_ID)).thenReturn(List.of(stock(arroz, CENTRAL_WAREHOUSE, "100")));
+
+        assertFalse(service.listProducts("mercearia-baixa").get(0).available());
+    }
+
+    @Test
+    void lo03_servicoSemControloDeStockEstaSempreDisponivel() {
+        Product montagem = product(5L, "MONTAGEM", "Montagem", "200.00", true);
+        montagem.setStockTracked(false);
+        when(productLookup.listForCompany(COMPANY_ID)).thenReturn(List.of(montagem));
+
+        assertTrue(service.listProducts("mercearia-baixa").get(0).available());
+    }
+
+    @Test
+    void lo03_artigoDaLojaNaoMostraQuantidadesCustosNemFornecedores() {
+        List<String> fields = Arrays.stream(OnlineShopProductDTO.class.getRecordComponents())
+                .map(component -> component.getName().toLowerCase(java.util.Locale.ROOT)).toList();
+
+        assertEquals(List.of("sku", "name", "category", "pricewithvat", "available"), fields);
+    }
+
+    private static Stock stock(Product product, Long warehouseId, String quantity) {
+        Warehouse warehouse = new Warehouse();
+        warehouse.setId(warehouseId);
+        Stock stock = new Stock();
+        stock.setProduct(product);
+        stock.setWarehouse(warehouse);
+        stock.setQuantity(new BigDecimal(quantity));
+        return stock;
+    }
+
     private static OnlineShopSettings shop(boolean enabled) {
         Company company = new Company();
         company.setId(COMPANY_ID);
@@ -130,6 +203,7 @@ class OnlineShopCatalogTest {
         settings.setCompany(company);
         settings.setEnabled(enabled);
         settings.setPublicCode("mercearia-baixa");
+        settings.setPickupWarehouseIds(new java.util.ArrayList<>(List.of(PICKUP_A, PICKUP_B)));
         return settings;
     }
 
