@@ -37,15 +37,7 @@ final class StockProductFormDialog {
         categoryCombo.addItem("Sem categoria");
         for (var c : categories) categoryCombo.addItem(c.name() + "  (" + c.code() + ")");
 
-        JComboBox<String> taxCombo = new JComboBox<>();
-        UIHelper.styleComboBox(taxCombo);
-        taxCombo.addItem("IVA Padrão (16%)");
-        int defaultTaxIdx = 0;
-        for (int i = 0; i < vatRates.size(); i++) {
-            taxCombo.addItem(vatRates.get(i).name());
-            if ("IVA_STANDARD".equals(vatRates.get(i).type())) defaultTaxIdx = i + 1;
-        }
-        if (taxCombo.getItemCount() > 0) taxCombo.setSelectedIndex(defaultTaxIdx);
+        JComboBox<String> taxCombo = StockProductFormBuilder.vatComboWithStandardSelected(vatRates);
 
         final byte[][] imageHolder = {null};
         JPanel imagePanel = StockProductFormBuilder.createImageChooserPanel(owner, imageHolder); JCheckBox perishableBox = StockProductFormBuilder.perishableCheckBox(); // validade obrigatória se ligado
