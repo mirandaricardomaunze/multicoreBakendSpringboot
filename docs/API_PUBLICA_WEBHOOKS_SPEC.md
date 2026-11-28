@@ -423,6 +423,43 @@ sistema sem usar o desktop. Hoje a única API é a interna do desktop, com login
   reactivar limpa contador e aviso; desactivação manual não gera aviso; não-ADMIN recusado ao pedir os avisos;
   avisos só da empresa activa.
 
+#### 4.3.5 Endpoints internos dos webhooks (WH-08)
+
+- Rotas **internas** (login de utilizador + `X-Company-Id`, nunca `X-Api-Key`), sempre na **empresa activa**, num
+  único `WebhookController` (só HTTP, delega nos Services do §4.1.1/§4.3.3/§4.3.4; DTO record na fronteira, nunca a
+  entidade), sob o mesmo prefixo das chaves de API (§3.1.1):
+
+  | Método e rota | Service | Resposta |
+  |---|---|---|
+  | `GET /api/integrations/webhooks` | `WebhookSubscriptionService.list()` | `200` lista de `WebhookSubscriptionDTO` (sem segredo) |
+  | `POST /api/integrations/webhooks` (`{url, events}`) | `create(...)` | `201` `CreatedWebhookSubscriptionDTO` — a única vez que o segredo sai |
+  | `POST /api/integrations/webhooks/{id}/activate` | `activate(id)` | `200` `WebhookSubscriptionDTO` |
+  | `POST /api/integrations/webhooks/{id}/deactivate` | `deactivate(id)` | `200` `WebhookSubscriptionDTO` |
+  | `GET /api/integrations/webhooks/alerts` | `autoDisabledAlerts()` | `200` lista de `WebhookAlertDTO` (sino do WH-UI-01) |
+  | `GET /api/integrations/webhooks/{id}/deliveries?status=&page=0&size=50` | `WebhookDeliveryService.listDeliveries(...)` | `200` lista de `WebhookDeliveryDTO` (sem corpo nem segredo) |
+  | `POST /api/integrations/webhooks/deliveries/{deliveryId}/resend` | `resend(deliveryId)` | `200` `WebhookDeliveryDTO` já `PENDING` |
+
+- **Só o ADMIN**: qualquer outro perfil → **`403`** pela política HTTP (`ApiRolePolicy`, prefixo
+  `/api/integrations` já ADMIN) **antes** de chegar ao Service; a guarda do Service (§4.1.1) mantém-se como segunda
+  linha. Sem login → `401`. Toda a rota nova fica classificada (RPC-01, `ApiRolePolicyEndpointCoverageHarnessTest`).
+  Uma `X-Api-Key` nestas rotas é recusada como qualquer `/api/**` (API-03).
+- **Erros de regra → `400`** com a mensagem PT-MZ do Service (`BusinessRuleException`, `GlobalExceptionHandler`),
+  incluindo subscrição/entrega **de outra empresa ou inexistente** ("Subscrição não encontrada." /
+  "Entrega não encontrada."): o mesmo tratamento das chaves de API (§3.1.1), para não revelar se o id existe noutra
+  empresa e manter um só contrato na API interna. Corpo inválido ou ausente → `400`; `status`/`size` fora do
+  permitido → `400` com as mensagens do §4.3.3. Nunca há stack trace nem segredo nas respostas de erro.
+- **Empresa activa**: tudo o que o `X-Company-Id` não for a empresa da subscrição/entrega comporta-se como
+  "não encontrada"; a lista e os avisos só trazem dados da empresa activa.
+- **Segredo**: só no corpo do `201` do `POST`; `GET`, activar, desactivar, entregas e avisos nunca o devolvem
+  (nem `secret` nem o valor cifrado).
+- **Contrato de teste** (`WebhookHttpIntegrationTest`, `@SpringBootTest` + MockMvc, perfil `test`, resolução DNS por
+  porta falsa e dispatcher/cliente HTTP falsos — sem rede): ADMIN cria (`201` com `whsec_`), lista sem segredo,
+  desactiva e activa; MANAGER e EMPLOYEE recebem `403` em todas as rotas; URL privada ou sem eventos → `400` com a
+  mensagem; subscrição de outra empresa → `400` "Subscrição não encontrada."; registo de entregas com filtro e `size`
+  101 → `400`; reenvio de `FAILED` → `200` `PENDING` e de `DELIVERED` → `400`; avisos devolvem a subscrição
+  desactivada automaticamente; nenhuma resposta contém o segredo fora do `201`. `ApiRolePolicyEndpointCoverageHarnessTest`
+  verde com as rotas novas.
+
 ### 4.4 Desktop
 
 - Configurações › Integrações: chaves de API (criar com permissões, mostrar uma vez, revogar, último
