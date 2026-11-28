@@ -38,6 +38,8 @@ public final class ApiRolePolicy {
             "/api/returnables", "/api/variants", "/api/weighbridge", "/api/exceptions", "/api/portal",
             // Public API: no user role ever reaches it; each route demands its key permission (PublicApiPermissions).
             "/api/public",
+            // Online shop: public without login, per-IP limits (LOJA_ONLINE_SPEC §3.2); no user role reaches it.
+            "/api/shop",
             // Integrations (API keys, webhooks): ADMIN only (API_PUBLICA_WEBHOOKS_SPEC §3.1.1, §4.1).
             "/api/integrations");
 

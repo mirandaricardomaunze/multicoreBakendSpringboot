@@ -26,13 +26,14 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(clientVersionInterceptor)
                 .addPathPatterns("/api/**")
                 // A API pública é para sistemas externos, não para o desktop: sem verificação de versão.
-                .excludePathPatterns("/api/version", PublicApiRoutes.PATTERN);
+                .excludePathPatterns("/api/version", PublicApiRoutes.PATTERN, OnlineShopRoutes.PATTERN);
 
         registry.addInterceptor(securityInterceptor)
                 .addPathPatterns("/api/**")
                 // Login e logout só precisam do corpo/token; não exigem empresa (o superadmin não tem).
                 // A API pública autentica por X-Api-Key no ApiKeyAuthenticationFilter; a empresa é a da chave. API-03.
-                .excludePathPatterns("/api/auth/**", "/api/version", PublicApiRoutes.PATTERN);
+                // A loja online é pública (sem login): a empresa é a da loja do código no endereço. LO-04.
+                .excludePathPatterns("/api/auth/**", "/api/version", PublicApiRoutes.PATTERN, OnlineShopRoutes.PATTERN);
     }
 
     /**

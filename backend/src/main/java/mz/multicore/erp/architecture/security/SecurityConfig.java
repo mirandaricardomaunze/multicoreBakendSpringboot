@@ -55,6 +55,8 @@ public class SecurityConfig {
                                                    TokenAuthenticationFilter tokenAuthenticationFilter,
                                                    ApiKeyAuthenticationService apiKeyAuthenticationService,
                                                    PublicApiRateLimiter publicApiRateLimiter,
+                                                   OnlineShopRateLimiter onlineShopRateLimiter,
+                                                   ClientIpResolver clientIpResolver,
                                                    Environment environment) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -74,6 +76,8 @@ public class SecurityConfig {
                         // e um cliente bloqueado por ser antigo tem de a poder consultar.
                         .requestMatchers("/api/version").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // Loja online: montra e encomendas sem login; limites por IP no filtro abaixo. LO-04.
+                        .requestMatchers(OnlineShopRoutes.PATTERN).permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )
@@ -83,6 +87,9 @@ public class SecurityConfig {
                 .addFilterBefore(PortalHttpsOnlyFilter.forEnvironment(environment), UsernamePasswordAuthenticationFilter.class)
                 // API pública: só X-Api-Key em /api/public/**; a chave nunca abre o /api/** interno; 60/min por chave. API-03/05.
                 .addFilterBefore(new ApiKeyAuthenticationFilter(apiKeyAuthenticationService, publicApiRateLimiter),
+                        UsernamePasswordAuthenticationFilter.class)
+                // Loja online: 60 pedidos/min e 5 encomendas/hora por IP. LO-04.
+                .addFilterBefore(new OnlineShopRateLimitFilter(onlineShopRateLimiter, clientIpResolver),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)

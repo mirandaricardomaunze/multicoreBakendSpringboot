@@ -7,14 +7,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import mz.multicore.erp.modules.publicapi.dto.ApiKeyPrincipal;
 import mz.multicore.erp.modules.publicapi.model.ApiKeyPermission;
 import mz.multicore.erp.modules.publicapi.service.ApiKeyAuthenticationService;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.OptionalLong;
 
@@ -69,8 +67,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         }
         OptionalLong retryAfter = rateLimiter.acquire(principal.get().keyId());
         if (retryAfter.isPresent()) {
-            response.setHeader("Retry-After", String.valueOf(retryAfter.getAsLong()));
-            refuse(response, 429, "RATE_LIMIT_EXCEEDED", "Limite de " + PublicApiRateLimiter.REQUESTS_PER_MINUTE
+            JsonErrorResponses.tooManyRequests(response, retryAfter.getAsLong(), "Limite de " + PublicApiRateLimiter.REQUESTS_PER_MINUTE
                     + " pedidos por minuto atingido para esta chave. Tente novamente em "
                     + retryAfter.getAsLong() + " segundo(s).");
             return;
@@ -92,9 +89,6 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
     private static void refuse(HttpServletResponse response, int status, String code, String message)
             throws IOException {
-        response.setStatus(status);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.getWriter().write("{\"code\":\"" + code + "\",\"message\":\"" + message + "\"}");
+        JsonErrorResponses.write(response, status, code, message);
     }
 }

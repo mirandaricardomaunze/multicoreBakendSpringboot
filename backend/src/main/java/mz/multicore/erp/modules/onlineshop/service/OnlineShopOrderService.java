@@ -82,6 +82,7 @@ public class OnlineShopOrderService {
     /** Places the order of the shop behind {@code /loja/{code}}; nothing is saved when a rule refuses it. */
     @Transactional
     public OnlineShopOrderDTO placeOrder(String publicCode, PlaceOnlineShopOrderRequest request) {
+        OnlineShopCheckoutRules.rejectRobots(request);
         OnlineShopSettings shop = OpenOnlineShops.require(settingsRepository, publicCode);
         OnlineShopCheckout checkout = OnlineShopCheckoutRules.validate(request, shop);
         Long companyId = shop.getCompany().getId();

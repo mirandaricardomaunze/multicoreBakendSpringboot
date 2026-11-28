@@ -24,9 +24,20 @@ final class OnlineShopCheckoutRules {
     static final int NAME_MAX_LENGTH = 120;
     static final int ADDRESS_MAX_LENGTH = 255;
     static final int NOTES_MAX_LENGTH = 500;
+    static final String ROBOT_REFUSED = "Não foi possível registar a encomenda.";
     private static final Pattern MOBILE_MZ = Pattern.compile("8[2-7]\\d{7}");
 
     private OnlineShopCheckoutRules() {
+    }
+
+    /**
+     * Honeypot of the public form (§3.2, LO-04): a filled hidden field refuses the order before the shop is even
+     * looked up, with a neutral message that does not tell the robot why.
+     */
+    static void rejectRobots(PlaceOnlineShopOrderRequest request) {
+        if (request != null && request.honeypotFilled()) {
+            throw new BusinessRuleException(ROBOT_REFUSED);
+        }
     }
 
     static OnlineShopCheckout validate(PlaceOnlineShopOrderRequest request, OnlineShopSettings shop) {
