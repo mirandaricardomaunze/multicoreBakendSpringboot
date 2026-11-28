@@ -104,7 +104,7 @@ public class StockPanelDecompositionHarnessTest {
                 StockWasteApiClient wasteApi = Mockito.mock(StockWasteApiClient.class);
                 InventoryPhysicalCountingApiClient physApi = Mockito.mock(InventoryPhysicalCountingApiClient.class);
 
-                StockPanel panel = new StockPanel(invApi, comApi, trApi, countApi, catApi, printApi, wasteApi, physApi);
+                StockPanel panel = new StockPanel(invApi, comApi, trApi, countApi, catApi, printApi, wasteApi, physApi, null);
                 assertNotNull(panel);
                 assertNotNull(panel.stockTable);
             } finally {

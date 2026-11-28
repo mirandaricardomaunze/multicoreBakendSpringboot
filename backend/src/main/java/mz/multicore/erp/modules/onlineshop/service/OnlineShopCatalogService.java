@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.onlineshop.service;
 
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.advances.AdvancePayments;
@@ -10,6 +11,8 @@ import mz.multicore.erp.modules.comercial.service.ProductCommandService;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopProductDTO;
+import mz.multicore.erp.modules.onlineshop.dto.OnlineShopPublicationDTO;
+import mz.multicore.erp.modules.onlineshop.dto.SetOnlineShopPublicationRequest;
 import mz.multicore.erp.modules.onlineshop.model.OnlineShopSettings;
 import mz.multicore.erp.modules.onlineshop.repository.OnlineShopSettingsRepository;
 import org.springframework.stereotype.Service;
@@ -59,6 +62,23 @@ public class OnlineShopCatalogService {
                 .filter(OnlineShopCatalogService::isOnSale)
                 .map(p -> toDTO(p, !p.isStockTracked() || freeStock.anyFree(p.getId())))
                 .toList();
+    }
+
+    /** "Publicar na loja online" of a product of the active company, as the desktop form shows it (LO-UI-02). */
+    @Transactional(readOnly = true)
+    public OnlineShopPublicationDTO publication(Long productId) {
+        Product product = productLookup.requireForCompany(productId, CurrentUserContext.requireCurrentCompanyId());
+        return new OnlineShopPublicationDTO(product.getId(), product.isPublishedOnline());
+    }
+
+    /** The desktop form's switch (LO-UI-02): same rules and audit as {@link #setPublished(Long, boolean)}. */
+    @Transactional
+    public OnlineShopPublicationDTO setPublished(Long productId, SetOnlineShopPublicationRequest request) {
+        if (request == null || request.published() == null) {
+            throw new BusinessRuleException("Indique se o artigo fica publicado na loja online.");
+        }
+        setPublished(productId, request.published());
+        return new OnlineShopPublicationDTO(productId, request.published());
     }
 
     /** Switches "Publicar na loja online" of a product of the active company, audited. */

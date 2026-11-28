@@ -49,6 +49,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  *
  * <p>Harness LO-UI-01 (§3.5): the desktop reads and saves the settings by {@code GET}/{@code PUT
  * /api/online-shop/settings}, ADMIN only (403 for the other roles), with the LO-01 messages unchanged.
+ *
+ * <p>Harness LO-UI-02 (§3.5): the product form reads "Publicar na loja online" by {@code GET} and changes it by
+ * {@code PUT /api/online-shop/products/{id}/published}; who edits products (MANAGER, ADMIN) may publish, the others
+ * get 403.
  * Seeded users: ana=ADMIN, joao=MANAGER, maria=EMPLOYEE (password "password").
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:online-shop-http;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
@@ -255,6 +259,50 @@ class OnlineShopHttpIntegrationTest {
             assertThat(settings(put(SETTINGS), other, "{\"enabled\":false}").getStatus()).as(user + " PUT")
                     .isEqualTo(403);
         }
+    }
+
+    @Test
+    void loUi02_quemEditaOArtigoPublicaPelaFicha() throws Exception {
+        String[] manager = login("joao");
+        Long productId = unpublishedProduct("LOUI02-PUBLICAR", Long.parseLong(manager[1]));
+        String url = "/api/online-shop/products/" + productId + "/published";
+
+        MockHttpServletResponse read = settings(get(url), manager, "");
+        assertThat(read.getStatus()).as(read.getContentAsString(StandardCharsets.UTF_8)).isEqualTo(200);
+        JsonNode before = objectMapper.readTree(read.getContentAsString(StandardCharsets.UTF_8));
+        assertThat(before.get("productId").asLong()).isEqualTo(productId);
+        assertThat(before.get("published").asBoolean()).as("desligado por omissão").isFalse();
+
+        MockHttpServletResponse saved = settings(put(url), manager, "{\"published\":true}");
+        assertThat(saved.getStatus()).as(saved.getContentAsString(StandardCharsets.UTF_8)).isEqualTo(200);
+        assertThat(objectMapper.readTree(settings(get(url), manager, "").getContentAsString(StandardCharsets.UTF_8))
+                .get("published").asBoolean()).isTrue();
+        Integer audited = jdbc.queryForObject("select count(*) from audit_logs where action = 'ONLINE_SHOP_PUBLISH'"
+                + " and details like '%LOUI02-PUBLICAR%'", Integer.class);
+        assertThat(audited).as("publicação auditada").isPositive();
+
+        MockHttpServletResponse missing = settings(put(url), manager, "{}");
+        assertThat(missing.getStatus()).isEqualTo(400);
+        assertThat(message(missing)).isEqualTo("Indique se o artigo fica publicado na loja online.");
+
+        String[] employee = {login("maria")[0], manager[1]};
+        assertThat(settings(get(url), employee, "").getStatus()).as("maria GET").isEqualTo(403);
+        assertThat(settings(put(url), employee, "{\"published\":false}").getStatus()).as("maria PUT").isEqualTo(403);
+        assertThat(settings(put(url), manager, "{\"published\":false}").getStatus()).isEqualTo(200);
+    }
+
+    private Long unpublishedProduct(String sku, long companyId) {
+        Product product = new Product();
+        product.setSku(sku);
+        product.setName("Artigo LO-UI-02");
+        product.setUnitPrice(new BigDecimal("100.00"));
+        product.setPurchasePrice(BigDecimal.ZERO);
+        product.setMinStock(BigDecimal.ZERO);
+        product.setSaleType(ProductSaleType.SERVICE);
+        product.setStockTracked(false);
+        product.getCompanies().add(companyLookup.require(companyId));
+        productCommandService.saveProduct(product);
+        return productLookup.findBySkuForCompany(sku, companyId).orElseThrow().getId();
     }
 
     private MockHttpServletResponse settings(MockHttpServletRequestBuilder request, String[] session, String body)

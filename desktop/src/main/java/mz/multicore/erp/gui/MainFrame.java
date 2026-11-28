@@ -204,7 +204,7 @@ public class MainFrame extends JFrame {
             sellerDashboardPanel = sellerSession
                     ? new SellerDashboardPanel(comercialApiClient, posApiClient, this::handleSellerDashboardAction)
                     : null;
-            stockPanel = sellerSession ? null : new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient, printApiClient, stockWasteApiClient, inventoryPhysicalCountingApiClient);
+            stockPanel = sellerSession ? null : new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient, printApiClient, stockWasteApiClient, inventoryPhysicalCountingApiClient, onlineShopApiClient);
             comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient, printApiClient,
                     productionApiClient, fleetApiClient,
                     () -> {

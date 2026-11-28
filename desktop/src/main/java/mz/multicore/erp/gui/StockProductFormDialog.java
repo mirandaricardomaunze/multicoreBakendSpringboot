@@ -49,6 +49,7 @@ final class StockProductFormDialog {
 
         final byte[][] imageHolder = {null};
         JPanel imagePanel = StockProductFormBuilder.createImageChooserPanel(owner, imageHolder); JCheckBox perishableBox = StockProductFormBuilder.perishableCheckBox(); // validade obrigatória se ligado
+        OnlineShopPublishBox publishBox = OnlineShopPublishBox.forNewProduct(); // LO-UI-02: só depois de gravado
 
         JPanel dialogPanel = UIHelper.createDialogForm(
                 "SKU / Código (Único):", skuField, "Referência:", referenceField, "Código de Barras:", barcodeField,
@@ -57,7 +58,8 @@ final class StockProductFormDialog {
                 "Embalagens por Caixa:", packagesPerBoxField, "Unidades por Embalagem:", unitsPerPackageField,
                 "Total de Unidades por Caixa:", unitsPerBoxField, "Peso líquido/unidade (kg):", netWeightField,
                 "Peso bruto/unidade (kg):", grossWeightField, "Preço Grosso (MT):", wholesalePriceField,
-                "Qtd mín. grosso:", wholesaleMinQtyField, "Validade:", perishableBox, "Descrição:", descField, "Imagem (opcional):", imagePanel
+                "Qtd mín. grosso:", wholesaleMinQtyField, "Validade:", perishableBox, "Loja online:", publishBox.checkBox(),
+                "Descrição:", descField, "Imagem (opcional):", imagePanel
         );
 
         ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Registar Novo Produto", "fas-boxes",
@@ -125,6 +127,7 @@ final class StockProductFormDialog {
 
         final byte[][] imageHolder = {null};
         JPanel imagePanel = StockProductFormBuilder.createImageChooserPanel(owner, imageHolder); JCheckBox perishableBox = StockProductFormBuilder.perishableCheckBox(); // validade obrigatória se ligado
+        OnlineShopPublishBox publishBox = OnlineShopPublishBox.forProduct(owner.onlineShopApiClient); // LO-UI-02
 
         Runnable prefill = () -> {
             ProductDTO p = productCombo.selectedProduct();
@@ -149,6 +152,7 @@ final class StockProductFormDialog {
                 }
             }
             imageHolder[0] = null;
+            publishBox.load(p.id());
         };
         productCombo.addActionListener(e -> prefill.run());
         prefill.run();
@@ -160,7 +164,8 @@ final class StockProductFormDialog {
                 "Stock Mínimo:", minStockField, "Embalagens por Caixa:", packagesPerBoxField, "Unidades por Embalagem:", unitsPerPackageField,
                 "Total de Unidades por Caixa:", unitsPerBoxField, "Peso líquido/unidade (kg):", netWeightField,
                 "Peso bruto/unidade (kg):", grossWeightField, "Preço Grosso (MT):", wholesalePriceField,
-                "Qtd mín. grosso:", wholesaleMinQtyField, "Validade:", perishableBox, "Descrição:", descField, "Nova Imagem (opcional):", imagePanel
+                "Qtd mín. grosso:", wholesaleMinQtyField, "Validade:", perishableBox, "Loja online:", publishBox.checkBox(),
+                "Descrição:", descField, "Nova Imagem (opcional):", imagePanel
         );
 
         ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Editar Produto", "fas-edit",
@@ -174,6 +179,7 @@ final class StockProductFormDialog {
                     minStockField, packagesPerBoxField, unitsPerPackageField, descField, wholesalePriceField,
                     wholesaleMinQtyField, netWeightField, grossWeightField, categoryCombo, taxCombo, categories, vatRates);
             byte[] selectedImage = imageHolder[0]; boolean perishable = perishableBox.isSelected();
+            Runnable publishIfChanged = publishBox.pendingSave(selected.id());
 
             return () -> {
                 owner.comercialApiClient.updateProduct(
@@ -182,6 +188,7 @@ final class StockProductFormDialog {
                         data.categoryId(), selected.saleType() != null ? selected.saleType() : "UNIT", selected.stockTracked(), data.taxRateId(),
                         data.description(), data.wholesalePrice(), data.wholesaleMinQty(), data.netWeightKg(), data.grossWeightKg(), selected.businessUnitId(), perishable);
                 if (selectedImage != null) owner.comercialApiClient.updateProductImage(selected.id(), selectedImage);
+                publishIfChanged.run();
                 return null;
             };
         });

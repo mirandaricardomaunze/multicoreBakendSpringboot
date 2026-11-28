@@ -42,7 +42,7 @@ public final class ApiRolePolicy {
             "/api/shop",
             // Integrations (API keys, webhooks): ADMIN only (API_PUBLICA_WEBHOOKS_SPEC §3.1.1, §4.1).
             "/api/integrations",
-            // Online shop back office: settings ADMIN only (LOJA_ONLINE_SPEC §3.5, LO-UI-01).
+            // Online shop back office: settings ADMIN only (LO-UI-01); product publication like products (LO-UI-02).
             "/api/online-shop");
 
     /** Business-sector areas (SA-C01..C03): every role may read, only management may change. */
@@ -160,7 +160,8 @@ public final class ApiRolePolicy {
         if (matches(uri, "/api/comercial/invoices")) {
             return "GET".equalsIgnoreCase(method) ? seller : manager;
         }
-        if (matches(uri, "/api/comercial/products") || matches(uri, "/api/product-categories")) {
+        if (matches(uri, "/api/comercial/products") || matches(uri, "/api/product-categories")
+                || matches(uri, "/api/online-shop/products")) {
             return "GET".equalsIgnoreCase(method) ? seller : manager;
         }
         if (matches(uri, "/api/comercial/clients")) {

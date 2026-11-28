@@ -3,6 +3,7 @@ package mz.multicore.erp.gui.integrations;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.*;
 import mz.multicore.erp.gui.ConfigPanel;
+import mz.multicore.erp.gui.OnlineShopPublishBox;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopDeliveryZoneDTO;
@@ -35,6 +36,9 @@ import static org.mockito.Mockito.when;
  * por armazém de venda em "Lojas de levantamento", tabela "Zonas de entrega" (Nome, Taxa em MT) com "Adicionar zona" e
  * "Remover zona", "Telefone de contacto" e "Prazo de cancelamento (dias)" com 7 por omissão; lê e grava por
  * {@code GET}/{@code PUT /api/online-shop/settings}; outro perfil não pede nada e vê o aviso.
+ * LO-UI-02: a ficha do artigo tem a caixa "Publicar na loja online", desligada por omissão e sempre desligada no
+ * artigo novo até ser gravado; o estado vem do servidor e só se grava por
+ * {@code PUT /api/online-shop/products/{id}/published} quando a caixa mudou.
  */
 class OnlineShopUiHarnessTest {
 
@@ -211,6 +215,77 @@ class OnlineShopUiHarnessTest {
         assertThat(Files.readString(client)).contains("/api/online-shop/settings").contains(".put(SETTINGS");
     }
 
+    @Test
+    @DisplayName("LO-UI-02: No artigo novo a caixa Publicar na loja online vem desligada até o artigo ser gravado")
+    void loUi02_artigoNovoDesligado() throws Exception {
+        onEdt(() -> {
+            OnlineShopPublishBox publish = OnlineShopPublishBox.forNewProduct();
+            assertThat(publish.checkBox().getText()).isEqualTo("Publicar na loja online");
+            assertThat(publish.checkBox().isSelected()).isFalse();
+            assertThat(publish.checkBox().isEnabled()).isFalse();
+            assertThat(publish.checkBox().getToolTipText()).isEqualTo("Grave o artigo antes de o publicar na loja online.");
+            publish.checkBox().setSelected(true);
+            publish.pendingSave(5L).run();
+        });
+    }
+
+    @Test
+    @DisplayName("LO-UI-02: O estado vem do servidor e só se grava quando a caixa muda")
+    void loUi02_lidoDoServidorGravadoSoQuandoMuda() throws Exception {
+        OnlineShopApiClient client = mock(OnlineShopApiClient.class);
+        when(client.isPublished(7L)).thenReturn(true);
+        AtomicReference<OnlineShopPublishBox> ref = new AtomicReference<>();
+        onEdt(() -> {
+            CurrentUserContext.setCurrentUser("gestor", "MANAGER");
+            ref.set(OnlineShopPublishBox.forProduct(client));
+            ref.get().load(7L);
+            assertThat(ref.get().checkBox().isEnabled()).as("à espera do servidor").isFalse();
+        });
+        verify(client, timeout(5000)).isPublished(7L);
+        for (int i = 0; i < 100 && !Boolean.FALSE.equals(ref.get().checkBox().getClientProperty("loading")); i++) {
+            Thread.sleep(50);
+        }
+        onEdt(() -> { });
+        onEdt(() -> {
+            OnlineShopPublishBox publish = ref.get();
+            assertThat(publish.checkBox().isSelected()).as("estado do servidor").isTrue();
+            assertThat(publish.checkBox().isEnabled()).isTrue();
+            publish.pendingSave(7L).run();
+            verify(client, never()).setPublished(7L, false);
+            verify(client, never()).setPublished(7L, true);
+
+            publish.checkBox().setSelected(false);
+            publish.pendingSave(7L).run();
+            verify(client).setPublished(7L, false);
+
+            publish.load(8L);
+            publish.apply(7L, true);
+            assertThat(publish.checkBox().isEnabled()).as("resposta de outro artigo ignorada").isFalse();
+            publish.apply(8L, false);
+            assertThat(publish.checkBox().isSelected()).isFalse();
+            publish.checkBox().setSelected(true);
+            publish.pendingSave(8L).run();
+            verify(client).setPublished(8L, true);
+        });
+    }
+
+    @Test
+    @DisplayName("LO-UI-02: A ficha do artigo usa a caixa no registo e na edição e grava depois do artigo")
+    void loUi02_fichaDoArtigoUsaACaixa() throws Exception {
+        String form = Files.readString(gui("..", "StockProductFormDialog.java"));
+        assertThat(form).contains("OnlineShopPublishBox.forNewProduct()")
+                .contains("OnlineShopPublishBox.forProduct(owner.onlineShopApiClient)")
+                .contains("publishBox.load(p.id())").contains("publishBox.pendingSave(selected.id())")
+                .contains("\"Loja online:\", publishBox.checkBox()");
+        assertThat(form.indexOf("publishIfChanged.run()")).as("depois de gravar o artigo")
+                .isGreaterThan(form.indexOf("owner.comercialApiClient.updateProduct("));
+        assertThat(Files.readString(gui("..", "MainFrame.java"))).contains("inventoryPhysicalCountingApiClient, onlineShopApiClient)");
+        Path client = Path.of("src", "main", "java", "mz", "multicore", "erp", "desktop", "client",
+                "OnlineShopApiClient.java");
+        if (!Files.exists(client)) client = Path.of("desktop").resolve(client);
+        assertThat(Files.readString(client)).contains("/api/online-shop/products/").contains("\"/published\"");
+    }
+
     private static OnlineShopSettingsPanel loaded(OnlineShopSettingsDTO settings) throws Exception {
         return loaded(mock(OnlineShopApiClient.class), settings);
     }
@@ -230,8 +305,8 @@ class OnlineShopUiHarnessTest {
         return new WarehouseDTO(id, name, null, null, null, 1L, null, true, null, null, true);
     }
 
-    private static Path gui(String file) {
-        Path nested = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui", "integrations", file);
+    private static Path gui(String... file) {
+        Path nested = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui", "integrations").resolve(Path.of("", file));
         return Files.exists(nested) ? nested : Path.of("desktop").resolve(nested);
     }
 
