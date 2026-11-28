@@ -3,7 +3,7 @@
 > Cenários que provam [ENTREGAS_AGENDA_PROVA_SPEC.md](ENTREGAS_AGENDA_PROVA_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-28
+**Última actualização:** 2026-11-28 (EN-01 verde: `DeliveryScheduleRulesTest`, migração V165)
 
 | ID | Garantia | Teste |
 |---|---|---|

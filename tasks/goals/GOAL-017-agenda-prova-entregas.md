@@ -1,7 +1,7 @@
 ---
 id: GOAL-017
 title: "Entregas agendadas por dia e camião, com prova de entrega e devolução na obra"
-status: TODO
+status: IN_PROGRESS
 priority: MEDIUM
 spec: docs/ENTREGAS_AGENDA_PROVA_SPEC.md
 harness: docs/ENTREGAS_AGENDA_PROVA_HARNESS.md
@@ -17,7 +17,7 @@ o gestor aprovar. Regras em `docs/ENTREGAS_AGENDA_PROVA_SPEC.md` §3 (decididas 
 
 ## Critérios de aceitação
 
-- [ ] EN-01 — agendar guia aprovada com dia, período e camião; estados da entrega — `DeliveryScheduleRulesTest`
+- [x] EN-01 — agendar guia aprovada com dia, período e camião; estados da entrega — `DeliveryScheduleRulesTest`
 - [ ] EN-02 — não entregue com motivo, reagendar, sem stock — `DeliveryScheduleRulesTest`
 - [ ] EN-03 — agenda do dia por camião e período — `DeliveryScheduleRulesTest`
 - [ ] EN-04 — prova de entrega: nome obrigatório, assinatura e foto opcionais — `DeliveryProofTest`
@@ -42,3 +42,4 @@ o gestor aprovar. Regras em `docs/ENTREGAS_AGENDA_PROVA_SPEC.md` §3 (decididas 
 ## Registo de progresso
 
 <!-- uma linha por iteração: data · critério · resultado -->
+- 2026-11-28 · EN-01 · `DeliveryScheduleService.schedule` agenda/reagenda só guias aprovadas (dia ≥ hoje, Manhã/Tarde, viatura operacional da empresa via `VehicleLookup.requireForCompany`), estado `DeliveryStatus` na guia (V165), entregue não se reagenda; `DeliveryScheduleRulesTest` 16/16 verde.

@@ -21,6 +21,7 @@ import java.util.List;
 public class VehicleLookup {
 
     private static final String MANIFEST_NOT_FOUND = "Manifesto de carga não encontrado.";
+    private static final String VEHICLE_NOT_FOUND = "Viatura não encontrada.";
 
     private final VehicleRepository vehicleRepository;
     private final FuelLogRepository fuelLogRepository;
@@ -40,6 +41,15 @@ public class VehicleLookup {
             return List.of();
         }
         return vehicleRepository.findByCompanyIdOrderByLicensePlateAsc(companyId);
+    }
+
+    /** Viatura da empresa; de outra empresa ou inexistente é recusada da mesma forma. */
+    public Vehicle requireForCompany(Long vehicleId, Long companyId) {
+        if (vehicleId == null || companyId == null) {
+            throw new BusinessRuleException(VEHICLE_NOT_FOUND);
+        }
+        return vehicleRepository.findByIdAndCompanyId(vehicleId, companyId)
+                .orElseThrow(() -> new BusinessRuleException(VEHICLE_NOT_FOUND));
     }
 
     /** Abastecimentos da viatura, do mais recente para o mais antigo. */

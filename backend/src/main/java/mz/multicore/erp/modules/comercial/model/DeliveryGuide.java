@@ -6,8 +6,10 @@ import mz.multicore.erp.modules.inventory.model.Warehouse;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +83,27 @@ public class DeliveryGuide extends BaseEntity {
 
     @Column(name = "notes", length = 500)
     private String notes;
+
+    // ─── Agenda de entrega (docs/ENTREGAS_AGENDA_PROVA_SPEC.md §3.1) ────────
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'UNSCHEDULED'")
+    @Column(name = "delivery_status", nullable = false, length = 20)
+    private DeliveryStatus deliveryStatus = DeliveryStatus.UNSCHEDULED;
+
+    @Column(name = "scheduled_date")
+    private LocalDate scheduledDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scheduled_period", length = 20)
+    private DeliveryPeriod scheduledPeriod;
+
+    /** Viatura da frota (id apenas: a frota é outro módulo). */
+    @Column(name = "delivery_vehicle_id")
+    private Long deliveryVehicleId;
+
+    /** Matrícula da viatura no momento em que se agendou. */
+    @Column(name = "delivery_vehicle_label", length = 20)
+    private String deliveryVehicleLabel;
 
     // ─── Decisão (aprovação / rejeição) ─────────────────────────────────────
     @Column(name = "approved_by", length = 80)
