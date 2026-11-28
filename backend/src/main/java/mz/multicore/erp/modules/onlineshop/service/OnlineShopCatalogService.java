@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.onlineshop.service;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.advances.AdvancePayments;
@@ -22,7 +21,6 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,8 +35,6 @@ import java.util.Set;
  */
 @Service
 public class OnlineShopCatalogService {
-
-    static final String SHOP_UNAVAILABLE = "Loja indisponível.";
 
     private final OnlineShopSettingsRepository settingsRepository;
     private final ProductLookup productLookup;
@@ -61,7 +57,7 @@ public class OnlineShopCatalogService {
     /** Published products of the shop behind {@code /loja/{code}}; disabled or unknown shop → "Loja indisponível.". */
     @Transactional(readOnly = true)
     public List<OnlineShopProductDTO> listProducts(String publicCode) {
-        OnlineShopSettings shop = requireOpenShop(publicCode);
+        OnlineShopSettings shop = OpenOnlineShops.require(settingsRepository, publicCode);
         Long companyId = shop.getCompany().getId();
         Set<Long> inStock = productsWithFreeStock(companyId, Set.copyOf(shop.getPickupWarehouseIds()));
         return productLookup.listForCompany(companyId).stream()
@@ -81,15 +77,6 @@ public class OnlineShopCatalogService {
         productCommandService.saveProduct(product);
         auditLogService.logCurrent("ONLINE_SHOP_PUBLISH", "Artigo " + product.getSku()
                 + (published ? " publicado na" : " retirado da") + " loja online");
-    }
-
-    private OnlineShopSettings requireOpenShop(String publicCode) {
-        if (publicCode == null || publicCode.isBlank()) {
-            throw new BusinessRuleException(SHOP_UNAVAILABLE);
-        }
-        return settingsRepository.findByPublicCode(publicCode.trim().toLowerCase(Locale.ROOT))
-                .filter(OnlineShopSettings::isEnabled)
-                .orElseThrow(() -> new BusinessRuleException(SHOP_UNAVAILABLE));
     }
 
     /** Products with stock minus active reservations above zero in at least one of the pickup shops. */
@@ -120,7 +107,8 @@ public class OnlineShopCatalogService {
         return productId + ":" + warehouseId;
     }
 
-    private static boolean isOnSale(Product product) {
+    /** Published and not the system advance product: the only products the shop shows and sells. */
+    static boolean isOnSale(Product product) {
         return product.isPublishedOnline() && !AdvancePayments.isSystemSku(product.getSku());
     }
 

@@ -24,7 +24,7 @@ a iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - [x] LO-02 — só artigos publicados — `OnlineShopCatalogTest`
 - [x] LO-03 — Disponível/Esgotado sem dados internos — `OnlineShopCatalogTest`
 - [x] LO-05 — validação do checkout — `OnlineShopOrderTest`
-- [ ] LO-06 — encomenda pelo serviço da API pública — `OnlineShopOrderTest`
+- [x] LO-06 — encomenda pelo serviço da API pública — `OnlineShopOrderTest`
 - [ ] LO-07 — escolha do armazém e recusa sem stock — `OnlineShopOrderTest`
 - [ ] LO-08 — taxa de entrega por zona — `OnlineShopOrderTest`
 - [ ] LO-10 — cancelamento automático — `OnlineShopExpiryTest`
@@ -61,3 +61,4 @@ em LO-01 quando o GOAL-013 estiver `DONE`.
 - 2026-11-28 · LO-02 · concluído: campo "Publicar na loja online" no artigo (desligado por omissão, migração V163); OnlineShopCatalogService lista só os artigos publicados da loja activa (nunca o Adiantamento), loja desactivada ou inexistente → "Loja indisponível.", publicar/retirar auditado (ONLINE_SHOP_PUBLISH); OnlineShopCatalogTest 6/6 verde.
 - 2026-11-28 · LO-03 · concluído: cada artigo da montra traz só Disponível/Esgotado (`available`), Disponível quando stock − reservas activas > 0 em pelo menos uma loja de levantamento (serviços sem controlo de stock sempre disponíveis; stock noutros armazéns não conta), lido pelo StockLookup e OrderReservationLookup; o DTO não tem quantidades, custos nem fornecedores; OnlineShopCatalogTest 11/11 verde.
 - 2026-11-28 · LO-05 · concluído: OnlineShopCheckoutRules valida o checkout (PlaceOnlineShopOrderRequest): nome obrigatório (≤150), telemóvel moçambicano normalizado como no pagamento móvel (258 opcional, 9 dígitos, 82–87), NUIT opcional mas válido (módulo 11), modo LEVANTAMENTO numa loja de levantamento da loja ou ENTREGA com zona da loja e morada (≤255), notas ≤500 e carrinho não vazio com quantidades > 0; OnlineShopOrderTest 10/10 verde.
+- 2026-11-28 · LO-06 · concluído: OnlineShopOrderService cria a encomenda pelo ExternalOrderPlacementService da API pública (Encomenda A4 em aprovação com reserva, preços e IVA do sistema, só artigos publicados), cliente por NUIT (registado com o nome do checkout quando novo) ou Consumidor Final, telemóvel guardado na encomenda, nova origem `LOJA_ONLINE` (ExternalOrderSource passa a levar a origem), a loja actua como vendedor "Loja online · {código}"; o nome do checkout passa a ≤120 (limite do comprador na encomenda); a resposta traz só número, estado, resumo e total; OnlineShopOrderTest 16/16 verde.

@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.comercial.dto.SaveClientRequest;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.ExternalOrderSource;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
+import mz.multicore.erp.modules.comercial.model.OrderOrigin;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
@@ -93,7 +94,7 @@ public class PublicOrderService {
         return placementService.findPlaced(key.companyId(), idempotencyKey)
                 .map(placed -> replay(key.companyId(), placed, fingerprint, reference))
                 .orElseGet(() -> new PublicOrderSubmission(
-                        place(key, request, new ExternalOrderSource(key.keyName(), reference, idempotencyKey,
+                        place(key, request, new ExternalOrderSource(OrderOrigin.API, key.keyName(), reference, idempotencyKey,
                                 fingerprint, trimToNull(request.contactPhone()))), true));
     }
 

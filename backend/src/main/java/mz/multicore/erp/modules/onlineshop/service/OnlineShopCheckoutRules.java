@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
  */
 final class OnlineShopCheckoutRules {
 
-    static final int NAME_MAX_LENGTH = 150;
+    static final int NAME_MAX_LENGTH = 120;
     static final int ADDRESS_MAX_LENGTH = 255;
     static final int NOTES_MAX_LENGTH = 500;
     private static final Pattern MOBILE_MZ = Pattern.compile("8[2-7]\\d{7}");

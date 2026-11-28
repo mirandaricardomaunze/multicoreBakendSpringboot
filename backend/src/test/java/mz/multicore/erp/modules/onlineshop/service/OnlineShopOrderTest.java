@@ -6,23 +6,56 @@ import mz.multicore.erp.modules.onlineshop.dto.OnlineShopOrderLineRequest;
 import mz.multicore.erp.modules.onlineshop.dto.PlaceOnlineShopOrderRequest;
 import mz.multicore.erp.modules.onlineshop.model.OnlineShopDeliveryZone;
 import mz.multicore.erp.modules.onlineshop.model.OnlineShopSettings;
+import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.modules.comercial.dto.ClientDTO;
+import mz.multicore.erp.modules.comercial.dto.CreateOrderRequest;
+import mz.multicore.erp.modules.comercial.dto.OrderDTO;
+import mz.multicore.erp.modules.comercial.dto.OrderLineDTO;
+import mz.multicore.erp.modules.comercial.dto.SaveClientRequest;
+import mz.multicore.erp.modules.comercial.model.Client;
+import mz.multicore.erp.modules.comercial.model.ExternalOrderSource;
+import mz.multicore.erp.modules.comercial.model.OrderKind;
+import mz.multicore.erp.modules.comercial.model.OrderOrigin;
+import mz.multicore.erp.modules.comercial.model.Product;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
+import mz.multicore.erp.modules.comercial.service.ComercialService;
+import mz.multicore.erp.modules.comercial.service.ExternalOrderPlacementService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.fiscal.model.TaxRate;
+import mz.multicore.erp.modules.onlineshop.dto.OnlineShopOrderDTO;
+import mz.multicore.erp.modules.onlineshop.dto.OnlineShopOrderLineDTO;
+import mz.multicore.erp.modules.onlineshop.repository.OnlineShopSettingsRepository;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Harness LO-05 (docs/LOJA_ONLINE_SPEC.md §3.3): the checkout requires the name and a Mozambican mobile phone
  * (validated like the mobile payment), accepts an optional but valid NUIT, and needs a pickup store of the shop for
  * {@code LEVANTAMENTO} or a zone of the shop and an address for {@code ENTREGA}.
+ * Harness LO-06 (§3.3): the order is placed through the public API's placement service — system prices and VAT,
+ * reserved stock, client by NUIT or Consumidor Final with the contact on the order, origin {@code LOJA_ONLINE}.
  */
 class OnlineShopOrderTest {
 
+    private static final Long COMPANY_ID = 1L;
     private static final Long PICKUP_A = 10L;
+    private static final Long PICKUP_B = 11L;
     private static final List<OnlineShopOrderLineRequest> CART =
             List.of(new OnlineShopOrderLineRequest(" ARROZ-5KG ", new BigDecimal("2")));
 
@@ -113,8 +146,159 @@ class OnlineShopOrderTest {
 
     @Test
     void lo05_limitesDeTamanho() {
-        assertRefused("O nome tem no máximo 150 caracteres.", request("A".repeat(151), "841234567", null));
+        assertRefused("O nome tem no máximo 120 caracteres.", request("A".repeat(121), "841234567", null));
         assertRefused("A morada tem no máximo 255 caracteres.", delivery("Matola", "R".repeat(256)));
+    }
+
+    // ─── LO-06: encomenda pelo serviço da API pública ─────────────────────────
+
+    private final OnlineShopSettingsRepository settingsRepository = mock(OnlineShopSettingsRepository.class);
+    private final ProductLookup productLookup = mock(ProductLookup.class);
+    private final ClientLookup clientLookup = mock(ClientLookup.class);
+    private final ComercialService comercialService = mock(ComercialService.class);
+    private final ExternalOrderPlacementService placementService = mock(ExternalOrderPlacementService.class);
+    private final OnlineShopOrderService orderService = new OnlineShopOrderService(
+            settingsRepository, productLookup, clientLookup, comercialService, placementService);
+
+    @Test
+    void lo06_consumidorFinalPeloServicoDaApiPublicaComOrigemLojaOnline() {
+        stubShop();
+        Product arroz = onSale(1L, new BigDecimal("16"));
+        when(productLookup.findBySkuForCompany("ARROZ-5KG", COMPANY_ID)).thenReturn(Optional.of(arroz));
+        AtomicReference<String> actor = new AtomicReference<>();
+        when(placementService.placeReservedFormalOrder(any(), any())).thenAnswer(invocation -> {
+            actor.set(CurrentUserContext.getUsername() + "|" + CurrentUserContext.getRole() + "|"
+                    + CurrentUserContext.requireCurrentCompanyId());
+            return placed("ENC-2026/00007", "Aguarda aprovação", "232.00");
+        });
+
+        OnlineShopOrderDTO result = orderService.placeOrder(" Mercearia-Baixa ", new PlaceOnlineShopOrderRequest(
+                "Ana Machava", "+258 84 123 4567", null, OnlineShopFulfilment.LEVANTAMENTO, PICKUP_B, null, null,
+                "Ligar antes", CART));
+
+        ArgumentCaptor<CreateOrderRequest> order = ArgumentCaptor.forClass(CreateOrderRequest.class);
+        ArgumentCaptor<ExternalOrderSource> source = ArgumentCaptor.forClass(ExternalOrderSource.class);
+        verify(placementService).placeReservedFormalOrder(order.capture(), source.capture());
+        assertNull(order.getValue().clientId(), "sem NUIT é Consumidor Final");
+        assertEquals("Ana Machava", order.getValue().walkInName());
+        assertEquals(COMPANY_ID, order.getValue().companyId());
+        assertEquals(PICKUP_B, order.getValue().warehouseId());
+        assertEquals(OrderKind.FORMAL_ORDER, order.getValue().kind());
+        assertEquals("Ligar antes", order.getValue().notes());
+        assertEquals(1L, order.getValue().lines().get(0).productId());
+        assertEquals(0, new BigDecimal("2").compareTo(order.getValue().lines().get(0).quantity()));
+        assertEquals(new BigDecimal("16"), order.getValue().lines().get(0).taxRate(), "IVA do artigo no sistema");
+        assertNull(order.getValue().lines().get(0).unitPrice(), "o preço nunca vem do pedido");
+        assertEquals(OrderOrigin.LOJA_ONLINE, source.getValue().origin());
+        assertEquals("Loja online", source.getValue().originName());
+        assertEquals("841234567", source.getValue().contactPhone());
+        assertEquals("Loja online · mercearia-baixa|SELLER|1", actor.get(), "a loja vende como vendedor da empresa");
+
+        assertEquals(new OnlineShopOrderDTO("ENC-2026/00007", "Aguarda aprovação",
+                List.of(new OnlineShopOrderLineDTO("ARROZ-5KG", "Arroz 5 kg", new BigDecimal("2"))),
+                new BigDecimal("232.00")), result);
+    }
+
+    @Test
+    void lo06_clienteExistentePorNuitGuardaOContacto() {
+        stubShop();
+        when(productLookup.findBySkuForCompany("ARROZ-5KG", COMPANY_ID)).thenReturn(Optional.of(onSale(1L, null)));
+        Client client = new Client();
+        client.setId(42L);
+        when(clientLookup.findForCompanyByTaxId("400000008", COMPANY_ID)).thenReturn(Optional.of(client));
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", new PlaceOnlineShopOrderRequest("Ana", "841234567", "400000008",
+                OnlineShopFulfilment.LEVANTAMENTO, PICKUP_A, null, null, null, CART));
+
+        ArgumentCaptor<CreateOrderRequest> order = ArgumentCaptor.forClass(CreateOrderRequest.class);
+        ArgumentCaptor<ExternalOrderSource> source = ArgumentCaptor.forClass(ExternalOrderSource.class);
+        verify(placementService).placeReservedFormalOrder(order.capture(), source.capture());
+        assertEquals(42L, order.getValue().clientId());
+        assertNull(order.getValue().walkInName());
+        assertEquals("841234567", source.getValue().contactPhone());
+        verify(comercialService, never()).createClient(any());
+    }
+
+    @Test
+    void lo06_nuitNovoRegistaOClienteComONomeDoCheckout() {
+        stubShop();
+        when(productLookup.findBySkuForCompany("ARROZ-5KG", COMPANY_ID)).thenReturn(Optional.of(onSale(1L, null)));
+        when(clientLookup.findForCompanyByTaxId("400000008", COMPANY_ID)).thenReturn(Optional.empty());
+        when(comercialService.createClient(any())).thenReturn(
+                new ClientDTO(77L, "Ana Machava", "400000008", null, null, 0, null, null, null));
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", new PlaceOnlineShopOrderRequest("Ana Machava", "841234567",
+                "400000008", OnlineShopFulfilment.LEVANTAMENTO, PICKUP_A, null, null, null, CART));
+
+        ArgumentCaptor<SaveClientRequest> client = ArgumentCaptor.forClass(SaveClientRequest.class);
+        verify(comercialService).createClient(client.capture());
+        assertEquals("Ana Machava", client.getValue().name());
+        assertEquals("400000008", client.getValue().taxId());
+        ArgumentCaptor<CreateOrderRequest> order = ArgumentCaptor.forClass(CreateOrderRequest.class);
+        verify(placementService).placeReservedFormalOrder(order.capture(), any());
+        assertEquals(77L, order.getValue().clientId());
+    }
+
+    @Test
+    void lo06_artigoNaoPublicadoNaoSeEncomendaENadaECriado() {
+        stubShop();
+        Product hidden = onSale(1L, null);
+        hidden.setPublishedOnline(false);
+        when(productLookup.findBySkuForCompany("ARROZ-5KG", COMPANY_ID)).thenReturn(Optional.of(hidden));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> orderService.placeOrder(
+                "mercearia-baixa", request("Ana", "841234567", null)));
+
+        assertEquals("O artigo ARROZ-5KG não está à venda na loja online.", ex.getMessage());
+        verify(placementService, never()).placeReservedFormalOrder(any(), any());
+    }
+
+    @Test
+    void lo06_lojaDesactivadaNaoAceitaEncomendas() {
+        OnlineShopSettings closed = shop();
+        closed.setEnabled(false);
+        when(settingsRepository.findByPublicCode("mercearia-baixa")).thenReturn(Optional.of(closed));
+
+        assertEquals("Loja indisponível.", assertThrows(BusinessRuleException.class,
+                () -> orderService.placeOrder("mercearia-baixa", request("Ana", "841234567", null))).getMessage());
+        verify(placementService, never()).placeReservedFormalOrder(any(), any());
+    }
+
+    @Test
+    void lo06_respostaSoComNumeroEstadoResumoETotal() {
+        List<String> fields = Arrays.stream(OnlineShopOrderDTO.class.getRecordComponents())
+                .map(component -> component.getName()).toList();
+        assertEquals(List.of("number", "statusLabel", "lines", "totalAmount"), fields);
+    }
+
+    private void stubShop() {
+        when(settingsRepository.findByPublicCode("mercearia-baixa")).thenReturn(Optional.of(shop()));
+    }
+
+    private static Product onSale(Long id, BigDecimal taxRate) {
+        Product product = new Product();
+        product.setId(id);
+        product.setSku("ARROZ-5KG");
+        product.setName("Arroz 5 kg");
+        product.setUnitPrice(new BigDecimal("100.00"));
+        product.setPublishedOnline(true);
+        if (taxRate != null) {
+            TaxRate rate = new TaxRate();
+            rate.setRate(taxRate);
+            product.setTaxRate(rate);
+        }
+        return product;
+    }
+
+    private static OrderDTO placed(String number, String statusLabel, String total) {
+        OrderLineDTO line = new OrderLineDTO(5L, 1L, "Arroz 5 kg", "ARROZ-5KG", new BigDecimal("2"),
+                new BigDecimal("100.00"), new BigDecimal("16"), new BigDecimal("200.00"), BigDecimal.ZERO, null, null,
+                1, null, null, null, null, null);
+        return new OrderDTO(9L, number, null, null, null, "Ana", null, null, new BigDecimal(total), "PENDING_APPROVAL",
+                null, List.of(line), null, null, 0, null, OrderKind.FORMAL_ORDER, "Encomenda", statusLabel, null, null,
+                null, null, null, false, PICKUP_A, null, null, null, null, null, 0L);
     }
 
     private static PlaceOnlineShopOrderRequest request(String name, String phone, String nuit) {
@@ -134,10 +318,14 @@ class OnlineShopOrderTest {
     }
 
     private static OnlineShopSettings shop() {
+        Company company = new Company();
+        company.setId(COMPANY_ID);
         OnlineShopSettings shop = new OnlineShopSettings();
+        shop.setCompany(company);
         shop.setEnabled(true);
         shop.setPublicCode("mercearia-baixa");
         shop.getPickupWarehouseIds().add(PICKUP_A);
+        shop.getPickupWarehouseIds().add(PICKUP_B);
         shop.getDeliveryZones().add(new OnlineShopDeliveryZone("Matola", new BigDecimal("150.00")));
         return shop;
     }

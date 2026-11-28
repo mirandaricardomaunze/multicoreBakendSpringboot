@@ -5,7 +5,6 @@ import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 import mz.multicore.erp.modules.comercial.model.ExternalOrderSource;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
-import mz.multicore.erp.modules.comercial.model.OrderOrigin;
 import mz.multicore.erp.modules.comercial.repository.OrderLineRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -44,7 +43,7 @@ public class ExternalOrderPlacementService {
         OrderDTO created = orderLifecycleService.createOrder(request, OrderKind.FORMAL_ORDER);
         Order order = orderRepository.findById(created.id()).orElseThrow();
         OrderStockAvailability.requireAndReserve(order, inventoryService, orderLineRepository);
-        order.setOrigin(OrderOrigin.API);
+        order.setOrigin(source.origin());
         order.setOriginName(source.originName());
         order.setExternalReference(source.externalReference());
         order.setIdempotencyKey(source.idempotencyKey());
