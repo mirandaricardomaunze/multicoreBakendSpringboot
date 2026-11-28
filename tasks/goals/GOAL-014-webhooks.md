@@ -1,7 +1,7 @@
 ---
 id: GOAL-014
 title: "Webhooks avisam sistemas externos de vendas, encomendas e stock"
-status: IN_PROGRESS
+status: DONE
 priority: MEDIUM
 spec: docs/API_PUBLICA_WEBHOOKS_SPEC.md
 harness: docs/API_PUBLICA_WEBHOOKS_HARNESS.md
@@ -28,7 +28,7 @@ iteração termina com `NEEDS_HUMAN` e não começa este goal.
 - [x] WH-06 — registo de entregas e reenvio — `WebhookDeliveryTest`
 - [x] WH-07 — desactivação após 20 falhas com aviso — `WebhookDeliveryTest`
 - [x] WH-08 — endpoints, ADMIN, empresa activa — `WebhookHttpIntegrationTest`
-- [ ] WH-UI-01 — ecrã de webhooks — `IntegrationsUiHarnessTest`
+- [x] WH-UI-01 — ecrã de webhooks — `IntegrationsUiHarnessTest`
 
 ## Fora de âmbito
 
@@ -72,3 +72,5 @@ GOAL-013 primeiro e depois segue para este goal.
 - 2026-11-28 · WH-08 · regra dos endpoints escrita na SPEC §4.3.5 (`WebhookController` em `/api/integrations/webhooks`: listar, criar `201` com segredo só aí, activar/desactivar, `/alerts`, `/{id}/deliveries`, `/deliveries/{id}/resend`; não-ADMIN `403` pela `ApiRolePolicy`, regra/outra empresa/inexistente `400` PT-MZ como as chaves de API, rotas classificadas RPC-01; contrato do `WebhookHttpIntegrationTest`) e linha do HARNESS actualizada; implementação na próxima iteração.
 - 2026-11-28 · WH-08 · concluído: `WebhookController` em `/api/integrations/webhooks` (listar, criar `201` com o segredo só aí, activar/desactivar, `/alerts`, `/{id}/deliveries` com filtro/página/`size`, `/deliveries/{deliveryId}/resend`), só HTTP e a delegar em `WebhookSubscriptionService`/`WebhookDeliveryService`; não-ADMIN `403` pela `ApiRolePolicy` (prefixo `/api/integrations`), outra empresa/inexistente/regras `400` PT-MZ, sem login `401`; WebhookHttpIntegrationTest 5/5 e ApiRolePolicyEndpointCoverageHarnessTest verdes.
 - 2026-11-28 · WH-UI-01 · regra do ecrã escrita na SPEC §4.4.2 (secção "Webhooks" no separador Integrações por `WebhookApiClient`, tabela com eventos e estados PT-MZ, "Novo webhook" com validação local, segredo `whsec_` uma vez com "Copiar", Activar/Desactivar pela selecção, registo de entregas com filtro, "Reenviar" só `FAILED`, aviso no sino só ADMIN para `config`, só ADMIN gere; contrato `whUi01_*`) e linha do HARNESS actualizada; implementação na próxima iteração.
+- 2026-11-28 · WH-UI-01 · concluído: secção "Webhooks" por baixo das chaves de API em Configurações › Integrações (`IntegrationsPanel` com `ApiKeysPanel` e `WebhooksPanel`, `refresh()` relê as duas) pelo `WebhookApiClient` (`/api/integrations/webhooks`); tabela com URL, eventos PT-MZ (`WebhookLabels`), falhas seguidas, criada em/por e estado (incl. "Desactivada automaticamente em …"); "Novo webhook" (`NewWebhookDialog`) com validação local e códigos de evento; segredo `whsec_` uma vez pelo `ApiKeySecretDialog.forWebhook` (generalizado, não duplicado); Activar/Desactivar pela selecção com confirmação ao desactivar; registo de entregas com filtro de estado e "Reenviar" só `FAILED` com confirmação; aviso no sino só para o ADMIN (`NotificationWebhookAlertProvider`, prioridade alta, abre `config`); IntegrationsUiHarnessTest 17/17, DesktopThinContextTest e suite desktop verdes.
+- 2026-11-28 · WH-UI-01 · correcção do gate: filtro de estado do registo de entregas no `WebhooksPanel` passa a `TableFilter.combo` (DG-03, combo cru); diff-guard PASS, IntegrationsUiHarnessTest e DesktopThinContextTest verdes.

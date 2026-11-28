@@ -34,6 +34,7 @@ public class NotificationFeed {
     private final StockTransferApiClient stockTransferApiClient;
     private final QualityApiClient qualityApiClient;
     private AccountingApiClient accountingApiClient;
+    private WebhookApiClient webhookApiClient;
 
     public NotificationFeed(ApprovalApiClient approvalApiClient, InventoryApiClient inventoryApiClient,
                             MySubscriptionApiClient subscriptionApiClient, HRApiClient hrApiClient) {
@@ -86,6 +87,9 @@ public class NotificationFeed {
         return this;
     }
 
+    /** Junta ao sino os webhooks desactivados automaticamente (docs/API_PUBLICA_WEBHOOKS_SPEC.md §4.4.2). */
+    public NotificationFeed withWebhookAlerts(WebhookApiClient client) { this.webhookApiClient = client; return this; }
+
     public List<NotificationItem> load(Long companyId) {
         List<NotificationItem> items = new ArrayList<>();
         addSystemAlerts(items);
@@ -103,6 +107,7 @@ public class NotificationFeed {
         addGoals(items, companyId);
         NotificationInventoryAlertProvider.addInTransitOverdue(items, companyId, stockTransferApiClient, IN_TRANSIT_OVERDUE_HOURS);
         NotificationBudgetAlertProvider.addBudgetAlerts(items, accountingApiClient, LocalDate.now().getYear());
+        NotificationWebhookAlertProvider.addWebhookAlerts(items, webhookApiClient);
         items.sort(Comparator.comparingInt(NotificationItem::priority).reversed()
                 .thenComparing(NotificationItem::type).thenComparing(NotificationItem::title));
         return List.copyOf(items);

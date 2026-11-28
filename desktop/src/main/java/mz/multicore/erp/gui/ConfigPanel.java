@@ -117,8 +117,24 @@ public class ConfigPanel extends JPanel {
                        ExchangeRateApiClient exchangeRateApiClient,
                        AccountingApiClient accountingApiClient,
                        ApiKeyApiClient apiKeyApiClient) {
+        this(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient,
+                mySubscriptionApiClient, monitoringApiClient, activityApiClient, dataImportApiClient,
+                exchangeRateApiClient, accountingApiClient, apiKeyApiClient, null);
+    }
+
+    /** With the webhooks too (API_PUBLICA_WEBHOOKS_SPEC §4.4.2): second section of "Integrações". */
+    public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
+                       DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
+                       MySubscriptionApiClient mySubscriptionApiClient,
+                       SystemMonitoringApiClient monitoringApiClient,
+                       mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
+                       DataImportApiClient dataImportApiClient,
+                       ExchangeRateApiClient exchangeRateApiClient,
+                       AccountingApiClient accountingApiClient,
+                       ApiKeyApiClient apiKeyApiClient,
+                       mz.multicore.erp.desktop.client.WebhookApiClient webhookApiClient) {
         this.integrationsPanel = apiKeyApiClient == null ? null
-                : new mz.multicore.erp.gui.integrations.IntegrationsPanel(apiKeyApiClient);
+                : new mz.multicore.erp.gui.integrations.IntegrationsPanel(apiKeyApiClient, webhookApiClient);
         this.costCentersPanel = accountingApiClient == null ? null
                 : new mz.multicore.erp.gui.accounting.CostCentersPanel(accountingApiClient);
         this.exchangeRatesPanel = exchangeRateApiClient == null ? null
