@@ -180,6 +180,14 @@ public class Order extends BaseEntity {
     @Column(name = "contact_phone", length = 40)
     private String contactPhone;
 
+    /** Loja online (docs/LOJA_ONLINE_SPEC.md §3.5): "Levantamento — {loja}" ou "Entrega — {zona}"; nulo nas outras. */
+    @Column(name = "fulfilment_label", length = 120)
+    private String fulfilmentLabel;
+
+    /** Morada do checkout da loja online, só na entrega ao domicílio. */
+    @Column(name = "delivery_address", length = 255)
+    private String deliveryAddress;
+
     /** SHA-256 do corpo que criou a encomenda pela API (§3.4.2): repetição igual → 200, diferente → 409. */
     @Column(name = "request_fingerprint", length = 64)
     private String requestFingerprint;

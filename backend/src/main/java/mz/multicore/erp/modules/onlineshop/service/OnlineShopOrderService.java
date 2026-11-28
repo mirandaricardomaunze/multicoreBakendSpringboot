@@ -17,6 +17,7 @@ import mz.multicore.erp.modules.comercial.service.ExternalOrderPlacementService;
 import mz.multicore.erp.modules.comercial.service.OrderReservationLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopFulfilment;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopOrderDTO;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopOrderLineDTO;
@@ -45,6 +46,9 @@ import java.util.Map;
  *
  * <p>LO-08 (§3.3): home delivery adds one service line "Taxa de entrega — {zona}" at the zone fee and the standard
  * VAT ({@link DeliveryFeeProductProvisioner}); pickup is free.
+ *
+ * <p>LO-12 (§3.5): the order keeps how it is fulfilled — "Levantamento — {loja}" or "Entrega — {zona}" — and, for
+ * home delivery only, the checkout address.
  */
 @Service
 public class OnlineShopOrderService {
@@ -54,6 +58,8 @@ public class OnlineShopOrderService {
     /** Same approval thresholds as an order typed at the desktop by a SELLER (API §3.4.1). */
     static final String ACTOR_ROLE = "SELLER";
     static final String NO_STOCK_FOR_DELIVERY = "Não há stock suficiente para entrega.";
+    /** Column limit of the fulfilment kept on the order (LO-12). */
+    static final int FULFILMENT_LABEL_MAX_LENGTH = 120;
 
     private final OnlineShopSettingsRepository settingsRepository;
     private final ProductLookup productLookup;
@@ -63,12 +69,14 @@ public class OnlineShopOrderService {
     private final StockLookup stockLookup;
     private final OrderReservationLookup reservationLookup;
     private final DeliveryFeeProductProvisioner deliveryFeeProducts;
+    private final WarehouseLookup warehouseLookup;
 
     public OnlineShopOrderService(OnlineShopSettingsRepository settingsRepository, ProductLookup productLookup,
                                   ClientLookup clientLookup, ComercialService comercialService,
                                   ExternalOrderPlacementService placementService, StockLookup stockLookup,
                                   OrderReservationLookup reservationLookup,
-                                  DeliveryFeeProductProvisioner deliveryFeeProducts) {
+                                  DeliveryFeeProductProvisioner deliveryFeeProducts,
+                                  WarehouseLookup warehouseLookup) {
         this.settingsRepository = settingsRepository;
         this.productLookup = productLookup;
         this.clientLookup = clientLookup;
@@ -77,6 +85,7 @@ public class OnlineShopOrderService {
         this.stockLookup = stockLookup;
         this.reservationLookup = reservationLookup;
         this.deliveryFeeProducts = deliveryFeeProducts;
+        this.warehouseLookup = warehouseLookup;
     }
 
     /** Places the order of the shop behind {@code /loja/{code}}; nothing is saved when a rule refuses it. */
@@ -111,7 +120,16 @@ public class OnlineShopOrderService {
         CreateOrderRequest order = new CreateOrderRequest(clientId, walkIn ? checkout.customerName() : null,
                 companyId, warehouseId, lines, OrderKind.FORMAL_ORDER, null, null, null, null, checkout.notes());
         return placementService.placeReservedFormalOrder(order,
-                new ExternalOrderSource(OrderOrigin.LOJA_ONLINE, ORIGIN_NAME, null, null, null, checkout.phone()));
+                new ExternalOrderSource(OrderOrigin.LOJA_ONLINE, ORIGIN_NAME, null, null, null, checkout.phone(),
+                        fulfilmentLabel(companyId, checkout), checkout.deliveryAddress()));
+    }
+
+    /** "Levantamento — {nome da loja}" or "Entrega — {nome da zona}", kept on the order (LO-12). */
+    private String fulfilmentLabel(Long companyId, OnlineShopCheckout checkout) {
+        String label = checkout.fulfilment() == OnlineShopFulfilment.ENTREGA
+                ? "Entrega — " + checkout.deliveryZone().getName()
+                : "Levantamento — " + warehouseLookup.requireForCompany(checkout.pickupWarehouseId(), companyId).getName();
+        return label.length() <= FULFILMENT_LABEL_MAX_LENGTH ? label : label.substring(0, FULFILMENT_LABEL_MAX_LENGTH);
     }
 
     /**

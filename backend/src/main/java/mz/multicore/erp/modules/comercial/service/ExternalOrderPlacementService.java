@@ -49,6 +49,8 @@ public class ExternalOrderPlacementService {
         order.setIdempotencyKey(source.idempotencyKey());
         order.setRequestFingerprint(source.requestFingerprint());
         order.setContactPhone(source.contactPhone());
+        order.setFulfilmentLabel(source.fulfilmentLabel());
+        order.setDeliveryAddress(source.deliveryAddress());
         return orderLifecycleService.toDTO(orderRepository.save(order));
     }
 

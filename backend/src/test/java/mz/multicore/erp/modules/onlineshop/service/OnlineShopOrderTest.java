@@ -30,6 +30,9 @@ import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
+import mz.multicore.erp.modules.comercial.model.Order;
+import mz.multicore.erp.modules.comercial.service.ComercialOrderLifecycleService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.fiscal.model.TaxRate;
 import mz.multicore.erp.modules.onlineshop.dto.OnlineShopOrderDTO;
@@ -177,11 +180,14 @@ class OnlineShopOrderTest {
     private final List<Stock> stockLines = new ArrayList<>();
     private final List<ReservedStock> reservations = new ArrayList<>();
     private final ProductCommandService productCommandService = mock(ProductCommandService.class);
+    private final WarehouseLookup warehouseLookup = mock(WarehouseLookup.class);
     private final OnlineShopOrderService orderService = new OnlineShopOrderService(settingsRepository, productLookup,
             clientLookup, comercialService, placementService, stockLookup, reservationLookup,
-            new DeliveryFeeProductProvisioner(productLookup, productCommandService));
+            new DeliveryFeeProductProvisioner(productLookup, productCommandService), warehouseLookup);
 
     {
+        when(warehouseLookup.requireForCompany(PICKUP_A, COMPANY_ID)).thenReturn(warehouse(PICKUP_A, "Loja Baixa"));
+        when(warehouseLookup.requireForCompany(PICKUP_B, COMPANY_ID)).thenReturn(warehouse(PICKUP_B, "Loja Matola"));
         when(stockLookup.listForCompany(COMPANY_ID)).thenReturn(stockLines);
         when(reservationLookup.activeReservationsForCompany(COMPANY_ID)).thenReturn(reservations);
         when(productCommandService.saveProduct(any())).thenAnswer(invocation -> {
@@ -500,6 +506,123 @@ class OnlineShopOrderTest {
                 DeliveryFeeProductProvisioner.sku(7L, " Maputo — Baixa, zona 1 "));
         assertEquals("LOJA-ENTREGA-7-ZONA", DeliveryFeeProductProvisioner.sku(7L, "***"));
         assertEquals("LOJA-ENTREGA-7-ZONA-ACUCAR", DeliveryFeeProductProvisioner.sku(7L, "Zona Açúcar"));
+    }
+
+    // ─── LO-12: entrega guardada na encomenda e no OrderDTO ────────────────────
+
+    @Test
+    void lo12_levantamentoGuardaALojaSemMorada() {
+        openShopWithArroz();
+        stock(PICKUP_B, "10");
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", pickup(PICKUP_B, CART));
+
+        ExternalOrderSource source = placedSource();
+        assertEquals("Levantamento — Loja Matola", source.fulfilmentLabel());
+        assertNull(source.deliveryAddress(), "no levantamento não há morada");
+    }
+
+    @Test
+    void lo12_entregaGuardaAZonaEAMorada() {
+        openShopWithArroz();
+        stock(PICKUP_A, "10");
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", delivery(" matola ", "  Rua da Resistência, 45  "));
+
+        ExternalOrderSource source = placedSource();
+        assertEquals("Entrega — Matola", source.fulfilmentLabel(), "nome da zona como está na loja");
+        assertEquals("Rua da Resistência, 45", source.deliveryAddress());
+    }
+
+    @Test
+    void lo12_rotuloDaEntregaNuncaPassaOLimiteDaColuna() {
+        openShopWithArroz();
+        stock(PICKUP_A, "10");
+        when(warehouseLookup.requireForCompany(PICKUP_A, COMPANY_ID)).thenReturn(warehouse(PICKUP_A, "L".repeat(200)));
+        when(placementService.placeReservedFormalOrder(any(), any())).thenReturn(placed("ENC-1", "Pendente", "1"));
+
+        orderService.placeOrder("mercearia-baixa", pickup(PICKUP_A, CART));
+
+        assertEquals(OnlineShopOrderService.FULFILMENT_LABEL_MAX_LENGTH, placedSource().fulfilmentLabel().length());
+    }
+
+    @Test
+    void lo12_apiPublicaFicaSemEntrega() {
+        ExternalOrderSource api = new ExternalOrderSource(OrderOrigin.API, "ERP Loja", "REF-1", "key", "hash", null);
+        assertNull(api.fulfilmentLabel());
+        assertNull(api.deliveryAddress());
+    }
+
+    @Test
+    void lo12_orderDtoTrazOrigemContactoEntregaEMorada() {
+        Order order = order();
+        order.setOrigin(OrderOrigin.LOJA_ONLINE);
+        order.setOriginName("Loja online");
+        order.setContactPhone("841234567");
+        order.setFulfilmentLabel("Entrega — Matola");
+        order.setDeliveryAddress("Rua X");
+
+        OrderDTO dto = lifecycle().toDTO(order);
+
+        assertEquals("LOJA_ONLINE", dto.origin());
+        assertEquals("Loja online", dto.originLabel());
+        assertEquals("841234567", dto.contactPhone());
+        assertEquals("Entrega — Matola", dto.fulfilmentLabel());
+        assertEquals("Rua X", dto.deliveryAddress());
+    }
+
+    @Test
+    void lo12_orderDtoDoDesktopEDaApiSemEntrega() {
+        OrderDTO desktop = lifecycle().toDTO(order());
+        assertEquals("DESKTOP", desktop.origin(), "origem em falta conta como do desktop");
+        assertEquals("Desktop", desktop.originLabel());
+        assertNull(desktop.contactPhone());
+        assertNull(desktop.fulfilmentLabel());
+        assertNull(desktop.deliveryAddress());
+
+        Order api = order();
+        api.setOrigin(OrderOrigin.API);
+        api.setOriginName("ERP Loja");
+        OrderDTO apiDto = lifecycle().toDTO(api);
+        assertEquals("API", apiDto.origin());
+        assertEquals("API · ERP Loja", apiDto.originLabel());
+        assertNull(apiDto.fulfilmentLabel());
+        assertNull(apiDto.deliveryAddress());
+
+        assertEquals("Desktop", placed("ENC-1", "Pendente", "1").originLabel(), "construtor antigo = desktop");
+    }
+
+    private ExternalOrderSource placedSource() {
+        ArgumentCaptor<ExternalOrderSource> source = ArgumentCaptor.forClass(ExternalOrderSource.class);
+        verify(placementService).placeReservedFormalOrder(any(), source.capture());
+        return source.getValue();
+    }
+
+    /** Only {@code toDTO} is used: it reads the order alone. */
+    private static ComercialOrderLifecycleService lifecycle() {
+        return new ComercialOrderLifecycleService(null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null);
+    }
+
+    private static Order order() {
+        Client client = new Client();
+        client.setId(3L);
+        client.setName("Consumidor Final");
+        Order order = new Order();
+        order.setId(9L);
+        order.setOrderNumber("ENC-2026/00009");
+        order.setClient(client);
+        order.setStatus("PENDING_APPROVAL");
+        return order;
+    }
+
+    private static Warehouse warehouse(Long id, String name) {
+        Warehouse warehouse = new Warehouse();
+        warehouse.setId(id);
+        warehouse.setName(name);
+        return warehouse;
     }
 
     private void openShopWithArroz() {

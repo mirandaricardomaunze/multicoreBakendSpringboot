@@ -3,7 +3,7 @@
 > Cenários que provam [LOJA_ONLINE_SPEC.md](LOJA_ONLINE_SPEC.md).
 > Um ID por regra verificável; o goal só marca um critério quando o teste da linha está verde.
 
-**Última actualização:** 2026-11-28 (LO-01 verde: `OnlineShopSettingsTest`, migração V162; LO-02 verde: `OnlineShopCatalogTest`, migração V163; LO-03 verde: `OnlineShopCatalogTest`; LO-05, LO-06 e LO-07 verdes: `OnlineShopOrderTest`; LO-08 verde: `OnlineShopOrderTest` · `OnlineShopSettingsTest`; LO-10 verde: `OnlineShopExpiryTest`; LO-04 verde: `OnlineShopHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest`; LO-09 verde: `OnlineShopHttpIntegrationTest`, `POST /api/shop/{código}/orders/lookup`; LO-11 verde: `OnlineShopStaticAssetsHarnessTest`, página `/loja/{código}` em `static/loja/` e `GET /api/shop/{código}`; LO-UI-01 dividido em LO-12, LO-UI-01, LO-UI-02 e LO-UI-03 com a SPEC §3.5)
+**Última actualização:** 2026-11-28 (LO-01 verde: `OnlineShopSettingsTest`, migração V162; LO-02 verde: `OnlineShopCatalogTest`, migração V163; LO-03 verde: `OnlineShopCatalogTest`; LO-05, LO-06 e LO-07 verdes: `OnlineShopOrderTest`; LO-08 verde: `OnlineShopOrderTest` · `OnlineShopSettingsTest`; LO-10 verde: `OnlineShopExpiryTest`; LO-04 verde: `OnlineShopHttpIntegrationTest` · `ApiRolePolicyEndpointCoverageHarnessTest`; LO-09 verde: `OnlineShopHttpIntegrationTest`, `POST /api/shop/{código}/orders/lookup`; LO-11 verde: `OnlineShopStaticAssetsHarnessTest`, página `/loja/{código}` em `static/loja/` e `GET /api/shop/{código}`; LO-UI-01 dividido em LO-12, LO-UI-01, LO-UI-02 e LO-UI-03 com a SPEC §3.5; LO-12 verde: `OnlineShopOrderTest`, migração V164)
 
 | ID | Garantia | Teste |
 |---|---|---|
